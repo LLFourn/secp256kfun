@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "secp256kfun",
+    "schnorr_fun",
+    "ecdsa_fun",
+]

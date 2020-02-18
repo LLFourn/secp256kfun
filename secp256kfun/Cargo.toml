@@ -1,0 +1,60 @@
+[package]
+name = "secp256kfun"
+version = "0.1.0"
+authors = ["LLFourn <lloyd.fourn@gmail.com>"]
+license = "cc0-1.0"
+homepage = "https://github.com/LLFourn/secp256kfun"
+repository = "https://github.com/LLFourn/secp256kfun"
+documentation = "https://docs.rs/secp256kfun"
+edition = "2018"
+categories = ["cryptography", "no_std"]
+keywords = ["bitcoin", "secp256k1"]
+
+[package.metadata.docs.rs]
+features = ["serde_hex", "serde"]
+
+[dependencies]
+sha2 = "0.8"
+digest = "0.8"
+subtle = { version = "2" }
+rand_core = { version = "0.5" }
+serde = { version = "1", default-features = false, optional = true }
+
+[dependencies.parity_libsecp256k1_core]
+git = "https://github.com/paritytech/libsecp256k1.git"
+package = "libsecp256k1-core"
+rev = "d453081f81579b03f8ce8c56494779185f0cc29c"
+version = "0.1"
+
+[dev-dependencies]
+hex-literal = "0.2"
+serde_json = "1"
+serde = "1"
+rand = { version = "0.7", features = ["wasm-bindgen"] }
+lazy_static = "1.4"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+secp256k1 = { default-features = false, version = "0.17", features = ["std"] }
+grin_secp256k1zkp = "0.7"
+bincode = "1.0"
+criterion = "0.3"
+
+[build-dependencies]
+libsecp256k1-gen-ecmult = "0.1.0"
+libsecp256k1-gen-genmult = "0.1.0"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+
+[features]
+default = ["std"]
+all = ["std", "serde_hex"]
+alloc = []
+std = ["alloc"]
+serde_hex = [ "alloc", "serde" ]
+
+
+[[bench]]
+name = "bench_ecmult"
+harness = false

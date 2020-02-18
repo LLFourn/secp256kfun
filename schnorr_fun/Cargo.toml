@@ -1,0 +1,45 @@
+[package]
+name = "schnorr_fun"
+version = "0.1.0"
+authors = ["LLFourn <lloyd.fourn@gmail.com>"]
+edition = "2018"
+license = "cc0-1.0"
+homepage = "https://github.com/LLFourn/secp256kfun"
+repository = "https://github.com/LLFourn/secp256kfun"
+documentation = "https://docs.rs/schnorr_fun"
+categories = ["cryptography", "no_std"]
+keywords = ["bitcoin", "schnorr"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.docs.rs]
+features = ["serde_hex", "serde"]
+
+[dependencies]
+secp256kfun = { path = "../secp256kfun" }
+sha2 = "0.8"
+digest = "0.8"
+rand_core = { version = "0.5" }
+serde = { version = "1", default-features = false, optional = true }
+
+[dev-dependencies]
+rand = { version = "0.7", features = ["wasm-bindgen"] }
+hex-literal = "0.2"
+serde = "1"
+lazy_static = "1.4"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = "0.3"
+grin_secp256k1zkp = "0.7"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[[bench]]
+name = "bench_schnorr"
+harness = false
+
+
+[features]
+default = ["std"]
+alloc = []
+std = ["alloc"]
+serde_hex = [ "alloc", "serde" ]
