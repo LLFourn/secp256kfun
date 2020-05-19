@@ -34,7 +34,7 @@ fn ecdsa_sign() {
 #[test]
 fn ecdsa_verify() {
     let secp = secp256k1::Secp256k1::new();
-    let ecdsa = ecdsa_fun::ECDSA::from_tag(b"test");
+    let ecdsa = ecdsa_fun::ECDSA::from_tag(b"test").enforce_low_s();
 
     for _ in 0..TEST_SOUNDNESS {
         let secret_key = Scalar::random(&mut rand::thread_rng());

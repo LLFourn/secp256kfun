@@ -1,4 +1,4 @@
-//! ECDSA One-Time Signature Encryptions.
+//! ECDSA Adaptor signatures.
 use crate::{Signature, ECDSA};
 use digest::{generic_array::typenum::U32, Digest};
 use secp256kfun::{
@@ -119,7 +119,9 @@ impl<CH: Digest<OutputSize = U32> + Clone, NH> Adaptor<CH, NH> {
         signature: &Signature<impl Secrecy>,
         ciphertext: &EncryptedSignature<impl Secrecy>,
     ) -> Option<Scalar> {
-        if ciphertext.R.x_scalar != signature.R_x || signature.s.is_high() {
+        if ciphertext.R.x_scalar != signature.R_x
+            || (signature.s.is_high() && self.ecdsa.enforce_low_s)
+        {
             return None;
         }
         let EncryptedSignature { s_hat, .. } = ciphertext;

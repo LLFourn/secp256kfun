@@ -24,8 +24,16 @@ mod signature;
 pub use signature::Signature;
 pub mod adaptor;
 
-pub struct ECDSA<N = NonceHash<sha2::Sha256>> {
-    pub nonce_hash: N,
+/// An instance of the ECDSA signature scheme.
+pub struct ECDSA<NH = NonceHash<sha2::Sha256>> {
+    /// An instance of [`NonceHash`] to produce nonces.
+    ///
+    /// [`NonceHash`]: secp256kfun::hash::NonceHash
+    pub nonce_hash: NH,
+    /// `enforce_low_s`: Whether the verify algorithm should enforce that the `s` component of the signature is low (see [BIP-146]).
+    ///
+    /// [BIP-146]: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki#low_s
+    pub enforce_low_s: bool,
 }
 
 impl ECDSA<NonceHash<sha2::Sha256>> {
@@ -34,6 +42,7 @@ impl ECDSA<NonceHash<sha2::Sha256>> {
     pub fn from_tag(tag: &[u8]) -> Self {
         ECDSA {
             nonce_hash: NonceHash::from_tag(tag),
+            enforce_low_s: false,
         }
     }
 }
@@ -42,7 +51,22 @@ impl ECDSA<()> {
     /// Creates an `ECDSA` instance that cannot be used to sign messages but can
     /// verify signatures.
     pub fn verify_only() -> Self {
-        ECDSA { nonce_hash: () }
+        ECDSA {
+            nonce_hash: (),
+            enforce_low_s: false,
+        }
+    }
+}
+
+impl<NH> ECDSA<NH> {
+    /// Transforms the ECDSA instance into one which enforces the [BIP-146] low s constraint.
+    ///
+    /// [BIP-146]: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki#low_s
+    pub fn enforce_low_s(self) -> Self {
+        ECDSA {
+            nonce_hash: self.nonce_hash,
+            enforce_low_s: true,
+        }
     }
 }
 
@@ -56,7 +80,7 @@ impl<NA> ECDSA<NA> {
     ) -> bool {
         let (R_x, s) = signature.as_tuple();
         // This ensures that there is only one valid s value per R_x for any given message.
-        if s.is_high() {
+        if s.is_high() && self.enforce_low_s {
             return false;
         }
 
@@ -132,6 +156,7 @@ impl<NH: Digest<OutputSize = U32> + Clone> ECDSA<NonceHash<NH>> {
 mod test {
     use super::*;
     use rand::RngCore;
+    use secp256kfun::TEST_SOUNDNESS;
 
     #[test]
     fn repeated_sign_and_verify() {
@@ -147,15 +172,20 @@ mod test {
     }
 
     #[test]
-    fn shouldnt_verify_high_s() {
-        let ecdsa = ECDSA::from_tag(b"test");
-        let mut message = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut message);
-        let secret_key = Scalar::random(&mut rand::thread_rng());
-        let public_key = g!(secret_key * G);
-        let mut sig = ecdsa.sign(&secret_key, &message, Derivation::Deterministic);
-        assert!(ecdsa.verify(&public_key, &message, &sig));
-        sig.s = -sig.s;
-        assert!(!ecdsa.verify(&public_key, &message, &sig));
+    fn low_s() {
+        for _ in 0..TEST_SOUNDNESS {
+            let ecdsa = ECDSA::from_tag(b"test");
+            let ecdsa_enforce_low_s = ECDSA::from_tag(b"test").enforce_low_s();
+            let mut message = [0u8; 32];
+            rand::thread_rng().fill_bytes(&mut message);
+            let secret_key = Scalar::random(&mut rand::thread_rng());
+            let public_key = g!(secret_key * G);
+            let mut sig = ecdsa.sign(&secret_key, &message, Derivation::Deterministic);
+            assert!(ecdsa.verify(&public_key, &message, &sig));
+            assert!(ecdsa_enforce_low_s.verify(&public_key, &message, &sig));
+            sig.s = -sig.s;
+            assert!(!ecdsa_enforce_low_s.verify(&public_key, &message, &sig));
+            assert!(ecdsa.verify(&public_key, &message, &sig));
+        }
     }
 }
