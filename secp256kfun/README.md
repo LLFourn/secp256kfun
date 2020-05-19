@@ -44,7 +44,7 @@ Here's the main things this library tries to be better at:
 ## The Zero Element
 
 Both secp256k1 points and scalars have a notional _zero_ element.
-Unfortunately, in things surrounding Bitcoin the zero scalar and zero point are illegal values in most cases.
+Unfortunately, in things surrounding Bitcoin, the zero scalar and zero point are illegal values in most cases.
 The _high-level_ [rust-secp256k1][2] deals with zero problem by returning a `Result` in its API whenever the return value might be zero.
 This is annoying for two reasons:
 
