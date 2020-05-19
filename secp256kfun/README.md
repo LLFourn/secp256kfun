@@ -157,7 +157,7 @@ assert_eq!(commitment, pedersen_commit(G, &B, &r, &x));
 ```
 
 Note that not only is `pedersen_commitment` generic over the `Secrecy` of the scalars but it also generic over the _type_ of the points.
-When pass in `G`, which is a `BasePoint`, as the `A` argument the compiler will produce a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
+When we pass in `G`, which is a `BasePoint`, as the `A` argument the compiler will produce a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
 
 [1]: https://github.com/bitcoin-core/secp256k1
 [2]: https://github.com/rust-bitcoin/
