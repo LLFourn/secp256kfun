@@ -7,7 +7,7 @@ use crate::{
 use core::marker::PhantomData;
 use rand_core::{CryptoRng, RngCore};
 
-/// The x-coordinate of a [Point](crate::Point). This is the preferred
+/// The x-coordinate of a [`Point`]. This is the preferred
 /// compressed representation of a point.
 #[derive(Clone)]
 pub struct XOnly<YChoice = ()>(pub(crate) backend::XOnly, PhantomData<YChoice>);

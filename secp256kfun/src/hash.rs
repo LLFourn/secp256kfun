@@ -94,7 +94,7 @@ impl Derivation {
 /// Hashes for doing nonce derivation.
 ///
 /// Usually, libraries that use `secp256kfun` let the caller decide which type
-/// of nonce [Derivation] they will use. `NonceHash` two hashes that may be needed at runtime:
+/// of nonce [`Derivation`] they will use. `NonceHash` two hashes that may be needed at runtime:
 ///
 /// - `nonce_hash`: The hash that's used to produce the secret unpredictable nonce.
 /// - 'aux_hash`:   A hash that's used to hash random data before being xor'd into the nonce hash.

@@ -51,8 +51,11 @@ impl<CH, NH> Schnorr<CH, NH> {
     ///
     /// **The secret key in the resulting key is not guaranteed to be the same
     /// as the input**. For half the input values the result will be the
-    /// negation of it. This happens because the corresponding [crate::Point] may not
-    /// have an y-coordinate that is even (see [EvenY](secp256kfun::marker::EvenY))
+    /// negation of it. This happens because the corresponding [`Point`] may not
+    /// have an y-coordinate that is even (see [`EvenY`])
+    ///
+    /// [`Point`]: secp256kfun::Point
+    /// [`EvenY`]: secp256kfun::marker::EvenY
     pub fn keygen(&self, mut sk: Scalar) -> KeyPair {
         let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
 

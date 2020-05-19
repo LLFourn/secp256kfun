@@ -23,7 +23,7 @@ use rand_core::{CryptoRng, RngCore};
 /// let X = g!(x * G);
 /// ```
 /// But finding `x` from `(X,G)` is hard (you can't divide `X` by `G`).
-/// This is otherwise known as the elliptic curve [_discrete logarithm problem_
+/// This is otherwise known as the elliptic curve [_discrete logarithm problem_][2].
 ///
 /// Because of this, scalars are often used as _secret keys_ and their
 /// corresponding points are used as _public keys_.
@@ -134,7 +134,7 @@ impl Scalar<Secret, Zero> {
         Self::from_inner(backend::Scalar::from_bytes_mod_order(bytes))
     }
 
-    /// Exactly like [from_bytes_mod_order](Scalar::from_bytes_mod_order) except
+    /// Exactly like [`from_bytes_mod_order`] except
     /// it operates on a 32-byte slice rather than an array.  If the slice is
     /// not 32 bytes long then the function returns `None`.
     ///
@@ -148,6 +148,8 @@ impl Scalar<Secret, Zero> {
     ///     Scalar::from_bytes_mod_order(*bytes)
     /// );
     /// ```
+    ///
+    /// [`from_bytes_mod_order`]: crate::Scalar::from_bytes_mod_order
     pub fn from_slice_mod_order(slice: &[u8]) -> Option<Self> {
         if slice.len() != 32 {
             return None;

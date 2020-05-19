@@ -2,10 +2,10 @@
 #[derive(Debug, Clone, Default)]
 pub struct Zero;
 #[derive(Debug, Clone, Default)]
-/// Something marked with NonZero is guaranteed not to be 0.
+/// Something marked with `NonZero` is guaranteed not to be 0.
 pub struct NonZero;
 
-/// A marker trait over [Zero] and [NonZero].
+/// A marker trait over [`Zero`] and [`NonZero`].
 pub trait ZeroChoice {}
 
 impl ZeroChoice for Zero {}

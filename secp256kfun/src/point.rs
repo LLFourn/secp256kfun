@@ -15,41 +15,20 @@ use rand_core::{CryptoRng, RngCore};
 ///
 /// where `p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F`
 ///
+/// and the notional _point at infinity_ (the _zero_ element).
+///
 /// ## Markers
 ///
 /// A `Point<T,S,Z>` has three types parameters.
 ///
-/// ### `T`: Point Type
+/// - `T`: A [`PointType`] used to reason about what the point can do and to specialize point operations.
+/// - `S`: A [`Secrecy`] to determine whether operations on this point should be done in constant-time or not.
+/// - `Z`: A [`ZeroChoice`] to mark whether it is possible that this point is the point at infinity.
 ///
-/// There are several different point types which all implement the [PointType][crate::marker::PointType] maker trait.
-/// - [`Normal`]: A point in Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hahsed.
-/// - [`Jacobian`]: A non-Normal point with (x,y,z) coordinates. Usually the result of a point operation. Before being serialized or hashed, you have to normalize it.
-/// - [`BasePoint`]: A Normal point that has pre-computed multiplication tables like [G](crate::G).
-/// - [`EvenY`]/[`SquareY`]: A Normal point whose y coordinate is known to be _even_ or _square_ at compile time.
-///
-/// A `Point<Jacobian>` needs to be normalized before being serialized or hashed:
-/// ```
-/// use secp256kfun::{g, marker::*, Scalar, G};
-/// let scalar = Scalar::random(&mut rand::thread_rng());
-/// let jacobian_point = g!(scalar * G);
-/// let normal_point = jacobian_point.mark::<Normal>();
-/// let bytes = normal_point.to_bytes(); // we can now serialize it
-/// ```
-///
-/// A Point that is `EvenY/SquareY` serializes to and from the 32-byte x-only representation like the [`XOnly`](crate::XOnly) type.
-/// `Normal` points serialize to and from the standard 33-byte representation specified in [_SEC 1 standard_][1].
-///
-/// [1]: https://www.secg.org/sec1-v2.pdf
-///
-/// ### `S`: Secrecy
-///
-///
-///
-/// [`Normal`](crate::marker::Normal)
-/// [`Jacobain`](crate::marker::Jacobian)
-/// [`BasePoint`](crate::marker::BasePoint)
-/// [`EvenY`](crate::marker::EvenY)
-/// [`SquareY`](crate::marker::SquareY)
+/// [`PointType`]: crate::marker::PointType
+/// [`Secrecy`]: crate::marker::Secrecy
+/// [`ZeroChoice`]: crate::marker::ZeroChoice
+
 #[derive(Default)]
 pub struct Point<T = Normal, S = Public, Z = NonZero>(
     pub(crate) backend::Point,

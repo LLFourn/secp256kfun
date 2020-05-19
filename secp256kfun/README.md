@@ -60,7 +60,7 @@ secp256kfun solves these difficulties using _marker types_.
 Points and Scalars are marked with `Zero` or `NonZero` at compile time (by default, `NonZero`).
 So if you declare your function with a `NonZero` type, passing a `Zero` type will be a compile time error as shown below:
 
-```rust
+```rust,compile_fail
 use secp256kfun::{marker::*, Scalar, Point,G,g};
 // a randomly selected Scalar will never be zero (statistically unreachable)
 let x = Scalar::random(&mut rand::thread_rng());

@@ -5,7 +5,9 @@ use secp256kfun::{marker::*, Scalar, XOnly};
 #[derive(Clone)]
 pub struct Signature<S = Public> {
     /// The x-coordinate of the signature's public nonce. When verifying it is
-    /// interpreted as the [Point](crate::Point)
+    /// interpreted as the [`Point`].
+    ///
+    /// [`Point`]: secp256kfun::Point
     pub R: XOnly<SquareY>,
     /// The challenge _response_ part of the signature.
     pub s: Scalar<S, Zero>,
@@ -63,9 +65,9 @@ impl Signature<Public> {
             s: Scalar::random(rng).mark::<(Zero, Public)>(),
         }
     }
-    /// Deserializes a signature from the byte representation produced by [to_bytes](Signature::to_bytes).
+    /// Deserializes a signature from the byte representation produced by [`to_bytes`].
     ///
-    /// This returns `None` if the first 32 bytes were not a valid [XOnly] or the last 32 bytes were not a valid scalar.
+    /// This returns `None` if the first 32 bytes were not a valid [`XOnly`] or the last 32 bytes were not a valid scalar.
     ///
     /// #Examples
     /// ```
@@ -76,6 +78,9 @@ impl Signature<Public> {
     ///     None => eprintln!("the bytes did *not* encode a valid signature"),
     /// }
     /// ```
+    ///
+    /// [`XOnly`]: secp256kfun::XOnly
+    /// [`to_bytes`]: crate::Signature::to_bytes
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         let mut R = [0u8; 32];
         R.copy_from_slice(&bytes[0..32]);

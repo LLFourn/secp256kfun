@@ -70,7 +70,7 @@ where
     }
 }
 
-/// Extension trait adding the algorithms for the adaptor signature scheme [Schnorr](crate::Schnorr).
+/// Extension trait adding the algorithms for the adaptor signature scheme to instances of [`Schnorr`].
 pub trait Adaptor {
     fn verify_encrypted_signature(
         &self,
