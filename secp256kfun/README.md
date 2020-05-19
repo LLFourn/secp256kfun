@@ -25,7 +25,7 @@ There isn't a 0.0.1 release yet so you want to try it out at this early stage yo
 
 ```toml
 [dependencies]
-secp256kfun = { git = https://github.com/LLFourn/secp256kfun.git, pacakge = "secp256kfun" }
+secp256kfun = { git = "https://github.com/LLFourn/secp256kfun.git", package = "secp256kfun" }
 ```
 
 ## Documentation
