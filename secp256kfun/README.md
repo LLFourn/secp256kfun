@@ -9,7 +9,7 @@ Fun does not mean (yet -- please help!):
 
 - **stable**: This library will frequently add/remove/change APIs for the foreseeable future. It also needs a nightly compiler for [_specialization_][5].
 - **well reviewed or tested**: This code is fresh and experimental and not rigorously tested.
-- **side-channel resistant**: There has been no empirical investigation into whether [parity/libsecp256k1][4] is resistant against timing attacks etc.
+- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying [parity/libsecp256k1][4] is resistant against timing attacks etc.
 - **performant**: The library is in general not as performant as [libsecp256k1][1], at least on 64-bit platforms.
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
@@ -158,6 +158,8 @@ assert_eq!(commitment, pedersen_commit(G, &B, &r, &x));
 
 Note that not only is `pedersen_commitment` generic over the `Secrecy` of the scalars but it also generic over the _type_ of the points.
 When we pass in `G`, which is a `BasePoint`, as the `A` argument the compiler will produce a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
+
+**note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
 
 [1]: https://github.com/bitcoin-core/secp256k1
 [2]: https://github.com/rust-bitcoin/
