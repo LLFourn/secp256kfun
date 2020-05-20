@@ -108,3 +108,24 @@ secp256kfun::impl_display_debug_serialize! {
         signature.to_bytes()
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    #[cfg(feature = "serialization")]
+    #[test]
+    fn signature_serialization_roundtrip() {
+        use super::*;
+        use crate::{
+            secp256kfun::{hash::Derivation, Scalar},
+            Schnorr,
+        };
+        let schnorr = Schnorr::from_tag(b"test");
+        let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+        let signature = schnorr.sign(&kp, b"test", Derivation::Deterministic);
+        let serialized = bincode::serialize(&signature).unwrap();
+        assert_eq!(serialized.len(), 64);
+        let deserialized = bincode::deserialize::<Signature>(&serialized).unwrap();
+        assert_eq!(signature, deserialized);
+    }
+}

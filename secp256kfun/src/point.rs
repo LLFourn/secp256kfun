@@ -111,6 +111,15 @@ impl<T, S, Z> Point<T, S, Z> {
             T::NegationType::default(),
         )
     }
+
+    /// A hack that is necessary when writing deserialization code until rust issue [#44491] is fixed.
+    /// Don't use this method use [`mark`] which checks the type is a valid secrecy.
+    ///
+    /// [`mark`]: crate::marker::Mark::mark
+    /// [#44491]: https://github.com/rust-lang/rust/issues/44491
+    pub fn set_secrecy<SNew>(self) -> Point<T, SNew, Z> {
+        Point::from_inner(self.0, self.1)
+    }
 }
 
 impl Point<Normal, Public, Zero> {
@@ -223,15 +232,15 @@ crate::impl_serialize! {
 
 crate::impl_fromstr_deserailize! {
     name => "secp256k1 x-coordinate",
-    fn from_bytes<S: Secrecy,T: YChoice>(bytes: [u8;32]) -> Option<Point<T,S, NonZero>> {
+    fn from_bytes<S,T: YChoice>(bytes: [u8;32]) -> Option<Point<T,S, NonZero>> {
         T::bytes_into_point(bytes)
     }
 }
 
 crate::impl_fromstr_deserailize! {
-    name => "secp256k1 x-coordinate",
-    fn from_bytes<S: Secrecy>(bytes: [u8;33]) -> Option<Point<Normal,S, NonZero>> {
-        Point::from_bytes(bytes).map(|point| point.mark::<S>())
+    name => "33-byte encoded secp256k1 point",
+    fn from_bytes<S>(bytes: [u8;33]) -> Option<Point<Normal,S, NonZero>> {
+        Point::from_bytes(bytes).map(|point| point.set_secrecy::<S>())
     }
 }
 

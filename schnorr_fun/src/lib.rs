@@ -20,6 +20,7 @@ extern crate std;
 
 use digest::{generic_array::typenum::U32, Digest};
 use rand_core::{CryptoRng, RngCore};
+pub use secp256kfun;
 use secp256kfun::{
     derive_nonce, g,
     hash::{tagged_hash, Derivation, Hash, NonceHash},
@@ -56,7 +57,7 @@ impl<CH, NH> Schnorr<CH, NH> {
     ///
     /// [`Point`]: secp256kfun::Point
     /// [`EvenY`]: secp256kfun::marker::EvenY
-    pub fn keygen(&self, mut sk: Scalar) -> KeyPair {
+    pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
         let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
 
         KeyPair { sk, pk }
@@ -195,7 +196,7 @@ mod test {
         fn anticipated_signature_on_should_correspond_to_actual_signature() {
             for _ in 0..TEST_SOUNDNESS {
                 let schnorr = Schnorr::from_tag(b"secp256kfun-test/schnorr");
-                let keypair = schnorr.keygen(Scalar::random(&mut rand::thread_rng()));
+                let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
                 let signature = schnorr.sign(&keypair, b"message", Derivation::Deterministic);
                 let anticipated_signature = schnorr.anticipate_signature(
                     &keypair.verification_key(),
@@ -217,8 +218,8 @@ mod test {
         fn sign_deterministic() {
             for _ in 0..TEST_SOUNDNESS {
                 let schnorr = Schnorr::from_tag(b"secp256kfun-test/schnorr");
-                let keypair_1 = schnorr.keygen(Scalar::random(&mut rand::thread_rng()));
-                let keypair_2 = schnorr.keygen(Scalar::random(&mut rand::thread_rng()));
+                let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+                let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
                 let signature_1 = schnorr.sign(&keypair_1, b"attack at dawn", Derivation::Deterministic);
                 let signature_2 = schnorr.sign(&keypair_1, b"attack at dawn", Derivation::Deterministic);
                 let signature_3 = schnorr.sign(&keypair_1, b"retreat at noon", Derivation::Deterministic);

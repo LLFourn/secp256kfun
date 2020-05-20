@@ -47,10 +47,19 @@ pub trait Secrecy: Default + Clone + PartialEq {}
 /// Indicates that the value is secret and enforces that all operations that are
 /// executed on it must be _constant time_.
 #[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
+
 #[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct Public;
 
 impl Secrecy for Secret {}

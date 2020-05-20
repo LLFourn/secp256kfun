@@ -64,6 +64,15 @@ impl<Z, S> Scalar<S, Z> {
     pub(crate) fn from_inner(inner: backend::Scalar) -> Self {
         Scalar(inner, PhantomData)
     }
+
+    /// A hack that is necessary when writing deserialization code until rust issue [#44491] is fixed.
+    /// Don't use this method use [`mark`] which checks the type is a valid secrecy.
+    ///
+    /// [`mark`]: crate::marker::Mark::mark
+    /// [#44491]: https://github.com/rust-lang/rust/issues/44491
+    pub fn set_secrecy<SNew>(self) -> Scalar<SNew, Z> {
+        Scalar::from_inner(self.0)
+    }
 }
 
 impl Scalar<Public, Zero> {
@@ -161,6 +170,13 @@ impl Scalar<Secret, Zero> {
 
     /// Creates a scalar from 32 big-endian encoded bytes. If the bytes
     /// represent an integer greater than or equal to the curve order then it returns `None`.
+    ///
+    /// # Example
+    /// ```
+    /// use secp256kfun::{marker::*, Scalar};
+    /// assert!(Scalar::from_bytes([0u8; 32]).is_some());
+    /// assert!(Scalar::from_bytes([255u8; 32]).is_none());
+    /// ```
     pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
         backend::Scalar::from_bytes(bytes).map(Self::from_inner)
     }
@@ -206,8 +222,8 @@ impl From<u32> for Scalar<Public, Zero> {
 
 crate::impl_fromstr_deserailize! {
     name => "non-zero secp256k1 scalar",
-    fn from_bytes<S: Secrecy>(bytes: [u8;32]) -> Option<Scalar<S,NonZero>> {
-        Scalar::from_bytes(bytes).and_then(|scalar| scalar.mark::<S>().mark::<NonZero>())
+    fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,NonZero>> {
+        Scalar::from_bytes(bytes).and_then(|scalar| scalar.set_secrecy::<S>().mark::<NonZero>())
     }
 }
 
@@ -219,8 +235,8 @@ crate::impl_display_debug_serialize! {
 
 crate::impl_fromstr_deserailize! {
     name => "secp256k1 scalar",
-    fn from_bytes<S: Secrecy>(bytes: [u8;32]) -> Option<Scalar<S,Zero>> {
-        Scalar::from_bytes(bytes).map(|scalar| scalar.mark::<S>())
+    fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,Zero>> {
+        Scalar::from_bytes(bytes).map(|scalar| scalar.set_secrecy::<S>())
     }
 }
 
@@ -252,6 +268,15 @@ impl HashInto for Scalar {
 mod test {
     use super::*;
     use crate::{nzscalar, op, s};
+
+    #[cfg(feature = "serialization")]
+    #[test]
+    fn scalar_serde_rountrip() {
+        let original = Scalar::random(&mut rand::thread_rng());
+        let serialized = bincode::serialize(&original).unwrap();
+        let deserialized = bincode::deserialize::<Scalar>(&serialized[..]).unwrap();
+        assert_eq!(deserialized, original)
+    }
 
     crate::test_plus_wasm! {
         fn random() {

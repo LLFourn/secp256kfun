@@ -1,8 +1,11 @@
 /// Something marked with Zero might be `0` i.e. the additive identity
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Zero;
-#[derive(Debug, Clone, Default)]
+
 /// Something marked with `NonZero` is guaranteed not to be 0.
+#[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NonZero;
 
 /// A marker trait over [`Zero`] and [`NonZero`].
@@ -27,7 +30,7 @@ impl<Z: ZeroChoice> DecideZero<Z> for NonZero {
 mod change_marks {
     use crate::{marker::*, Point, Scalar};
 
-    impl<Z, S: Secrecy> ChangeMark<Scalar<S, Z>> for NonZero {
+    impl<Z, S> ChangeMark<Scalar<S, Z>> for NonZero {
         type Out = Option<Scalar<S, NonZero>>;
 
         fn change_mark(scalar: Scalar<S, Z>) -> Self::Out {

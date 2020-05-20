@@ -16,7 +16,7 @@ fn signing_test_vector(
     let secret_key = Scalar::from_bytes_mod_order(secret_key)
         .mark::<NonZero>()
         .unwrap();
-    let keypair = BIP340.keygen(secret_key);
+    let keypair = BIP340.new_keypair(secret_key);
 
     assert_eq!(keypair.public_key().as_bytes(), &public_key);
     let signature = BIP340.sign(&keypair, &message, Derivation::Aux(aux_rand));

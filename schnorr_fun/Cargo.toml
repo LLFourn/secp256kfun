@@ -1,3 +1,4 @@
+
 [package]
 name = "schnorr_fun"
 version = "0.1.0"
@@ -11,20 +12,21 @@ categories = ["cryptography", "no_std"]
 keywords = ["bitcoin", "schnorr"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [package.metadata.docs.rs]
-features = ["serde_hex", "serde"]
+features = ["serialize_hex", "serialization"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun" }
+secp256kfun = { path = "../secp256kfun", default-features = false }
 sha2 = "0.8"
 digest = "0.8"
 rand_core = { version = "0.5" }
-serde = { version = "1", default-features = false, optional = true }
+serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 rand = { version = "0.7", features = ["wasm-bindgen"] }
 hex-literal = "0.2"
-serde = "1"
 lazy_static = "1.4"
+bincode = "1.0"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.3"
@@ -42,4 +44,5 @@ harness = false
 default = ["std"]
 alloc = []
 std = ["alloc"]
-serde_hex = [ "alloc", "serde" ]
+serialization = ["serde", "secp256kfun/serialization"]
+serialize_hex = [ "alloc", "serialization" ]

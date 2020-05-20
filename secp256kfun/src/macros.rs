@@ -360,10 +360,10 @@ macro_rules! impl_display_debug {
 #[macro_export]
 macro_rules! impl_serialize {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
-        #[cfg(any(feature = "serde", test))]
+        #[cfg(feature = "serialization")]
         impl$(<$($tpl $(:$tcl)?),*>)? serde::Serialize for $type {
             fn serialize<Ser: serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
-                #[cfg(any(feature = "serde_hex", test))]
+                #[cfg(any(feature = "serialize_hex", test))]
                 {
                     if serializer.is_human_readable() {
                         return serializer.collect_str(&self)
@@ -430,12 +430,12 @@ macro_rules! impl_fromstr_deserailize {
 
 
 
-        #[cfg(any(feature = "serde", test))]
+        #[cfg(feature = "serialization")]
         impl<'de, $($($tpl $(: $tcl)?),*)?> serde::Deserialize<'de> for $type<$($tpr),*> {
             fn deserialize<Deser: serde::Deserializer<'de>>(
                 deserializer: Deser,
             ) -> Result<$type<$($tpr),*>, Deser::Error> {
-                #[cfg(any(feature = "serde_hex", test))]
+                #[cfg(any(feature = "serialize_hex", test))]
                 {
                     if deserializer.is_human_readable() {
                         #[allow(unused_parens)]

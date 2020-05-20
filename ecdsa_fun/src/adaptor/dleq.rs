@@ -22,7 +22,11 @@ impl DLEQ<sha2::Sha256, NonceHash<sha2::Sha256>> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct Proof<S = Public> {
     pub challenge: Scalar<S, Zero>,
     pub response: Scalar<S, Zero>,
@@ -147,5 +151,18 @@ mod test {
         let bogus_proof = dleq.prove(&x, &G, &xG, &H, &xH, Derivation::Deterministic);
 
         assert!(!dleq.verify(&G, &xG, &H, &xH, &bogus_proof));
+    }
+
+    #[cfg(feature = "serialization")]
+    #[test]
+    fn dleq_proof_serialize_roundtrip() {
+        let dleq = DLEQ::from_tag(b"test");
+        let x = Scalar::random(&mut rand::thread_rng());
+        let H = Point::random(&mut rand::thread_rng());
+        let (proof, ..) = dleq.prove_guaranteed(&x, &G, &H, Derivation::Deterministic);
+        let serialized = bincode::serialize(&proof).unwrap();
+        assert_eq!(serialized.len(), 64);
+        let deserialized = bincode::deserialize::<Proof<Public>>(&serialized[..]).unwrap();
+        assert_eq!(proof, deserialized);
     }
 }

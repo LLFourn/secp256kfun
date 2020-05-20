@@ -28,6 +28,9 @@ pub use point::Point;
 pub use scalar::Scalar;
 pub use xonly::XOnly;
 
+#[cfg(feature = "serialization")]
+pub extern crate serde;
+
 pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero> =
     &Point::from_inner(backend::G_JACOBIAN, marker::BasePoint(backend::G_TABLE));
 

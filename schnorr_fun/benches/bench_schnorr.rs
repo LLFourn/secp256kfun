@@ -13,7 +13,7 @@ lazy_static::lazy_static! {
 // note schnorr runs against grin's secp256k1 library
 fn sign_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_sign");
-    let keypair = schnorr.keygen(SK.clone());
+    let keypair = schnorr.new_keypair(SK.clone());
     {
         group.bench_function("fun::schnorr_sign", |b| {
             b.iter(|| schnorr.sign(&keypair, &MESSAGE[..], Derivation::Deterministic))
@@ -41,7 +41,7 @@ fn sign_schnorr(c: &mut Criterion) {
 
 fn verify_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_verify");
-    let keypair = schnorr.keygen(SK.clone());
+    let keypair = schnorr.new_keypair(SK.clone());
     {
         let sig = schnorr.sign(&keypair, &MESSAGE[..], Derivation::Deterministic);
         let verification_key = &keypair.verification_key();

@@ -42,6 +42,7 @@ pub trait PointType: Sized + Clone + Copy {
 /// A Fully Normalized Point. Internally `Normal` points are represented using
 /// _affine_ coordinates with fully normalized `x` and `y` field elements.
 #[derive(Default, Debug, Clone, Copy)]
+#[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Normal;
 #[derive(Default, Debug, Clone, Copy)]
 /// A Non-normalized Point. `Jacobian` points are represented internally as
@@ -52,15 +53,19 @@ pub struct Normal;
 pub struct Jacobian;
 /// A [`Normal`] point whose `y` coordinate is known to be even.
 #[derive(Default, Debug, Clone, Copy)]
+#[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EvenY;
-#[derive(Default, Debug, Clone, Copy)]
+
 /// A [`Normal`] point whose `y` coordinate is known to be a square.
+#[derive(Default, Debug, Clone, Copy)]
+#[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SquareY;
-#[derive(Clone, Copy)]
+
 /// A [`Normal`] point which has pre-computed tables for accelerating scalar
 /// multiplications. The only example of this is [`G`].
 ///
 /// [`G`]: crate::G
+#[derive(Clone, Copy)]
 pub struct BasePoint(pub(crate) backend::BasePoint);
 
 /// A marker trait that indicates a PointType uses a affine internal representation.

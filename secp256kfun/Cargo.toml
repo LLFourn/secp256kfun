@@ -11,14 +11,14 @@ categories = ["cryptography", "no_std"]
 keywords = ["bitcoin", "secp256k1"]
 
 [package.metadata.docs.rs]
-features = ["serde_hex", "serde"]
+features = ["serialize_hex", "serialization"]
 
 [dependencies]
 sha2 = "0.8"
 digest = "0.8"
 subtle = { version = "2" }
 rand_core = { version = "0.5" }
-serde = { version = "1", default-features = false, optional = true }
+serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
 
 [dependencies.parity_libsecp256k1_core]
 git = "https://github.com/paritytech/libsecp256k1.git"
@@ -29,7 +29,6 @@ version = "0.1"
 [dev-dependencies]
 hex-literal = "0.2"
 serde_json = "1"
-serde = "1"
 rand = { version = "0.7", features = ["wasm-bindgen"] }
 lazy_static = "1.4"
 
@@ -49,10 +48,11 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
-all = ["std", "serde_hex"]
+all = ["std", "serialize_hex"]
 alloc = []
 std = ["alloc"]
-serde_hex = [ "alloc", "serde" ]
+serialization = ["serde"]
+serialize_hex = [ "alloc", "serialization" ]
 
 
 [[bench]]
