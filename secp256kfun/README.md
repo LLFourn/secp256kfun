@@ -1,4 +1,4 @@
-# Secp256kFUN!
+# secp256kFUN!
 A pure rust secp256k1 elliptic curve cryptography library that is optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
@@ -105,30 +105,28 @@ match sum.mark::<(Normal, NonZero)>() {
 
 If the distribution of a function's execution time is a function of the distribution of its inputs, then information about those inputs may leak to anyone that can measure its execution time.
 Therefore it is crucial that functions that take secret inputs run in _constant time_.
-
 Good low-level libraries tend to have one constant time version of an algorithm and then a faster variable time version. In _high-level_ libraries the experts have made the choice for you.
-
 Here's a question that demonstrates the problem with this: **Should a signature verification algorithm run in variable time or constant time?**
 
-Well, if you're talking about public signatures on a public blockchain then variable time is fine -- in fact it may be necessary for performance.
+Well, if you're talking about public signatures on a public blockchain then variable time is fine -- in fact it may be crucial for performance.
 But what about if you're verifying a _blind signature_ that you just received.
 The time it takes you to verify the signature may reveal which message you chose to get signed violating the security of the blind signature scheme.
 
 With secp25kfun it's possible to _let the caller decide_ whether your algorithm runs in constant time or not.
-A simple example of where this is useful is the _Pedersen commitment_ function below.
+A simple example of where this is useful is the `pedersen_commitment` function below.
 When you're committing to your secret you want `pedersen_commitment` to run in constant time, so information about what you're committing to isn't leaked through execution time.
 On the other hand, when you're verifying the opening of the commitment you don't care about leaking information and speed is preferable.
 With secp256kfun you only have to write the function once.
 The caller can decide whether the internal operations will run in constant time or not depending on their assessment about whether the values are secret or public within the context of the protocol at that point.
 
 ```rust
-use secp256kfun::{marker::*, Point, Scalar, G, g};
+use secp256kfun::{marker::*, Point, Scalar, g};
 
 fn pedersen_commit(
-    A: &Point<impl PointType>, // Accept any kind of Point.
+    A: &Point<impl PointType>, // Accept any kind of Point
     B: &Point<impl PointType>,
     r: &Scalar<impl Secrecy>, // Accept a Secret or Public Scalar
-    x: &Scalar<impl Secrecy, Zero>,
+    x: &Scalar<impl Secrecy, Zero>, // Allow commitment to Zero
 ) -> Point<Jacobian> {
     // Make the commitment
     g!(r * A +  x * B)
@@ -139,13 +137,16 @@ fn pedersen_commit(
         .expect("computationally unreachable")
 }
 
+// public setup
+let A = secp256kfun::G; // use the standard basepoint for one of the points
+let B = Point::random(&mut rand::thread_rng());
+
 // Alice commits to her secret value x with randomness r
 let r = Scalar::random(&mut rand::thread_rng());
 let x = Scalar::from(42);
-let B = Point::random(&mut rand::thread_rng());
-let commitment = pedersen_commit(G, &B, &r, &x);
+let commitment = pedersen_commit(A, &B, &r, &x);
 
-// Imagine Later on, Bob receives the public opening (r,x) for commitment He
+// Imagine Later on, Bob receives the public opening (r,x) for commitment. He
 // doesn't care about leaking these values via execution time so he marks them
 // as public.
 let r = r.mark::<Public>();
@@ -153,11 +154,11 @@ let x = x.mark::<Public>();
 
 // Now he'll compute the commitment quickly in variable time and check it
 // against the original
-assert_eq!(commitment, pedersen_commit(G, &B, &r, &x));
+assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 ```
 
 Note that not only is `pedersen_commitment` generic over the `Secrecy` of the scalars but it also generic over the _type_ of the points.
-When we pass in `G`, which is a `BasePoint`, as the `A` argument the compiler will produce a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
+`A` is set to `G` which is a `BasePoint` so the compiler will specialize a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
 
 **note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
 
