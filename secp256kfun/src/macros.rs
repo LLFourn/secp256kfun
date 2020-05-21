@@ -267,8 +267,7 @@ macro_rules! hash_all {
     }
 }
 
-/// Creates a non-zero [`Scalar`](crate::Scalar) from a u32. The result will be
-/// marked as [`NonZero`](crate::marker::NonZero).
+/// Creates a [`Scalar<Secret, NonZero>`] from a non-zero u32.
 ///
 /// # Examples
 /// This is how you use it:
@@ -287,11 +286,14 @@ macro_rules! hash_all {
 /// let three = 3;
 /// let scalar = nzscalar!(three);
 /// ```
+///
+/// [`Scalar<Secret, NonZero>`]: crate::Scalar
 #[macro_export]
 macro_rules! nzscalar {
     ($n:expr) => {{
+        // hack to check at compile time the thing is non-zero
         let _ = [(); (($n as u32).count_ones() as usize) - 1];
-        $crate::Scalar::<$crate::marker::Public, $crate::marker::NonZero>::from_non_zero_u32(
+        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
             unsafe { core::num::NonZeroU32::new_unchecked($n) },
         )
     }};

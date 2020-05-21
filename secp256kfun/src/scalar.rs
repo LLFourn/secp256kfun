@@ -75,13 +75,6 @@ impl<Z, S> Scalar<S, Z> {
     }
 }
 
-impl Scalar<Public, Zero> {
-    /// Returns the zero scalar
-    pub fn zero() -> Self {
-        Self::from_inner(backend::Scalar::zero())
-    }
-}
-
 impl<S> Scalar<S, NonZero> {
     /// Returns the multiplicative inverse of the scalar.
     pub fn invert(&self) -> Self {
@@ -125,6 +118,25 @@ impl Scalar<Secret, NonZero> {
             .mark::<NonZero>()
             .expect("computationally unreachable")
     }
+
+    /// Converts a [`NonZeroU32`] into a `Scalar<Secret,NonZero>`.
+    /// Note: this can be done at compile time with the [`nzscalar`] macro.
+    ///
+    /// [`NonZeroU32`]: core::num::NonZeroU32
+    /// [`nzscalar`]: crate::nzscalar
+    pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
+        Self::from_inner(backend::Scalar::from_u32(int.get()))
+    }
+
+    /// Returns the integer `1` as a `Scalar<Secret, NonZero>`.
+    pub fn one() -> Self {
+        crate::nzscalar!(1)
+    }
+
+    /// Returns the integer -1 (modulo the curve order) as a `Scalar<Secret, NonZero>`.
+    pub fn minus_one() -> Self {
+        Self::from_inner(backend::Scalar::minus_one())
+    }
 }
 
 impl Scalar<Secret, Zero> {
@@ -137,7 +149,7 @@ impl Scalar<Secret, Zero> {
     /// let scalar_overflowed = Scalar::from_bytes_mod_order(hex_literal::hex!(
     ///     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
     /// ));
-    /// assert_eq!(scalar_overflowed, Scalar::from(1))
+    /// assert_eq!(scalar_overflowed, Scalar::one())
     /// ```
     pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
         Self::from_inner(backend::Scalar::from_bytes_mod_order(bytes))
@@ -192,19 +204,10 @@ impl Scalar<Secret, Zero> {
         bytes.copy_from_slice(&slice);
         Self::from_bytes(bytes)
     }
-}
 
-impl Scalar<Public, NonZero> {
-    pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
-        Self::from_inner(backend::Scalar::from_u32(int.get()))
-    }
-
-    pub fn one() -> Self {
-        crate::nzscalar!(1)
-    }
-
-    pub fn minus_one() -> Self {
-        Self::from_inner(backend::Scalar::minus_one())
+    /// Returns the zero scalar
+    pub fn zero() -> Self {
+        Self::from_inner(backend::Scalar::zero())
     }
 }
 
@@ -214,9 +217,9 @@ impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
     }
 }
 
-impl From<u32> for Scalar<Public, Zero> {
+impl From<u32> for Scalar<Secret, Zero> {
     fn from(int: u32) -> Self {
-        Self(backend::Scalar::from_u32(int), PhantomData)
+        Self::from_inner(backend::Scalar::from_u32(int))
     }
 }
 
