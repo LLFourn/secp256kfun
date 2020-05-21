@@ -178,13 +178,14 @@ impl crate::backend::BackendXOnly for XOnly {
     }
 }
 
+static MULT_CTX: ECMultContext =
+    unsafe { ECMultContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const.rs"))) };
+static MULT_GEN_CTX: ECMultGenContext =
+    unsafe { ECMultGenContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const_gen.rs"))) };
+
 pub static G_TABLE: BasePoint = BasePoint {
-    mult_ctx: unsafe {
-        &ECMultContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const.rs")))
-    },
-    mult_gen_ctx: unsafe {
-        &ECMultGenContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const_gen.rs")))
-    },
+    mult_ctx: &MULT_CTX,
+    mult_gen_ctx: &MULT_GEN_CTX,
 };
 
 pub const G_JACOBIAN: Jacobian = Jacobian::new(
