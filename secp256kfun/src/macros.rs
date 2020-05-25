@@ -402,15 +402,15 @@ macro_rules! impl_display_debug_serialize {
 macro_rules! impl_fromstr_deserailize {
     (
         name => $name:literal,
-        fn from_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($input:ident : [u8;$len:literal]) ->  Option<$type:ident<$($tpr:path),*>> $block:block
+        fn from_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($input:ident : [u8;$len:literal]) ->  Option<$type:path> $block:block
     ) => {
 
-        impl$(<$($tpl $(:$tcl)?),*>)? core::str::FromStr for $type<$($tpr),*> {
+        impl$(<$($tpl $(:$tcl)?),*>)? core::str::FromStr for $type  {
             type Err = $crate::HexError;
 
             /// Parses the string as hex and interprets tries to convert the
             /// resulting byte array into the desired value.
-            fn from_str(hex: &str) -> Result<$type<$($tpr),*>, $crate::HexError> {
+            fn from_str(hex: &str) -> Result<$type , $crate::HexError> {
                 use $crate::hex_val;
                 if hex.len() % 2 == 1 {
                     Err($crate::HexError::InvalidHex)
@@ -433,17 +433,17 @@ macro_rules! impl_fromstr_deserailize {
 
 
         #[cfg(feature = "serialization")]
-        impl<'de, $($($tpl $(: $tcl)?),*)?> serde::Deserialize<'de> for $type<$($tpr),*> {
+        impl<'de, $($($tpl $(: $tcl)?),*)?> serde::Deserialize<'de> for $type  {
             fn deserialize<Deser: serde::Deserializer<'de>>(
                 deserializer: Deser,
-            ) -> Result<$type<$($tpr),*>, Deser::Error> {
+            ) -> Result<$type , Deser::Error> {
                 #[cfg(any(feature = "serialize_hex", test))]
                 {
                     if deserializer.is_human_readable() {
                         #[allow(unused_parens)]
                         struct HexVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
                         impl<'de, $($($tpl $(: $tcl)?),*)?> serde::de::Visitor<'de> for HexVisitor$(<$($tpl),*>)? {
-                            type Value = $type<$($tpr),*>;
+                            type Value = $type ;
                             fn expecting(
                                 &self,
                                 f: &mut core::fmt::Formatter,
@@ -452,9 +452,9 @@ macro_rules! impl_fromstr_deserailize {
                                 Ok(())
                             }
 
-                            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<$type<$($tpr),*>, E> {
+                            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<$type , E> {
                                 use $crate::HexError::*;
-                                <$type<$($tpr),*> as core::str::FromStr>::from_str(v).map_err(|e| match e {
+                                <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
                                     InvalidLength => E::invalid_length(v.len(), &format!("{}", $len).as_str()),
                                     InvalidEncoding => E::invalid_value(serde::de::Unexpected::Str(v), &self),
                                     InvalidHex => E::custom("invalid hex")
@@ -472,7 +472,7 @@ macro_rules! impl_fromstr_deserailize {
                     struct BytesVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
 
                     impl<'de, $($($tpl $(: $tcl)?),*)?> serde::de::Visitor<'de> for BytesVisitor$(<$($tpl),*>)? {
-                        type Value = $type<$($tpr),*>;
+                        type Value = $type ;
 
                         fn expecting(
                             &self,
@@ -482,7 +482,7 @@ macro_rules! impl_fromstr_deserailize {
                             Ok(())
                         }
 
-                        fn visit_seq<A>(self, mut seq: A) -> Result<$type<$($tpr),*>, A::Error>
+                        fn visit_seq<A>(self, mut seq: A) -> Result<$type , A::Error>
                         where A: serde::de::SeqAccess<'de> {
 
                             let mut $input = [0u8; $len];
@@ -501,5 +501,6 @@ macro_rules! impl_fromstr_deserailize {
                 }
             }
         }
+
     };
 }
