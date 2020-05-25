@@ -166,4 +166,11 @@ mod change_marks {
             XOnly::from_inner(xonly.0)
         }
     }
+
+    impl<Y> ChangeMark<XOnly<Y>> for () {
+        type Out = XOnly<()>;
+        fn change_mark(xonly: XOnly<Y>) -> Self::Out {
+            XOnly::from_inner(xonly.0)
+        }
+    }
 }
