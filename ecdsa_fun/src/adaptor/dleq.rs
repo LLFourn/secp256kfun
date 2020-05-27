@@ -2,9 +2,7 @@ use digest::{generic_array::typenum::U32, Digest};
 use secp256kfun::{
     derive_nonce, g,
     hash::{tagged_hash, Derivation, Hash, NonceHash},
-    hash_all,
     marker::*,
-    op::double_mul,
     s, Point, Scalar,
 };
 
@@ -97,8 +95,8 @@ impl<CH: Digest<OutputSize = U32> + Clone, NH> DLEQ<CH, NH> {
         let (c, s) = proof.as_tuple();
         let minus_c = -c;
 
-        let rG = double_mul(s, G, &minus_c, xG);
-        let rH = double_mul(s, H, &minus_c, xH);
+        let rG = g!(s * G + minus_c * xG);
+        let rH = g!(s * H + minus_c * xH);
 
         match (
             rG.mark::<(Normal, NonZero)>(),
@@ -122,7 +120,15 @@ impl<CH: Digest<OutputSize = U32> + Clone, NH> DLEQ<CH, NH> {
         H: &Point<impl Normalized, impl Secrecy>,
         xH: &Point<impl Normalized, impl Secrecy>,
     ) -> Scalar<Public, Zero> {
-        let hash = hash_all!(self.challenge_hash.clone(), rG, rH, G, xG, H, xH);
+        let hash = self
+            .challenge_hash
+            .clone()
+            .add(rG)
+            .add(rH)
+            .add(G)
+            .add(xG)
+            .add(H)
+            .add(xH);
         Scalar::from_hash(hash).mark::<(Public, Zero)>()
     }
 }

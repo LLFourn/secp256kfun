@@ -259,14 +259,6 @@ macro_rules! derive_nonce {
     }}
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! hash_all {
-    ($hash: expr, $($item:expr),*) => {
-        $hash$(.add($item))*
-    }
-}
-
 /// Creates a [`Scalar<Secret, NonZero>`] from a non-zero u32.
 ///
 /// # Examples
