@@ -1,5 +1,9 @@
 use super::{BasePoint, XOnly, G_TABLE};
-use parity_libsecp256k1_core::curve::{Affine, Field, Jacobian, Scalar};
+use parity_backend::{
+    field::Field,
+    group::{Affine, Jacobian},
+    scalar::Scalar,
+};
 use subtle::{Choice, ConstantTimeEq};
 pub struct ConstantTime;
 

@@ -55,8 +55,5 @@ pub fn hex_val(c: u8) -> Result<u8, HexError> {
     }
 }
 
-// need this here so that crate::curve exists within this crate -- see build.rs
-use parity_libsecp256k1_core::curve;
-
 #[doc(hidden)]
 pub const TEST_SOUNDNESS: usize = 20;

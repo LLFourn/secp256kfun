@@ -1,0 +1,19 @@
+[package]
+name = "secp256kfun_parity_backend"
+version = "0.1.0"
+description = "Vendored version of paritytech/libsecp256k1 for secp256kfun"
+license = "Apache-2.0"
+repository = "https://github.com/LLFourn/secp256kfun"
+authors = ["Wei Tang <hi@that.world>", "LLFourn <lloyd.fourn@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crunchy = "0.2"
+subtle = { version = "2.2", default-features = false }
+
+
+[features]
+default = []
+alloc = []

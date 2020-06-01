@@ -1,7 +1,8 @@
-pub use parity_libsecp256k1_core::curve::Scalar;
-use parity_libsecp256k1_core::{
-    curve::{Affine, ECMultContext, ECMultGenContext, Field, Jacobian},
-    util::JACOBIAN_INFINITY,
+pub use parity_backend::scalar::Scalar;
+use parity_backend::{
+    ecmult::{ECMultContext, ECMultGenContext},
+    field::Field,
+    group::{Affine, Jacobian, JACOBIAN_INFINITY},
 };
 mod constant_time;
 mod variable_time;
@@ -179,9 +180,10 @@ impl crate::backend::BackendXOnly for XOnly {
 }
 
 static MULT_CTX: ECMultContext =
-    unsafe { ECMultContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const.rs"))) };
-static MULT_GEN_CTX: ECMultGenContext =
-    unsafe { ECMultGenContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/const_gen.rs"))) };
+    unsafe { ECMultContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/ecmult_table.rs"))) };
+static MULT_GEN_CTX: ECMultGenContext = unsafe {
+    ECMultGenContext::new_from_raw(include!(concat!(env!("OUT_DIR"), "/ecmult_gen_table.rs")))
+};
 
 pub static G_TABLE: BasePoint = BasePoint {
     mult_ctx: &MULT_CTX,
