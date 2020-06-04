@@ -37,6 +37,6 @@ default = ["std"]
 std = ["alloc"]
 alloc = []
 serialization = ["serde", "secp256kfun/serialization"]
-serialize_hex = [ "alloc", "serialization" ]
+serialize_hex = [ "alloc", "serialization", "secp256kfun/serialize_hex"]
 
 
