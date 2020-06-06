@@ -41,7 +41,6 @@
 /// [`Scalar`s]: crate::Scalar
 /// [`Point`s]: crate::Point
 /// [`mark`]: crate::marker::Mark::mark
-#[rustc_specialization_trait]
 pub trait Secrecy: Default + Clone + PartialEq {}
 
 /// Indicates that the value is secret and enforces that all operations that are

@@ -1,7 +1,4 @@
-#![feature(min_specialization)]
-// TODO Get rid of this
-#![feature(rustc_attrs)]
-#![feature(external_doc)]
+#![feature(rustc_attrs, min_specialization, external_doc)]
 #![doc(include = "../README.md")]
 #![no_std]
 #![allow(non_snake_case)]
