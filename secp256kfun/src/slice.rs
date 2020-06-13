@@ -41,18 +41,18 @@ impl<'a, 'b> PartialEq<Slice<'b, Public>> for Slice<'a, Public> {
     }
 }
 
-impl<'a, S> From<Slice<'a, S>> for &'a [u8] {
-    fn from(msg: Slice<'a, S>) -> Self {
-        msg.inner
-    }
-}
-
-impl<'a, S> From<&'a [u8]> for Slice<'a, S> {
-    fn from(slice: &'a [u8]) -> Self {
-        Slice {
+impl<'a, S> Slice<'a, S> {
+    pub(crate) fn from_inner(slice: &'a [u8]) -> Self {
+        Self {
             inner: slice,
             secrecy: PhantomData::<S>,
         }
+    }
+}
+
+impl<'a, S> From<Slice<'a, S>> for &'a [u8] {
+    fn from(msg: Slice<'a, S>) -> Self {
+        msg.inner
     }
 }
 

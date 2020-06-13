@@ -36,8 +36,12 @@ mod test {
         let schnorr = Schnorr::from_tag(b"test");
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let encryption_key = Point::random(&mut rand::thread_rng());
-        let encrypted_signature =
-            schnorr.encrypted_sign(&kp, &encryption_key, b"test", Derivation::Deterministic);
+        let encrypted_signature = schnorr.encrypted_sign(
+            &kp,
+            &encryption_key,
+            b"test".as_ref().mark::<Public>(),
+            Derivation::Deterministic,
+        );
         let serialized = bincode::serialize(&encrypted_signature).unwrap();
         assert_eq!(serialized.len(), 65);
         let deserialized = bincode::deserialize::<EncryptedSignature>(&serialized).unwrap();

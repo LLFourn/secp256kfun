@@ -88,7 +88,7 @@ mod change_marks {
         type Out = Slice<'a, S>;
 
         fn change_mark(bytes: &'a [u8]) -> Self::Out {
-            Slice::<S>::from(bytes)
+            Slice::<S>::from_inner(bytes)
         }
     }
 
@@ -96,7 +96,7 @@ mod change_marks {
         type Out = Slice<'a, SNew>;
 
         fn change_mark(bytes: Slice<'a, S>) -> Self::Out {
-            Slice::<SNew>::from(bytes.inner)
+            Slice::<SNew>::from_inner(bytes.inner)
         }
     }
 }

@@ -122,7 +122,11 @@ mod test {
         };
         let schnorr = Schnorr::from_tag(b"test");
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-        let signature = schnorr.sign(&kp, b"test", Derivation::Deterministic);
+        let signature = schnorr.sign(
+            &kp,
+            b"test".as_ref().mark::<Public>(),
+            Derivation::Deterministic,
+        );
         let serialized = bincode::serialize(&signature).unwrap();
         assert_eq!(serialized.len(), 64);
         let deserialized = bincode::deserialize::<Signature>(&serialized).unwrap();
