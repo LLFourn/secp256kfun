@@ -9,7 +9,7 @@ use secp256kfun::{
     derive_nonce, g,
     hash::{Derivation, NonceHash},
     marker::*,
-    s, Point, Scalar,
+    s, Point, Scalar, Slice,
 };
 mod encrypted_signature;
 pub use encrypted_signature::EncryptedSignature;
@@ -19,7 +19,7 @@ pub trait AdaptorSign {
         &self,
         signing_key: &KeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: &[u8],
+        message: Slice<'_, impl Secrecy>,
         derivation: Derivation,
     ) -> EncryptedSignature;
 }
@@ -33,7 +33,7 @@ where
         &self,
         signing_key: &KeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: &[u8],
+        message: Slice<'_, impl Secrecy>,
         derivation: Derivation,
     ) -> EncryptedSignature {
         let (x, X) = signing_key.as_tuple();
@@ -76,7 +76,7 @@ pub trait Adaptor {
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: &[u8],
+        message: Slice<'_, impl Secrecy>,
         ciphertext: &EncryptedSignature<impl Secrecy>,
     ) -> bool;
 
@@ -103,7 +103,7 @@ where
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: &[u8],
+        message: Slice<'_, impl Secrecy>,
         ciphertext: &EncryptedSignature<impl Secrecy>,
     ) -> bool {
         let EncryptedSignature {
@@ -183,13 +183,12 @@ mod test {
                 let verification_key = signing_keypair.verification_key();
                 let decryption_key = Scalar::random(&mut rand::thread_rng());
                 let encryption_key = g!(decryption_key * G).mark::<Normal>();
-
-                let message = b"give 100 coins to Bob";
+                let message = b"give 100 coins to Bob".as_ref().mark::<Public>();
 
                 let ciphertext = schnorr.encrypted_sign(
                     &signing_keypair,
                     &encryption_key,
-                    &message[..],
+                    message,
                     Derivation::Deterministic,
                 );
 
@@ -197,13 +196,13 @@ mod test {
                     .verify_encrypted_signature(
                         &signing_keypair.verification_key(),
                         &encryption_key,
-                        &message[..],
+                        message,
                         &ciphertext,
                     ));
 
                 let decryption_key = decryption_key.mark::<Public>();
                 let signature = schnorr.decrypt_signature(decryption_key.clone(), ciphertext.clone());
-                assert!(schnorr.verify(&verification_key, &message[..], &signature));
+                assert!(schnorr.verify(&verification_key, message, &signature));
                 let rec_decryption_key = schnorr
                     .recover_decryption_key(&encryption_key, &ciphertext, &signature)
                     .expect("recovery works");

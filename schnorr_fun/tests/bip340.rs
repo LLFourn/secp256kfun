@@ -17,11 +17,12 @@ fn signing_test_vector(
         .mark::<NonZero>()
         .unwrap();
     let keypair = BIP340.new_keypair(secret_key);
+    let message = message.as_ref().mark::<Public>();
 
     assert_eq!(keypair.public_key().as_bytes(), &public_key);
-    let signature = BIP340.sign(&keypair, &message, Derivation::Aux(aux_rand));
+    let signature = BIP340.sign(&keypair, message, Derivation::Aux(aux_rand));
     assert_eq!(signature.to_bytes().as_ref(), target_sig.as_ref());
-    assert!(BIP340.verify(&keypair.verification_key(), &message[..], &signature));
+    assert!(BIP340.verify(&keypair.verification_key(), message, &signature));
 }
 
 enum Outcome {
@@ -41,6 +42,7 @@ fn verification_test_vector(
     sig: [u8; 64],
     expected_outcome: Outcome,
 ) {
+    let message = message.as_ref().mark::<Public>();
     use Outcome::*;
     let public_key = {
         let public_key = XOnly::from_bytes(public_key);
@@ -59,7 +61,7 @@ fn verification_test_vector(
     };
 
     assert_eq!(
-        BIP340.verify(&public_key.into(), &message, &signature),
+        BIP340.verify(&public_key.into(), message, &signature),
         match expected_outcome {
             Success => true,
             Failure => false,

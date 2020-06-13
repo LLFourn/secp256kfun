@@ -14,6 +14,7 @@ extern crate std;
 pub mod hash;
 mod point;
 mod scalar;
+mod slice;
 mod xonly;
 
 mod backend;
@@ -23,6 +24,7 @@ pub mod op;
 mod macros;
 pub use point::Point;
 pub use scalar::Scalar;
+pub use slice::Slice;
 pub use xonly::XOnly;
 
 #[cfg(feature = "serialization")]

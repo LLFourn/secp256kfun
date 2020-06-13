@@ -19,13 +19,12 @@ extern crate alloc;
 extern crate std;
 
 use digest::{generic_array::typenum::U32, Digest};
-use rand_core::{CryptoRng, RngCore};
 pub use secp256kfun;
 use secp256kfun::{
     derive_nonce, g,
     hash::{tagged_hash, Derivation, Hash, NonceHash},
     marker::*,
-    s, Point, Scalar, XOnly,
+    s, Point, Scalar, Slice, XOnly,
 };
 mod signature;
 pub use signature::Signature;
@@ -61,7 +60,6 @@ impl<CH, NH> Schnorr<CH, NH> {
     /// [`EvenY`]: secp256kfun::marker::EvenY
     pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
         let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
-
         KeyPair { sk, pk }
     }
 }
@@ -73,7 +71,12 @@ where
 {
     /// Sign a message using a secret key. Schnorr signatures require
     /// unpredictable secret values called _nonces_.
-    pub fn sign(&self, keypair: &KeyPair, message: &[u8], derivation: Derivation) -> Signature {
+    pub fn sign(
+        &self,
+        keypair: &KeyPair,
+        message: Slice<'_, impl Secrecy>,
+        derivation: Derivation,
+    ) -> Signature {
         let (x, X) = keypair.as_tuple();
 
         let mut r = derive_nonce!(
@@ -96,24 +99,27 @@ impl<GT, CH: Digest<OutputSize = U32> + Clone, NH> Schnorr<GT, CH, NH> {
     /// specified by BIP-340.
     ///
     /// Concretely computes the hash `H(R || X || m)`.
-    pub fn challenge(
+    pub fn challenge<S: Secrecy>(
         &self,
         R: &XOnly<SquareY>,
         X: &XOnly<EvenY>,
-        m: &[u8],
-    ) -> Scalar<Public, Zero> {
+        m: Slice<'_, S>,
+    ) -> Scalar<S, Zero> {
         let hash = self.challenge_hash.clone();
-        let challenge = Scalar::from_hash(hash.add(R).add(X).add(m));
-        // Since the challenge pre-image is adversarially controlled we
-        // conservatively allow for it to be zero
-        challenge.mark::<(Zero, Public)>()
+        let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
+        challenge
+            // Since the challenge pre-image is adversarially controlled we
+            // conservatively allow for it to be zero
+            .mark::<Zero>()
+            // The resulting challenge should take the secrecy of the message
+            .mark::<S>()
     }
 
     #[must_use]
     pub fn verify(
         &self,
-        public_key: &Point<EvenY, Public, NonZero>,
-        message: &[u8],
+        public_key: &Point<EvenY, impl Secrecy, NonZero>,
+        message: Slice<'_, impl Secrecy>,
         signature: &Signature<impl Secrecy>,
     ) -> bool {
         let X = public_key;
@@ -124,12 +130,12 @@ impl<GT, CH: Digest<OutputSize = U32> + Clone, NH> Schnorr<GT, CH, NH> {
 
     /// Anticipates a Schnorr signature given the nonce `R` that will be used ahead
     /// of time.  Deterministically returns the group element that corresponds to
-    /// the scalar value of the signature. i.e `R + e * X`
+    /// the scalar value of the signature. i.e `R + c * X`
     pub fn anticipate_signature(
         &self,
         X: &Point<EvenY, impl Secrecy>,
         R: &Point<SquareY, impl Secrecy>,
-        m: &[u8],
+        m: Slice<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
         let c = self.challenge(&R.to_xonly(), &X.to_xonly(), m);
         g!(R + c * X)
@@ -146,11 +152,12 @@ mod test {
             for _ in 0..TEST_SOUNDNESS {
                 let schnorr = Schnorr::from_tag(b"secp256kfun-test/schnorr");
                 let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let signature = schnorr.sign(&keypair, b"message", Derivation::Deterministic);
+                let msg = b"Chancellor on brink of second bailout for banks".as_ref().mark::<Public>();
+                let signature = schnorr.sign(&keypair,msg, Derivation::Deterministic);
                 let anticipated_signature = schnorr.anticipate_signature(
                     &keypair.verification_key(),
                     &signature.R.to_point(),
-                    b"message",
+                    msg,
                 );
 
                 dbg!(g!(signature.s * schnorr.G));
@@ -169,14 +176,16 @@ mod test {
                 let schnorr = Schnorr::from_tag(b"secp256kfun-test/schnorr");
                 let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
                 let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let signature_1 = schnorr.sign(&keypair_1, b"attack at dawn", Derivation::Deterministic);
-                let signature_2 = schnorr.sign(&keypair_1, b"attack at dawn", Derivation::Deterministic);
-                let signature_3 = schnorr.sign(&keypair_1, b"retreat at noon", Derivation::Deterministic);
-                let signature_4 = schnorr.sign(&keypair_2, b"attack at dawn", Derivation::Deterministic);
+                let msg_atkdwn = b"attack at dawn".as_ref().mark::<Public>();
+                let msg_rtrtnoon = b"retreat at noon".as_ref().mark::<Public>();
+                let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn, Derivation::Deterministic);
+                let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn, Derivation::Deterministic);
+                let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon, Derivation::Deterministic);
+                let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn, Derivation::Deterministic);
 
                 assert!(schnorr.verify(
                     &keypair_1.verification_key(),
-                    b"attack at dawn",
+                    msg_atkdwn,
                     &signature_1
                 ));
                 assert_eq!(signature_1, signature_2);

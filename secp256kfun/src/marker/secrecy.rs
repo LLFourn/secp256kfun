@@ -41,11 +41,11 @@
 /// [`Scalar`s]: crate::Scalar
 /// [`Point`s]: crate::Point
 /// [`mark`]: crate::marker::Mark::mark
-pub trait Secrecy: Default + Clone + PartialEq {}
+pub trait Secrecy: Default + Clone + PartialEq + Copy {}
 
 /// Indicates that the value is secret and enforces that all operations that are
 /// executed on it must be _constant time_.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Copy)]
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize)
@@ -54,7 +54,7 @@ pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Copy)]
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize)
@@ -67,7 +67,7 @@ impl Secrecy for Public {}
 
 mod change_marks {
     use super::*;
-    use crate::{marker::ChangeMark, Point, Scalar};
+    use crate::{marker::ChangeMark, Point, Scalar, Slice};
     impl<Z, S, SNew: Secrecy> ChangeMark<Scalar<S, Z>> for SNew {
         type Out = Scalar<SNew, Z>;
 
@@ -81,6 +81,22 @@ mod change_marks {
 
         fn change_mark(point: Point<Y, S, Z>) -> Self::Out {
             Point::from_inner(point.0, point.1)
+        }
+    }
+
+    impl<'a, S: Secrecy> ChangeMark<&'a [u8]> for S {
+        type Out = Slice<'a, S>;
+
+        fn change_mark(bytes: &'a [u8]) -> Self::Out {
+            Slice::<S>::from(bytes)
+        }
+    }
+
+    impl<'a, S: Secrecy, SNew: Secrecy> ChangeMark<Slice<'a, S>> for SNew {
+        type Out = Slice<'a, SNew>;
+
+        fn change_mark(bytes: Slice<'a, S>) -> Self::Out {
+            Slice::<SNew>::from(bytes.inner)
         }
     }
 }

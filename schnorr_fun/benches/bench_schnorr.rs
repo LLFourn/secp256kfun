@@ -14,9 +14,10 @@ lazy_static::lazy_static! {
 fn sign_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_sign");
     let keypair = schnorr.new_keypair(SK.clone());
+    let message = MESSAGE.as_ref().mark::<Public>();
     {
         group.bench_function("fun::schnorr_sign", |b| {
-            b.iter(|| schnorr.sign(&keypair, &MESSAGE[..], Derivation::Deterministic))
+            b.iter(|| schnorr.sign(&keypair, message, Derivation::Deterministic))
         });
     }
 
@@ -42,17 +43,22 @@ fn sign_schnorr(c: &mut Criterion) {
 fn verify_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_verify");
     let keypair = schnorr.new_keypair(SK.clone());
+    let message = MESSAGE.as_ref().mark::<Public>();
     {
-        let sig = schnorr.sign(&keypair, &MESSAGE[..], Derivation::Deterministic);
+        let sig = schnorr.sign(
+            &keypair,
+            (&MESSAGE[..]).mark::<Public>(),
+            Derivation::Deterministic,
+        );
         let verification_key = &keypair.verification_key();
         group.bench_function("fun::schnorr_verify", |b| {
-            b.iter(|| schnorr.verify(&verification_key, &MESSAGE[..], &sig))
+            b.iter(|| schnorr.verify(&verification_key, message, &sig))
         });
 
         {
             let sig = sig.clone().mark::<Secret>();
             group.bench_function("fun::schnorr_verify_ct", |b| {
-                b.iter(|| schnorr.verify(&verification_key, &MESSAGE[..], &sig))
+                b.iter(|| schnorr.verify(&verification_key, message, &sig))
             });
         }
     }

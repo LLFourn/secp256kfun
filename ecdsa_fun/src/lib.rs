@@ -126,7 +126,7 @@ impl<NH: Digest<OutputSize = U32> + Clone> ECDSA<NonceHash<NH>> {
         let R = g!(r * G).mark::<Normal>(); // Must be normal so we can get x-coordinate
 
         // This coverts R is its x-coordinate mod q. This acts as a kind of poor
-        // man's version of the Fiat-Shamir challenge in a Schnoz
+        // man's version of the Fiat-Shamir challenge in a Schnorr
         // signature. The lack of any known algebraic relationship between r and
         // R_x is what makes ECDSA signatures difficult to forge.
         let R_x = Scalar::from_bytes_mod_order(R.to_xonly().into_bytes())

@@ -1,9 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{
-    hash::Derivation::Deterministic,
-    marker::{NonZero, Secret},
-    Scalar, G,
-};
+use secp256kfun::{g, hash::Derivation::Deterministic, marker::*, Scalar, G};
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
@@ -35,7 +31,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecdsa_verify");
 
     let signature = ECDSA.sign(&SK, MESSAGE, Deterministic);
-    let pk = &*SK * G;
+    let pk = g!(SK * G);
 
     group.bench_function("fun::ecdsa_verify", |b| {
         b.iter(|| ECDSA.verify(&pk, MESSAGE, &signature))
