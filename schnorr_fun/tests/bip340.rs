@@ -1,6 +1,8 @@
 use hex_literal::hex;
-use schnorr_fun::{Schnorr, Signature};
-use secp256kfun::{hash::Derivation, marker::*, Scalar, XOnly};
+use schnorr_fun::{
+    fun::{hash::Derivation, marker::*, Scalar, XOnly},
+    Schnorr, Signature,
+};
 
 lazy_static::lazy_static! {
     pub static ref BIP340: Schnorr = Schnorr::from_tag(b"BIP340");

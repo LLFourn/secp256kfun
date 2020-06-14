@@ -1,10 +1,10 @@
-use digest::{generic_array::typenum::U32, Digest};
-use secp256kfun::{
+use crate::fun::{
     derive_nonce, g,
     hash::{tagged_hash, Derivation, Hash, NonceHash},
     marker::*,
     s, Point, Scalar,
 };
+use digest::{generic_array::typenum::U32, Digest};
 
 pub struct DLEQ<CH, N> {
     pub challenge_hash: CH,

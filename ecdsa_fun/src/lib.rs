@@ -12,14 +12,13 @@ extern crate alloc;
 extern crate std;
 
 use digest::{generic_array::typenum::U32, Digest};
-pub use secp256kfun;
-use secp256kfun::{
+use fun::{
     derive_nonce, g,
     hash::{Derivation, NonceHash},
     marker::*,
     s, Point, Scalar, G,
 };
-
+pub use secp256kfun as fun;
 mod signature;
 pub use signature::Signature;
 pub mod adaptor;

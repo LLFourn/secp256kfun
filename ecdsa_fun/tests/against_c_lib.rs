@@ -1,6 +1,6 @@
 use ecdsa_fun::{
     self,
-    secp256kfun::{g, hash::Derivation, Scalar, G, TEST_SOUNDNESS},
+    fun::{g, hash::Derivation, Scalar, G, TEST_SOUNDNESS},
 };
 use secp256k1::{Message, PublicKey, SecretKey};
 

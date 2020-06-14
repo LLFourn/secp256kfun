@@ -1,5 +1,5 @@
+use crate::fun::{marker::*, Scalar, XOnly};
 use rand_core::{CryptoRng, RngCore};
-use secp256kfun::{marker::*, Scalar, XOnly};
 
 /// A Schnorr signature.
 #[derive(Clone)]

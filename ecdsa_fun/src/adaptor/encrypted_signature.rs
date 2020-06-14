@@ -1,5 +1,5 @@
 use super::dleq;
-use secp256kfun::{marker::*, Point, Scalar};
+use crate::fun::{marker::*, Point, Scalar};
 
 /// `PointNonce` is a [`NonZero`] Point that also has an x-coordinate that is NonZero
 /// when reduced modulo the curve order.
