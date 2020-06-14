@@ -33,7 +33,7 @@ impl KeyPair {
     }
 
     pub fn random<R: CryptoRng + RngCore>(
-        G: &Point<BasePoint, Public, NonZero>,
+        G: &Point<impl Normalized, Public, NonZero>,
         rng: &mut R,
     ) -> KeyPair {
         let mut sk = Scalar::random(rng);

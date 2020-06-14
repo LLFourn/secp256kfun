@@ -33,7 +33,7 @@
 /// let H = Point::random(&mut rand::thread_rng());
 /// let X = g!(x * H); // This is constant time because x is secret
 /// let x = x.mark::<Public>();
-/// let X = g!(x * H); // This will run faster but in variable time
+/// let X = g!(x * H); // This will run faster (in variable time)
 /// ```
 ///
 /// [`Secret`]: crate::marker::Secret

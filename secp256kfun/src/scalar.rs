@@ -123,7 +123,7 @@ impl Scalar<Secret, NonZero> {
     /// Note: this can be done at compile time with the [`nzscalar`] macro.
     ///
     /// [`NonZeroU32`]: core::num::NonZeroU32
-    /// [`nzscalar`]: crate::nzscalar
+    /// [`nzscalar`]: macro@nzscalar
     pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
         Self::from_inner(backend::Scalar::from_u32(int.get()))
     }

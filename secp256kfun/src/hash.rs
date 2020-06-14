@@ -47,6 +47,7 @@ pub fn tagged_hash(tag: &[u8]) -> sha2::Sha256 {
 /// }
 /// ```
 pub trait HashInto {
+    /// Asks the item to convert itself to bytes and add itself to `hash`.
     fn hash_into(&self, hash: &mut impl Digest);
 }
 

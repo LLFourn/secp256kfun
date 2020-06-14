@@ -1,8 +1,33 @@
 //! Generate and verify Schnorr signatures on secp256k1
 //!
-//! Schnorr signatures were introduced by their namesake in [1]. This implementation
-//! implements the scheme according to Bitcoin's [BIP-340][2] specification, but
-//! it can be used as a general Schnorr signature scheme.
+//! Schnorr signatures were introduced by their namesake in [1]. This
+//! implementation is based on Bitcoin's [BIP-340][2] specification, but is
+//! flexible and can be used as a general purpose Schnorr signature scheme.
+//!
+//! ## Examples
+//!
+//! ```
+//! use schnorr_fun::{
+//!     fun::{hash::Derivation, marker::*, Scalar},
+//!     Schnorr,
+//! };
+//!
+//! // Create a BIP-340 compatible instance
+//! let schnorr = Schnorr::from_tag(b"bip340");
+//! // Or create an instance for your own protocol
+//! let schnorr = Schnorr::from_tag(b"my-domain-separator");
+//! // Generate your public/private key-pair
+//! let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+//! let message = b"Chancellor on brink of second bailout for banks"
+//!     .as_ref()
+//!     .mark::<Public>();
+//! // Sign the message with our keypair
+//! let signature = schnorr.sign(&keypair, message, Derivation::rng(&mut rand::thread_rng()));
+//! // Get the verifier's key
+//! let verification_key = keypair.verification_key();
+//! // Check it's valid 🍿
+//! assert!(schnorr.verify(&verification_key, message, &signature));
+//! ```
 //!
 //! [1]: https://d-nb.info/1156214580/34
 //! [2]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
@@ -19,19 +44,27 @@ extern crate alloc;
 extern crate std;
 
 use digest::{generic_array::typenum::U32, Digest};
-pub use secp256kfun;
-use secp256kfun::{
+use fun::{
     derive_nonce, g,
     hash::{tagged_hash, Derivation, Hash, NonceHash},
     marker::*,
     s, Point, Scalar, Slice, XOnly,
 };
+pub use secp256kfun as fun;
 mod signature;
 pub use signature::Signature;
 pub mod adaptor;
 mod keypair;
 pub use keypair::KeyPair;
 
+/// An instance of the Schnorr signature scheme.
+///
+/// Each instance is defined by its
+/// - `G`: Public base point
+/// - `challenge_hash`: The hash function instance that is used to produce the [_Fiat-Shamir_] challenge.
+/// - `nonce_hash`: The hash used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
+///
+/// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
 pub struct Schnorr<GT = BasePoint, CH = sha2::Sha256, N = NonceHash<sha2::Sha256>> {
     pub G: Point<GT>,
     pub challenge_hash: CH,
@@ -39,9 +72,13 @@ pub struct Schnorr<GT = BasePoint, CH = sha2::Sha256, N = NonceHash<sha2::Sha256
 }
 
 impl Schnorr {
+    //! Generates a `Schnorr` instance from a tag.
+    //! The instance will have its `challenge_hash` and `nonce_hash` derived from the tag and use the standard value of [`G`].
+    //!
+    //! [`G`]: fun::G
     pub fn from_tag(tag: &[u8]) -> Self {
         Schnorr {
-            G: secp256kfun::G.clone(),
+            G: fun::G.clone(),
             challenge_hash: tagged_hash(&[tag, b"/challenge"].concat()),
             nonce_hash: NonceHash::from_tag(tag),
         }
@@ -56,8 +93,8 @@ impl<CH, NH> Schnorr<CH, NH> {
     /// negation of it. This happens because the corresponding [`Point`] may not
     /// have an y-coordinate that is even (see [`EvenY`])
     ///
-    /// [`Point`]: secp256kfun::Point
-    /// [`EvenY`]: secp256kfun::marker::EvenY
+    /// [`Point`]: fun::Point
+    /// [`EvenY`]: fun::marker::EvenY
     pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
         let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
         KeyPair { sk, pk }
@@ -69,8 +106,9 @@ where
     CH: Digest<OutputSize = U32> + Clone,
     NH: Digest<OutputSize = U32> + Clone,
 {
-    /// Sign a message using a secret key. Schnorr signatures require
-    /// unpredictable secret values called _nonces_.
+    /// Sign a message using a secret key and a particular nonce derivation scheme.
+    ///
+    /// # Examples
     pub fn sign(
         &self,
         keypair: &KeyPair,
@@ -147,7 +185,7 @@ mod test {
     use super::*;
     use secp256kfun::{hash::Derivation, TEST_SOUNDNESS};
 
-    secp256kfun::test_plus_wasm! {
+    fun::test_plus_wasm! {
         fn anticipated_signature_on_should_correspond_to_actual_signature() {
             for _ in 0..TEST_SOUNDNESS {
                 let schnorr = Schnorr::from_tag(b"secp256kfun-test/schnorr");

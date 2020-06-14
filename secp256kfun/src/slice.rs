@@ -20,7 +20,8 @@ use subtle::ConstantTimeEq;
 /// let bytes = b"a secret message";
 /// let slice = bytes.as_ref().mark::<Secret>();
 /// ```
-
+///
+/// [`mark`]: crate::marker::Mark::mark
 #[derive(Debug, Clone, Copy)]
 pub struct Slice<'a, S> {
     pub(crate) inner: &'a [u8],
