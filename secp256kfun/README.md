@@ -1,23 +1,20 @@
 # secp256kFUN!
-A pure rust secp256k1 elliptic curve cryptography library that is optimized for fun! Here, fun means:
+A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
 - **abstraction**: The library exposes two simple abstractions _Points_ and _Scalars_ so you can do a clean textbook implementations of crypto.
-- **mid-level**: The library tries to strike the right balance between the efficiency and power of low-level APIs and the simplicity of high-level APIs.
+- **Unoptimizable**: The most straightforward way of expressing a certain algorithm is also the most efficient way.
 
 Fun does not mean (yet -- please help!):
 
-- **stable**: This library will frequently add/remove/change APIs for the foreseeable future. It also needs a nightly compiler for [_specialization_][5].
+- **stable**: This library will frequently add/remove/change APIs for the foreseeable future. It also needs a nightly compiler for [_specialization_] (it uses the `min_specialization` feature).
 - **well reviewed or tested**: This code is fresh and experimental and not rigorously tested.
 - **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying [parity/libsecp256k1][4] is resistant against timing attacks etc.
 - **performant**: The library is in general not as performant as [libsecp256k1][1], at least on 64-bit platforms.
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
-If you want to engineer something solid that a lot of people's money might depend on you should use [libsecp256k1][1] or its rust bindings [rust-secp256k1][2] (if you can).
-
-Note if you don't *need* to use secp256k1, consider using the [ristretto][3] group from curve25519-dalek whose APIs helped inspire this library.
-
-This library uses [parity/libsecp256k1][4] to do the elliptic curve arithmetic so most of its performance and side-channel resistance will depend on that.
+_High_level_ libraries like [rust-secp256k1][2] make it difficult to implement core exotic cryptographic schemes correctly and efficiently.
+_Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the resulting code is often error prone and difficult to read.
 
 ## Use
 
@@ -28,18 +25,20 @@ There isn't a 0.0.1 release yet so you want to try it out at this early stage yo
 secp256kfun = { git = "https://github.com/LLFourn/secp256kfun.git", package = "secp256kfun" }
 ```
 
+### Should use?
+
+If you need to use secp256k1 but want to engineer something solid that a lot of people's money will depend on you should use [libsecp256k1][1] or its rust bindings [rust-secp256k1][2] (avoid this library for now).
+If you don't *need* to use secp256k1, consider using the wonderful [ristretto][3] group from curve25519-dalek whose APIs helped inspire this effort.
+This library vendors [parity/libsecp256k1][4] into the `parity_backend` directory to do the elliptic curve arithmetic so most of its performance and side-channel resistance will depend on that.
+
 ## Documentation
 
 ```shell
 cargo doc --open --all-features
 ```
 
-## Why This Exists
-
-It is difficult or sometimes impossible to implement any non-trivial cryptographic algorithms using high-level libraries like [rust-secp256k1][2].
-You can do it using low-level libraries like [parity/libsecp256k1][4] but the resulting code can be difficult to read and error prone because of all the extraneous details you're forced to deal with.
-secp256kfun is a mid level api that tries to get the best of both worlds.
-Here's the main things this library tries to be better at:
+# Features
+Here's the distinguishing features of this library.
 
 ## The Zero Element
 
@@ -103,25 +102,25 @@ match sum.mark::<(Normal, NonZero)>() {
 
 ## Variable time or Constant time?
 
-If the distribution of a function's execution time is a function of the distribution of its inputs, then information about those inputs may leak to anyone that can measure its execution time.
+If a function's execution time depends on its inputs, then information about those inputs may leak to anyone that can measure its execution time.
 Therefore it is crucial that functions that take secret inputs run in _constant time_.
 Good low-level libraries tend to have one constant time version of an algorithm and then a faster variable time version. In _high-level_ libraries the experts have made the choice for you.
 Here's a question that demonstrates the problem with this: **Should a signature verification algorithm run in variable time or constant time?**
 
-Well, if you're talking about public signatures on a public blockchain then variable time is fine -- in fact it may be crucial for performance.
-But what about if you're verifying a _blind signature_ that you just received.
-The time it takes you to verify the signature may reveal which message you chose to get signed violating the security of the blind signature scheme.
+Well, if you're talking about public signatures on a public blockchain then variable time is fine - it may even be crucial for performance.
+But what about if you're verifying a _blind signature_ that you just received?
+The time it takes you to verify the signature may reveal which message you chose to get signed violating the security of the blind signature scheme!
 
-With secp25kfun it's possible to _let the caller decide_ whether your algorithm runs in constant time or not.
-A simple example of where this is useful is the `pedersen_commitment` function below.
-When you're committing to your secret you want `pedersen_commitment` to run in constant time, so information about what you're committing to isn't leaked through execution time.
-On the other hand, when you're verifying the opening of the commitment you don't care about leaking information and speed is preferable.
-With secp256kfun you only have to write the function once.
-The caller can decide whether the internal operations will run in constant time or not depending on their assessment about whether the values are secret or public within the context of the protocol at that point.
+With secp25kfun it's possible to _let the caller decide_ whether a function argument is secret in the context of the protocol with the `Secret` and `Public` marker types.
+In the example below, we have a `pedersen_commitment` function which is called by the committing party with a secret value and by the verifying party when the secret value is finally revealed.
+This means that we want it to be constant time when making the commitment but variable time when checking the opening.
+Note that we only have to write the function once.
+The compiler will decide whether to use constant time or variable time operations by whether value is marked `Secret` or `Public` (note it does this through [_specialization_]).
 
 ```rust
 use secp256kfun::{marker::*, Point, Scalar, g};
 
+/// commit to a secret value x with publicly known A and B.
 fn pedersen_commit(
     A: &Point<impl PointType>, // Accept any kind of Point
     B: &Point<impl PointType>,
@@ -152,18 +151,28 @@ let commitment = pedersen_commit(A, &B, &r, &x);
 let r = r.mark::<Public>();
 let x = x.mark::<Public>();
 
-// Now he'll compute the commitment quickly in variable time and check it
+// Now he'll compute the commitment in faster variable time and check it
 // against the original
 assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 ```
 
-Note that not only is `pedersen_commitment` generic over the `Secrecy` of the scalars but it also generic over the _type_ of the points.
-`A` is set to `G` which is a `BasePoint` so the compiler will specialize a faster version of `pedersen_commitment` for that call because it can use `G`'s pre-computed multiplication tables.
+As a bonus, this example also shows how you don't have to design the cryptographic function around the basepoint `G` which is taken for granted in existing libraries.
+The `pedersen_commitment` takes any `PointType`.
+When you pass in `G` which is a `BasePoint` the compiler will specialize the call so that at runtime it uses the pre-computed multiplication tables that `BasePoint`s have to accelerate the operations.
 
 **note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
+
+## Other Features
+
+-
+- Bult-in type-safe "x-only" point compression and decompression to both even y and square y points.
+- Arithmetic expression macro `g!` (used above) to clearly express group operations.
+- Nonce derivation functionality to help avoid messing this up.
+- `serde` serialization/deserialization for binary and hex for human-readable formats.
+
 
 [1]: https://github.com/bitcoin-core/secp256k1
 [2]: https://github.com/rust-bitcoin/
 [3]: https://github.com/dalek-cryptography/curve25519-dalek
 [4]: https://github.com/paritytech/libsecp256k1
-[5]: https://github.com/rust-lang/rust/issues/31844
+[_specialization_]: https://github.com/rust-lang/rust/issues/31844

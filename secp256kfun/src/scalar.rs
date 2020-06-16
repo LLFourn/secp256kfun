@@ -8,35 +8,45 @@ use rand_core::{CryptoRng, RngCore};
 /// A secp256k1 scalar (an integer mod the curve order)
 ///
 /// The term _scalar_ comes from interpreting the secp256k1 elliptic curve group
-/// as a [_vector space_][4] with a point as _vectors_ and the field of integers
-/// modulo the curve order as its scalars. Specifically, a `Scalar`
-/// represents an integer modulo
+/// as a [_vector space_][4] with a point as a notional single element vector
+/// and the field of integers modulo the curve order as its
+/// scalars. Specifically, a `Scalar` represents an integer modulo the curve
+/// order `q` where
 ///
-/// 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+/// `q = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141`
 ///
-/// The thing that makes secp256k1 useful for cryptography is that scalar
-/// _multiplication_ can be done efficiently:
+/// The thing that makes secp256k1 and other elliptic curves useful for
+/// cryptography is that scalar _multiplication_ can be done efficiently:
 ///
 /// ```
 /// use secp256kfun::{g, Scalar, G};
 /// let x = Scalar::random(&mut rand::thread_rng());
 /// let X = g!(x * G);
 /// ```
-/// But finding `x` from `(X,G)` is hard (you can't divide `X` by `G`).
-/// This is otherwise known as the elliptic curve [_discrete logarithm problem_][2].
 ///
-/// Because of this, scalars are often used as _secret keys_ and their
-/// corresponding points are used as _public keys_.
+/// But finding `x` from `(X,G)` is hard because there is no known efficient
+/// algorithm to divide `X` by `G` to get `x`. This is known as the elliptic
+/// curve [_discrete logarithm problem_][2].  Because of this, a scalar is often
+/// used as a _secret key_ and the point obtained by multiplying it by [`G`] is
+/// the _public key_.
+///
+/// [`G`]: crate::G
+///
+/// # Markers
+///
+/// A `Scalar<S,Z>` has two markers:
+///
+/// - `S`: A [`Secrecy`] to determine whether operations on this scalar should be done in constant time or not. By default scalars are [`Secret`] so operations run in constant-time.
+/// - `Z`: A [`ZeroChoice`] to keep track of whether the point might be zero or is guaranteed to non-zero.
+///
 ///
 /// [1]: https://en.wikipedia.org/wiki/One-way_function
 /// [2]: https://en.wikipedia.org/wiki/Discrete_logarithm
 /// [3]: https://en.wikipedia.org/wiki/Group_isomorphism
-/// [4]: https://en.wikipedia.org/wiki/Vector_space
-///
-/// # Markers
-///
-///
-/// A Scalar is marked whether it is known to not be zero
+/// [4]: https://en.wikipedia.org/wiki/Vector_space#Definition
+/// [`Secrecy`]: crate::marker::Secrecy
+/// [`Secret`]: crate::marker::Secret
+/// [`ZeroChoice]: crate::marker::ZeroChoice
 #[derive(Clone)]
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
 
@@ -76,7 +86,15 @@ impl<Z, S> Scalar<S, Z> {
 }
 
 impl<S> Scalar<S, NonZero> {
-    /// Returns the multiplicative inverse of the scalar.
+    /// Returns the multiplicative inverse of the scalar modulo the curve order.
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{s, Scalar};
+    /// let a = Scalar::random(&mut rand::thread_rng());
+    /// let a_inverse = a.invert();
+    /// assert_eq!(s!(a * a_inverse), Scalar::one());
+    /// ```
     pub fn invert(&self) -> Self {
         Self::from_inner(op::ScalarUnary::invert(self))
     }
@@ -140,7 +158,7 @@ impl Scalar<Secret, NonZero> {
 }
 
 impl Scalar<Secret, Zero> {
-    /// Converts 32 bytes into a scalar by reducing it modulo the curve order.
+    /// Converts 32 bytes into a scalar by reducing it modulo the curve order `q`.
     /// # Example
     /// ```
     /// use secp256kfun::Scalar;
@@ -205,7 +223,14 @@ impl Scalar<Secret, Zero> {
         Self::from_bytes(bytes)
     }
 
-    /// Returns the zero scalar
+    /// Returns the zero scalar.
+    /// # Example
+    /// ```
+    /// # use secp256kfun::{Scalar, s};
+    /// let x = Scalar::random(&mut rand::thread_rng());
+    /// let zero = Scalar::zero();
+    /// assert_eq!(s!(zero * x), zero);
+    /// assert_eq!(s!(x + zero), x);
     pub fn zero() -> Self {
         Self::from_inner(backend::Scalar::zero())
     }
@@ -262,7 +287,7 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
 }
 
 impl HashInto for Scalar {
-    fn hash_into(&self, hash: &mut impl Digest) {
+    fn hash_into(&self, hash: &mut impl digest::Digest) {
         hash.input(&self.to_bytes())
     }
 }

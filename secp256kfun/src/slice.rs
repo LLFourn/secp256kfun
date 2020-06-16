@@ -1,12 +1,12 @@
 use crate::{hash::HashInto, marker::*};
 use core::marker::PhantomData;
-use digest::Digest;
 use subtle::ConstantTimeEq;
 
-/// `Slice` represents some potentially secret bytes of arbitrary length.  It
-/// exists so you can mark some bytes with a [`Secrecy`]. The only automatic
-/// effect this has is that equality comparison runs in constant time if either
-/// `Slice` is marked [`Secret`].
+/// Potentially secret bytes of arbitrary length.
+///
+/// This type exists so you can mark some bytes with a [`Secrecy`]. The only
+/// automatic effect this has is that equality comparison runs in constant time
+/// if either `Slice` is marked [`Secret`].
 ///
 /// [`Secrecy`]: crate::marker::Secrecy
 /// [`Secret`]: crate::marker::Secret
@@ -18,7 +18,7 @@ use subtle::ConstantTimeEq;
 /// ```
 /// use secp256kfun::marker::*;
 /// let bytes = b"a secret message";
-/// let slice = bytes.as_ref().mark::<Secret>();
+/// let secret_slice = bytes.as_ref().mark::<Secret>();
 /// ```
 ///
 /// [`mark`]: crate::marker::Mark::mark
@@ -58,7 +58,7 @@ impl<'a, S> From<Slice<'a, S>> for &'a [u8] {
 }
 
 impl<'a, S> HashInto for Slice<'a, S> {
-    fn hash_into(&self, hash: &mut impl Digest) {
+    fn hash_into(&self, hash: &mut impl digest::Digest) {
         hash.input(self.inner)
     }
 }

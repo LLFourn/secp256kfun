@@ -1,4 +1,4 @@
-/// A marker trait over [`Secret`] and [`Public`].
+/// A marker trait implemented by [`Secret`] and [`Public`].
 ///
 /// [`Scalar`s] and [`Point`s] both have a `Secrecy` type parameter which must
 /// be either [`Secret`] or [`Public`]. At a high level these indicate:
@@ -12,20 +12,20 @@
 /// secret from party C but you only do operations on `x` while interacting with
 /// `B` (who perhaps, already knows it), then, in theory, `x` can be marked
 /// `Public`.  However it is up to you to make sure these conditions hold so the
-/// prudent thing to do is make sure that anything that might be secret is
-/// marked [`Secret`].
+/// prudent thing to do is make sure that anything that might be secret in some
+/// circumstance is marked [`Secret`].
 ///
 /// [`Scalar`s] are by default [`Secret`] and [`Point`s] are by default
-/// [`Public`].  In order to change the default you must [`mark`] it.
+/// [`Public`]. In order to change the default you must [`mark`] it.
 ///
 /// ```
-/// use secp256kfun::{marker::*, Scalar};
+/// use secp256kfun::{marker::*, Point, Scalar};
 /// let public_scalar = Scalar::random(&mut rand::thread_rng()).mark::<Public>();
+/// let secret_point = Point::random(&mut rand::thread_rng()).mark::<Secret>();
 /// ```
 ///
-/// The main purpose of marking value as secret or public is to tell the
-/// compiler when it can _specialize_ an operation on that value to make it run
-/// faster.
+/// The choice between a variable time or constant time algorithm is done
+/// through [_specialization_].
 ///
 /// ```
 /// use secp256kfun::{g, marker::*, Point, Scalar, G};
@@ -41,6 +41,7 @@
 /// [`Scalar`s]: crate::Scalar
 /// [`Point`s]: crate::Point
 /// [`mark`]: crate::marker::Mark::mark
+/// [_specialization_]: https://github.com/rust-lang/rust/issues/31844
 pub trait Secrecy: Default + Clone + PartialEq + Copy {}
 
 /// Indicates that the value is secret and enforces that all operations that are

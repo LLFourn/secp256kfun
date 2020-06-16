@@ -1,9 +1,34 @@
+//! Operations in the secp256k1 group.
+//!
+//! The purpose of this module is to hold all the operations that can be done
+//! with secp256k1 [`Points`] and [`Scalars`].  Usually, you shouldn't call
+//! these directly but instead use the group ([`g!`]) and scalar [`s!`] expression
+//! macros which compile your expressions into (potentially more efficient) calls to these functions.
+//!
+//! Most of the functions here are [`specialized`] so the compiler may be able to
+//! choose a faster algorithm depending on the arguments. For example scalar
+//! multiplications are faster on this marked `BasePoint` like [`G`], so in the
+//! following snippet computing `X1` will be computed faster than `X2` even
+//! though the same function is being called.
+//! ```
+//! use secp256kfun::{marker::*, op, Scalar, G};
+//! let x = Scalar::random(&mut rand::thread_rng());
+//! let X1 = op::scalar_mul_point(&x, G);
+//! let H = &G.clone().mark::<Normal>(); // scrub `BasePoint` marker
+//! let X2 = op::scalar_mul_point(&x, &H);
+//! assert_eq!(X1, X2);
+//! ```
+//! [`Points`]: crate::Point
+//! [`Scalars`]: crate::Scalar
+//! [`specialized`]: https://github.com/rust-lang/rust/issues/31844
+//! [`G`]: crate::G
 use crate::{
     backend::{self, ConstantTime, TimeSensitive, VariableTime},
     marker::*,
     Point, Scalar, XOnly,
 };
 
+/// Computes `x * A + y * B` more efficiently than calling [`scalar_mul_point`] twice.
 pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
     x: &Scalar<SX, ZX>,
     A: &Point<TA, SA, ZA>,
@@ -12,53 +37,48 @@ pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
 ) -> Point<Jacobian, Public, Zero> {
     Point::from_inner(DoubleMul::double_mul((x, A, y, B)), Jacobian)
 }
-
+/// Computes `x * P`.
 pub fn scalar_mul_point<Z1, S1, T2, S2, Z2>(
-    lhs: &Scalar<S1, Z1>,
-    rhs: &Point<T2, S2, Z2>,
+    x: &Scalar<S1, Z1>,
+    P: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Z1::Out>
 where
     Z1: DecideZero<Z2>,
 {
-    Point::from_inner(MulPoint::mul_point(lhs, rhs), Jacobian)
+    Point::from_inner(MulPoint::mul_point(x, P), Jacobian)
 }
 
-pub fn scalar_mul<Z1, Z2, S1, S2>(
-    lhs: &Scalar<S1, Z1>,
-    rhs: &Scalar<S2, Z2>,
-) -> Scalar<Secret, Z1::Out>
+/// Computes `x * y`
+pub fn scalar_mul<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Z1::Out>
 where
     Z1: DecideZero<Z2>,
 {
-    Scalar::from_inner(ScalarBinary::mul((lhs, rhs)))
+    Scalar::from_inner(ScalarBinary::mul((x, y)))
 }
 
-pub fn scalar_add<Z1, Z2, S1, S2>(
-    lhs: &Scalar<S1, Z1>,
-    rhs: &Scalar<S2, Z2>,
-) -> Scalar<Secret, Zero> {
-    Scalar::from_inner(ScalarBinary::add((lhs, rhs)))
+/// Computes `x + y`
+pub fn scalar_add<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
+    Scalar::from_inner(ScalarBinary::add((x, y)))
 }
 
-pub fn scalar_sub<Z1, Z2, S1, S2>(
-    lhs: &Scalar<S1, Z1>,
-    rhs: &Scalar<S2, Z2>,
-) -> Scalar<Secret, Zero> {
-    Scalar::from_inner(ScalarBinary::sub((lhs, rhs)))
+/// Computes `x - y`
+pub fn scalar_sub<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
+    Scalar::from_inner(ScalarBinary::sub((x, y)))
 }
 
+/// Computes `A - B`
 pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
-    lhs: &Point<T1, S1, Z1>,
-    rhs: &Point<T2, S2, Z2>,
+    A: &Point<T1, S1, Z1>,
+    B: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(PointBinary::sub((lhs, rhs)), Jacobian)
+    Point::from_inner(PointBinary::sub((A, B)), Jacobian)
 }
-
+/// Computes `A + B`
 pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
-    lhs: &Point<T1, S1, Z1>,
-    rhs: &Point<T2, S2, Z2>,
+    A: &Point<T1, S1, Z1>,
+    B: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(PointBinary::add((lhs, rhs)), Jacobian)
+    Point::from_inner(PointBinary::add((A, B)), Jacobian)
 }
 
 pub(crate) trait PointBinary {

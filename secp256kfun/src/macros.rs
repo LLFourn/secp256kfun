@@ -17,11 +17,15 @@ macro_rules! _s {
     (@scalar [$($a:tt)*] $scalar:ident $($t:tt)*) => {
         $crate::_s!(@dot [$($a)*] [$scalar] $($t)*)
     };
-
+    (@scalar [$($a:tt)*] 0 $($t:tt)*) => {
+        $crate::_s!(@next [{$crate::Scalar::zero()} $($a)*] $($t)*)
+    };
+    (@scalar [$($a:tt)*] $num:literal $($t:tt)*) => {
+        $crate::_s!(@next [{$crate::nzscalar!($num)} $($a)*] $($t)*)
+    };
     (@scalar [$($a:tt)*] $block:block $($t:tt)*) => {
         $crate::_s!(@next [$block $($a)*] $($t)*)
     };
-
     (@scalar [$($a:tt)*] ($($subexpr:tt)+) $($t:tt)*) => {
         $crate::_s!(@next [{$crate::_s!(@scalar [] $($subexpr)+)} $($a)*] $($t)*)
     };
@@ -101,10 +105,10 @@ macro_rules! _g {
         $crate::_g!(@point [s $block $($a)*] $($t)*)
     };
     (@scalar [$($a:tt)*] 0 * $($t:tt)+) => {
-        $crate::_g!(@point [s {Scalar::zero()} $($a)*] $($t)+)
+        $crate::_g!(@point [s {$crate::Scalar::zero()} $($a)*] $($t)+)
     };
     (@scalar [$($a:tt)*] $num:literal * $($t:tt)+) => {
-        $crate::_g!(@point [s {crate::nzscalar!($num)} $($a)*] $($t)+)
+        $crate::_g!(@point [s {$crate::nzscalar!($num)} $($a)*] $($t)+)
     };
     (@scalar [$($a:tt)*] $($t:tt)+) => {
         // failed to find scalar look for point instead
@@ -199,9 +203,60 @@ macro_rules! _g {
 /// additions/substraction. This compiles down to operations from the [`op`]
 /// module. Apart from being far more readable, the idea is that `g!` will (or
 /// may in the future) compile to more efficient operations than if you were to
-/// manually construct the operations yourself.
+/// manually call the functions from `op` yourself.
+///
+/// As a bonus, you don't need to put reference `&` makers on terms in `g!` this
+/// is done automatically if necessary.
 ///
 /// # Examples
+///
+/// Simple scalar multiplication by [`G`] but will work with any [`Point`]
+/// ```
+/// use secp256kfun::{g, Scalar, G};
+/// let x = Scalar::random(&mut rand::thread_rng());
+/// let X = g!(x * G);
+/// ```
+///
+/// A more complicated set of expressions.
+/// ```
+/// # use secp256kfun::{g, Point, Scalar, G};
+/// let x = Scalar::random(&mut rand::thread_rng());
+/// let y = Scalar::random(&mut rand::thread_rng());
+/// let H = Point::random(&mut rand::thread_rng());
+/// let minus = g!(x * G - y * H);
+/// let plus = g!(x * G + y * H);
+/// // note the parenthesis around the scalar sub expression
+/// assert_eq!(g!(plus + minus), g!((2 * x) * G));
+/// ```
+///
+/// You may access attributes:
+///
+/// ```
+/// # use secp256kfun::{g, Point, Scalar, G};
+/// struct DoMul {
+///     scalar: Scalar,
+///     point: Point,
+/// }
+///
+/// let mul = DoMul {
+///     scalar: Scalar::random(&mut rand::thread_rng()),
+///     point: Point::random(&mut rand::thread_rng()),
+/// };
+///
+/// let result = g!(mul.scalar * mul.point);
+/// ```
+///
+/// You can put an arbitrary expressions inside `{...}`
+///
+/// ```
+/// # use secp256kfun::{g, Point, Scalar, G};
+/// let x = Scalar::random(&mut rand::thread_rng());
+/// let Xinv = g!({ x.invert() } * G);
+/// assert_eq!(g!(x * Xinv), *G);
+/// ```
+///
+/// [`double_mul`]: crate::op::double_mul
+
 #[macro_export]
 macro_rules! g {
     ($($t:tt)+) => {{
@@ -227,13 +282,15 @@ macro_rules! test_plus_wasm {
 
 /// Macro to make nonce derivation clear and explicit.
 ///
-///Nonce derivation is a sensitive action where mistakes can have catastrophic
+/// Nonce derivation is a sensitive action where mistakes can have catastrophic
 /// consequences. This macro helps to make it clear to the reader what the
 /// secret thing that is being used to make the resulting nonce unpredictable
 /// and what public input data should be hashed to make sure no two nonce values
-/// are the same.
+/// are the same. For example, if you are implementing a signature scheme, then
+/// the message you are signing would go into `public`.
 ///
 /// # Example
+/// Derive a nonce using a secret scalar and additional randomness from `thread_rng`
 /// ```
 /// use secp256kfun::{Scalar, derive_nonce, hash::{Derivation, NonceHash}};
 /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
@@ -252,7 +309,7 @@ macro_rules! derive_nonce {
         secret => $secret:expr,
         public => [$($public:expr),+]
     ) => {{
-        use $crate::hash::Hash;
+        use $crate::hash::HashAdd;
         use core::borrow::Borrow;
         Scalar::from_hash(
             $nonce_hash.begin_derivation($derivation, $secret.borrow())$(.add($public.borrow()))+

@@ -1,4 +1,9 @@
-//! hashing utilities.
+//! Generally useful utilities related to hashing.
+//!
+//! In general, things in here are defined against the [`Digest`] trait from the [`RustCrypto`] project.
+//!
+//! [`Digest`]: digest::Digest
+//! [`RustCrypto`]: https://github.com/RustCrypto/hashes
 use crate::Scalar;
 use digest::{generic_array::typenum::U32, Digest};
 use rand_core::{CryptoRng, RngCore};
@@ -30,9 +35,10 @@ pub fn tagged_hash(tag: &[u8]) -> sha2::Sha256 {
     tagged_hash
 }
 
-/// A trait for anything that can be hashed. The implementations of this trait
-/// decide how the type will be converted into bytes so that it can be included
-/// in the hash.
+/// Anything that can be hashed.
+///
+/// The implementations of this trait decide how the type will be converted into
+/// bytes so that it can be included in the hash.
 ///
 /// # Example
 ///
@@ -48,20 +54,22 @@ pub fn tagged_hash(tag: &[u8]) -> sha2::Sha256 {
 /// ```
 pub trait HashInto {
     /// Asks the item to convert itself to bytes and add itself to `hash`.
-    fn hash_into(&self, hash: &mut impl Digest);
+    fn hash_into(&self, hash: &mut impl digest::Digest);
 }
 
 impl HashInto for [u8] {
-    fn hash_into(&self, hash: &mut impl Digest) {
+    fn hash_into(&self, hash: &mut impl digest::Digest) {
         hash.input(self)
     }
 }
 
-pub trait Hash {
+/// Extension trait for [`digest::Digest`] to make adding things to the hash convenient.
+pub trait HashAdd {
+    /// Adds converts `data` to bytes and then adds it to `self`.
     fn add<HI: HashInto + ?Sized>(self, data: &HI) -> Self;
 }
 
-impl<D: Digest> Hash for D {
+impl<D: Digest> HashAdd for D {
     fn add<HI: HashInto + ?Sized>(mut self, data: &HI) -> Self {
         data.hash_into(&mut self);
         self
@@ -93,29 +101,11 @@ impl Derivation {
 }
 
 /// Hashes for doing nonce derivation.
-///
-/// Usually, libraries that use `secp256kfun` let the caller decide which type
-/// of nonce [`Derivation`] they will use. `NonceHash` two hashes that may be needed at runtime:
-///
-/// - `nonce_hash`: The hash that's used to produce the secret unpredictable nonce.
-/// - 'aux_hash`:   A hash that's used to hash random data before being xor'd into the nonce hash.
-///
-///
-/// # Example
-/// ```
-/// use secp256kfun::{
-///     hash::{tagged_hash, Derivation, NonceHash},
-///     Scalar,
-/// };
-/// let secret_scalar = Scalar::random(&mut rand::thread_rng());
-/// let nonce_hash = NonceHash {
-///     nonce_hash: tagged_hash(b"my-nonce-hash"),
-///     aux_hash: tagged_hash(b"my-auxiliary-random-data-hash"),
-/// };
-/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceHash<H> {
+    /// The hash that is used to generate secret nonces.
     pub nonce_hash: H,
+    /// The hash that is used to hash auxiliary randomness that gets mixed in before applying `nonce_hash`.
     pub aux_hash: H,
 }
 
@@ -146,7 +136,7 @@ impl NonceHash<sha2::Sha256> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone> NonceHash<H> {
+impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
     /// Create a nonce derivation hash from a given derivation and secret
     /// unpredictable scalar. Rather than use this method directly it's generally clearer
     /// to use the [`derive_nonce`](macro.derive_nonce) macro.
@@ -155,7 +145,7 @@ impl<H: Digest<OutputSize = U32> + Clone> NonceHash<H> {
     ///
     /// Derive a nonce deterministically:
     /// ```
-    /// # use secp256kfun::{hash::{Derivation, NonceHash, Hash}, Scalar};
+    /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
     /// let nonce_hash = NonceHash::from_tag(b"test");
     /// let secret = Scalar::random(&mut rand::thread_rng());
     /// let secret_derived_nonce = Scalar::from_hash(
@@ -167,7 +157,7 @@ impl<H: Digest<OutputSize = U32> + Clone> NonceHash<H> {
     ///
     /// Derive a nonce using randomness:
     /// ```
-    /// # use secp256kfun::{hash::{Derivation, NonceHash, Hash}, Scalar};
+    /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
     /// # let nonce_hash = NonceHash::from_tag(b"test");
     /// # let secret = Scalar::random(&mut rand::thread_rng());
     /// let secret_derived_nonce = Scalar::from_hash(
@@ -180,7 +170,7 @@ impl<H: Digest<OutputSize = U32> + Clone> NonceHash<H> {
     /// The above is a convenient form of:
     ///
     /// ```
-    /// # use secp256kfun::{hash::{Derivation, NonceHash, Hash}, Scalar};
+    /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
     /// # use rand_core::RngCore;
     /// # let nonce_hash = NonceHash::from_tag(b"test");
     /// # let secret = Scalar::random(&mut rand::thread_rng());

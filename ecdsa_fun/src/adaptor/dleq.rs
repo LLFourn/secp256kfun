@@ -1,6 +1,6 @@
 use crate::fun::{
     derive_nonce, g,
-    hash::{tagged_hash, Derivation, Hash, NonceHash},
+    hash::{tagged_hash, Derivation, HashAdd, NonceHash},
     marker::*,
     s, Point, Scalar,
 };

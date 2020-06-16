@@ -1,21 +1,16 @@
-//! Each [Point<T,S,Z>](crate::Point) has a type argument `T` which describes
-//! its _point type_. Each type represents a different internal representation
-//! of the point which in turn affects what methods will be available on the
-//! point and whether the compiler will use _specialized_ arithmetic algorithms
-//! to speed up operations on the point.
 use crate::{
     backend::{self, BackendPoint, BackendXOnly},
     marker::*,
     op, Point, XOnly,
 };
 
-/// Every valid type `T` of a [`Point<T,S,Z>`] implements the `PointType` trait.
+/// Every `T` of a [`Point<T,S,Z>`] implements the `PointType` trait.
 ///
 /// There are several different point types.
 /// - [`Normal`]: A point in Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hahsed.
 /// - [`Jacobian`]: A non-Normal point with (x,y,z) coordinates. Usually the result of a point operation. Before being serialized or hashed, you have to normalize it.
 /// - [`BasePoint`]: A Normal point that has pre-computed multiplication tables like [`G`].
-/// - [`EvenY`]/[`SquareY`]: A Normal point whose y coordinate is known to be _even_ or _square_ at compile time.
+/// - [`EvenY`]/[`SquareY`]: A Normal point whose y-coordinate is known to be _even_ or _square_ at compile time.
 ///
 /// To normalize a `Point<Jacobian>` you mark it as [`Normal`]:
 /// ```
@@ -27,10 +22,10 @@ use crate::{
 /// ```
 ///
 /// A Point that is `EvenY/SquareY` serializes to and from the 32-byte x-only representation like the [`XOnly`] type.
-/// `Normal` points serialize to and from the standard 33-byte representation specified in [_SEC 1 standard_][1].
+/// `Normal` points serialize to and from the standard 33-byte representation specified in [_Standards for Efficient Cryptography_] (the same as [`Point::to/from_bytes`])
 ///
-/// [1]: https://www.secg.org/sec1-v2.pdf
-///
+/// [`Point::to/from_bytes`]: crate::Point::to_bytes
+/// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
 /// [`G`]: crate::G
 /// [`Point<T,S,Z>`]: crate::Point
 /// [`XOnly`]: crate::XOnly
@@ -75,14 +70,31 @@ pub trait Normalized: PointType {
     type YType;
 }
 
-pub trait YChoice: Normalized + NotBasePoint {
+/// A trait implemented by [`EvenY`] and [`SquareY`].
+///
+/// Every valid x-coordinate on the curve has exactly two valid y-coordinates
+/// (with one being the negation of the other) and one and only one of them will
+/// be even or square (and it might be the same one).  This fact is used to make
+/// a [`Point`] conform to either one then to compress the point to only its
+/// x-coordinate ([`XOnly<Y: YChoice>`][1]). When decompressing the x-coordinate we
+/// choose the y-coordinate according to the `YChoice`.
+///
+/// **Note: Usually the methods on this trait are not used directly but are used
+/// internally by methods on [`XOnly`][1] and [`Point`].**
+///
+/// [1]: crate::XOnly
+/// [`Point`]: crate::Point
+pub trait YChoice: Normalized + Default {
+    /// Converts an `XOnly` into a `Point` given the choice of y coordinate.
     fn xonly_into_point(x_only: XOnly<Self>) -> Point<Self, Public, NonZero>;
+    /// Converts 32-bytes representing an x-coordinate into a `Point`.
     fn bytes_into_point<S>(bytes: [u8; 32]) -> Option<Point<Self, S, NonZero>>;
+    /// Checks whether a `Normalized` point has a y-coordinate that matches the `YChoice`.
     fn norm_point_matches<T: Normalized, S>(point: &Point<T, S, NonZero>) -> bool;
 }
 
 #[rustc_specialization_trait]
-pub trait NotBasePoint: Default {}
+pub(crate) trait NotBasePoint: Default {}
 
 impl Normalized for EvenY {
     type YType = Self;

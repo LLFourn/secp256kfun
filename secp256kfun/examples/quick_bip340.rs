@@ -2,7 +2,7 @@
 use rand::thread_rng;
 use secp256kfun::{
     g,
-    hash::{tagged_hash, Hash},
+    hash::{tagged_hash, HashAdd},
     marker::*,
     s, Scalar, XOnly, G,
 };

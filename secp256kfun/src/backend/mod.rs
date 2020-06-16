@@ -25,6 +25,7 @@ pub trait BackendPoint {
     fn norm_to_xonly(&self) -> XOnly;
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point>;
     fn norm_from_bytes_y_square(x_bytes: [u8; 32]) -> Option<Point>;
+    fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point>;
 }
 
 pub trait TimeSensitive {

@@ -27,7 +27,7 @@ mod test {
 
             assert_eq!(
                 &point_1.to_bytes_uncompressed()[..],
-                &secp_pk_1.serialize_uncompressed()[1..]
+                &secp_pk_1.serialize_uncompressed()[..]
             );
             (point_1, secp_pk_1)
         };
@@ -45,7 +45,7 @@ mod test {
             };
             assert_eq!(
                 &point_2.to_bytes_uncompressed()[..],
-                &secp_pk_2.serialize_uncompressed()[1..]
+                &secp_pk_2.serialize_uncompressed()[..]
             );
         }
     }
@@ -79,7 +79,7 @@ mod test {
 
         assert_eq!(
             &result.to_bytes_uncompressed()[..],
-            &result_secp.serialize_uncompressed()[1..],
+            &result_secp.serialize_uncompressed()[..],
         )
     }
 
@@ -100,7 +100,7 @@ mod test {
             secp_pk_1
                 .combine(&secp_pk_1)
                 .unwrap()
-                .serialize_uncompressed()[1..]
+                .serialize_uncompressed()[..]
         );
     }
 

@@ -74,6 +74,26 @@ impl crate::backend::BackendPoint for Jacobian {
         (self.x.b32(), self.y.b32())
     }
 
+    fn norm_from_coordinates(x_bytes: [u8; 32], y_bytes: [u8; 32]) -> Option<Jacobian> {
+        let mut x = Field::default();
+        let mut y = Field::default();
+        if !x.set_b32(&x_bytes) {
+            return None;
+        }
+
+        if !y.set_b32(&y_bytes) {
+            return None;
+        }
+
+        let mut point = Affine::default();
+        point.set_xy(&x, &y);
+        if point.is_valid_var() {
+            Some(Jacobian::from_ge(&point))
+        } else {
+            None
+        }
+    }
+
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Jacobian> {
         /// set odd or even in constant time
         // we don't use the one from the inner library because it's vartime
