@@ -30,7 +30,7 @@ mod test {
         use super::*;
         use crate::{
             adaptor::*,
-            secp256kfun::{hash::Derivation, Scalar},
+            fun::{hash::Derivation, Scalar},
             Schnorr,
         };
         let schnorr = Schnorr::from_tag(b"test");

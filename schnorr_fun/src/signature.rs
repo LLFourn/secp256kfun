@@ -117,7 +117,7 @@ mod test {
     fn signature_serialization_roundtrip() {
         use super::*;
         use crate::{
-            secp256kfun::{hash::Derivation, Scalar},
+            fun::{hash::Derivation, Scalar},
             Schnorr,
         };
         let schnorr = Schnorr::from_tag(b"test");

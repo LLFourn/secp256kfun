@@ -47,7 +47,7 @@ mod test {
     #[test]
     fn encrypted_signature_serde_roundtrip() {
         use super::*;
-        use crate::secp256kfun::hash::Derivation;
+        use crate::fun::hash::Derivation;
         let adaptor = crate::adaptor::Adaptor::from_tag(b"test");
         let secret_key = Scalar::random(&mut rand::thread_rng());
         let encryption_key = Point::random(&mut rand::thread_rng());
