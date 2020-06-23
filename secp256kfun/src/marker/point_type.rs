@@ -7,8 +7,8 @@ use crate::{
 /// Every `T` of a [`Point<T,S,Z>`] implements the `PointType` trait.
 ///
 /// There are several different point types.
-/// - [`Normal`]: A point in Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hahsed.
-/// - [`Jacobian`]: A non-Normal point with (x,y,z) coordinates. Usually the result of a point operation. Before being serialized or hashed, you have to normalize it.
+/// - [`Normal`]: A point represented internally with Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hahsed.
+/// - [`Jacobian`]: A non-Normal represented internally in Jacobian coordinates. Usually the result of a point operation. Before being serialized or hashed, you have to normalize it.
 /// - [`BasePoint`]: A Normal point that has pre-computed multiplication tables like [`G`].
 /// - [`EvenY`]/[`SquareY`]: A Normal point whose y-coordinate is known to be _even_ or _square_ at compile time.
 ///
@@ -20,15 +20,8 @@ use crate::{
 /// let normal_point = jacobian_point.mark::<Normal>();
 /// let bytes = normal_point.to_bytes(); // we can now serialize it
 /// ```
-///
-/// A Point that is `EvenY/SquareY` serializes to and from the 32-byte x-only representation like the [`XOnly`] type.
-/// `Normal` points serialize to and from the standard 33-byte representation specified in [_Standards for Efficient Cryptography_] (the same as [`Point::to/from_bytes`])
-///
-/// [`Point::to/from_bytes`]: crate::Point::to_bytes
-/// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
 /// [`G`]: crate::G
 /// [`Point<T,S,Z>`]: crate::Point
-/// [`XOnly`]: crate::XOnly
 pub trait PointType: Sized + Clone + Copy {
     /// The point type returned from the negation of a point of this type.
     type NegationType: Default;
@@ -63,7 +56,7 @@ pub struct SquareY;
 #[derive(Clone, Copy)]
 pub struct BasePoint(pub(crate) backend::BasePoint);
 
-/// A marker trait that indicates a PointType uses a affine internal representation.
+/// A marker trait that indicates a `PointType` uses a affine internal representation.
 #[rustc_specialization_trait]
 pub trait Normalized: PointType {
     /// Indicates what is known at compile time about the y-coordinate of the normalized point. It is either `()` or a [`YChoice`].

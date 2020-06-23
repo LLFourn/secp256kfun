@@ -6,8 +6,10 @@ license = "cc0-1.0"
 homepage = "https://github.com/LLFourn/secp256kfun"
 repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/secp256kfun"
+description = "A mid-level secp256k1 library optimized for fun!"
 edition = "2018"
 categories = ["cryptography", "no_std"]
+readme = "README.md"
 keywords = ["bitcoin", "secp256k1"]
 
 [package.metadata.docs.rs]
@@ -16,10 +18,10 @@ features = ["serialize_hex", "serialization"]
 [dependencies]
 sha2 = "0.8"
 digest = "0.8"
-subtle = { version = "2" }
+subtle = { version = "2.2" }
 rand_core = { version = "0.5" }
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
-parity_backend = { path = "../parity_backend", version = "0.1.0", package = "secp256kfun_parity_backend" }
+parity_backend = { version = "0.1.0", package = "secp256kfun_parity_backend" }
 
 [dev-dependencies]
 hex-literal = "0.2"
@@ -34,7 +36,7 @@ bincode = "1.0"
 criterion = "0.3"
 
 [build-dependencies]
-parity_backend = { path = "../parity_backend", version = "0.1.0", package = "secp256kfun_parity_backend", features = ["alloc"] }
+parity_backend = { version = "0.1.0", package = "secp256kfun_parity_backend", features = ["alloc"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"

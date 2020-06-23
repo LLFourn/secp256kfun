@@ -9,14 +9,14 @@ use rand_core::{CryptoRng, RngCore};
 
 /// A point on the secp256k1 elliptic curve.
 ///
-/// A point marked with `NonZero` is any two integers modulo `p` `(x,y)`  that satisfy:
+/// A `Point<T,S,Z>` marked with `Z = NonZero` is any two integers modulo `p` `(x,y)`  that satisfy:
 ///
 /// `y^2 = 3*x + 7 mod p`
 ///
 /// where `p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F`.
 /// For every valid x-coordinate, there will be exactly two valid y-coordinates which will be the negation modulo p of each other.
 ///
-/// If the point is marked `Zero` then it may also be _point at infinity_ which is the [_identity element_] of the group.
+/// If the point is marked `Z = Zero` then it may also be _point at infinity_ which is the [_identity element_] of the group.
 ///
 /// ## Markers
 ///
@@ -26,8 +26,21 @@ use rand_core::{CryptoRng, RngCore};
 /// - `S`: A [`Secrecy`] to determine whether operations on this point should be done in constant-time or not. By default points are [`Public`] so operations run in variable time.
 /// - `Z`: A [`ZeroChoice`] to keep track of whether the point might be zero (the point at infinity) or is guaranteed to be non-zero.
 ///
+/// # Serialization
+///
+/// Only points that are marked with `Z` = `NonZero` and `T` ≠ `Jacobian` can be
+/// serialized.  A Point that is `EvenY/SquareY` serializes to and from the
+/// 32-byte x-only representation like the [`XOnly`] type.  `Normal` points
+/// serialize to and from the standard 33-byte representation specified in
+/// [_Standards for Efficient Cryptography_] (the same as
+/// [`Point::to/from_bytes`])
+///
+///
+/// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
+/// [`Point::to/from_bytes`]: crate::Point::to_bytes
 /// [`PointType`]: crate::marker::PointType
 /// [`Secrecy`]: crate::marker::Secrecy
+/// [`XOnly`]: crate::XOnly
 /// [`ZeroChoice`]: crate::marker::ZeroChoice
 /// [`Public`]: crate::marker::Public
 /// [_identity element_]: https://en.wikipedia.org/wiki/Identity_element
@@ -45,11 +58,12 @@ impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
 }
 
 impl Point<Normal, Public, NonZero> {
-    /// Creates a Point from the a point encoded using the compressed form
-    /// specified in [_Standards for Efficient Cryptography_].
-    /// The first byte must be `0x02` or `0x03` to indicate that the y-coordinate is even or odd respectively.
-    /// The remaining 32 bytes must encode an x-coordinate on the curve.
-    /// If the conditions are not met then it will return `None`.
+    /// Creates a Point the compressed encoding specified in [_Standards for
+    /// Efficient Cryptography_]. This is the typical encoding used in
+    /// Bitcoin. The first byte must be `0x02` or `0x03` to indicate that the
+    /// y-coordinate is even or odd respectively.  The remaining 32 bytes must
+    /// encode an x-coordinate on the curve.  If these conditions are not then
+    /// it will return `None`.
     ///
     /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
     pub fn from_bytes(bytes: [u8; 33]) -> Option<Self> {

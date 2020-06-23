@@ -44,8 +44,8 @@
 /// [_specialization_]: https://github.com/rust-lang/rust/issues/31844
 pub trait Secrecy: Default + Clone + PartialEq + Copy {}
 
-/// Indicates that the value is secret and enforces that all operations that are
-/// executed on it must be _constant time_.
+/// Indicates that the value is secret and therefore makes core operations
+/// executed on it to use  _constant time_ versions of the operations.
 #[derive(Debug, Clone, Default, PartialEq, Copy)]
 #[cfg_attr(
     feature = "serialization",
@@ -54,7 +54,6 @@ pub trait Secrecy: Default + Clone + PartialEq + Copy {}
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
-
 #[derive(Debug, Clone, Default, PartialEq, Copy)]
 #[cfg_attr(
     feature = "serialization",

@@ -2,20 +2,21 @@
 //!
 //! The purpose of this module is to hold all the operations that can be done
 //! with secp256k1 [`Points`] and [`Scalars`].  Usually, you shouldn't call
-//! these directly but instead use the group ([`g!`]) and scalar [`s!`] expression
-//! macros which compile your expressions into (potentially more efficient) calls to these functions.
+//! these directly but instead use the group [`g!`] and scalar [`s!`] expression
+//! macros which compile your expressions into (potentially more efficient)
+//! calls to these functions.
 //!
 //! Most of the functions here are [`specialized`] so the compiler may be able to
 //! choose a faster algorithm depending on the arguments. For example scalar
-//! multiplications are faster on this marked `BasePoint` like [`G`], so in the
+//! multiplications are faster points marked `BasePoint` like [`G`], so in the
 //! following snippet computing `X1` will be computed faster than `X2` even
 //! though the same function is being called.
 //! ```
 //! use secp256kfun::{marker::*, op, Scalar, G};
 //! let x = Scalar::random(&mut rand::thread_rng());
-//! let X1 = op::scalar_mul_point(&x, G);
+//! let X1 = op::scalar_mul_point(&x, G); // fast
 //! let H = &G.clone().mark::<Normal>(); // scrub `BasePoint` marker
-//! let X2 = op::scalar_mul_point(&x, &H);
+//! let X2 = op::scalar_mul_point(&x, &H); // slow
 //! assert_eq!(X1, X2);
 //! ```
 //! [`Points`]: crate::Point
@@ -37,7 +38,8 @@ pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
 ) -> Point<Jacobian, Public, Zero> {
     Point::from_inner(DoubleMul::double_mul((x, A, y, B)), Jacobian)
 }
-/// Computes `x * P`.
+
+/// Computes multiplies the point `P` by the scalar `x`.
 pub fn scalar_mul_point<Z1, S1, T2, S2, Z2>(
     x: &Scalar<S1, Z1>,
     P: &Point<T2, S2, Z2>,
@@ -48,7 +50,7 @@ where
     Point::from_inner(MulPoint::mul_point(x, P), Jacobian)
 }
 
-/// Computes `x * y`
+/// Multiplies two scalars together (modulo the curve order)
 pub fn scalar_mul<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Z1::Out>
 where
     Z1: DecideZero<Z2>,
@@ -56,24 +58,25 @@ where
     Scalar::from_inner(ScalarBinary::mul((x, y)))
 }
 
-/// Computes `x + y`
+/// Adds two scalars together (modulo the curve order)
 pub fn scalar_add<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
     Scalar::from_inner(ScalarBinary::add((x, y)))
 }
 
-/// Computes `x - y`
+/// Subtracts one scalar from another
 pub fn scalar_sub<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
     Scalar::from_inner(ScalarBinary::sub((x, y)))
 }
 
-/// Computes `A - B`
+/// Subtracts one point from another
 pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Zero> {
     Point::from_inner(PointBinary::sub((A, B)), Jacobian)
 }
-/// Computes `A + B`
+
+/// Adds two points together
 pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,

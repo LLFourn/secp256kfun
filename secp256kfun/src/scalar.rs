@@ -26,9 +26,9 @@ use rand_core::{CryptoRng, RngCore};
 ///
 /// But finding `x` from `(X,G)` is hard because there is no known efficient
 /// algorithm to divide `X` by `G` to get `x`. This is known as the elliptic
-/// curve [_discrete logarithm problem_][2].  Because of this, a scalar is often
-/// used as a _secret key_ and the point obtained by multiplying it by [`G`] is
-/// the _public key_.
+/// curve [_discrete logarithm problem_][2].  Because of this, scalars are often
+/// used as a _secret keys_ with the points obtained by multiplying them by [`G`] as
+/// their corresponding _public keys_.
 ///
 /// [`G`]: crate::G
 ///
@@ -124,10 +124,10 @@ impl Scalar<Secret, NonZero> {
     /// let mut hash = sha2::Sha256::default();
     /// hash.input(b"Chancellor on brink of second bailout for banks".as_ref());
     /// let scalar = Scalar::from_hash(hash);
-    /// assert_eq!(
-    ///     scalar.to_bytes(),
-    ///     hex_literal::hex!("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d")
-    /// );
+    /// # assert_eq!(
+    /// #     scalar.to_bytes(),
+    /// #     hex_literal::hex!("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d")
+    /// # );
     /// ```
     pub fn from_hash(hash: impl Digest<OutputSize = U32>) -> Self {
         let mut bytes = [0u8; 32];

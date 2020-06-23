@@ -43,7 +43,8 @@ pub fn tagged_hash(tag: &[u8]) -> sha2::Sha256 {
 /// # Example
 ///
 /// ```
-/// use secp256kfun::hash::HashInto;
+/// use digest::Digest;
+/// use secp256kfun::hash::{HashAdd, HashInto};
 /// struct CryptoData([u8; 42]);
 ///
 /// impl HashInto for CryptoData {
@@ -51,6 +52,9 @@ pub fn tagged_hash(tag: &[u8]) -> sha2::Sha256 {
 ///         hash.input(&self.0[..])
 ///     }
 /// }
+///
+/// let cryptodata = CryptoData([42u8; 42]);
+/// let hash = sha2::Sha256::default().add(&cryptodata).result();
 /// ```
 pub trait HashInto {
     /// Asks the item to convert itself to bytes and add itself to `hash`.
@@ -65,7 +69,7 @@ impl HashInto for [u8] {
 
 /// Extension trait for [`digest::Digest`] to make adding things to the hash convenient.
 pub trait HashAdd {
-    /// Adds converts `data` to bytes and then adds it to `self`.
+    /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
     fn add<HI: HashInto + ?Sized>(self, data: &HI) -> Self;
 }
 

@@ -10,10 +10,9 @@ use rand_core::{CryptoRng, RngCore};
 /// An `XOnly<Y>` is the compressed representation of a [`Point<T,S,Z>`] which
 /// only stores the x-coordinate of the point.
 ///
-/// When being decompressed into a point, it will make the choice of
-/// y-coordinate based on its type parameter `Y`. `Y` is always a [`YChoice`] or
-/// `()` if the y-coordinate is unspecified (in which case it will be able to be
-/// decompressed).
+/// The type parameter `Y` determines how to decompress the x-only into a point.
+/// `Y` is always a [`YChoice`] or `()` if the y-coordinate is unspecified (in
+/// which case it can't be decompressed).
 ///
 /// Instead of using an `XOnly<Y>` it is often more practical to use a
 /// [`Point<T,S,Z>`] where `T` is set to a [`YChoice`]. For example, a
@@ -86,7 +85,8 @@ impl<Y> XOnly<Y> {
 
 impl<Y: YChoice> XOnly<Y> {
     /// Decompresses a `XOnly<Y: YChoice>` into a [`Point<Y,Public,NonZero>`].
-    /// The resulting point will have its y chosen depending on `Y` and is marked as such.
+    /// The resulting point will have its y-coordinate chosen depending on `Y`
+    /// and is marked as such.
     ///
     /// # Example
     /// ```
@@ -119,7 +119,7 @@ impl<Y: YChoice> XOnly<Y> {
     /// assert_ne!(secret_key, original);
     /// assert_eq!(-secret_key, original);
     /// ```
-    pub fn from_scalar_mul<GT>(G: &Point<GT>, x: &mut Scalar<impl Secrecy>) -> Self {
+    pub fn from_scalar_mul(G: &Point<impl PointType>, x: &mut Scalar<impl Secrecy>) -> Self {
         let X = crate::op::scalar_mul_point(x, G).mark::<Normal>();
         let needs_negation = !Y::norm_point_matches(&X);
         x.conditional_negate(needs_negation);

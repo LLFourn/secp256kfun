@@ -1,4 +1,5 @@
 # secp256kFUN!
+
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
@@ -13,29 +14,28 @@ Fun does not mean (yet -- please help!):
 - **performant**: The library is in general not as performant as [libsecp256k1][1], at least on 64-bit platforms.
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
-_High_level_ libraries like [rust-secp256k1][2] make it difficult to implement core exotic cryptographic schemes correctly and efficiently.
+I hope you can build very satisfying implementations of cryptographic schemes with this library.
+_High-level_ libraries like [rust-secp256k1][2] make it difficult to implement exotic cryptographic schemes correctly and efficiently.
 _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the resulting code is often error prone and difficult to read.
 
 ## Use
 
-There isn't a 0.0.1 release yet so you want to try it out at this early stage you have add a git dependency:
-
 ```toml
 [dependencies]
-secp256kfun = { git = "https://github.com/LLFourn/secp256kfun.git", package = "secp256kfun" }
+secp256kfun = "0.1.0"
 ```
 
 ### Should use?
 
-If you need to use secp256k1 but want to engineer something solid that a lot of people's money will depend on you should use [libsecp256k1][1] or its rust bindings [rust-secp256k1][2] (avoid this library for now).
-If you don't *need* to use secp256k1, consider using the wonderful [ristretto][3] group from curve25519-dalek whose APIs helped inspire this effort.
+This library is ready for production **as long what you are trying to produce is just fun and amusement!**.
+If you want to engineer something solid that a lot of people's money will depend, this library is a very very risky choice.
+Instead, try to use [libsecp256k1][1] or its rust bindings [rust-secp256k1][2].
+If you don't *need* to use secp256k1, instead consider using the wonderful [ristretto][3] group from curve25519-dalek whose APIs helped inspire this effort.
 This library vendors [parity/libsecp256k1][4] into the `parity_backend` directory to do the elliptic curve arithmetic so most of its performance and side-channel resistance will depend on that.
 
 ## Documentation
 
-```shell
-cargo doc --open --all-features
-```
+https://docs.rs/secp256kfun
 
 # Features
 Here's the distinguishing features of this library.
@@ -156,19 +156,18 @@ let x = x.mark::<Public>();
 assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 ```
 
-As a bonus, this example also shows how you don't have to design the cryptographic function around the basepoint `G` which is taken for granted in existing libraries.
+As a bonus, this example also shows how you don't have to design the cryptographic function around the basepoint `G`.
 The `pedersen_commitment` takes any `PointType`.
-When you pass in `G` which is a `BasePoint` the compiler will specialize the call so that at runtime it uses the pre-computed multiplication tables that `BasePoint`s have to accelerate the operations.
+When you pass in `G`, which is a `BasePoint`, the compiler will specialize the call so that at runtime it uses the pre-computed multiplication tables that `BasePoint`s have.
 
 **note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
 
 ## Other Features
 
--
 - Bult-in type-safe "x-only" point compression and decompression to both even y and square y points.
 - Arithmetic expression macro `g!` (used above) to clearly express group operations.
 - Nonce derivation functionality to help avoid messing this up.
-- `serde` serialization/deserialization for binary and hex for human-readable formats.
+- `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serialization` or `serialize_hex` features).
 
 
 [1]: https://github.com/bitcoin-core/secp256k1
