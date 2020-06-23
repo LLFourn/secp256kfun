@@ -119,7 +119,8 @@ impl<Y: YChoice> XOnly<Y> {
     /// assert_ne!(secret_key, original);
     /// assert_eq!(-secret_key, original);
     /// ```
-    pub fn from_scalar_mul(G: &Point<impl PointType>, x: &mut Scalar<impl Secrecy>) -> Self {
+    // This GT can't be an impl PointType yet because of https://github.com/rust-lang/rust/issues/44491
+    pub fn from_scalar_mul<GT>(G: &Point<GT>, x: &mut Scalar<impl Secrecy>) -> Self {
         let X = crate::op::scalar_mul_point(x, G).mark::<Normal>();
         let needs_negation = !Y::norm_point_matches(&X);
         x.conditional_negate(needs_negation);
