@@ -4,7 +4,7 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
 - **abstraction**: The library exposes two simple abstractions _Points_ and _Scalars_ so you can do a clean textbook implementations of crypto.
-- **Unoptimizable**: The most straightforward way of expressing a certain algorithm is also the most efficient way.
+- **unoptimizable**: The most straightforward way of expressing a certain algorithm is also the most efficient way.
 
 Fun does not mean (yet -- please help!):
 
