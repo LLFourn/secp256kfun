@@ -27,8 +27,8 @@ secp256kfun = "0.1.0"
 
 ### Should use?
 
-This library is ready for production **as long what you are trying to produce is just fun and amusement!**.
-If you want to engineer something solid that a lot of people's money will depend, this library is a very very risky choice.
+This library is ready for production as long what you are trying to produce is **fun and amusement!**.
+If you want to engineer something solid that a lot of people's money will depend on, this library is a very very risky choice.
 Instead, try to use [libsecp256k1][1] or its rust bindings [rust-secp256k1][2].
 If you don't *need* to use secp256k1, instead consider using the wonderful [ristretto][3] group from curve25519-dalek whose APIs helped inspire this effort.
 This library vendors [parity/libsecp256k1][4] into the `parity_backend` directory to do the elliptic curve arithmetic so most of its performance and side-channel resistance will depend on that.
