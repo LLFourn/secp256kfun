@@ -26,9 +26,12 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --release
     - name: Run serde tests
       run: |
-        (cd secp256kfun && cargo test --features=serialization)
-        (cd schnorr_fun && cargo test --features=serialization)
-        (cd ecdsa_fun   && cargo test --features=serialization)
+        (cd secp256kfun && cargo test --features=serialization --release)
+        (cd schnorr_fun && cargo test --features=serialization --release)
+        (cd ecdsa_fun   && cargo test --features=serialization --release)
+        (cd secp256kfun && cargo test --features=serialize_hex --release)
+        (cd schnorr_fun && cargo test --features=serialize_hex --release)
+        (cd ecdsa_fun   && cargo test --features=serialize_hex --release)

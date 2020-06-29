@@ -1,5 +1,8 @@
 # secp256kFUN!
 
+![](https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
+
+
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
