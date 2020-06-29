@@ -29,9 +29,6 @@ jobs:
       run: cargo test --verbose --release
     - name: Run serde tests
       run: |
-        (cd secp256kfun && cargo test --features=serialization --release)
-        (cd schnorr_fun && cargo test --features=serialization --release)
-        (cd ecdsa_fun   && cargo test --features=serialization --release)
         (cd secp256kfun && cargo test --features=serialize_hex --release)
         (cd schnorr_fun && cargo test --features=serialize_hex --release)
         (cd ecdsa_fun   && cargo test --features=serialize_hex --release)
