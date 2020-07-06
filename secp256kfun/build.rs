@@ -11,6 +11,7 @@ use std::{
 };
 
 fn main() {
+    // scratch: v0.1.2
     println!("cargo:rerun-if-changed=build.rs");
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let ecmult_path = Path::new(&out_dir).join("ecmult_table.rs");

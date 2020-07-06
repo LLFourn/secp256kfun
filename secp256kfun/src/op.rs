@@ -230,8 +230,7 @@ impl<Z1, S1, S2, T2: NotBasePoint + Normalized> MulPoint<S2, T2> for Scalar<S1, 
 
 impl<Z1, S1, S2> MulPoint<S2, BasePoint> for Scalar<S1, Z1> {
     default fn mul_point<Z2>(&self, rhs: &Point<BasePoint, S2, Z2>) -> backend::Point {
-        // ConstantTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
-        ConstantTime::scalar_mul_norm_point(&self.0, &rhs.0)
+        ConstantTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
     }
 }
 
@@ -249,8 +248,7 @@ impl<Z1, T2: Normalized + NotBasePoint> MulPoint<Public, T2> for Scalar<Public, 
 
 impl<Z1> MulPoint<Public, BasePoint> for Scalar<Public, Z1> {
     fn mul_point<Z2>(&self, rhs: &Point<BasePoint, Public, Z2>) -> backend::Point {
-        // VariableTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
-        VariableTime::scalar_mul_norm_point(&self.0, &rhs.0)
+        VariableTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
     }
 }
 
