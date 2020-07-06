@@ -1,9 +1,9 @@
 # secp256kFUN!
 
 
-[![Crates.io][crates-badge]][crates-url]
-[![Actions][actions-badge]][actions-url]
-[![Docs.rs][docs-badge]][docs-url]
+[![crates-badge]][crates-url]
+[![actions-badge]][actions-url]
+[![docs-badge]][docs-url]
 
 [actions-badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
 [actions-url]: https://github.com/llfourn/secp256kfun/actions?query=workflow%3ARust
