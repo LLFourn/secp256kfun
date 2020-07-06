@@ -1,16 +1,11 @@
-# secp256kFUN!
+# secp256kFUN! &emsp; [![crates_badge]][crates_url] [![actions_badge]][actions_url] [![docs_badge]][docs_url]
 
-
-[![crates-badge]][crates-url]
-[![actions-badge]][actions-url]
-[![docs-badge]][docs-url]
-
-[actions-badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
-[actions-url]: https://github.com/llfourn/secp256kfun/actions?query=workflow%3ARust
-[crates-badge]: https://img.shields.io/crates/v/secp256kfun.svg
-[crates-url]: https://crates.io/crates/secp256kfun
-[docs-badge]: https://docs.rs/secp256kfun/badge.svg
-[docs-url]: https://docs.rs/secp256kfun
+[actions_badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
+[actions_url]: https://github.com/llfourn/secp256kfun/actions?query=workflow%3ARust
+[crates_badge]: https://img.shields.io/crates/v/secp256kfun.svg
+[crates_url]: https://crates.io/crates/secp256kfun
+[docs_badge]: https://docs.rs/secp256kfun/badge.svg
+[docs_url]: https://docs.rs/secp256kfun
 
 
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
