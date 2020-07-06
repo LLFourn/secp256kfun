@@ -2,7 +2,7 @@
 name = "secp256kfun"
 version = "0.1.3-alpha.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
-license = "CC0-1.0"
+license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun"
 repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/secp256kfun"
