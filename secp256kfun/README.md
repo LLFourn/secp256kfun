@@ -1,6 +1,8 @@
 # secp256kFUN!
 
 ![](https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
+![](https://docs.rs/secp256kfun/badge.svg)
+![](https://img.shields.io/crates/v/secp256kfun.svg)
 
 
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
@@ -171,6 +173,7 @@ When you pass in `G`, which is a `BasePoint`, the compiler will specialize the c
 - Arithmetic expression macro `g!` (used above) to clearly express group operations.
 - Nonce derivation functionality to help avoid messing this up.
 - `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serialization` or `serialize_hex` features).
+- `no_std` support
 
 
 [1]: https://github.com/bitcoin-core/secp256k1
