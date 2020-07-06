@@ -1,6 +1,6 @@
 # secp256kFUN! &emsp; [![crates_badge]][crates_url] [![actions_badge]][actions_url] [![docs_badge]][docs_url]
 
-[actions_badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg)
+[actions_badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg
 [actions_url]: https://github.com/llfourn/secp256kfun/actions?query=workflow%3ARust
 [crates_badge]: https://img.shields.io/crates/v/secp256kfun.svg
 [crates_url]: https://crates.io/crates/secp256kfun
