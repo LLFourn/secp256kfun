@@ -143,7 +143,7 @@ impl NonceHash<sha2::Sha256> {
 impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
     /// Create a nonce derivation hash from a given derivation and secret
     /// unpredictable scalar. Rather than use this method directly it's generally clearer
-    /// to use the [`derive_nonce`](macro.derive_nonce) macro.
+    /// to use the [`derive_nonce`](crate::derive_nonce!) macro.
     ///
     /// # Examples
     ///
