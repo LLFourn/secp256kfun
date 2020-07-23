@@ -1,10 +1,21 @@
-use rand_core::{CryptoRng, RngCore};
 use secp256kfun::{marker::*, Point, Scalar, XOnly};
+
 /// A secret and public key-pair for generating Schnorr signatures.
 ///
-/// The `KeyPair` struct is exists because it is more efficient to pre-compute
-/// the public key and pass it in rather pass it in when signing with the same
-/// key multiple times.
+/// The `KeyPair` struct is exists because it is more efficient to pre-compute the public key and
+/// pass it in rather pass it in when signing with the same key multiple times.
+///
+/// Create a `KeyPair` from a [`Schnorr`] instance.
+///
+/// ```
+/// use schnorr_fun::{fun::Scalar, Schnorr};
+/// let my_secret_key = Scalar::random(&mut rand::thread_rng());
+/// let schnorr = Schnorr::from_tag(b"my-domain");
+/// let my_keypair = schnorr.new_keypair(my_secret_key);
+/// ```
+///
+/// [`Schnorr`]: crate::Schnorr
+#[derive(Clone, Debug)]
 pub struct KeyPair {
     pub(crate) sk: Scalar,
     pub(crate) pk: XOnly<EvenY>,
@@ -22,26 +33,27 @@ impl KeyPair {
     }
 
     /// Gets a reference to the key-pair as a tuple
+    ///
     /// # Example
     /// ```
-    /// # use secp256kfun::{G};
-    /// # use schnorr_fun::KeyPair;
-    /// # let keypair = KeyPair::random(G, &mut rand::thread_rng());
-    /// let (sec_key, pub_key) = keypair.as_tuple();
+    /// # use schnorr_fun::{Schnorr, fun::Scalar};
+    /// # let keypair = Schnorr::from_tag(b"test").new_keypair(Scalar::one());
+    /// let (secret_key, public_key) = keypair.as_tuple();
     pub fn as_tuple(&self) -> (&Scalar, &XOnly<EvenY>) {
         (&self.sk, &self.pk)
     }
 
-    pub fn random<R: CryptoRng + RngCore>(
-        G: &Point<impl Normalized, Public, NonZero>,
-        rng: &mut R,
-    ) -> KeyPair {
-        let mut sk = Scalar::random(rng);
-        let pk = XOnly::from_scalar_mul(G, &mut sk);
-
-        Self { sk, pk }
-    }
-
+    /// Returns the full `Point<EvenY>` for the public key which is used in [`verify`].
+    ///
+    /// This is just a descriptive short version of:
+    ///
+    /// ```
+    /// # use schnorr_fun::{fun::Scalar, Schnorr};
+    /// # let keypair = Schnorr::from_tag(b"test").new_keypair(Scalar::random(&mut rand::thread_rng()));
+    /// let verification_key = keypair.public_key().to_point();
+    /// # assert_eq!(keypair.verification_key(), keypair.public_key().to_point())
+    /// ```
+    /// [`verify`]: crate::Schnorr::verify
     pub fn verification_key(&self) -> Point<EvenY> {
         self.pk.to_point()
     }
