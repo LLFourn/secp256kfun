@@ -1,17 +1,29 @@
 use secp256kfun::{marker::*, Point, Scalar};
 
+/// A one-time encrypted Schnorr signature or "adaptor signature".
+///
+/// Sometimes also called a "pre-signature".
+
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serialization",
     derive(serde::Serialize, serde::Deserialize)
 )]
 pub struct EncryptedSignature<S = Public> {
-    pub R: Point<SquareY, Public, NonZero>,
+    /// The `R` point in the signature
+    pub R: Point<SquareY, Public>,
+    /// The _one-time encrypted_ `s` value of the signature.
     pub s_hat: Scalar<S, Zero>,
+    /// Whether the decryptor should negate their decryption key prior to decryption.
+    /// This exists as a side effect of using "x-only" public keys.
     pub needs_negation: bool,
 }
 
 impl<OldSec> EncryptedSignature<OldSec> {
+    /// Marks the encrypted signature with a [`Secrecy`]. If it is marked as `Secret` the operations
+    /// (e.g. verification) on the signature encryption should be done in constant time.
+    ///
+    /// [`Secrecy`]: secp256kfun::marker::Secrecy
     #[must_use]
     pub fn mark<NewSec: Secrecy>(self) -> EncryptedSignature<NewSec> {
         EncryptedSignature {

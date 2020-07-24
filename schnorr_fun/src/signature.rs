@@ -48,7 +48,18 @@ impl<S> Signature<S> {
         (&self.R, &self.s)
     }
 
-    /// Marks the signature
+    /// Marks the signature with a [`Secrecy`]. If it is marked as `Secret` the
+    /// operations (e.g. verification) on the signature should be done in constant
+    /// time.
+    ///
+    /// # Examples
+    /// ```
+    /// use schnorr_fun::{fun::marker::*, Signature};
+    /// let signature = Signature::random(&mut rand::thread_rng());
+    /// let secret_sig = signature.mark::<Secret>();
+    /// ```
+    ///
+    /// [`Secrecy`]: secp256kfun::marker::Secrecy
     #[must_use]
     pub fn mark<M: Secrecy>(self) -> Signature<M> {
         Signature {
@@ -59,6 +70,15 @@ impl<S> Signature<S> {
 }
 
 impl Signature<Public> {
+    /// Generates a uniformly distributed signature. It will be valid for an
+    /// infinite number of messages on every key but computationally you will
+    /// never be able to find one! Useful for testing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use schnorr_fun::Signature;
+    /// let random_signature = Signature::random(&mut rand::thread_rng());
     pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
         Signature {
             R: XOnly::<SquareY>::random(rng),
@@ -69,7 +89,7 @@ impl Signature<Public> {
     ///
     /// This returns `None` if the first 32 bytes were not a valid [`XOnly`] or the last 32 bytes were not a valid scalar.
     ///
-    /// #Examples
+    /// # Examples
     /// ```
     /// # use schnorr_fun::Signature;
     /// # let bytes = [0u8;64];

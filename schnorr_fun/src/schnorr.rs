@@ -9,26 +9,50 @@ use crate::{
 };
 use digest::{generic_array::typenum::U32, Digest};
 
-/// An instance of the Schnorr signature scheme.
+/// An instance of a [`BIP-340`] style Schnorr signature scheme.
 ///
-/// Each instance is defined by its
+/// Each instance is defined by its:
 /// - `G`: Public generator (usually [`G`])
 /// - `challenge_hash`: The hash function instance that is used to produce the [_Fiat-Shamir_] challenge.
-/// - `nonce_hash`: The hash used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
+/// - `nonce_hash`: The [`NonceHash<H>`] used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
 ///
 /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
-/// [`G`]: fun::G
+/// [`G`]: crate::fun::G
+/// [`NonceHash<H>`]: crate::fun::hash::NonceHash
+/// [`BIP-340`]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 pub struct Schnorr<GT = BasePoint, CH = sha2::Sha256, N = NonceHash<sha2::Sha256>> {
+    /// The generator point the Schnorr signature scheme is defined with.
     pub G: Point<GT>,
+    /// The hash used to produce the [_Fiat-Shamir_] challenge
+    /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
     pub challenge_hash: CH,
+    /// The [`NonceHash<H>`] to produce nonces when signing. If you don't need a signing instance this can just be `()`.
+    ///
+    /// [`NonceHash<H>`]: crate::fun::hash::NonceHash
     pub nonce_hash: N,
 }
 
+impl Default for Schnorr {
+    /// The default is just `Schnorr::from_tag("BIP340")`.
+    fn default() -> Self {
+        Schnorr::from_tag(b"BIP340")
+    }
+}
+
 impl Schnorr {
-    //! Generates a `Schnorr` instance from a tag.
-    //! The instance will have its `challenge_hash` and `nonce_hash` derived from the tag and use the standard value of [`G`].
-    //!
-    //! [`G`]: fun::G
+    /// Generates a `Schnorr` instance from a tag.
+    /// The instance will have its `challenge_hash` and `nonce_hash` derived from the tag and use the standard value of [`G`].
+    ///
+    /// [`G`]: crate::fun::G
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use schnorr_fun::Schnorr;
+    /// // An instance for your own protocol
+    /// let my_schnorr = Schnorr::from_tag(b"my-domain");
+    /// // An instance compatible with Bitcoin
+    /// let bitcoin_schnorr = Schnorr::from_tag(b"BIP340");
     pub fn from_tag(tag: &[u8]) -> Self {
         Schnorr {
             G: crate::fun::G.clone(),
@@ -46,8 +70,8 @@ impl<CH, NH> Schnorr<CH, NH> {
     /// negation of it. This happens because the corresponding [`Point`] may not
     /// have an y-coordinate that is even (see [`EvenY`])
     ///
-    /// [`Point`]: fun::Point
-    /// [`EvenY`]: fun::marker::EvenY
+    /// [`Point`]: crate::fun::Point
+    /// [`EvenY`]: crate::fun::marker::EvenY
     pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
         let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
         KeyPair { sk, pk }
@@ -62,6 +86,22 @@ where
     /// Sign a message using a secret key and a particular nonce derivation scheme.
     ///
     /// # Examples
+    ///
+    /// ```
+    /// use schnorr_fun::{
+    ///     fun::{marker::*, Scalar},
+    ///     Derivation, Schnorr,
+    /// };
+    /// let schnorr = Schnorr::from_tag(b"my-domain");
+    /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+    /// let message = b"Chancellor on brink of second bailout for banks"
+    ///     .as_ref()
+    ///     .mark::<Public>();
+    /// // sign a message deterministically
+    /// let signature = schnorr.sign(&keypair, message, Derivation::Deterministic);
+    /// // sign a message using auxiliary randomness (preferred)
+    /// let signature = schnorr.sign(&keypair, message, Derivation::rng(&mut rand::thread_rng()));
+    /// ```
     pub fn sign(
         &self,
         keypair: &KeyPair,
@@ -86,10 +126,29 @@ where
 }
 
 impl<GT, CH: Digest<OutputSize = U32> + Clone, NH> Schnorr<GT, CH, NH> {
-    /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form
-    /// specified by BIP-340.
+    /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by BIP-340.
     ///
     /// Concretely computes the hash `H(R || X || m)`.
+    ///
+    /// # Example
+    ///
+    /// Here's how you could use this to roll your own signatures.
+    ///
+    /// ```
+    /// use schnorr_fun::{
+    ///     fun::{marker::*, s, Scalar, XOnly},
+    ///     Schnorr, Signature,
+    /// };
+    /// let schnorr = Schnorr::from_tag(b"my-domain");
+    /// let message = b"we rolled our own sign!".as_ref().mark::<Public>();
+    /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+    /// let mut r = Scalar::random(&mut rand::thread_rng());
+    /// let R = XOnly::<SquareY>::from_scalar_mul(&schnorr.G, &mut r);
+    /// let challenge = schnorr.challenge(&R, keypair.public_key(), message);
+    /// let s = s!(r + challenge * { keypair.secret_key() });
+    /// let signature = Signature { R, s };
+    /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
+    /// ```
     pub fn challenge<S: Secrecy>(
         &self,
         R: &XOnly<SquareY>,
@@ -106,10 +165,16 @@ impl<GT, CH: Digest<OutputSize = U32> + Clone, NH> Schnorr<GT, CH, NH> {
             .mark::<S>()
     }
 
+    /// Verifies a signature on a message under a given public key.  Note that a full
+    /// `Point<EvenY,..>` is passed in rather than a `XOnly<EvenY,..>` because it's more efficient
+    /// for repeated verification (where as `XOnly<EvenY,..>` is more efficient for repeated
+    /// signing).
+    ///
+    /// For an example see the [Synopsis](crate#synopsis)
     #[must_use]
     pub fn verify(
         &self,
-        public_key: &Point<EvenY, impl Secrecy, NonZero>,
+        public_key: &Point<EvenY, impl Secrecy>,
         message: Slice<'_, impl Secrecy>,
         signature: &Signature<impl Secrecy>,
     ) -> bool {
@@ -119,9 +184,9 @@ impl<GT, CH: Digest<OutputSize = U32> + Clone, NH> Schnorr<GT, CH, NH> {
         g!(s * self.G - c * X) == *R
     }
 
-    /// Anticipates a Schnorr signature given the nonce `R` that will be used ahead
-    /// of time.  Deterministically returns the group element that corresponds to
-    /// the scalar value of the signature. i.e `R + c * X`
+    /// _Anticipates_ a Schnorr signature given the nonce `R` that will be used ahead of time.
+    /// Deterministically returns the group element that corresponds to the scalar value of the
+    /// signature. i.e `R + c * X`
     pub fn anticipate_signature(
         &self,
         X: &Point<EvenY, impl Secrecy>,
