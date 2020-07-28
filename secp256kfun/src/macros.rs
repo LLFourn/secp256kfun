@@ -289,6 +289,8 @@ macro_rules! test_plus_wasm {
 /// are the same. For example, if you are implementing a signature scheme, then
 /// the message you are signing would go into `public`.
 ///
+/// This macro compiles to a call to [`NonceHash::begin_derivation`] which has further examples.
+///
 /// # Example
 /// Derive a nonce using a secret scalar and additional randomness from `thread_rng`
 /// ```
@@ -301,6 +303,8 @@ macro_rules! test_plus_wasm {
 ///     public => [b"public-inputs-to-the-algorithm".as_ref()]
 /// );
 /// ```
+///
+/// [`NonceHash::begin_derivation`]: crate::hash::NonceHash::begin_derivation
 #[macro_export]
 macro_rules! derive_nonce {
     (
@@ -311,7 +315,7 @@ macro_rules! derive_nonce {
     ) => {{
         use $crate::hash::HashAdd;
         use core::borrow::Borrow;
-        Scalar::from_hash(
+        Scalar::from(
             $nonce_hash.begin_derivation($derivation, $secret.borrow())$(.add($public.borrow()))+
         )
     }}
