@@ -1,6 +1,6 @@
 # SchnorrFun!
 
-Generate and verify Schnorr signatures on secp256k1.
+Generate and verify Schnorr signatures on secp256k1. Uses [secp256kfun].
 
 Schnorr signatures were introduced (and patented until 2008) by their namesake in [Efficient Signature Generation by Smart Cards][1].
 This implementation is based on the [BIP-340] specification, but is flexible enough to be used as a general purpose Schnorr signature scheme.
@@ -9,15 +9,13 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 
 ``` toml
 [dependencies]
-schnorr_fun = { git = "https://github.com/llfourn/secp256kfun" }
+schnorr_fun = "0.1"
 ```
 
 ### Should use?
 
+This library and [secp256kfun] is experimental.
 BIP-340 is still in review so APIs are subject to change.
-Ver 0.1 will be released once BIP-340 looks final.
-
-Also see [secp256kfun]
 
 ## Synopsis
 

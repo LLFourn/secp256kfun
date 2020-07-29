@@ -1,5 +1,5 @@
-//! Bitcoin-compatible ECDSA implementation. Work in progress.
-
+#![feature(external_doc)]
+#![doc(include = "../README.md")]
 #![no_std]
 #![allow(non_snake_case)]
 

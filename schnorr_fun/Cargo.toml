@@ -8,6 +8,7 @@ license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun"
 repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/schnorr_fun"
+description = "BIP340 Schnorr signatures based on secp256kfun"
 categories = ["cryptography", "no_std"]
 keywords = ["bitcoin", "schnorr"]
 

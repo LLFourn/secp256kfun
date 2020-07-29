@@ -7,7 +7,9 @@ license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun"
 repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/ecdsa_fun"
-categories = ["cryptography", "no_std"]
+description = "Bitcoin compatible ECDSA signatures based on secp256kfun"
+readme = "README.md"
+categories = ["cryptography", "cryptography::cryptocurrencies"]
 keywords = ["bitcoin", "ecdsa", "secp256k1"]
 
 [package.metadata.docs.rs]
