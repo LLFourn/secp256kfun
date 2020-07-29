@@ -315,7 +315,7 @@ macro_rules! derive_nonce {
     ) => {{
         use $crate::hash::HashAdd;
         use core::borrow::Borrow;
-        Scalar::from(
+        Scalar::from_hash(
             $nonce_hash.begin_derivation($derivation, $secret.borrow())$(.add($public.borrow()))+
         )
     }}
