@@ -80,7 +80,7 @@ impl<D: Digest> HashAdd for D {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 /// A choice of nonce Derivation.
 ///
 /// See [`NonceHash::begin_derivation`] and [`derive_nonce!`] for usage examples.
@@ -92,10 +92,6 @@ pub enum Derivation {
     Deterministic,
     /// Derive a nonce with additional randomness
     Aux([u8; 32]),
-    /// **B**ring **Y**our **O**wn nonce that **Y**ou must ensure **O**nly **L**ives **O**nce. It must be uniformly random and completely
-    /// hidden from the perspective of any attacker and it must only be used once. Don't use this
-    /// unless you understand what you are doing and there is no other option.
-    BYOYOLO(Scalar),
 }
 
 impl Derivation {
@@ -107,7 +103,7 @@ impl Derivation {
     /// use secp256kfun::hash::Derivation;
     /// let derivation = Derivation::rng(&mut rand::thread_rng());
     /// ```
-    pub fn rng<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn rng<R: RngCore + CryptoRng>(rng: &mut R) -> Derivation {
         let mut aux = [0u8; 32];
         rng.fill_bytes(&mut aux);
         Derivation::Aux(aux)
@@ -166,10 +162,10 @@ impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
     /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
     /// let nonce_hash = NonceHash::from_tag(b"test");
     /// let secret = Scalar::random(&mut rand::thread_rng());
-    /// let secret_derived_nonce = Scalar::from(
+    /// let secret_derived_nonce = Scalar::from_hash(
     ///     nonce_hash
     ///         .begin_derivation(Derivation::Deterministic, &secret)
-    ///         .add(b"public inputs".as_ref()),
+    ///         .add(b"other data".as_ref()),
     /// );
     /// ```
     ///
@@ -178,10 +174,10 @@ impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
     /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
     /// # let nonce_hash = NonceHash::from_tag(b"test");
     /// # let secret = Scalar::random(&mut rand::thread_rng());
-    /// let secret_derived_nonce = Scalar::from(
+    /// let secret_derived_nonce = Scalar::from_hash(
     ///     nonce_hash
     ///         .begin_derivation(Derivation::rng(&mut rand::thread_rng()), &secret)
-    ///         .add(b"public inputs".as_ref()),
+    ///         .add(b"other data".as_ref()),
     /// );
     /// ```
     ///
@@ -194,44 +190,15 @@ impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
     /// # let secret = Scalar::random(&mut rand::thread_rng());
     /// let mut aux = [0u8; 32];
     /// rand::thread_rng().fill_bytes(&mut aux);
-    /// let secret_derived_nonce = Scalar::from(
+    /// let secret_derived_nonce = Scalar::from_hash(
     ///     nonce_hash
     ///         .begin_derivation(Derivation::Aux(aux), &secret)
-    ///         .add(b"public inputs".as_ref()),
+    ///         .add(b"other data".as_ref()),
     /// );
     /// ```
-    ///
-    /// Bring your own nonce. By passing in a `BYOYOLO` nonce to a function you explicitly abandon
-    /// the carefully defined derivation inputs the function designer has used to make sure that the
-    /// resulting output does not leak your secret inputs. **Don't use this unless it is
-    /// absolutely necessary and you can prove it is secure in the way you are using it.**.
-    ///
-    /// ```
-    /// # use secp256kfun::{hash::{Derivation, NonceHash, HashAdd}, Scalar};
-    /// # use rand_core::RngCore;
-    /// # let nonce_hash = NonceHash::from_tag(b"test");
-    /// # let secret = Scalar::random(&mut rand::thread_rng());
-    /// let my_nonce = Scalar::random(&mut rand::thread_rng());
-    /// let my_nonce_again = Scalar::from(
-    ///     nonce_hash
-    ///         .begin_derivation(Derivation::BYOYOLO(my_nonce.clone()), &secret)
-    ///         .add(b"public inputs".as_ref()),
-    /// );
-    /// assert_eq!(my_nonce, my_nonce_again);
-    /// ```
-    ///
-    /// [`NonceDerivation`]: crate::hash::NonceDerivation
-    /// [`derive_nonce!`]: crate::derive_nonce!
-    pub fn begin_derivation(&self, derivation: Derivation, secret: &Scalar) -> NonceDerivation<H> {
+    pub fn begin_derivation(&self, derivation: Derivation, secret: &Scalar) -> H {
         match derivation {
-            Derivation::BYOYOLO(scalar) => NonceDerivation {
-                state: self.nonce_hash.clone(),
-                yolo: Some(scalar),
-            },
-            Derivation::Deterministic => NonceDerivation {
-                state: self.nonce_hash.clone().add(secret),
-                yolo: None,
-            },
+            Derivation::Deterministic => self.nonce_hash.clone().add(secret),
             Derivation::Aux(aux_bytes) => {
                 let sec_bytes = secret.to_bytes();
                 let mut aux_hash = self.aux_hash.clone();
@@ -244,41 +211,8 @@ impl<H: Digest<OutputSize = U32> + Clone + digest::Digest> NonceHash<H> {
                     *byte ^= sec_bytes[i]
                 }
 
-                NonceDerivation {
-                    state: self.nonce_hash.clone().add(&bytes[..]),
-                    yolo: None,
-                }
+                self.nonce_hash.clone().add(&bytes[..])
             }
-        }
-    }
-}
-
-/// The state of a nonce derivation.
-///
-/// Essentially just a wrapper around a hash and possibly an override `Scalar` if the [`Derivation`]
-/// was `Derivation::BYOYOLO(scalar)`.  Use the `From` implementation to convert this into the nonce
-/// `Scalar` if you are finished using [`HashAdd::add`].
-///
-/// [`HashAdd::add`]: crate::hash::HashAdd::add
-/// [`Derivation`]: crate::hash::Derivation
-#[derive(Clone, Debug)]
-pub struct NonceDerivation<H> {
-    state: H,
-    yolo: Option<Scalar>,
-}
-
-impl<H: Digest> HashAdd for NonceDerivation<H> {
-    fn add<HI: HashInto + ?Sized>(mut self, data: &HI) -> Self {
-        self.state = self.state.add(data);
-        self
-    }
-}
-
-impl<H: Digest<OutputSize = U32>> From<NonceDerivation<H>> for Scalar {
-    fn from(nd: NonceDerivation<H>) -> Self {
-        match nd.yolo {
-            Some(scalar) => scalar,
-            None => Scalar::from_hash(nd.state),
         }
     }
 }
