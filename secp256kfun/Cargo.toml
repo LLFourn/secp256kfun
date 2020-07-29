@@ -1,6 +1,6 @@
 [package]
 name = "secp256kfun"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun"
@@ -36,7 +36,7 @@ bincode = "1.0"
 criterion = "0.3"
 
 [build-dependencies]
-parity_backend = { version = "0.1.0", package = "secp256kfun_parity_backend", features = ["alloc"] }
+parity_backend = { version = "0.1.1", package = "secp256kfun_parity_backend", features = ["alloc"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
