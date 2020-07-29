@@ -62,7 +62,7 @@ impl Schnorr {
     }
 }
 
-impl<CH, NH> Schnorr<CH, NH> {
+impl<GT, CH, NH> Schnorr<GT, CH, NH> {
     /// Converts a non-zero scalar to a key-pair by interpreting it as a secret key.
     ///
     /// **The secret key in the resulting key is not guaranteed to be the same
