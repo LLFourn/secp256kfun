@@ -2,10 +2,11 @@
 use rand::thread_rng;
 use secp256kfun::{
     g,
-    hash::{tagged_hash, HashAdd},
+    hash::{HashAdd, Tagged},
     marker::*,
     s, Scalar, XOnly, G,
 };
+use sha2::Sha256;
 
 #[derive(Clone, Debug)]
 pub struct Signature {
@@ -14,7 +15,7 @@ pub struct Signature {
 }
 
 lazy_static::lazy_static! {
-    pub static ref BIP340_CHALLENGE: sha2::Sha256 = tagged_hash(b"BIP340/challenge");
+    pub static ref BIP340_CHALLENGE: Sha256 = Sha256::default().tagged(b"BIP340/challenge");
 }
 
 pub fn keygen() -> (Scalar, XOnly<EvenY>) {

@@ -283,40 +283,45 @@ macro_rules! test_plus_wasm {
 /// Macro to make nonce derivation clear and explicit.
 ///
 /// Nonce derivation is a sensitive action where mistakes can have catastrophic
-/// consequences. This macro helps to make it clear to the reader what the
-/// secret thing that is being used to make the resulting nonce unpredictable
-/// and what public input data should be hashed to make sure no two nonce values
-/// are the same. For example, if you are implementing a signature scheme, then
-/// the message you are signing would go into `public`.
+/// consequences. This macro helps to make it clear for which secret the nonce
+/// is being produced and what public input are being used to make sure no two
+/// nonce values are the same (even when using generating the nonce
+/// deterministically). For example, if you are implementing a signature scheme,
+/// then the message you are signing would go into `public` and the secret
+/// signign key would go into `secret`.
 ///
-/// This macro compiles to a call to [`NonceHash::begin_derivation`] which has further examples.
+/// This macro compiles to a call to [`NonceGen::begin_derivation`].
 ///
-/// # Example
-/// Derive a nonce using a secret scalar and additional randomness from `thread_rng`
+/// # Examples
+///
+/// Derive a nonce deterministically. This example shouldn't be taken
+/// literally. What you actually pass here to `secret` and `public` is dependent
+/// on the cryptographic scheme and is crucial to get right.
+///
 /// ```
-/// use secp256kfun::{Scalar, derive_nonce, hash::{Derivation, NonceHash}};
+/// use secp256kfun::{Scalar, derive_nonce, nonce::{NonceGen,Deterministic}};
+/// use sha2::Sha256;
 /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
-/// let mut r = derive_nonce!(
-///     nonce_hash => NonceHash::from_tag(b"my-nonce-hash"),
-///     derivation => Derivation::rng(&mut rand::thread_rng()),
+/// let nonce_gen = Deterministic::<Sha256>::default().add_protocol_tag("my-protocol");
+/// let r = derive_nonce!(
+///     nonce_gen => nonce_gen,
 ///     secret => &secret_scalar,
 ///     public => [b"public-inputs-to-the-algorithm".as_ref()]
 /// );
 /// ```
-///
-/// [`NonceHash::begin_derivation`]: crate::hash::NonceHash::begin_derivation
+/// [`NonceGen::begin_derivation`]: crate::nonce::NonceGen::begin_derivation
 #[macro_export]
 macro_rules! derive_nonce {
     (
-        nonce_hash => $nonce_hash:expr,
-        derivation => $derivation:expr,
+        nonce_gen => $nonce_gen:expr,
         secret => $secret:expr,
         public => [$($public:expr),+]
     ) => {{
         use $crate::hash::HashAdd;
         use core::borrow::Borrow;
+        use $crate::nonce::NonceGen;
         Scalar::from_hash(
-            $nonce_hash.begin_derivation($derivation, $secret.borrow())$(.add($public.borrow()))+
+            $nonce_gen.begin_derivation($secret.borrow())$(.add($public.borrow()))+
         )
     }}
 }
