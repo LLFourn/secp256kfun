@@ -1,21 +1,25 @@
 use crate::fun::{
-    derive_nonce, g,
-    hash::{tagged_hash, Derivation, HashAdd, NonceHash},
+    derive_nonce,
+    digest::{generic_array::typenum::U32, Digest},
+    g,
+    hash::{HashAdd, Tagged},
     marker::*,
+    nonce::{NonceChallengeBundle, NonceGen},
     s, Point, Scalar,
 };
-use digest::{generic_array::typenum::U32, Digest};
 
-pub struct DLEQ<CH, N> {
-    pub challenge_hash: CH,
-    pub nonce_hash: N,
+pub struct DLEQ<H, NG> {
+    nonce_challenge_bundle: NonceChallengeBundle<H, NG>,
 }
 
-impl DLEQ<sha2::Sha256, NonceHash<sha2::Sha256>> {
-    pub fn from_tag(tag: &[u8]) -> Self {
+impl<H: Tagged, NG: NonceGen> DLEQ<H, NG> {
+    pub fn new(nonce_gen: NG) -> Self {
         DLEQ {
-            challenge_hash: tagged_hash(&[tag, b"/challenge"].concat()),
-            nonce_hash: NonceHash::from_tag(tag),
+            nonce_challenge_bundle: NonceChallengeBundle {
+                challenge_hash: H::default(),
+                nonce_gen,
+            }
+            .add_protocol_tag("DLEQ"),
         }
     }
 }
@@ -36,21 +40,20 @@ impl Proof {
     }
 }
 
-impl<CH, NH> DLEQ<CH, NonceHash<NH>>
+impl<CH, NG> DLEQ<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
-    NH: Digest<OutputSize = U32> + Clone,
+    NG: NonceGen,
 {
     pub fn prove_guaranteed(
         &self,
         x: &Scalar,
         G: &Point<impl Normalized, impl Secrecy>,
         H: &Point<impl Normalized, impl Secrecy>,
-        nonce: Derivation,
     ) -> (Proof, Point, Point) {
         let xG = g!(x * G).mark::<Normal>();
         let xH = g!(x * H).mark::<Normal>();
-        (self.prove(x, G, &xG, H, &xH, nonce), xG, xH)
+        (self.prove(x, G, &xG, H, &xH), xG, xH)
     }
 
     pub fn prove(
@@ -60,11 +63,9 @@ where
         xG: &Point<impl Normalized, impl Secrecy>,
         H: &Point<impl Normalized, impl Secrecy>,
         xH: &Point<impl Normalized, impl Secrecy>,
-        derivation: Derivation,
     ) -> Proof {
         let r = derive_nonce!(
-            nonce_hash => self.nonce_hash,
-            derivation => derivation,
+            nonce_gen => self.nonce_challenge_bundle.nonce_gen,
             secret => x,
             public => [G, xG, H, xH]
         );
@@ -82,7 +83,7 @@ where
     }
 }
 
-impl<CH: Digest<OutputSize = U32> + Clone, NH> DLEQ<CH, NH> {
+impl<CH: Digest<OutputSize = U32> + Clone, NG> DLEQ<CH, NG> {
     #[must_use]
     pub fn verify(
         &self,
@@ -121,6 +122,7 @@ impl<CH: Digest<OutputSize = U32> + Clone, NH> DLEQ<CH, NH> {
         xH: &Point<impl Normalized, impl Secrecy>,
     ) -> Scalar<Public, Zero> {
         let hash = self
+            .nonce_challenge_bundle
             .challenge_hash
             .clone()
             .add(rG)
@@ -136,25 +138,32 @@ impl<CH: Digest<OutputSize = U32> + Clone, NH> DLEQ<CH, NH> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use secp256kfun::G;
+    use crate::{fun::G, nonce};
+    use sha2::Sha256;
+
+    macro_rules! dleq_test_instance {
+        () => {
+            DLEQ::<Sha256, _>::new(nonce::Deterministic::<Sha256>::default())
+        };
+    }
 
     #[test]
     fn prove_verify() {
-        let dleq = DLEQ::from_tag(b"test");
+        let dleq = dleq_test_instance!();
         let x = Scalar::random(&mut rand::thread_rng());
         let H = Point::random(&mut rand::thread_rng());
-        let (proof, xG, xH) = dleq.prove_guaranteed(&x, &G, &H, Derivation::Deterministic);
+        let (proof, xG, xH) = dleq.prove_guaranteed(&x, &G, &H);
         assert!(dleq.verify(&G, &xG, &H, &xH, &proof));
     }
 
     #[test]
     fn prove_bogus() {
-        let dleq = DLEQ::from_tag(b"test");
+        let dleq = dleq_test_instance!();
         let x = Scalar::random(&mut rand::thread_rng());
         let xG = Point::random(&mut rand::thread_rng());
         let H = Point::random(&mut rand::thread_rng());
         let xH = Point::random(&mut rand::thread_rng());
-        let bogus_proof = dleq.prove(&x, &G, &xG, &H, &xH, Derivation::Deterministic);
+        let bogus_proof = dleq.prove(&x, &G, &xG, &H, &xH);
 
         assert!(!dleq.verify(&G, &xG, &H, &xH, &bogus_proof));
     }
@@ -162,10 +171,10 @@ mod test {
     #[cfg(feature = "serialization")]
     #[test]
     fn dleq_proof_serialize_roundtrip() {
-        let dleq = DLEQ::from_tag(b"test");
+        let dleq = dleq_test_instance!();
         let x = Scalar::random(&mut rand::thread_rng());
         let H = Point::random(&mut rand::thread_rng());
-        let (proof, ..) = dleq.prove_guaranteed(&x, &G, &H, Derivation::Deterministic);
+        let (proof, ..) = dleq.prove_guaranteed(&x, &G, &H);
         let serialized = bincode::serialize(&proof).unwrap();
         assert_eq!(serialized.len(), 64);
         let deserialized = bincode::deserialize::<Proof<Public>>(&serialized[..]).unwrap();
