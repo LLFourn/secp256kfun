@@ -130,7 +130,7 @@ impl<Y: YChoice> XOnly<Y> {
 
 impl<Y> HashInto for XOnly<Y> {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.input(self.as_bytes())
+        hash.update(self.as_bytes())
     }
 }
 

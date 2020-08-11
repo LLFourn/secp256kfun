@@ -197,9 +197,9 @@ where
         let mut aux_bytes = [0u8; 32];
         self.rng.fill_bytes(&mut aux_bytes[..]);
         let mut aux_hash = self.aux_hash.clone();
-        aux_hash.input(aux_bytes);
+        aux_hash.update(aux_bytes);
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(aux_hash.result().as_ref());
+        bytes.copy_from_slice(aux_hash.finalize().as_ref());
 
         // bitwise xor the hashed randomness with secret
         for (i, byte) in bytes.iter_mut().enumerate() {

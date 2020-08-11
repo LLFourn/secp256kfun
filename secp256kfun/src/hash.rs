@@ -19,8 +19,8 @@ pub trait Tagged: Default + Clone {
     /// use digest::Digest;
     /// use secp256kfun::hash::Tagged;
     /// let mut hash = sha2::Sha256::default().tagged(b"my-domain/my-purpose");
-    /// hash.input(b"hello world");
-    /// println!("{:?}", hash.result());
+    /// hash.update(b"hello world");
+    /// println!("{:?}", hash.finalize());
     /// ```
     fn tagged(&self, tag: &[u8]) -> Self;
 }
@@ -33,14 +33,14 @@ where
     fn tagged(&self, tag: &[u8]) -> Self {
         let hashed_tag = {
             let mut hash = H::default();
-            hash.input(tag);
-            hash.result()
+            hash.update(tag);
+            hash.finalize()
         };
         let mut tagged_hash = self.clone();
         let fill_block =
             <<H::BlockSize as PartialDiv<H::OutputSize>>::Output as Unsigned>::to_usize();
         for _ in 0..fill_block {
-            tagged_hash.input(&hashed_tag[..]);
+            tagged_hash.update(&hashed_tag[..]);
         }
         tagged_hash
     }
@@ -60,12 +60,12 @@ where
 ///
 /// impl HashInto for CryptoData {
 ///     fn hash_into(&self, hash: &mut impl digest::Digest) {
-///         hash.input(&self.0[..])
+///         hash.update(&self.0[..])
 ///     }
 /// }
 ///
 /// let cryptodata = CryptoData([42u8; 42]);
-/// let hash = sha2::Sha256::default().add(&cryptodata).result();
+/// let hash = sha2::Sha256::default().add(&cryptodata).finalize();
 /// ```
 pub trait HashInto {
     /// Asks the item to convert itself to bytes and add itself to `hash`.
@@ -74,13 +74,13 @@ pub trait HashInto {
 
 impl HashInto for [u8] {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.input(self)
+        hash.update(self)
     }
 }
 
 impl HashInto for str {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.input(self.as_bytes())
+        hash.update(self.as_bytes())
     }
 }
 

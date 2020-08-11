@@ -117,7 +117,7 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// let message_hash = {
     ///     let mut message_hash = [0u8; 32];
     ///     let hash = Sha256::default().chain(message);
-    ///     message_hash.copy_from_slice(hash.result().as_ref());
+    ///     message_hash.copy_from_slice(hash.finalize().as_ref());
     ///     message_hash
     /// };
     /// let signature = ecdsa.sign(&secret_key, &message_hash);
