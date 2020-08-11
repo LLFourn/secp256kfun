@@ -122,7 +122,7 @@ impl Scalar<Secret, NonZero> {
     /// use digest::Digest;
     /// use secp256kfun::Scalar;
     /// let mut hash = sha2::Sha256::default();
-    /// hash.input(b"Chancellor on brink of second bailout for banks".as_ref());
+    /// hash.update(b"Chancellor on brink of second bailout for banks".as_ref());
     /// let scalar = Scalar::from_hash(hash);
     /// # assert_eq!(
     /// #     scalar.to_bytes(),
@@ -131,7 +131,7 @@ impl Scalar<Secret, NonZero> {
     /// ```
     pub fn from_hash(hash: impl Digest<OutputSize = U32>) -> Self {
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(hash.result().as_slice());
+        bytes.copy_from_slice(hash.finalize().as_slice());
         Scalar::from_bytes_mod_order(bytes)
             .mark::<NonZero>()
             .expect("computationally unreachable")
@@ -288,7 +288,7 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
 
 impl HashInto for Scalar {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.input(&self.to_bytes())
+        hash.update(&self.to_bytes())
     }
 }
 

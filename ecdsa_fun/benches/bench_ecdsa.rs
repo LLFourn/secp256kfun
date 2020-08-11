@@ -1,19 +1,18 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{g, hash::Derivation::Deterministic, marker::*, Scalar, G};
+use secp256kfun::{g, marker::*, nonce::Deterministic, Scalar, G};
+use sha2::Sha256;
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
     static ref SK: Scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").mark::<NonZero>().unwrap();
-    static ref ECDSA: ecdsa_fun::ECDSA = ecdsa_fun::ECDSA::from_tag(b"bench");
+    static ref ECDSA: ecdsa_fun::ECDSA<Deterministic::<Sha256>> = ecdsa_fun::ECDSA::default();
 }
 
 fn sign_ecdsa(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecdsa_sign");
 
-    group.bench_function("fun::ecdsa_sign", |b| {
-        b.iter(|| ECDSA.sign(&SK, MESSAGE, Deterministic))
-    });
+    group.bench_function("fun::ecdsa_sign", |b| b.iter(|| ECDSA.sign(&SK, MESSAGE)));
 
     {
         use secp256k1::{Message, Secp256k1, SecretKey};
@@ -30,7 +29,7 @@ fn sign_ecdsa(c: &mut Criterion) {
 fn verify_ecdsa(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecdsa_verify");
 
-    let signature = ECDSA.sign(&SK, MESSAGE, Deterministic);
+    let signature = ECDSA.sign(&SK, MESSAGE);
     let pk = g!(SK * G);
 
     group.bench_function("fun::ecdsa_verify", |b| {

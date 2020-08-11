@@ -59,7 +59,7 @@ impl<'a, S> From<Slice<'a, S>> for &'a [u8] {
 
 impl<'a, S> HashInto for Slice<'a, S> {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.input(self.inner)
+        hash.update(self.inner)
     }
 }
 

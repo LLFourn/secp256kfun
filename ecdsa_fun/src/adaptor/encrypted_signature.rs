@@ -42,20 +42,22 @@ pub struct EncryptedSignature<S = Public> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::{adaptor::Adaptor, fun::nonce};
+    use rand::rngs::ThreadRng;
+    use sha2::Sha256;
 
     #[cfg(feature = "serialization")]
     #[test]
     fn encrypted_signature_serde_roundtrip() {
-        use super::*;
-        use crate::fun::hash::Derivation;
-        let adaptor = crate::adaptor::Adaptor::from_tag(b"test");
+        let ecdsa_adaptor =
+            Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
         let secret_key = Scalar::random(&mut rand::thread_rng());
         let encryption_key = Point::random(&mut rand::thread_rng());
-        let encrypted_signature = adaptor.encrypted_sign(
+        let encrypted_signature = ecdsa_adaptor.encrypted_sign(
             &secret_key,
             &encryption_key,
             b"hello world you are beautiful!!!",
-            Derivation::Deterministic,
         );
         let serialized = bincode::serialize(&encrypted_signature).unwrap();
         assert_eq!(serialized.len(), 33 + 33 + 32 + 64);

@@ -13,6 +13,10 @@ extern crate alloc;
 extern crate std;
 
 pub mod hash;
+pub mod nonce;
+pub use digest;
+pub use rand_core;
+
 mod point;
 mod scalar;
 mod slice;

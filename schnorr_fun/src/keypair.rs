@@ -8,9 +8,9 @@ use secp256kfun::{marker::*, Point, Scalar, XOnly};
 /// Create a `KeyPair` from a [`Schnorr`] instance.
 ///
 /// ```
-/// use schnorr_fun::{fun::Scalar, Schnorr};
+/// # use schnorr_fun::{fun::Scalar, Schnorr};
+/// # let schnorr = schnorr_fun::test_instance!();
 /// let my_secret_key = Scalar::random(&mut rand::thread_rng());
-/// let schnorr = Schnorr::from_tag(b"my-domain");
 /// let my_keypair = schnorr.new_keypair(my_secret_key);
 /// ```
 ///
@@ -37,7 +37,7 @@ impl KeyPair {
     /// # Example
     /// ```
     /// # use schnorr_fun::{Schnorr, fun::Scalar};
-    /// # let keypair = Schnorr::from_tag(b"test").new_keypair(Scalar::one());
+    /// # let keypair = schnorr_fun::test_instance!().new_keypair(Scalar::one());
     /// let (secret_key, public_key) = keypair.as_tuple();
     pub fn as_tuple(&self) -> (&Scalar, &XOnly<EvenY>) {
         (&self.sk, &self.pk)
@@ -49,7 +49,7 @@ impl KeyPair {
     ///
     /// ```
     /// # use schnorr_fun::{fun::Scalar, Schnorr};
-    /// # let keypair = Schnorr::from_tag(b"test").new_keypair(Scalar::random(&mut rand::thread_rng()));
+    /// # let keypair = schnorr_fun::test_instance!().new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let verification_key = keypair.public_key().to_point();
     /// # assert_eq!(keypair.verification_key(), keypair.public_key().to_point())
     /// ```
