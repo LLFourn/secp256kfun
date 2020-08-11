@@ -42,14 +42,15 @@ pub struct EncryptedSignature<S = Public> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::{adaptor::Adaptor, fun::nonce};
-    use rand::rngs::ThreadRng;
-    use sha2::Sha256;
 
     #[cfg(feature = "serialization")]
     #[test]
     fn encrypted_signature_serde_roundtrip() {
+        use super::*;
+        use crate::{adaptor::Adaptor, fun::nonce};
+        use rand::rngs::ThreadRng;
+        use sha2::Sha256;
+
         let ecdsa_adaptor =
             Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
         let secret_key = Scalar::random(&mut rand::thread_rng());
