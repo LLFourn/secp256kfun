@@ -10,31 +10,37 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 ``` toml
 [dependencies]
 schnorr_fun = "0.1"
+sha2 = "0.9"
 ```
 
 ### Should use?
 
-This library and [secp256kfun] is experimental.
+This library and [secp256kfun] are experimental.
 BIP-340 is still in review so APIs are subject to change.
 
 ## Synopsis
 
 ```rust
 use schnorr_fun::{
-    fun::{hash::Derivation, marker::*, Scalar},
+    fun::{marker::*, Scalar, nonce},
     Schnorr,
+    MessageKind,
 };
-// Create a BIP-340 compatible instance
-let schnorr = Schnorr::default();
-// Or create an instance for your own protocol
-let schnorr = Schnorr::from_tag(b"my-domain");
+use sha2::Sha256;
+use rand::rngs::ThreadRng;
+// Use synthetic nonces
+let nonce_gen = nonce::from_global_rng::<Sha256,ThreadRng>();
+// Create a BIP-341 compatible instance
+let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone(),MessageKind::Prehashed);
+// Or create an instance for your own application
+let schnorr = Schnorr::<Sha256,_>::new(nonce_gen, MessageKind::Plain { tag: "my-app" });
 // Generate your public/private key-pair
 let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 let message = b"Chancellor on brink of second bailout for banks"
     .as_ref()
     .mark::<Public>();
 // Sign the message with our keypair
-let signature = schnorr.sign(&keypair, message, Derivation::rng(&mut rand::thread_rng()));
+let signature = schnorr.sign(&keypair, message);
 // Get the verifier's key
 let verification_key = keypair.verification_key();
 // Check it's valid 🍿

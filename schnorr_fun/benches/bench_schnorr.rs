@@ -1,13 +1,14 @@
 #![allow(non_upper_case_globals)]
 use criterion::{criterion_group, criterion_main, Criterion};
-use schnorr_fun::Schnorr;
-use secp256kfun::{hash::Derivation, marker::*, Scalar};
+use schnorr_fun::{MessageKind, Schnorr};
+use secp256kfun::{marker::*, nonce::Deterministic, Scalar};
+use sha2::Sha256;
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
     static ref SK: Scalar<Secret,NonZero> = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").mark::<NonZero>().unwrap();
-    static ref schnorr: Schnorr = schnorr_fun::Schnorr::from_tag(b"bench");
+    static ref schnorr: Schnorr<Sha256, Deterministic<Sha256>> = Schnorr::new(Deterministic::default(), MessageKind::Plain { tag: "bench" });
 }
 
 // note schnorr runs against grin's secp256k1 library
@@ -17,7 +18,7 @@ fn sign_schnorr(c: &mut Criterion) {
     let message = MESSAGE.as_ref().mark::<Public>();
     {
         group.bench_function("fun::schnorr_sign", |b| {
-            b.iter(|| schnorr.sign(&keypair, message, Derivation::Deterministic))
+            b.iter(|| schnorr.sign(&keypair, message))
         });
     }
 
@@ -45,11 +46,7 @@ fn verify_schnorr(c: &mut Criterion) {
     let keypair = schnorr.new_keypair(SK.clone());
     let message = MESSAGE.as_ref().mark::<Public>();
     {
-        let sig = schnorr.sign(
-            &keypair,
-            (&MESSAGE[..]).mark::<Public>(),
-            Derivation::Deterministic,
-        );
+        let sig = schnorr.sign(&keypair, (&MESSAGE[..]).mark::<Public>());
         let verification_key = &keypair.verification_key();
         group.bench_function("fun::schnorr_verify", |b| {
             b.iter(|| schnorr.verify(&verification_key, message, &sig))

@@ -1,11 +1,37 @@
 use hex_literal::hex;
 use schnorr_fun::{
-    fun::{hash::Derivation, marker::*, Scalar, XOnly},
-    Schnorr, Signature,
+    fun::{
+        marker::*,
+        nonce::{NonceRng, Synthetic},
+        Scalar, XOnly,
+    },
+    MessageKind, Schnorr, Signature,
 };
+use sha2::Sha256;
 
-lazy_static::lazy_static! {
-    pub static ref BIP340: Schnorr = Schnorr::from_tag(b"BIP340");
+struct AuxRng([u8; 32]);
+
+impl rand_core::RngCore for AuxRng {
+    fn next_u32(&mut self) -> u32 {
+        rand_core::impls::next_u32_via_fill(self)
+    }
+    fn next_u64(&mut self) -> u64 {
+        rand_core::impls::next_u64_via_fill(self)
+    }
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        dest.copy_from_slice(&self.0)
+    }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        Ok(self.fill_bytes(dest))
+    }
+}
+
+impl rand_core::CryptoRng for AuxRng {}
+
+impl NonceRng for AuxRng {
+    fn fill_bytes(&self, bytes: &mut [u8]) {
+        bytes.copy_from_slice(&self.0[..])
+    }
 }
 
 fn signing_test_vector(
@@ -15,16 +41,18 @@ fn signing_test_vector(
     message: [u8; 32],
     target_sig: [u8; 64],
 ) {
+    let nonce_gen = Synthetic::<Sha256, _>::new(AuxRng(aux_rand));
+    let bip340 = Schnorr::<Sha256, _>::new(nonce_gen, MessageKind::Prehashed);
     let secret_key = Scalar::from_bytes_mod_order(secret_key)
         .mark::<NonZero>()
         .unwrap();
-    let keypair = BIP340.new_keypair(secret_key);
+    let keypair = bip340.new_keypair(secret_key);
     let message = message.as_ref().mark::<Public>();
 
     assert_eq!(keypair.public_key().as_bytes(), &public_key);
-    let signature = BIP340.sign(&keypair, message, Derivation::Aux(aux_rand));
+    let signature = bip340.sign(&keypair, message);
     assert_eq!(signature.to_bytes().as_ref(), target_sig.as_ref());
-    assert!(BIP340.verify(&keypair.verification_key(), message, &signature));
+    assert!(bip340.verify(&keypair.verification_key(), message, &signature));
 }
 
 enum Outcome {
@@ -44,6 +72,7 @@ fn verification_test_vector(
     sig: [u8; 64],
     expected_outcome: Outcome,
 ) {
+    let bip340 = Schnorr::<Sha256>::verification_only(MessageKind::Prehashed);
     let message = message.as_ref().mark::<Public>();
     use Outcome::*;
     let public_key = {
@@ -63,7 +92,7 @@ fn verification_test_vector(
     };
 
     assert_eq!(
-        BIP340.verify(&public_key.into(), message, &signature),
+        bip340.verify(&public_key.into(), message, &signature),
         match expected_outcome {
             Success => true,
             Failure => false,
