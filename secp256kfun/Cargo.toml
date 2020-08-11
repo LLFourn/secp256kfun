@@ -1,6 +1,6 @@
 [package]
 name = "secp256kfun"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun"
