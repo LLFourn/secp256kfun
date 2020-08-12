@@ -1,5 +1,8 @@
-use crate::fun::{marker::*, Scalar, XOnly};
-use rand_core::{CryptoRng, RngCore};
+use crate::fun::{
+    marker::*,
+    rand_core::{CryptoRng, RngCore},
+    Scalar, XOnly,
+};
 
 /// A Schnorr signature.
 #[derive(Clone)]
