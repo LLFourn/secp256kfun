@@ -17,7 +17,9 @@
 //! };
 //! use rand::rngs::ThreadRng;
 //! use sha2::Sha256;
+//! // use deterministic nonce generation
 //! let adaptor = Adaptor::<Sha256, nonce::Deterministic<Sha256>>::default();
+//! // use synthetic nonce generation (preferred)
 //! let adaptor = Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
 //! let secret_signing_key = Scalar::random(&mut rand::thread_rng());
 //! let verification_key = g!(secret_signing_key * G).mark::<Normal>();
@@ -57,7 +59,7 @@ use secp256kfun::{
     derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
-    hash::Tagged,
+    hash::{AddTag, Tagged},
     marker::*,
     nonce::NonceGen,
     s, Point, Scalar, G,
@@ -86,12 +88,24 @@ where
     }
 }
 
-impl<H: Tagged, NG: NonceGen + Clone> Adaptor<H, NG> {
+impl<H: Tagged, NG: AddTag + Clone> Adaptor<H, NG> {
     pub fn new(nonce_gen: NG) -> Self {
         Self {
             ecdsa: ECDSA::new(nonce_gen.clone()),
             dleq: dleq::DLEQ::new(nonce_gen.clone()),
         }
+    }
+}
+
+impl<CH: Tagged> Adaptor<CH, ()> {
+    /// Create an `Adaptor` instance that can do verification only
+    /// # Example
+    /// ```
+    /// use ecdsa_fun::adaptor::Adaptor;
+    /// let adaptor = Adaptor::<sha2::Sha256, _>::verify_only();
+    /// ```
+    pub fn verify_only() -> Self {
+        Self::new(())
     }
 }
 

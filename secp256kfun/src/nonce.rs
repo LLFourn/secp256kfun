@@ -113,7 +113,10 @@ where
 /// # Example
 ///
 /// ```
-/// use secp256kfun::nonce::{Deterministic, NonceGen};
+/// use secp256kfun::{
+///     hash::AddTag,
+///     nonce::{Deterministic, NonceGen},
+/// };
 /// use sha2::Sha256;
 /// let nonce_gen = Deterministic::<Sha256>::default()
 ///     .add_protocol_tag("BIP340") // for example
@@ -138,27 +141,10 @@ pub struct Deterministic<H> {
 ///
 /// In general it's better to use the [`derive_nonce`] macro than to call
 /// `begin_derivation` directly.
-pub trait NonceGen {
+pub trait NonceGen: AddTag {
     /// The type of hash that `begin_derivation` will return.
     type Hash: Digest<OutputSize = U32>;
-    /// Tells the `NonceGen` to use a tag specific to a protocol.
-    /// This is ensure that two similar protocols do not produce the same nonces
-    /// even if they have the same public inputs. By "protocol" we mean type of cryptographic
-    /// scheme. For example, for the [BIP-340] signature scheme you would use "BIP340".
-    ///
-    /// It is the responsibility of the protocol implementer to call this with a
-    /// protocol specific tag.
-    ///
-    /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-    fn add_protocol_tag(self, tag: &str) -> Self;
-    /// Tells the `NonceGen` further domain separate itself for a particular
-    /// application. This is useful when you are domain separating signatures in
-    /// your application from other signatures **because it is crucial to change
-    /// the nonces too**.
-    ///
-    /// For typical Fiat-Shamir type proofs/signatures there is a also
-    /// [`NonceChallengeBundle`] type to help keep these in sync.
-    fn add_application_tag(self, tag: &str) -> Self;
+
     /// Takes a secret [`Scalar`] and outputs a hash. Before turining this hash
     /// into the nonce, you must add all the public inputs from the scheme into
     /// the hash. So for a signature scheme for example you would add the
@@ -171,7 +157,9 @@ impl<H: Tagged + Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H>
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
         self.nonce_hash.clone().add(secret)
     }
+}
 
+impl<H: Tagged> AddTag for Deterministic<H> {
     fn add_application_tag(mut self, tag: &str) -> Self {
         self.nonce_hash = self.nonce_hash.tagged(tag.as_bytes());
         self
@@ -208,7 +196,9 @@ where
 
         self.nonce_hash.clone().add(&bytes[..])
     }
+}
 
+impl<H: Tagged, R> AddTag for Synthetic<H, R> {
     fn add_application_tag(mut self, tag: &str) -> Self {
         self.nonce_hash = self.nonce_hash.tagged(tag.as_bytes());
         self
@@ -235,7 +225,7 @@ where
 ///
 /// ```
 /// use rand::rngs::ThreadRng;
-/// use secp256kfun::nonce;
+/// use secp256kfun::{hash::AddTag, nonce};
 /// use sha2::Sha256;
 /// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
 /// let fs = nonce::NonceChallengeBundle {
@@ -256,10 +246,10 @@ pub struct NonceChallengeBundle<H, NG> {
     pub nonce_gen: NG,
 }
 
-impl<NG: NonceGen, H: Tagged> NonceChallengeBundle<H, NG> {
+impl<H: Tagged, NG: AddTag> AddTag for NonceChallengeBundle<H, NG> {
     /// Tags both the [`NonceGen`] and the challenge hash with a protocol
     /// specific tag.
-    pub fn add_protocol_tag(self, tag: &str) -> Self {
+    fn add_protocol_tag(self, tag: &str) -> Self {
         Self {
             nonce_gen: self.nonce_gen.add_protocol_tag(tag),
             challenge_hash: self
@@ -270,30 +260,9 @@ impl<NG: NonceGen, H: Tagged> NonceChallengeBundle<H, NG> {
 
     /// Tags both the [`NonceGen`] and the challenge hash with an application
     /// specific tag.
-    pub fn add_application_tag(self, tag: &str) -> Self {
+    fn add_application_tag(self, tag: &str) -> Self {
         Self {
             nonce_gen: self.nonce_gen.add_application_tag(tag),
-            challenge_hash: self.challenge_hash.tagged(tag.as_bytes()),
-        }
-    }
-}
-
-/// When NonceGen is () just ignore it
-impl<H: Tagged> NonceChallengeBundle<H, ()> {
-    /// Only tags the challenge hash
-    pub fn add_protocol_tag(self, tag: &str) -> Self {
-        Self {
-            nonce_gen: (),
-            challenge_hash: self
-                .challenge_hash
-                .tagged(&[tag.as_bytes(), b"/challenge"].concat()),
-        }
-    }
-
-    /// Only tags the challenge hash
-    pub fn add_application_tag(self, tag: &str) -> Self {
-        Self {
-            nonce_gen: (),
             challenge_hash: self.challenge_hash.tagged(tag.as_bytes()),
         }
     }

@@ -72,7 +72,7 @@ fn verification_test_vector(
     sig: [u8; 64],
     expected_outcome: Outcome,
 ) {
-    let bip340 = Schnorr::<Sha256>::verification_only(MessageKind::Prehashed);
+    let bip340 = Schnorr::<Sha256>::verify_only(MessageKind::Prehashed);
     let message = message.as_ref().mark::<Public>();
     use Outcome::*;
     let public_key = {
