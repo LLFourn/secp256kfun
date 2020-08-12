@@ -1,6 +1,6 @@
 [package]
 name = "secp256kfun_parity_backend"
-version = "0.1.2"
+version = "0.1.3-alpha.0"
 description = "Vendored version of paritytech/libsecp256k1 for secp256kfun"
 license = "Apache-2.0"
 repository = "https://github.com/LLFourn/secp256kfun"
