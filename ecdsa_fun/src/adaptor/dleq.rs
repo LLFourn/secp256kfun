@@ -2,17 +2,24 @@ use crate::fun::{
     derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
-    hash::{HashAdd, Tagged},
+    hash::{AddTag, HashAdd, Tagged},
     marker::*,
     nonce::{NonceChallengeBundle, NonceGen},
     s, Point, Scalar,
 };
 
+#[derive(Debug, Clone)]
 pub struct DLEQ<H, NG> {
     nonce_challenge_bundle: NonceChallengeBundle<H, NG>,
 }
 
-impl<H: Tagged, NG: NonceGen> DLEQ<H, NG> {
+impl<H: Tagged, NG: AddTag + Default> Default for DLEQ<H, NG> {
+    fn default() -> Self {
+        Self::new(NG::default())
+    }
+}
+
+impl<H: Tagged, NG: AddTag> DLEQ<H, NG> {
     pub fn new(nonce_gen: NG) -> Self {
         DLEQ {
             nonce_challenge_bundle: NonceChallengeBundle {

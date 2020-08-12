@@ -3,7 +3,7 @@ use crate::{
         self, derive_nonce,
         digest::{generic_array::typenum::U32, Digest},
         g,
-        hash::{HashAdd, Tagged},
+        hash::{AddTag, HashAdd, Tagged},
         marker::*,
         nonce::{NonceChallengeBundle, NonceGen},
         s, Point, Scalar, Slice, XOnly,
@@ -55,6 +55,8 @@ pub enum MessageKind {
 }
 
 impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, (), BasePoint> {
+    /// Create a new instance that doesn't
+    ///
     /// Creates a `Schnorr` instance to verifying signatures of a particular [`MessageKind`].
     /// The instance will use the standard value of [`G`].
     ///
@@ -62,40 +64,22 @@ impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, (), BasePoint> {
     ///
     /// ```
     /// use schnorr_fun::{MessageKind, Schnorr};
-    /// // An instance compatible with signing Bitcoin Taproot transactions
-    /// let taproot_schnorr = Schnorr::<sha2::Sha256>::verification_only(MessageKind::Prehashed);
-    /// // An instance for signing transactions in your application
-    /// let myapp_schnorr =
-    ///     Schnorr::<sha2::Sha256>::verification_only(MessageKind::Plain { tag: "my-app" });
+    /// // An instance that can verify Bitcoin Taproot transactions
+    /// let taproot_schnorr = Schnorr::<sha2::Sha256>::verify_only(MessageKind::Prehashed);
+    /// // An instance for verifying transactions in your application
+    /// let myapp_schnorr = Schnorr::<sha2::Sha256>::verify_only(MessageKind::Plain { tag: "myapp" });
     /// ```
     /// [`MessageKind`]: crate::MessageKind
     /// [`G`]: crate::fun::GNonceChalengeBundle
-    /// [`Synthetic`]: crate::nonce::Synthetiic
-    pub fn verification_only(msgkind: MessageKind) -> Self {
-        let mut fs_bundle = NonceChallengeBundle {
-            challenge_hash: H::default(),
-            nonce_gen: (),
-        }
-        .add_protocol_tag("BIP340");
-        if let MessageKind::Plain { tag } = msgkind {
-            fs_bundle = fs_bundle.add_application_tag(tag);
-        }
-        Self {
-            G: fun::G.clone(),
-            nonce_challenge_bundle: fs_bundle,
-        }
-    }
-
-    /// Returns the challenge hash being used to sign/verify signatures
-    pub fn challenge_hash(&self) -> H {
-        self.nonce_challenge_bundle.challenge_hash.clone()
+    pub fn verify_only(msgkind: MessageKind) -> Self {
+        Self::new((), msgkind)
     }
 }
 
 impl<CH, NG> Schnorr<CH, NG, BasePoint>
 where
     CH: Digest<OutputSize = U32> + Tagged,
-    NG: NonceGen,
+    NG: AddTag,
 {
     /// Creates a instance capable of signing and verifying.
     ///
@@ -187,6 +171,10 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         &self.G
     }
 
+    /// Returns the challenge hash being used to sign/verify signatures
+    pub fn challenge_hash(&self) -> CH {
+        self.nonce_challenge_bundle.challenge_hash.clone()
+    }
     /// Converts a non-zero scalar to a key-pair by interpreting it as a secret key.
     ///
     /// **The secret key in the resulting key is not guaranteed to be the same
