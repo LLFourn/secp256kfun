@@ -134,10 +134,10 @@ fn pedersen_commit(
     B: &Point<impl PointType>,
     r: &Scalar<impl Secrecy>, // Accept a Secret or Public Scalar
     x: &Scalar<impl Secrecy, Zero>, // Allow commitment to Zero
-) -> Point<Jacobian> {
+) -> Point {
     // Make the commitment
     g!(r * A +  x * B)
-        .mark::<NonZero>()
+        .mark::<(Normal,NonZero)>()
         // If the result is zero we could easily compute the discrete
         // logarithm of B with respect to A. Since this is meant to be unknown
         // this computionally unreachable.
