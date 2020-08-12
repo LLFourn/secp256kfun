@@ -8,8 +8,15 @@ use crate::fun::{
     s, Point, Scalar,
 };
 
+#[derive(Debug, Clone)]
 pub struct DLEQ<H, NG> {
     nonce_challenge_bundle: NonceChallengeBundle<H, NG>,
+}
+
+impl<H: Tagged, NG: NonceGen + Default> Default for DLEQ<H, NG> {
+    fn default() -> Self {
+        Self::new(NG::default())
+    }
 }
 
 impl<H: Tagged, NG: NonceGen> DLEQ<H, NG> {

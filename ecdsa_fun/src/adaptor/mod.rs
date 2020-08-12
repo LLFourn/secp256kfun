@@ -17,8 +17,8 @@
 //! };
 //! use rand::rngs::ThreadRng;
 //! use sha2::Sha256;
-//! let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
-//! let adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
+//! let adaptor = Adaptor::<Sha256, nonce::Deterministic<Sha256>>::default();
+//! let adaptor = Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
 //! let secret_signing_key = Scalar::random(&mut rand::thread_rng());
 //! let verification_key = g!(secret_signing_key * G).mark::<Normal>();
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
@@ -67,9 +67,23 @@ mod encrypted_signature;
 pub use encrypted_signature::{EncryptedSignature, PointNonce};
 pub mod dleq;
 
+#[derive(Clone, Debug)]
 pub struct Adaptor<ProofChallengeHash, NonceGen> {
     pub ecdsa: ECDSA<NonceGen>,
     pub dleq: dleq::DLEQ<ProofChallengeHash, NonceGen>,
+}
+
+impl<CH, NG> Default for Adaptor<CH, NG>
+where
+    ECDSA<NG>: Default,
+    dleq::DLEQ<CH, NG>: Default,
+{
+    fn default() -> Self {
+        Self {
+            ecdsa: ECDSA::<NG>::default(),
+            dleq: dleq::DLEQ::<CH, NG>::default(),
+        }
+    }
 }
 
 impl<H: Tagged, NG: NonceGen + Clone> Adaptor<H, NG> {

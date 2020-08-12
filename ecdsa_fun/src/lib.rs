@@ -19,7 +19,7 @@ pub use signature::Signature;
 pub mod adaptor;
 
 /// An instance of the ECDSA signature scheme.
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct ECDSA<NG> {
     /// An instance of [`NonceGen`] to produce nonces.
     ///
