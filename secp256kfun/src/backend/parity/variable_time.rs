@@ -1,7 +1,7 @@
 use core::cmp::Ordering;
 use parity_backend::{
     field::Field,
-    group::{Affine, Jacobian},
+    group::{Affine, Jacobian, JACOBIAN_INFINITY},
     scalar::Scalar,
 };
 pub struct VariableTime;
@@ -10,6 +10,9 @@ use super::{BasePoint, ConstantTime, XOnly};
 impl crate::backend::TimeSensitive for VariableTime {
     fn scalar_mul_point(lhs: &Scalar, rhs: &Jacobian) -> Jacobian {
         use crate::backend::BackendScalar;
+        if rhs.is_infinity() {
+            return JACOBIAN_INFINITY.clone();
+        }
         //HACK: use the variable time double_mult but multiply the basepoint by zero
         VariableTime::basepoint_double_mul(&Scalar::zero(), &super::G_TABLE, lhs, rhs)
     }
@@ -164,6 +167,9 @@ impl crate::backend::TimeSensitive for VariableTime {
     }
 
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Jacobian) -> Jacobian {
+        if B.is_infinity() {
+            return Self::scalar_mul_basepoint(x, A);
+        }
         let mut ret = Jacobian::default();
         A.mult_ctx.ecmult(&mut ret, B, y, x);
         ret

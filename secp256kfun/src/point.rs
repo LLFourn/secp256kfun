@@ -507,14 +507,21 @@ mod test {
             );
         }
         fn zero_cases() {
+            use crate::s;
             let I = Point::zero();
+            let forty_two =  s!(42);
+            let forty_two_pub = s!(42).mark::<Public>();
             assert!(I.is_zero());
             expression_eq!([I] == [I]);
             expression_eq!([I] == [-I]);
             expression_eq!([I + I] ==  [I]);
             expression_eq!([I - I] ==  [I]);
+            // see: https://github.com/LLFourn/secp256kfun/issues/13
+            expression_eq!([forty_two * I] == [I]);
+            expression_eq!([forty_two_pub * I] == [I]);
+            expression_eq!([forty_two * G + forty_two * I] == [forty_two * G]);
+            expression_eq!([forty_two_pub * G + forty_two_pub * I] == [forty_two_pub * G]);
         }
-
 
         #[cfg(feature = "alloc")]
         fn fmt_debug() {
