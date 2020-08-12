@@ -194,8 +194,7 @@ where
     CH: Digest<OutputSize = U32> + Clone,
 {
     fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
-        let encryption_key = g!(decryption_key * { self.G() }).mark::<Normal>();
-        encryption_key
+        g!(decryption_key * { self.G() }).mark::<Normal>()
     }
 
     #[must_use]

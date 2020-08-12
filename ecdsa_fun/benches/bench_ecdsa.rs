@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{g, marker::*, nonce::Deterministic, Scalar, G};
+use secp256kfun::{marker::*, nonce::Deterministic, Scalar};
 use sha2::Sha256;
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
@@ -30,7 +30,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecdsa_verify");
 
     let signature = ECDSA.sign(&SK, MESSAGE);
-    let pk = g!(SK * G);
+    let pk = ECDSA.verification_key_for(&SK);
 
     group.bench_function("fun::ecdsa_verify", |b| {
         b.iter(|| ECDSA.verify(&pk, MESSAGE, &signature))

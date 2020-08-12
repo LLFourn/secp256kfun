@@ -22,9 +22,9 @@
 //! // use synthetic nonce generation (preferred)
 //! let adaptor = Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
 //! let secret_signing_key = Scalar::random(&mut rand::thread_rng());
-//! let verification_key = g!(secret_signing_key * G).mark::<Normal>();
+//! let verification_key = adaptor.ecdsa.verification_key_for(&secret_signing_key);
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
-//! let encryption_key = g!(decryption_key * G).mark::<Normal>();
+//! let encryption_key = adaptor.encryption_key_for(&decryption_key);
 //! let message_hash = {
 //!     let message = "send 1 BTC to Bob";
 //!     let mut message_hash = [0u8; 32];
@@ -48,7 +48,9 @@
 //!     &encrypted_signature
 //! ));
 //! let signature = adaptor.decrypt_signature(&decryption_key, encrypted_signature.clone());
-//!
+//! // Alice recovers the decryption key from the signature
+//! // Note there is no need to call .verify before doing this;
+//! // successful recovery implies it was a valid signature.
 //! match adaptor.recover_decryption_key(&encryption_key, &signature, &encrypted_signature) {
 //!     Some(decryption_key) => println!("Alice got the decryption key {}", decryption_key),
 //!     None => panic!("signature is not the decryption of our original encrypted signature"),
@@ -159,6 +161,17 @@ where
 }
 
 impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
+    /// Returns the corresponding encryption key for a decryption key
+    ///
+    /// # Example
+    /// ```
+    /// use ecdsa_fun::{ adaptor::Adaptor, fun::Scalar };
+    /// let adaptor = Adaptor::<sha2::Sha256,()>::default();
+    /// let secret_decryption_key = Scalar::random(&mut rand::thread_rng());
+    /// let public_encryption_key = adaptor.encryption_key_for(&secret_decryption_key);
+    pub fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
+        g!(decryption_key * G).mark::<Normal>()
+    }
     /// Verifies an encrypted signature is valid i.e. if it is decrypted it will yield a signature
     /// on `message_hash` under `verification_key`.
     ///
@@ -262,7 +275,7 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fun::{nonce, G};
+    use crate::fun::nonce;
     use rand::rngs::ThreadRng;
     use sha2::Sha256;
 
@@ -273,9 +286,9 @@ mod test {
         for _ in 0..20 {
             let msg = b"hello world you are beautiful!!!";
             let signing_key = Scalar::random(&mut rand::thread_rng());
-            let verification_key = g!(signing_key * G);
+            let verification_key = ecdsa_adaptor.ecdsa.verification_key_for(&signing_key);
             let decryption_key = Scalar::random(&mut rand::thread_rng());
-            let encryption_key = g!(decryption_key * G).mark::<Normal>();
+            let encryption_key = ecdsa_adaptor.encryption_key_for(&decryption_key);
             let ciphertext = ecdsa_adaptor.encrypted_sign(&signing_key, &encryption_key, msg);
             assert!(ecdsa_adaptor.verify_encrypted_signature(
                 &verification_key,

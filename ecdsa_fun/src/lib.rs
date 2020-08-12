@@ -86,6 +86,18 @@ impl<NG> ECDSA<NG> {
 }
 
 impl<NG> ECDSA<NG> {
+    /// Get the corresponding verification key for a secret key
+    ///
+    /// # Example
+    /// ```
+    /// use ecdsa_fun::{fun::Scalar, ECDSA};
+    /// let ecdsa = ECDSA::verify_only();
+    /// let secret_key = Scalar::random(&mut rand::thread_rng());
+    /// let verification_key = ecdsa.verification_key_for(&secret_key);
+    /// ```
+    pub fn verification_key_for(&self, secret_key: &Scalar) -> Point {
+        g!(secret_key * G).mark::<Normal>()
+    }
     /// Verify an ECDSA signature.
     pub fn verify(
         &self,
@@ -121,17 +133,17 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// use rand::rngs::ThreadRng;
     /// use sha2::Sha256;
     /// let secret_key = Scalar::random(&mut rand::thread_rng());
-    /// let public_key = g!(secret_key * G).mark::<Normal>();
     /// let ecdsa = ECDSA::new(nonce::from_global_rng::<Sha256, ThreadRng>());
-    /// let message = b"Attack at dawn";
+    /// let verification_key = ecdsa.verification_key_for(&secret_key);
     /// let message_hash = {
+    ///     let message = b"Attack at dawn";
     ///     let mut message_hash = [0u8; 32];
     ///     let hash = Sha256::default().chain(message);
     ///     message_hash.copy_from_slice(hash.finalize().as_ref());
     ///     message_hash
     /// };
     /// let signature = ecdsa.sign(&secret_key, &message_hash);
-    /// assert!(ecdsa.verify(&public_key, &message_hash, &signature));
+    /// assert!(ecdsa.verify(&verification_key, &message_hash, &signature));
     /// ```
     pub fn sign(&self, secret_key: &Scalar, message_hash: &[u8; 32]) -> Signature {
         let x = secret_key;
@@ -205,7 +217,7 @@ mod test {
             let mut message = [0u8; 32];
             rand::thread_rng().fill_bytes(&mut message);
             let secret_key = Scalar::random(&mut rand::thread_rng());
-            let public_key = g!(secret_key * G);
+            let public_key = ecdsa.verification_key_for(&secret_key);
             let mut sig = ecdsa.sign(&secret_key, &message);
             assert!(ecdsa.verify(&public_key, &message, &sig));
             assert!(ecdsa_enforce_low_s.verify(&public_key, &message, &sig));
