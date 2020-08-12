@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use secp256kfun::{g, nzscalar, op, s, Point, Scalar};
+use secp256kfun::{g, op, s, Point, Scalar};
 
 #[derive(Clone)]
 struct Has<T> {
@@ -13,9 +13,9 @@ struct HasHas<T> {
 
 #[test]
 fn s_expressions_give_correct_answers() {
-    let a = nzscalar!(3);
-    let b = nzscalar!(5);
-    let c = nzscalar!(11);
+    let a = s!(3);
+    let b = s!(5);
+    let c = s!(11);
 
     assert_eq!(s!(a), &a);
     assert_eq!(s!({ a.invert() }), a.invert());
@@ -23,7 +23,7 @@ fn s_expressions_give_correct_answers() {
     assert_eq!(s!(a + b), op::scalar_add(&a, &b));
     assert_eq!(s!(-a + b), op::scalar_sub(&b, &a));
     assert_eq!(s!(a - b), op::scalar_sub(&a, &b));
-    assert_eq!(s!({ a.invert() } * a), nzscalar!(1));
+    assert_eq!(s!({ a.invert() } * a), s!(1));
     assert_eq!(
         s!(a + b - c - a),
         op::scalar_sub(&op::scalar_sub(&op::scalar_add(&a, &b), &c), &a)
@@ -53,7 +53,7 @@ fn s_expressions_give_correct_answers() {
     assert_eq!(s!(a * b * c), op::scalar_mul(&a, &op::scalar_mul(&b, &c)));
     assert_eq!(s!(-a * b * -c), op::scalar_mul(&a, &op::scalar_mul(&b, &c)));
 
-    let has_scalar = Has { has: nzscalar!(17) };
+    let has_scalar = Has { has: s!(17) };
 
     assert_eq!(s!(has_scalar.has * a), op::scalar_mul(&has_scalar.has, &a));
     let has_has_scalar = HasHas {
@@ -63,6 +63,7 @@ fn s_expressions_give_correct_answers() {
         s!(has_has_scalar.has_has.has * a),
         op::scalar_mul(&has_scalar.has, &a)
     );
+    assert_eq!(s!(3 * 11 + 5), s!(a * c + b));
 }
 
 #[test]
@@ -155,7 +156,7 @@ fn g_expressions_give_correct_answers() {
         )
     );
 
-    let has_scalar = Has { has: nzscalar!(17) };
+    let has_scalar = Has { has: s!(17) };
     let has_point = Has { has: C.clone() };
     let has_has_scalar = HasHas {
         has_has: has_scalar.clone(),

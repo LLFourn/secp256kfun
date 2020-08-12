@@ -21,7 +21,13 @@ macro_rules! _s {
         $crate::_s!(@next [{$crate::Scalar::zero()} $($a)*] $($t)*)
     };
     (@scalar [$($a:tt)*] $num:literal $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::nzscalar!($num)} $($a)*] $($t)*)
+        $crate::_s!(@next [{{
+        // hack to check at compile time the thing is non-zero
+        let _ = [(); (($num as u32).count_ones() as usize) - 1];
+        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
+            unsafe { core::num::NonZeroU32::new_unchecked($num) },
+        )
+    }} $($a)*] $($t)*)
     };
     (@scalar [$($a:tt)*] $block:block $($t:tt)*) => {
         $crate::_s!(@next [$block $($a)*] $($t)*)
@@ -108,7 +114,13 @@ macro_rules! _g {
         $crate::_g!(@point [s {$crate::Scalar::zero()} $($a)*] $($t)+)
     };
     (@scalar [$($a:tt)*] $num:literal * $($t:tt)+) => {
-        $crate::_g!(@point [s {$crate::nzscalar!($num)} $($a)*] $($t)+)
+        $crate::_g!(@point [s {{
+        // hack to check at compile time the thing is non-zero
+        let _ = [(); (($num as u32).count_ones() as usize) - 1];
+        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
+            unsafe { core::num::NonZeroU32::new_unchecked($num) },
+        )
+    }} $($a)*] $($t)+)
     };
     (@scalar [$($a:tt)*] $($t:tt)+) => {
         // failed to find scalar look for point instead
@@ -324,38 +336,6 @@ macro_rules! derive_nonce {
             $nonce_gen.begin_derivation($secret.borrow())$(.add($public.borrow()))+
         )
     }}
-}
-
-/// Creates a [`Scalar<Secret, NonZero>`] from a non-zero u32.
-///
-/// # Examples
-/// This is how you use it:
-/// ```
-/// use secp256kfun::nzscalar;
-/// let three = nzscalar!(3);
-/// ```
-/// This will fail to compile:
-/// ```compile_fail
-/// # use secp256kfun::nzscalar;
-/// let zero = nzscalar!(0);
-/// ```
-/// And so will this:
-/// ```compile_fail
-/// # use secp256kfun::nzscalar;
-/// let three = 3;
-/// let scalar = nzscalar!(three);
-/// ```
-///
-/// [`Scalar<Secret, NonZero>`]: crate::Scalar
-#[macro_export]
-macro_rules! nzscalar {
-    ($n:expr) => {{
-        // hack to check at compile time the thing is non-zero
-        let _ = [(); (($n as u32).count_ones() as usize) - 1];
-        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
-            unsafe { core::num::NonZeroU32::new_unchecked($n) },
-        )
-    }};
 }
 
 #[doc(hidden)]

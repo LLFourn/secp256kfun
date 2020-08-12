@@ -138,17 +138,15 @@ impl Scalar<Secret, NonZero> {
     }
 
     /// Converts a [`NonZeroU32`] into a `Scalar<Secret,NonZero>`.
-    /// Note: this can be done at compile time with the [`nzscalar`] macro.
     ///
     /// [`NonZeroU32`]: core::num::NonZeroU32
-    /// [`nzscalar`]: macro@nzscalar
     pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
         Self::from_inner(backend::Scalar::from_u32(int.get()))
     }
 
     /// Returns the integer `1` as a `Scalar<Secret, NonZero>`.
     pub fn one() -> Self {
-        crate::nzscalar!(1)
+        crate::s!(1)
     }
 
     /// Returns the integer -1 (modulo the curve order) as a `Scalar<Secret, NonZero>`.
@@ -295,7 +293,7 @@ impl HashInto for Scalar {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{nzscalar, op, s};
+    use crate::{op, s};
 
     #[cfg(feature = "serialization")]
     #[test]
@@ -327,7 +325,7 @@ mod test {
         fn one() {
             assert_eq!(Scalar::one(), Scalar::from(1));
             assert_eq!(Scalar::minus_one(), -Scalar::one());
-            assert_eq!(op::scalar_mul(&nzscalar!(3), &Scalar::minus_one()), -nzscalar!(3));
+            assert_eq!(op::scalar_mul(&s!(3), &Scalar::minus_one()), -s!(3));
         }
 
         fn zero() {
@@ -383,8 +381,8 @@ mod test {
 
 
         fn nz_scalar_to_scalar_subtraction_is_not_commutative() {
-            let two = nzscalar!(2);
-            let three = nzscalar!(3);
+            let two = s!(2);
+            let three = s!(3);
             let minus_1 = Scalar::minus_one();
             let one = Scalar::from(1);
 
