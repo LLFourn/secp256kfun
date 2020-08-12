@@ -42,6 +42,7 @@ harness = false
 
 [features]
 default = ["std"]
+all = ["std","serialize_hex"]
 alloc = []
 std = ["alloc"]
 serialization = ["serde", "secp256kfun/serialization"]

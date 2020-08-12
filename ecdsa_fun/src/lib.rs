@@ -11,6 +11,9 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
+#[cfg(feature = "libsecp_compat")]
+mod libsecp_compat;
+
 use fun::{derive_nonce, g, hash::AddTag, marker::*, nonce::NonceGen, s, Point, Scalar, G};
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
@@ -99,6 +102,7 @@ impl<NG> ECDSA<NG> {
         g!(secret_key * G).mark::<Normal>()
     }
     /// Verify an ECDSA signature.
+    #[must_use]
     pub fn verify(
         &self,
         verification_key: &Point<impl PointType, Public, NonZero>,
