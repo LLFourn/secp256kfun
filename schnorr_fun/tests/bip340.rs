@@ -3,7 +3,7 @@ use schnorr_fun::{
     fun::{
         marker::*,
         nonce::{NonceRng, Synthetic},
-        Scalar, XOnly,
+        rand_core, Scalar, XOnly,
     },
     MessageKind, Schnorr, Signature,
 };
