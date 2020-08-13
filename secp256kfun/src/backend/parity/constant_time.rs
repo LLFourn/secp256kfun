@@ -1,7 +1,7 @@
 use super::{BasePoint, XOnly, G_TABLE};
 use parity_backend::{
     field::Field,
-    group::{Affine, Jacobian},
+    group::{Affine, Jacobian, JACOBIAN_INFINITY},
     scalar::Scalar,
 };
 use subtle::{Choice, ConstantTimeEq};
@@ -9,6 +9,9 @@ pub struct ConstantTime;
 
 impl crate::backend::TimeSensitive for ConstantTime {
     fn scalar_mul_point(lhs: &Scalar, rhs: &Jacobian) -> Jacobian {
+        if rhs.is_infinity() {
+            return JACOBIAN_INFINITY.clone();
+        }
         let mut ret = Jacobian::default();
         G_TABLE
             .mult_ctx
@@ -17,6 +20,9 @@ impl crate::backend::TimeSensitive for ConstantTime {
     }
 
     fn scalar_mul_norm_point(lhs: &Scalar, rhs: &Jacobian) -> Jacobian {
+        if rhs.is_infinity() {
+            return JACOBIAN_INFINITY.clone();
+        }
         let mut ret = Jacobian::default();
         G_TABLE.mult_ctx.ecmult_const(
             &mut ret,
