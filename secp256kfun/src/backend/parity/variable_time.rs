@@ -167,9 +167,9 @@ impl crate::backend::TimeSensitive for VariableTime {
     }
 
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Jacobian) -> Jacobian {
-        if B.is_infinity() {
-            return Self::scalar_mul_basepoint(x, A);
-        }
+        // if B.is_infinity() {
+        //     return Self::scalar_mul_basepoint(x, A);
+        // }
         let mut ret = Jacobian::default();
         A.mult_ctx.ecmult(&mut ret, B, y, x);
         ret
