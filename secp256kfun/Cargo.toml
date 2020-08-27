@@ -37,7 +37,7 @@ bincode = "1.0"
 criterion = "0.3"
 
 [build-dependencies]
-parity_backend = { version = "0.1.1", package = "secp256kfun_parity_backend", features = ["alloc"] }
+parity_backend = { version = "0.1.2", package = "secp256kfun_parity_backend", features = ["alloc"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
