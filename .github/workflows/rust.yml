@@ -32,4 +32,4 @@ jobs:
     - name: ecdsa_fun-test
       run: ( cd ecdsa_fun && cargo test --features=all --release --verbose )
     - name: doc-build
-      run: cargo doc --no-deps 
+      run: cargo doc --no-deps --workspace --exclude secp256kfun_parity_backend
