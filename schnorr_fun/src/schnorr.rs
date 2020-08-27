@@ -87,12 +87,12 @@ where
     /// ```
     /// use rand::rngs::ThreadRng;
     /// use schnorr_fun::{
-    ///     nonce::{self, Deterministic},
+    ///     nonce::{Deterministic, GlobalRng, Synthetic},
     ///     MessageKind, Schnorr,
     /// };
     /// use sha2::Sha256;
     /// // Use synthetic nonces (preferred)
-    /// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
+    /// let nonce_gen = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default();
     /// // Use deterministic nonces.
     /// let nonce_gen = Deterministic::<Sha256>::default();
     /// // Sign pre-hashed messges as in BIP-341.
