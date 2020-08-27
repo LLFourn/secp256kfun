@@ -20,7 +20,8 @@
 //! // use deterministic nonce generation
 //! let adaptor = Adaptor::<Sha256, nonce::Deterministic<Sha256>>::default();
 //! // use synthetic nonce generation (preferred)
-//! let adaptor = Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
+//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+//! let adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
 //! let secret_signing_key = Scalar::random(&mut rand::thread_rng());
 //! let verification_key = adaptor.ecdsa.verification_key_for(&secret_signing_key);
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
@@ -282,8 +283,8 @@ mod test {
 
     #[test]
     fn end_to_end() {
-        let ecdsa_adaptor =
-            Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
+        let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+        let ecdsa_adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
         for _ in 0..20 {
             let msg = b"hello world you are beautiful!!!";
             let signing_key = Scalar::random(&mut rand::thread_rng());

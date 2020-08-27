@@ -17,7 +17,7 @@
 //!     MessageKind, Schnorr,
 //! };
 //! use sha2::Sha256;
-//! let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
+//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
 //! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen, MessageKind::Plain { tag: "my-app" });
 //! let signing_keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 //! let verification_key = signing_keypair.verification_key();
@@ -314,7 +314,7 @@ mod test {
             use sha2::Sha256;
             use rand::rngs::ThreadRng;
             test_schnorr(Schnorr::new(Deterministic::<Sha256>::default(),MessageKind::Plain{ tag: "test" }));
-            test_schnorr(Schnorr::new(nonce::from_global_rng::<Sha256, ThreadRng>(), MessageKind::Plain { tag: "test" }));
+            test_schnorr(Schnorr::new(nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default(), MessageKind::Plain { tag: "test" }));
         }
     }
 }

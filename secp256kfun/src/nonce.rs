@@ -40,7 +40,7 @@ pub trait NonceRng {
 }
 
 /// We implement NonceRng only for rngs we can conjure out of thin air with `Default`.
-impl<R: RngCore + CryptoRng + Default> NonceRng for PhantomData<fn(R)> {
+impl<R: RngCore + CryptoRng + Default> NonceRng for GlobalRng<R> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
         R::default().fill_bytes(bytes);
     }
@@ -50,10 +50,7 @@ impl<R: RngCore + CryptoRng + Default> NonceRng for PhantomData<fn(R)> {
 /// generation.
 ///
 /// The rng needs to implmenet [`NonceRng`]. This is done already for
-/// `PhantomData<fn(RNG)>` where `RNG` is a global rng (specifically
-/// implements `Default`) like [`OsRng`] and [`ThreadRng`]. This unusual
-/// implemenation for `fn(RNG)` is a hack to keep the `Synthetic` `Sync`.
-/// (`PhantomData<RNG>` is not `Sync` while `PhantomData<fn(RNG)>` is).
+/// [`GlobalRng`].
 ///
 /// # Examples
 ///
@@ -61,15 +58,16 @@ impl<R: RngCore + CryptoRng + Default> NonceRng for PhantomData<fn(R)> {
 /// use rand::rngs::ThreadRng;
 /// use secp256kfun::nonce;
 /// use sha2::Sha256;
-/// # let my_rng = core::marker::PhantomData::<fn(ThreadRng)>;
+/// # let my_rng = nonce::GlobalRng::<ThreadRng>::default();
 /// // the usual way to use this.
-/// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>(); // or OsRng
+/// let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default(); // or OsRng
 /// let nonce_gen = nonce::Synthetic::<Sha256, _>::new(my_rng); // BYO rng you've implemented NonceRng for
 /// ```
 ///
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 /// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
 /// [`OsRng`]: rand_core::OsRng
+/// [`GlobalRng`]: crate::nonce::GlobalRng
 #[derive(Debug, Default, Clone)]
 pub struct Synthetic<H, R> {
     rng: R,
@@ -78,7 +76,7 @@ pub struct Synthetic<H, R> {
 }
 
 impl<H: Default, R: NonceRng> Synthetic<H, R> {
-    /// Creates a `Synethetic` nonce generator from anything that implements [`NonceRng`]
+    /// Creates a `Synethetic` nonce generator from anything that implements [`NonceRng`].
     ///
     /// [`NonceRng`]: crate::nonce::NonceRng
     pub fn new(rng: R) -> Self {
@@ -90,31 +88,28 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
     }
 }
 
-/// Creates a `Synthetic` nonce generotor from a _global_ rng like [`ThreadRng`] or [`OsRng`].
-/// This gives you a `Synthetic` that is `Sync` since it conjures the RNG on demand.
+/// A zero sized type that wraps an instance of an RNG that implementes
+/// `Default` e.g. [`ThreadRng`] and [`OsRng`]. `GlobalRng` implements
+/// [`NonceRng`] and care has been taken to ensure it is `Sync`.
 ///
-/// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
-/// [`OsRng`]: rand_core::OsRng
-///
-/// # Example
-///
+/// # Examples
 /// ```
 /// use rand::rngs::ThreadRng;
-/// use secp256kfun::nonce;
-/// use sha2::Sha256;
-/// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
-/// assert!(is_sync(nonce_gen));
+/// use secp256kfun::nonce::{GlobalRng, NonceRng};
+/// let nonce_rng = GlobalRng::<ThreadRng>::default();
+/// let mut bytes = [0u8; 32];
+/// nonce_rng.fill_bytes(&mut bytes);
+/// assert_ne!(bytes, [0u8; 32]);
 ///
 /// fn is_sync<S: Sync>(x: S) -> bool {
 ///     true
 /// }
+/// assert!(is_sync(nonce_rng));
 /// ```
-pub fn from_global_rng<H, R>() -> Synthetic<H, PhantomData<fn(R)>>
-where
-    H: Default,
-    R: CryptoRng + RngCore + Default,
-{
-    Synthetic::new(PhantomData::<fn(R)>)
+#[derive(Debug, Default, Clone)]
+pub struct GlobalRng<R> {
+    // Using fn(R) ensures that it is sync even if R is not sync
+    inner: PhantomData<fn(R)>,
 }
 
 /// A deterministic nonce generator.
@@ -235,10 +230,13 @@ impl<H: Tagged, R> AddTag for Synthetic<H, R> {
 ///
 /// ```
 /// use rand::rngs::ThreadRng;
-/// use secp256kfun::{hash::AddTag, nonce};
+/// use secp256kfun::{
+///     hash::AddTag,
+///     nonce::{GlobalRng, NonceChallengeBundle, Synthetic},
+/// };
 /// use sha2::Sha256;
-/// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
-/// let fs = nonce::NonceChallengeBundle {
+/// let nonce_gen = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default();
+/// let fs = NonceChallengeBundle {
 ///     challenge_hash: Sha256::default(),
 ///     nonce_gen,
 /// }
@@ -332,7 +330,8 @@ mod test {
 
     #[test]
     fn synthetic_nonce_gen_is_random() {
-        let nonce_gen_1 = from_global_rng::<Sha256, ThreadRng>().add_protocol_tag("PROTO_ONE");
+        let nonce_gen_1 =
+            Synthetic::<Sha256, GlobalRng<ThreadRng>>::default().add_protocol_tag("PROTO_ONE");
 
         let one = s!(1);
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, one));

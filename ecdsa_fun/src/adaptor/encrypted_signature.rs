@@ -50,9 +50,8 @@ mod test {
         use crate::{adaptor::Adaptor, fun::nonce};
         use rand::rngs::ThreadRng;
         use sha2::Sha256;
-
-        let ecdsa_adaptor =
-            Adaptor::<Sha256, _>::new(nonce::from_global_rng::<Sha256, ThreadRng>());
+        let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+        let ecdsa_adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
         let secret_key = Scalar::random(&mut rand::thread_rng());
         let encryption_key = Point::random(&mut rand::thread_rng());
         let encrypted_signature = ecdsa_adaptor.encrypted_sign(

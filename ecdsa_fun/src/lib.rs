@@ -55,7 +55,7 @@ impl<NG> ECDSA<NG> {
     /// use ecdsa_fun::{nonce, ECDSA};
     /// use rand::rngs::ThreadRng;
     /// use sha2::Sha256;
-    /// let nonce_gen = nonce::from_global_rng::<Sha256, ThreadRng>();
+    /// let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
     /// let ecdsa = ECDSA::new(nonce_gen);
     /// ```
     ///
@@ -137,7 +137,8 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// use rand::rngs::ThreadRng;
     /// use sha2::Sha256;
     /// let secret_key = Scalar::random(&mut rand::thread_rng());
-    /// let ecdsa = ECDSA::new(nonce::from_global_rng::<Sha256, ThreadRng>());
+    /// let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+    /// let ecdsa = ECDSA::new(nonce_gen);
     /// let verification_key = ecdsa.verification_key_for(&secret_key);
     /// let message_hash = {
     ///     let message = b"Attack at dawn";
