@@ -18,7 +18,6 @@ use crate::{
 /// - `challenge_hash`: The hash function instance that is used to produce the [_Fiat-Shamir_] challenge.
 /// - `nonce_gen`: The [`NonceGen`] used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
 ///
-/// To create one
 /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
 /// [`G`]: crate::fun::G
 /// [`NonceGen<H>`]: crate::fun::hash::NonceGen
@@ -70,7 +69,7 @@ impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, (), BasePoint> {
     /// let myapp_schnorr = Schnorr::<sha2::Sha256>::verify_only(MessageKind::Plain { tag: "myapp" });
     /// ```
     /// [`MessageKind`]: crate::MessageKind
-    /// [`G`]: crate::fun::GNonceChalengeBundle
+    /// [`G`]: crate::fun::G
     pub fn verify_only(msgkind: MessageKind) -> Self {
         Self::new((), msgkind)
     }
