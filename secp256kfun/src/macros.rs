@@ -268,6 +268,9 @@ macro_rules! _g {
 /// ```
 ///
 /// [`double_mul`]: crate::op::double_mul
+/// [`G`]: crate::G
+/// [`Point`]: crate::Point
+/// [`op`]: crate::op
 
 #[macro_export]
 macro_rules! g {

@@ -238,11 +238,12 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
     /// returns `None`.  If it returns `Some(decryption_key)`, then `signature` is the unique
     /// signature obtained by decrypting `encrypted_signature` with the `decryption_key` corresponding to
     /// `encryption_key`.  In other words, if you already know that `encrypted_signature` is valid you do not
-    /// have to call [`Schnorr::verify`] on `signature` before calling this function because this function returning
+    /// have to call [`ECDSA::verify`] on `signature` before calling this function because this function returning
     /// `Some` implies it.
     ///
     /// See [synopsis] for an example
     ///
+    /// [`ECDSA::verify`]: crate::ECDSA::verify
     /// [synopsis]: crate::adaptor#synopsis
     pub fn recover_decryption_key(
         &self,
