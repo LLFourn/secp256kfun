@@ -11,7 +11,7 @@
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
-- **abstraction**: The library exposes two simple abstractions _Points_ and _Scalars_ so you can do a clean textbook implementations of crypto.
+- **abstraction**: The library exposes two simple abstractions _Points_ and _Scalars_ so you can do clean textbook implementations of crypto.
 - **unoptimizable**: The most straightforward way of expressing a certain operation on the group is also the most efficient way.
 
 Fun does not mean (yet -- please help!):
@@ -140,7 +140,7 @@ fn pedersen_commit(
         .mark::<(Normal,NonZero)>()
         // If the result is zero we could easily compute the discrete
         // logarithm of B with respect to A. Since this is meant to be unknown
-        // this computionally unreachable.
+        // this is computionally unreachable.
         .expect("computationally unreachable")
 }
 
@@ -168,7 +168,7 @@ As a bonus, this example also shows how you don't have to design the cryptograph
 The `pedersen_commitment` takes any `PointType`.
 When you pass in `G`, which is a `BasePoint`, the compiler will specialize the call so that at runtime it uses the pre-computed multiplication tables that `BasePoint`s have.
 
-**note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
+**Note: At this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**.
 
 ## Other Features
 
