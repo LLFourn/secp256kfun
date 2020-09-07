@@ -140,7 +140,7 @@ fn pedersen_commit(
         .mark::<(Normal,NonZero)>()
         // If the result is zero we could easily compute the discrete
         // logarithm of B with respect to A. Since this is meant to be unknown
-        // this computionally unreachable.
+        // this is computionally unreachable.
         .expect("computationally unreachable")
 }
 
