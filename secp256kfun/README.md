@@ -168,7 +168,7 @@ As a bonus, this example also shows how you don't have to design the cryptograph
 The `pedersen_commitment` takes any `PointType`.
 When you pass in `G`, which is a `BasePoint`, the compiler will specialize the call so that at runtime it uses the pre-computed multiplication tables that `BasePoint`s have.
 
-**note: at this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**
+**Note: At this stage constant-time in this library means *hopefully* constant time -- there's not testing being done to check this rigorously**.
 
 ## Other Features
 
