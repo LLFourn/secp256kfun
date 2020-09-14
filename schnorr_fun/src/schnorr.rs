@@ -105,7 +105,7 @@ where
             challenge_hash: CH::default(),
             nonce_gen,
         }
-        .add_protocol_tag("BIP340");
+        .add_protocol_tag("BIP0340");
 
         if let MessageKind::Plain { tag } = msgkind {
             nonce_challenge_bundle = nonce_challenge_bundle.add_application_tag(tag);
@@ -149,7 +149,7 @@ where
             public => [X, message]
         );
 
-        let R = XOnly::<SquareY>::from_scalar_mul(&self.G, &mut r);
+        let R = XOnly::from_scalar_mul(&self.G, &mut r);
         let c = self.challenge(&R, X, message);
         let s = s!(r + c * x).mark::<Public>();
 
@@ -205,18 +205,13 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// let message = b"we rolled our own sign!".as_ref().mark::<Public>();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
-    /// let R = XOnly::<SquareY>::from_scalar_mul(schnorr.G(), &mut r);
+    /// let R = XOnly::from_scalar_mul(schnorr.G(), &mut r);
     /// let challenge = schnorr.challenge(&R, keypair.public_key(), message);
     /// let s = s!(r + challenge * { keypair.secret_key() });
     /// let signature = Signature { R, s };
     /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
     /// ```
-    pub fn challenge<S: Secrecy>(
-        &self,
-        R: &XOnly,
-        X: &XOnly,
-        m: Slice<'_, S>,
-    ) -> Scalar<S, Zero> {
+    pub fn challenge<S: Secrecy>(&self, R: &XOnly, X: &XOnly, m: Slice<'_, S>) -> Scalar<S, Zero> {
         let hash = self.nonce_challenge_bundle.challenge_hash.clone();
         let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
         challenge
@@ -243,7 +238,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         let X = public_key;
         let (R, s) = signature.as_tuple();
         let c = self.challenge(R, &X.to_xonly(), message);
-        g!(s * self.G - c * X) == *R
+        let R_tmp = g!(s * self.G - c * X).mark::<Normal>();
+        R_tmp == *R
     }
 
     /// _Anticipates_ a Schnorr signature given the nonce `R` that will be used ahead of time.
@@ -252,7 +248,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     pub fn anticipate_signature(
         &self,
         X: &Point<EvenY, impl Secrecy>,
-        R: &Point<SquareY, impl Secrecy>,
+        R: &Point<EvenY, impl Secrecy>,
         m: Slice<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
         let c = self.challenge(&R.to_xonly(), &X.to_xonly(), m);

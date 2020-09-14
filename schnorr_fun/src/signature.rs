@@ -84,7 +84,7 @@ impl Signature<Public> {
     /// let random_signature = Signature::random(&mut rand::thread_rng());
     pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
         Signature {
-            R: XOnly::<SquareY>::random(rng),
+            R: XOnly::random(rng),
             s: Scalar::random(rng).mark::<(Zero, Public)>(),
         }
     }

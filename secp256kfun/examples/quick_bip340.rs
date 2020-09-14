@@ -15,7 +15,7 @@ pub struct Signature {
 }
 
 lazy_static::lazy_static! {
-    pub static ref BIP340_CHALLENGE: Sha256 = Sha256::default().tagged(b"BIP340/challenge");
+    pub static ref BIP340_CHALLENGE: Sha256 = Sha256::default().tagged(b"BIP0340/challenge");
 }
 
 pub fn keygen() -> (Scalar, XOnly) {

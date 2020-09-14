@@ -240,7 +240,7 @@ impl<H: Tagged, R> AddTag for Synthetic<H, R> {
 ///     challenge_hash: Sha256::default(),
 ///     nonce_gen,
 /// }
-/// .add_protocol_tag("BIP340");
+/// .add_protocol_tag("BIP0340");
 /// ```
 /// You get a perfectly compliant [BIP-340] challenge and nonce state.
 ///

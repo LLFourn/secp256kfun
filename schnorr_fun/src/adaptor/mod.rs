@@ -105,7 +105,7 @@ where
             .mark::<NonZero>()
             .expect("computationally unreachable");
 
-        let (R, needs_negation) = R.into_point_with_y_choice::<SquareY>();
+        let (R, needs_negation) = R.into_point_with_even_y();
         // We correct r here but we can't correct the decryption key (y) so we
         // store in "needs_negation" whether the decryptor needs to negate their
         // key before decrypting it
