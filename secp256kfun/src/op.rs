@@ -196,19 +196,31 @@ impl<Z1, Z2, T2: Normalized> PointBinary
     }
 }
 
-pub(crate) trait EqXOnlySquareY {
-    fn eq_xonly_square_y(&self, xonly: &XOnly<SquareY>) -> bool;
+pub(crate) trait PointEqXOnly {
+    fn point_eq_xonly(&self, xonly: &XOnly) -> bool;
 }
 
-impl<T, S, Z> EqXOnlySquareY for Point<T, S, Z> {
-    default fn eq_xonly_square_y(&self, xonly: &XOnly<SquareY>) -> bool {
-        ConstantTime::point_eq_xonly_square_y(&self.0, &xonly.0)
+impl<T, S, Z> PointEqXOnly for Point<T, S, Z> {
+    default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
+        ConstantTime::point_eq_xonly(&self.0, &xonly.0)
     }
 }
 
-impl<T, Z> EqXOnlySquareY for Point<T, Public, Z> {
-    fn eq_xonly_square_y(&self, xonly: &XOnly<SquareY>) -> bool {
-        VariableTime::point_eq_xonly_square_y(&self.0, &xonly.0)
+impl<T, Z> PointEqXOnly for Point<T, Public, Z> {
+    default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
+        VariableTime::point_eq_xonly(&self.0, &xonly.0)
+    }
+}
+
+impl<T: Normalized, Z> PointEqXOnly for Point<T, Secret, Z> {
+    default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
+        ConstantTime::norm_point_eq_xonly(&self.0, &xonly.0)
+    }
+}
+
+impl<T: Normalized, Z> PointEqXOnly for Point<T, Public, Z> {
+    fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
+        VariableTime::norm_point_eq_xonly(&self.0, &xonly.0)
     }
 }
 
@@ -415,7 +427,6 @@ pub(crate) trait PointUnary {
 
 pub(crate) trait NormPointUnary {
     fn is_y_even(&self) -> bool;
-    fn is_y_square(&self) -> bool;
 }
 
 impl<T, S, Z> PointUnary for Point<T, Z, S> {
@@ -481,20 +492,12 @@ impl<T: Normalized, Z> PointUnary for Point<T, Z, Public> {
 }
 
 impl<T: Normalized, Z, S> NormPointUnary for Point<T, Z, S> {
-    default fn is_y_square(&self) -> bool {
-        ConstantTime::norm_point_is_y_square(&self.0)
-    }
-
     default fn is_y_even(&self) -> bool {
         ConstantTime::norm_point_is_y_even(&self.0)
     }
 }
 
 impl<T: Normalized, Z> NormPointUnary for Point<T, Z, Public> {
-    fn is_y_square(&self) -> bool {
-        VariableTime::norm_point_is_y_square(&self.0)
-    }
-
     fn is_y_even(&self) -> bool {
         VariableTime::norm_point_is_y_even(&self.0)
     }

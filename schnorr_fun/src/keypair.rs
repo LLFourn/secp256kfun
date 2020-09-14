@@ -18,7 +18,7 @@ use secp256kfun::{marker::*, Point, Scalar, XOnly};
 #[derive(Clone, Debug)]
 pub struct KeyPair {
     pub(crate) sk: Scalar,
-    pub(crate) pk: XOnly<EvenY>,
+    pub(crate) pk: XOnly,
 }
 
 impl KeyPair {
@@ -28,7 +28,7 @@ impl KeyPair {
     }
 
     /// Returns a reference to the public key.
-    pub fn public_key(&self) -> &XOnly<EvenY> {
+    pub fn public_key(&self) -> &XOnly {
         &self.pk
     }
 
@@ -39,7 +39,7 @@ impl KeyPair {
     /// # use schnorr_fun::{Schnorr, fun::Scalar};
     /// # let keypair = schnorr_fun::test_instance!().new_keypair(Scalar::one());
     /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, &XOnly<EvenY>) {
+    pub fn as_tuple(&self) -> (&Scalar, &XOnly) {
         (&self.sk, &self.pk)
     }
 
@@ -59,8 +59,14 @@ impl KeyPair {
     }
 }
 
-impl From<KeyPair> for (Scalar, XOnly<EvenY>) {
+impl From<KeyPair> for (Scalar, XOnly) {
     fn from(kp: KeyPair) -> Self {
         (kp.sk, kp.pk)
+    }
+}
+
+impl AsRef<XOnly> for KeyPair {
+    fn as_ref(&self) -> &XOnly {
+        &self.pk
     }
 }

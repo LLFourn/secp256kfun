@@ -213,8 +213,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// ```
     pub fn challenge<S: Secrecy>(
         &self,
-        R: &XOnly<SquareY>,
-        X: &XOnly<EvenY>,
+        R: &XOnly,
+        X: &XOnly,
         m: Slice<'_, S>,
     ) -> Scalar<S, Zero> {
         let hash = self.nonce_challenge_bundle.challenge_hash.clone();
@@ -228,8 +228,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     }
 
     /// Verifies a signature on a message under a given public key.  Note that a full
-    /// `Point<EvenY,..>` is passed in rather than a `XOnly<EvenY,..>` because it's more efficient
-    /// for repeated verification (where as `XOnly<EvenY,..>` is more efficient for repeated
+    /// `Point<EvenY,..>` is passed in rather than a `XOnly` because it's more efficient
+    /// for repeated verification (where as `XOnly` is more efficient for repeated
     /// signing).
     ///
     /// For an example see the [Synopsis](crate#synopsis)

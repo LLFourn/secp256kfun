@@ -11,7 +11,7 @@ pub struct Signature<S = Public> {
     /// interpreted as the [`Point`].
     ///
     /// [`Point`]: secp256kfun::Point
-    pub R: XOnly<SquareY>,
+    pub R: XOnly,
     /// The challenge _response_ part of the signature.
     pub s: Scalar<S, Zero>,
 }
@@ -47,7 +47,7 @@ impl<S> Signature<S> {
     /// # let signature = schnorr_fun::Signature::random(&mut rand::thread_rng());
     /// let (R, s) = signature.as_tuple();
     /// ```
-    pub fn as_tuple(&self) -> (&XOnly<SquareY>, &Scalar<S, Zero>) {
+    pub fn as_tuple(&self) -> (&XOnly, &Scalar<S, Zero>) {
         (&self.R, &self.s)
     }
 

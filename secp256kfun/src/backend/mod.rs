@@ -15,7 +15,6 @@ pub trait BackendXOnly: Sized {
     fn as_bytes(&self) -> &[u8; 32];
     fn into_bytes(self) -> [u8; 32];
     fn into_norm_point_even_y(self) -> Point;
-    fn into_norm_point_square_y(self) -> Point;
 }
 
 pub trait BackendPoint {
@@ -24,7 +23,6 @@ pub trait BackendPoint {
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]);
     fn norm_to_xonly(&self) -> XOnly;
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point>;
-    fn norm_from_bytes_y_square(x_bytes: [u8; 32]) -> Option<Point>;
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point>;
 }
 
@@ -35,8 +33,7 @@ pub trait TimeSensitive {
     fn point_eq_point(lhs: &Point, rhs: &Point) -> bool;
     fn point_normalize(point: &mut Point);
     fn point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool;
-
-    fn point_eq_xonly_square_y(lhs: &Point, rhs: &XOnly) -> bool;
+    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool;
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_add_norm_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_sub_point(lhs: &Point, rhs: &Point) -> Point {
@@ -49,8 +46,8 @@ pub trait TimeSensitive {
     fn point_conditional_negate(point: &mut Point, cond: bool);
     fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point;
     fn norm_point_neg(point: &mut Point);
+    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool;
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool;
-    fn norm_point_is_y_square(point: &Point) -> bool;
     fn norm_point_is_y_even(point: &Point) -> bool;
     fn norm_point_conditional_negate(point: &mut Point, cond: bool);
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Point) -> Point;

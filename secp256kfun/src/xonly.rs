@@ -4,30 +4,23 @@ use crate::{
     marker::*,
     Point, Scalar,
 };
-use core::marker::PhantomData;
 use rand_core::{CryptoRng, RngCore};
 
-/// An `XOnly<Y>` is the compressed representation of a [`Point<T,S,Z>`] which
+/// An `XOnly` is the compressed representation of a [`Point<EvenY,S,Z>`] which
 /// only stores the x-coordinate of the point.
 ///
-/// The type parameter `Y` determines how to decompress the x-only into a point.
-/// `Y` is always a [`YChoice`] or `()` if the y-coordinate is unspecified (in
-/// which case it can't be decompressed).
-///
-/// Instead of using an `XOnly<Y>` it is often more practical to use a
-/// [`Point<T,S,Z>`] where `T` is set to a [`YChoice`]. For example, a
-/// `Point<EvenY,..>` can do everything an `XOnly<EvenY>` can do and more.
-/// `XOnly` exists because sometimes all you need is the x-coordinate and you
-/// don't want to store the full point in memory.
+/// Using a `Point<EvenY,..>` is usually the right choice as it serializes the
+/// same way and can do everything an `XOnly` can do and more. `XOnly` exists
+/// because sometimes all you need is the x-coordinate and you don't want to
+/// store the full point in memory.
 ///
 /// [`Point<T,S,Z>`]: crate::Point
-/// ['YChoice`]: crate::marker::YChoice
 #[derive(Clone)]
-pub struct XOnly<YChoice = ()>(pub(crate) backend::XOnly, PhantomData<YChoice>);
+pub struct XOnly(pub(crate) backend::XOnly);
 
-impl<Y> XOnly<Y> {
+impl XOnly {
     /// Converts a 32-byte big-endian encoded x-coordinate into an
-    /// `XOnly<Y>`. Returns `None` if the bytes do not represent a valid
+    /// `XOnly`. Returns `None` if the bytes do not represent a valid
     /// x-coordinate on the curve.
     ///
     /// # Example
@@ -35,9 +28,7 @@ impl<Y> XOnly<Y> {
     /// use secp256kfun::{marker::*, XOnly};
     /// // note: x = 1 is on the curve.
     /// // choose the even y-corrdinate when decompressing
-    /// assert!(XOnly::<EvenY>::from_bytes([1u8; 32]).is_some());
-    /// // choose the squaure y-corrdinate when decompressing
-    /// assert!(XOnly::<SquareY>::from_bytes([1u8; 32]).is_some());
+    /// assert!(XOnly::from_bytes([1u8; 32]).is_some());
     /// ```
     pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
         backend::XOnly::from_bytes(bytes).map(Self::from_inner)
@@ -57,14 +48,14 @@ impl<Y> XOnly<Y> {
     }
 
     pub(crate) fn from_inner(inner: backend::XOnly) -> Self {
-        XOnly(inner, PhantomData)
+        XOnly(inner)
     }
 
-    /// Generates a random valid `XOnly<Y>` from a random number generator.
+    /// Generates a random valid `XOnly` from a random number generator.
     /// # Example
     /// ```
     /// use secp256kfun::{marker::*, XOnly};
-    /// let random_x_coordinate = XOnly::<EvenY>::random(&mut rand::thread_rng());
+    /// let random_x_coordinate = XOnly::random(&mut rand::thread_rng());
     /// ```
     pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
         let mut bytes = [0u8; 32];
@@ -83,25 +74,22 @@ impl<Y> XOnly<Y> {
     }
 }
 
-impl<Y: YChoice> XOnly<Y> {
-    /// Decompresses a `XOnly<Y: YChoice>` into a [`Point<Y,Public,NonZero>`].
-    /// The resulting point will have its y-coordinate chosen depending on `Y`
-    /// and is marked as such.
+impl XOnly {
+    /// Decompresses a `XOnly` into a [`Point<EvenY,Public,NonZero>`].
+    /// The resulting point will have an even y-coordinate.
     ///
     /// # Example
     /// ```
     /// use secp256kfun::{marker::*, XOnly};
-    /// let xonly = XOnly::<EvenY>::random(&mut rand::thread_rng());
+    /// let xonly = XOnly::random(&mut rand::thread_rng());
     /// // get the point with a even y-coordinate
     /// let point_even_y = xonly.to_point();
-    /// // get the point with a square y-coordinate
-    /// let point_square_y = xonly.mark::<SquareY>().to_point();
     /// ```
-    pub fn to_point(&self) -> Point<Y, Public, NonZero> {
-        Y::xonly_into_point(self.clone())
+    pub fn to_point(&self) -> Point<EvenY, Public, NonZero> {
+        Point::from_inner(BackendXOnly::into_norm_point_even_y(self.0.clone()), EvenY)
     }
 
-    /// Multiplies `G` by `x` and then compresses the point to an `XOnly<Y: YChoice>`.
+    /// Multiplies `G` by `x` and then compresses the point to an `XOnly`.
     /// `x` is mutable because it will be negated if, after the
     /// multiplication, the resulting point doesn't match `Y` (negating it
     /// ensures that it does).
@@ -115,39 +103,45 @@ impl<Y: YChoice> XOnly<Y> {
     /// )
     /// .unwrap();
     /// let mut secret_key = original.clone();
-    /// let xonly_public_key = XOnly::<EvenY>::from_scalar_mul(G, &mut secret_key);
+    /// let xonly_public_key = XOnly::from_scalar_mul(G, &mut secret_key);
     /// assert_ne!(secret_key, original);
     /// assert_eq!(-secret_key, original);
     /// ```
     // This GT can't be an impl PointType yet because of https://github.com/rust-lang/rust/issues/44491
     pub fn from_scalar_mul<GT>(G: &Point<GT>, x: &mut Scalar<impl Secrecy>) -> Self {
         let X = crate::op::scalar_mul_point(x, G).mark::<Normal>();
-        let needs_negation = !Y::norm_point_matches(&X);
+        let needs_negation = !X.is_y_even();
         x.conditional_negate(needs_negation);
-        X.to_xonly().mark::<Y>()
+        X.to_xonly()
     }
 }
 
-impl<Y> HashInto for XOnly<Y> {
+impl HashInto for XOnly {
     fn hash_into(&self, hash: &mut impl digest::Digest) {
         hash.update(self.as_bytes())
     }
 }
 
-impl<Y> PartialEq<XOnly<Y>> for XOnly<Y> {
-    fn eq(&self, rhs: &XOnly<Y>) -> bool {
+impl PartialEq<XOnly> for XOnly {
+    fn eq(&self, rhs: &XOnly) -> bool {
         // XOnly should have secrecy too so we can do it in vartime if public
         crate::backend::ConstantTime::xonly_eq(&self.0, &rhs.0)
     }
 }
 
-impl<T, Z, S> PartialEq<XOnly<SquareY>> for Point<T, S, Z> {
-    fn eq(&self, rhs: &XOnly<SquareY>) -> bool {
-        crate::op::EqXOnlySquareY::eq_xonly_square_y(self, rhs)
+impl<T, Z, S> PartialEq<XOnly> for Point<T, S, Z> {
+    fn eq(&self, rhs: &XOnly) -> bool {
+        crate::op::PointEqXOnly::point_eq_xonly(self, rhs)
     }
 }
 
-impl<T, Z, S> PartialEq<Point<T, S, Z>> for XOnly<SquareY> {
+impl From<XOnly> for Point<EvenY, Public, NonZero> {
+    fn from(xonly: XOnly) -> Self {
+        Point::from_inner(BackendXOnly::into_norm_point_even_y(xonly.0), EvenY)
+    }
+}
+
+impl<T, Z, S> PartialEq<Point<T, S, Z>> for XOnly {
     fn eq(&self, rhs: &Point<T, S, Z>) -> bool {
         rhs == self
     }
@@ -155,13 +149,13 @@ impl<T, Z, S> PartialEq<Point<T, S, Z>> for XOnly<SquareY> {
 
 crate::impl_fromstr_deserailize! {
     name => "secp256k1 x-coordinate",
-    fn from_bytes<Y>(bytes: [u8;32]) -> Option<XOnly<Y>> {
+    fn from_bytes(bytes: [u8;32]) -> Option<XOnly> {
         XOnly::from_bytes(bytes)
     }
 }
 
 crate::impl_display_debug_serialize! {
-    fn to_bytes<Y>(xonly: &XOnly<Y>) -> &[u8;32] {
+    fn to_bytes(xonly: &XOnly) -> &[u8;32] {
         xonly.as_bytes()
     }
 }
@@ -172,7 +166,7 @@ mod test {
 
     crate::test_plus_wasm! {
         fn xonly_random() {
-            let _ = XOnly::<()>::random(&mut rand::thread_rng());
+            let _ = XOnly::random(&mut rand::thread_rng());
         }
 
         fn from_str() {
@@ -180,7 +174,7 @@ mod test {
             use core::str::FromStr;
 
             assert_eq!(
-                XOnly::<EvenY>::from_str(
+                XOnly::from_str(
                     "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
                 )
                     .unwrap()
@@ -191,14 +185,10 @@ mod test {
 
         fn xonly_to_point() {
             for _ in 0..crate::TEST_SOUNDNESS {
-                let xonly_even = XOnly::<EvenY>::random(&mut rand::thread_rng());
-                let xonly_square = XOnly::<SquareY>::random(&mut rand::thread_rng());
+                let xonly_even = XOnly::random(&mut rand::thread_rng());
 
                 let point_even = xonly_even.to_point();
-                assert!(EvenY::norm_point_matches(&point_even));
-
-                let point_square = xonly_square.to_point();
-                assert!(SquareY::norm_point_matches(&point_square));
+                assert!(point_even.is_y_even());
             }
         }
     }

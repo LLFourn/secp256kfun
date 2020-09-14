@@ -123,22 +123,6 @@ impl crate::backend::BackendPoint for Jacobian {
             None
         }
     }
-
-    fn norm_from_bytes_y_square(x_bytes: [u8; 32]) -> Option<Jacobian> {
-        let mut elem = Field::default();
-        let mut affine = Affine::default();
-        if elem.set_b32(&x_bytes) && affine.set_xquad(&elem) {
-            affine.x.normalize();
-            Some(Jacobian {
-                x: affine.x,
-                y: affine.y,
-                z: Field::from_int(1),
-                infinity: false,
-            })
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -176,19 +160,6 @@ impl crate::backend::BackendXOnly for XOnly {
         let elem = self.to_field_elem();
         let mut affine = Affine::default();
         affine.set_xo_var(&elem, false);
-        affine.y.normalize_var();
-        Jacobian {
-            x: affine.x,
-            y: affine.y,
-            z: Field::from_int(1),
-            infinity: false,
-        }
-    }
-
-    fn into_norm_point_square_y(self) -> Jacobian {
-        let elem = self.to_field_elem();
-        let mut affine = Affine::default();
-        affine.set_xquad(&elem);
         affine.y.normalize_var();
         Jacobian {
             x: affine.x,

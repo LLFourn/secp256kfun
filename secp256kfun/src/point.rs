@@ -29,11 +29,10 @@ use rand_core::{CryptoRng, RngCore};
 /// # Serialization
 ///
 /// Only points that are marked with `Z` = `NonZero` and `T` ≠ `Jacobian` can be
-/// serialized.  A Point that is `EvenY/SquareY` serializes to and from the
-/// 32-byte x-only representation like the [`XOnly`] type.  `Normal` points
-/// serialize to and from the standard 33-byte representation specified in
-/// [_Standards for Efficient Cryptography_] (the same as
-/// [`Point::to/from_bytes`])
+/// serialized. A Point that is `EvenY` serializes to and from the 32-byte
+/// x-only representation like the [`XOnly`] type. `Normal` points serialize to
+/// and from the standard 33-byte representation specified in [_Standards for
+/// Efficient Cryptography_] (the same as [`Point::to/from_bytes`])
 ///
 ///
 /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
@@ -116,45 +115,45 @@ impl Point<Normal, Public, NonZero> {
 
 impl<T, S> Point<T, S, NonZero> {
     /// Converts this point into the point with the same x-coordinate but with
-    /// the y-coordinate with the desired [`YChoice`] property.  The point is
-    /// marked appropriately and is returned with a `bool` indicating whether
-    /// the point had to be negated to achieve the constraint on [`YChoice`].
+    /// an even y-coordinate. Returns a Point marked `EvenY` with a `bool`
+    /// indicating whether the point had to be negated to make its y-coordinate
+    /// even.
     ///
     /// # Examples
     /// ```
     /// use secp256kfun::{marker::*, Point};
     /// let point = Point::random(&mut rand::thread_rng());
-    /// let (point_with_even_y, was_odd) = point.clone().into_point_with_y_choice::<EvenY>();
-    /// let (point_with_square_y, was_not_square) = point.into_point_with_y_choice::<SquareY>();
+    /// let (point_with_even_y, was_odd) = point.clone().into_point_with_even_y();
     /// ```
-    ///
-    /// [`YChoice`]: crate::marker::YChoice
-    pub fn into_point_with_y_choice<Y: YChoice>(self) -> (Point<Y, S, NonZero>, bool) {
+    pub fn into_point_with_even_y(self) -> (Point<EvenY, S, NonZero>, bool) {
         use crate::op::PointUnary;
         let normalized = self.mark::<Normal>();
-        let needs_negation = !Y::norm_point_matches(&normalized);
+        let needs_negation = !normalized.is_y_even();
         let negated = normalized.conditional_negate(needs_negation);
-        (Point::from_inner(negated, Y::default()), needs_negation)
+        (Point::from_inner(negated, EvenY), needs_negation)
     }
 }
 
-impl<Y: YChoice> Point<Y, Public, NonZero> {
-    /// Multiplies `base` by `scalar` and returns the resulting point.
-    /// If the resulting point does not match the [`YChoice`] of the invocant type, then the scalar and point are negated so they comply.
+impl Point<EvenY, Public, NonZero> {
+    /// Multiplies `base` by `scalar` and returns the resulting point. If the
+    /// resulting point does not have an even y-coordinate then the scalar and
+    /// point are negated so the point has an even y-coordinate and the scalar
+    /// matches it.
     ///
     /// # Examples
-    /// Ensure a `public_key` is even is the even version of the point and potentially negate its corresponding `secret_key` to match.
+    ///
     /// ```
     /// use secp256kfun::{marker::*, Point, Scalar, G};
     /// let mut secret_key = Scalar::random(&mut rand::thread_rng());
     /// let public_key = Point::<EvenY>::from_scalar_mul(G, &mut secret_key);
+    /// assert!(public_key.is_y_even());
     /// ```
     pub fn from_scalar_mul(
         base: &Point<impl PointType, impl Secrecy>,
         scalar: &mut Scalar<impl Secrecy>,
     ) -> Self {
         let point = crate::op::scalar_mul_point(scalar, base).mark::<Normal>();
-        let (point, needs_negation) = point.into_point_with_y_choice::<Y>();
+        let (point, needs_negation) = point.into_point_with_even_y();
         scalar.conditional_negate(needs_negation);
         point
     }
@@ -249,12 +248,6 @@ impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> 
     }
 }
 
-impl<Y: YChoice> From<XOnly<Y>> for Point<Y, Public, NonZero> {
-    fn from(xonly: XOnly<Y>) -> Self {
-        Y::xonly_into_point(xonly)
-    }
-}
-
 impl<S, T: Normalized> Point<T, S, NonZero> {
     /// Returns the x and y coordinates of the point as two 32-byte arrays containing their big endian encoding.
     ///
@@ -312,20 +305,22 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     }
 
     /// Converts a point to an `XOnly` (i.e. just its x-coordinate).
-    /// The resulting `XOnly` will inherit the point type of the invocant if it is a [`YChoice`].
-    /// Otherwise it will just be marked with `()`.
     ///
     /// # Example
     ///
     /// ```
     /// use secp256kfun::{marker::*, Point};
-    /// let (point_even_y, _) =
-    ///     Point::random(&mut rand::thread_rng()).into_point_with_y_choice::<EvenY>();
+    /// let (point_even_y, _) = Point::random(&mut rand::thread_rng()).into_point_with_even_y();
     /// let xonly = point_even_y.to_xonly();
-    /// assert!(format!("{:?}", xonly).starts_with("XOnly<EvenY>"));
+    /// assert_eq!(xonly.to_point(), point_even_y);
     /// ```
-    pub fn to_xonly(&self) -> XOnly<T::YType> {
+    pub fn to_xonly(&self) -> XOnly {
         XOnly::from_inner(backend::BackendPoint::norm_to_xonly(&self.0))
+    }
+
+    /// Returns whether the point has an even y-coordinate
+    pub fn is_y_even(&self) -> bool {
+        op::NormPointUnary::is_y_even(self)
     }
 }
 
@@ -362,15 +357,15 @@ crate::impl_serialize! {
 // For YChoice points they serialize and deserialize like XOnlys except when
 // deserializing we don't throw away y-coordinate
 crate::impl_serialize! {
-    fn to_bytes<S,T: YChoice>(point: &Point<T, S, NonZero>) -> [u8;32] {
+    fn to_bytes<S>(point: &Point<EvenY, S, NonZero>) -> [u8;32] {
         point.to_xonly().as_bytes().clone()
     }
 }
 
 crate::impl_fromstr_deserailize! {
     name => "secp256k1 x-coordinate",
-    fn from_bytes<S,T: YChoice>(bytes: [u8;32]) -> Option<Point<T,S, NonZero>> {
-        T::bytes_into_point(bytes)
+    fn from_bytes<S>(bytes: [u8;32]) -> Option<Point<EvenY,S, NonZero>> {
+        backend::Point::norm_from_bytes_y_oddness(bytes, false).map(|point| Point::from_inner(point, EvenY))
     }
 }
 
@@ -448,17 +443,6 @@ mod test {
             let P = crate::op::scalar_mul_point(&Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),G);
             operations_test!(&P);
             operations_test!(P.mark::<Public>())
-        }
-
-        fn bug_make_y_choice_then_negate() {
-            for _ in 0..20 {
-                let (point_even, _) =
-                    Point::random(&mut rand::thread_rng()).into_point_with_y_choice::<EvenY>();
-                let _ = point_even.to_bytes_uncompressed();
-                let (point_square, _) =
-                    Point::random(&mut rand::thread_rng()).into_point_with_y_choice::<SquareY>();
-                let _ = point_square.to_bytes_uncompressed();
-            }
         }
 
         fn G_to_and_from_bytes() {
