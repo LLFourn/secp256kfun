@@ -11,7 +11,7 @@ use secp256kfun::{marker::*, Point, Scalar};
 )]
 pub struct EncryptedSignature<S = Public> {
     /// The `R` point in the signature
-    pub R: Point<SquareY, Public>,
+    pub R: Point<EvenY, Public>,
     /// The _one-time encrypted_ `s` value of the signature.
     pub s_hat: Scalar<S, Zero>,
     /// Whether the decryptor should negate their decryption key prior to decryption.

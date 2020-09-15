@@ -89,7 +89,7 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
 }
 
 /// A zero sized type that wraps an instance of an RNG that implementes
-/// `Default` e.g. [`ThreadRng`] and [`OsRng`]. `GlobalRng` implements
+/// `Default` e.g. [`OsRng`]. `GlobalRng` implements
 /// [`NonceRng`] and care has been taken to ensure it is `Sync`.
 ///
 /// # Examples
@@ -106,6 +106,8 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
 /// }
 /// assert!(is_sync(nonce_rng));
 /// ```
+///
+/// [`OsRng`]: rand_core::OsRng
 #[derive(Debug, Default, Clone)]
 pub struct GlobalRng<R> {
     // Using fn(R) ensures that it is sync even if R is not sync
@@ -240,7 +242,7 @@ impl<H: Tagged, R> AddTag for Synthetic<H, R> {
 ///     challenge_hash: Sha256::default(),
 ///     nonce_gen,
 /// }
-/// .add_protocol_tag("BIP340");
+/// .add_protocol_tag("BIP0340");
 /// ```
 /// You get a perfectly compliant [BIP-340] challenge and nonce state.
 ///

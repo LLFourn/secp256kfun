@@ -30,6 +30,7 @@ pub struct Schnorr<CH, NG = (), GT = BasePoint> {
     ///
     /// [`NonceGen`]: crate::nonce::NonceGen
     nonce_challenge_bundle: NonceChallengeBundle<CH, NG>,
+    application_tag: Option<[u8; 64]>,
 }
 
 /// Describes the kind of messages that will be signed with a [`Schnorr`] instance.
@@ -48,7 +49,12 @@ pub enum MessageKind {
     Plain {
         /// You must provide a tag to separate signatures from your application
         /// from other applications. If two [`Schnorr`] instances are created
-        /// with a different `tag` then a signature valid for one will never be valid for the other.
+        /// with a different `tag` then a signature valid for one will never be
+        /// valid for the other. It will also never be valid for `Prehashed`
+        /// instances. The specific method of domain separation used is
+        /// described [here].
+        ///
+        /// [here]: https://github.com/sipa/bips/issues/207#issuecomment-673681901
         tag: &'static str,
     },
 }
@@ -105,15 +111,26 @@ where
             challenge_hash: CH::default(),
             nonce_gen,
         }
-        .add_protocol_tag("BIP340");
+        .add_protocol_tag("BIP0340");
 
-        if let MessageKind::Plain { tag } = msgkind {
-            nonce_challenge_bundle = nonce_challenge_bundle.add_application_tag(tag);
-        }
+        let application_tag = match msgkind {
+            MessageKind::Prehashed => None,
+            MessageKind::Plain { tag } => {
+                assert!(tag.len() <= 64);
+                // Only add the application tag to nonce gen since we will be
+                // separately adding the tag to the challenge hash in self.challenge()
+                nonce_challenge_bundle.nonce_gen =
+                    nonce_challenge_bundle.nonce_gen.add_application_tag(tag);
+                let mut application_tag = [0u8; 64];
+                application_tag[..tag.len()].copy_from_slice(tag.as_bytes());
+                Some(application_tag)
+            }
+        };
 
         Self {
             G: fun::G.clone(),
             nonce_challenge_bundle,
+            application_tag,
         }
     }
 }
@@ -149,7 +166,7 @@ where
             public => [X, message]
         );
 
-        let R = XOnly::<SquareY>::from_scalar_mul(&self.G, &mut r);
+        let R = XOnly::from_scalar_mul(&self.G, &mut r);
         let c = self.challenge(&R, X, message);
         let s = s!(r + c * x).mark::<Public>();
 
@@ -205,20 +222,22 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// let message = b"we rolled our own sign!".as_ref().mark::<Public>();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
-    /// let R = XOnly::<SquareY>::from_scalar_mul(schnorr.G(), &mut r);
+    /// let R = XOnly::from_scalar_mul(schnorr.G(), &mut r);
     /// let challenge = schnorr.challenge(&R, keypair.public_key(), message);
     /// let s = s!(r + challenge * { keypair.secret_key() });
     /// let signature = Signature { R, s };
     /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
     /// ```
-    pub fn challenge<S: Secrecy>(
-        &self,
-        R: &XOnly<SquareY>,
-        X: &XOnly<EvenY>,
-        m: Slice<'_, S>,
-    ) -> Scalar<S, Zero> {
+    pub fn challenge<S: Secrecy>(&self, R: &XOnly, X: &XOnly, m: Slice<'_, S>) -> Scalar<S, Zero> {
         let hash = self.nonce_challenge_bundle.challenge_hash.clone();
-        let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
+        let mut hash = hash.add(R).add(X);
+
+        if let Some(tag) = self.application_tag {
+            hash.update(&tag[..]);
+        }
+
+        let challenge = Scalar::from_hash(hash.add(&m));
+
         challenge
             // Since the challenge pre-image is adversarially controlled we
             // conservatively allow for it to be zero
@@ -228,8 +247,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     }
 
     /// Verifies a signature on a message under a given public key.  Note that a full
-    /// `Point<EvenY,..>` is passed in rather than a `XOnly<EvenY,..>` because it's more efficient
-    /// for repeated verification (where as `XOnly<EvenY,..>` is more efficient for repeated
+    /// `Point<EvenY,..>` is passed in rather than a `XOnly` because it's more efficient
+    /// for repeated verification (where as `XOnly` is more efficient for repeated
     /// signing).
     ///
     /// For an example see the [Synopsis](crate#synopsis)
@@ -243,7 +262,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         let X = public_key;
         let (R, s) = signature.as_tuple();
         let c = self.challenge(R, &X.to_xonly(), message);
-        g!(s * self.G - c * X) == *R
+        let R_tmp = g!(s * self.G - c * X).mark::<Normal>();
+        R_tmp == *R
     }
 
     /// _Anticipates_ a Schnorr signature given the nonce `R` that will be used ahead of time.
@@ -252,7 +272,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     pub fn anticipate_signature(
         &self,
         X: &Point<EvenY, impl Secrecy>,
-        R: &Point<SquareY, impl Secrecy>,
+        R: &Point<EvenY, impl Secrecy>,
         m: Slice<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
         let c = self.challenge(&R.to_xonly(), &X.to_xonly(), m);
@@ -262,6 +282,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
 
 #[cfg(test)]
 pub mod test {
+    use fun::nonce::Deterministic;
+
     use super::*;
     use crate::fun::TEST_SOUNDNESS;
     crate::fun::test_plus_wasm! {
@@ -307,6 +329,23 @@ pub mod test {
                 assert_ne!(signature_3.R, signature_1.R);
                 assert_ne!(signature_1.R, signature_4.R);
             }
+        }
+
+        fn deterministic_nonces_for_different_message_kinds() {
+            use sha2::Sha256;
+            let schnorr_1 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Prehashed);
+            let schnorr_2 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Plain { tag: "two" });
+            let schnorr_3 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Plain { tag: "three" });
+            let x =  Scalar::from_str("18451f9e08af9530814243e202a4a977130e672079f5c14dcf15bd4dee723072").unwrap();
+            let keypair = schnorr_1.new_keypair(x);
+            let message = b"foo".as_ref().mark::<Public>();
+            assert_ne!(schnorr_1.sign(&keypair, message).R, schnorr_2.sign(&keypair, message).R);
+            assert_ne!(schnorr_1.sign(&keypair, message).R, schnorr_3.sign(&keypair, message).R);
+
+            // make sure deterministic signatures don't change
+            use core::str::FromStr;
+            assert_eq!(schnorr_1.sign(&keypair, message), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
+            assert_eq!(schnorr_2.sign(&keypair, message), Signature::<Public>::from_str("6cad3863f4d01494ce4c40f3422e4916c616356d730bc4ffe33e386f038b328ba1dc9621e626992c2612f33cdb35f4be4badc464c1f4bf3de15517e7aedcf615").unwrap());
         }
     }
 }

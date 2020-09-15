@@ -169,6 +169,12 @@ impl crate::backend::TimeSensitive for ConstantTime {
         point.y.cmov(&neg_y, cond);
     }
 
+    fn point_eq_xonly(lhs: &Jacobian, rhs: &XOnly) -> bool {
+        let mut lhs = lhs.clone();
+        Self::point_normalize(&mut lhs);
+        Self::norm_point_eq_xonly(&lhs, rhs)
+    }
+
     fn norm_point_sub_point(lhs: &Jacobian, rhs: &Jacobian) -> Jacobian {
         crate::assert_normal!(lhs);
         let rhs = rhs.neg();
@@ -183,25 +189,11 @@ impl crate::backend::TimeSensitive for ConstantTime {
         })
     }
 
-    fn point_eq_xonly_square_y(lhs: &Jacobian, rhs: &XOnly) -> bool {
-        let lhs_not_infinity = Choice::from(!lhs.is_infinity() as u8);
-
-        let x_eq = {
-            let rhs_x = rhs.to_field_elem();
-            let z2 = lhs.z.sqr();
-            let rhs_xz2 = z2 * rhs_x;
-            let mut lhs_xz2 = lhs.x.clone();
-            lhs_xz2.normalize_weak();
-            Choice::from(lhs_xz2.eq(&rhs_xz2) as u8)
-        };
-
-        let lhs_square = {
-            let yz4 = &lhs.y * &lhs.z;
-            let (_, is_square) = yz4.sqrt();
-            Choice::from(is_square as u8)
-        };
-
-        (lhs_not_infinity & x_eq & lhs_square).into()
+    fn norm_point_eq_xonly(point: &Jacobian, xonly: &XOnly) -> bool {
+        crate::assert_normal!(point);
+        let are_equal = Choice::from((point.x == xonly.to_field_elem()) as u8);
+        let y_is_even = Choice::from((Self::norm_point_is_y_even(point)) as u8);
+        (are_equal & y_is_even).into()
     }
 
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Jacobian) -> Jacobian {
@@ -252,14 +244,6 @@ impl crate::backend::TimeSensitive for ConstantTime {
         crate::assert_normal!(&point);
         point.y = point.y.neg(1);
         point.y.normalize();
-    }
-
-    fn norm_point_is_y_square(point: &Jacobian) -> bool {
-        crate::assert_normal!(&point);
-        let (_, ret) = point.y.sqrt();
-        let is_infinity = Choice::from(point.is_infinity() as u8);
-        let is_y_square = Choice::from(ret as u8);
-        (!is_infinity & is_y_square).into()
     }
 
     fn norm_point_is_y_even(point: &Jacobian) -> bool {

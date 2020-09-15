@@ -92,6 +92,12 @@ impl crate::backend::TimeSensitive for VariableTime {
         }
     }
 
+    fn point_eq_xonly(lhs: &Jacobian, rhs: &XOnly) -> bool {
+        let mut lhs = lhs.clone();
+        Self::point_normalize(&mut lhs);
+        Self::norm_point_eq_xonly(&lhs, rhs)
+    }
+
     fn norm_point_eq_norm_point(lhs: &Jacobian, rhs: &Jacobian) -> bool {
         crate::assert_normal!(&lhs);
         crate::assert_normal!(&rhs);
@@ -100,11 +106,6 @@ impl crate::backend::TimeSensitive for VariableTime {
             (a, b) if a ^ b => false, // only one is infinity
             _ => lhs.x.cmp_var(&rhs.x) == Ordering::Equal && (lhs.y.is_odd() == rhs.y.is_odd()),
         }
-    }
-
-    fn norm_point_is_y_square(point: &Jacobian) -> bool {
-        crate::assert_normal!(&point);
-        !point.is_infinity() && point.y.is_quad_var()
     }
 
     fn norm_point_is_y_even(point: &Jacobian) -> bool {
@@ -161,9 +162,9 @@ impl crate::backend::TimeSensitive for VariableTime {
         )
     }
 
-    fn point_eq_xonly_square_y(lhs: &Jacobian, rhs: &XOnly) -> bool {
-        let rhs_x = rhs.to_field_elem();
-        !lhs.is_infinity() && lhs.eq_x_var(&rhs_x) && lhs.has_quad_y_var()
+    fn norm_point_eq_xonly(point: &Jacobian, xonly: &XOnly) -> bool {
+        crate::assert_normal!(point);
+        Self::norm_point_is_y_even(point) && point.x.eq_var(&xonly.to_field_elem())
     }
 
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Jacobian) -> Jacobian {

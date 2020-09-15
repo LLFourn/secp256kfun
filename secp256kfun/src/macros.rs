@@ -448,16 +448,16 @@ macro_rules! impl_fromstr_deserailize {
     ) => {
 
         impl$(<$($tpl $(:$tcl)?),*>)? core::str::FromStr for $type  {
-            type Err = $crate::HexError;
+            type Err = $crate::hex::HexError;
 
             /// Parses the string as hex and interprets tries to convert the
             /// resulting byte array into the desired value.
-            fn from_str(hex: &str) -> Result<$type , $crate::HexError> {
-                use $crate::hex_val;
+            fn from_str(hex: &str) -> Result<$type , $crate::hex::HexError> {
+                use $crate::hex::hex_val;
                 if hex.len() % 2 == 1 {
-                    Err($crate::HexError::InvalidHex)
+                    Err($crate::hex::HexError::InvalidHex)
                 } else if $len * 2 != hex.len() {
-                    Err($crate::HexError::InvalidLength)
+                    Err($crate::hex::HexError::InvalidLength)
                 } else {
                     let mut buf = [0u8; $len];
 
@@ -467,7 +467,7 @@ macro_rules! impl_fromstr_deserailize {
 
                     let $input = buf;
                     let result = $block;
-                    result.ok_or($crate::HexError::InvalidEncoding)
+                    result.ok_or($crate::hex::HexError::InvalidEncoding)
                 }
             }
         }
@@ -495,7 +495,7 @@ macro_rules! impl_fromstr_deserailize {
                             }
 
                             fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<$type , E> {
-                                use $crate::HexError::*;
+                                use $crate::hex::HexError::*;
                                 <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
                                     InvalidLength => E::invalid_length(v.len(), &format!("{}", $len).as_str()),
                                     InvalidEncoding => E::invalid_value(serde::de::Unexpected::Str(v), &self),
