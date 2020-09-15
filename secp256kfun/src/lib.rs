@@ -13,8 +13,8 @@ extern crate alloc;
 extern crate std;
 
 pub mod hash;
-pub mod nonce;
 pub mod hex;
+pub mod nonce;
 
 pub use digest;
 pub use rand_core;
@@ -55,8 +55,6 @@ mod libsecp_compat;
 ///[`BasePoint`]: crate::marker::BasePoint
 pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero> =
     &Point::from_inner(backend::G_JACOBIAN, marker::BasePoint(backend::G_TABLE));
-
-
 
 #[doc(hidden)]
 pub const TEST_SOUNDNESS: usize = 20;

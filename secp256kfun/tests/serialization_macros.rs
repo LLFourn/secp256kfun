@@ -2,7 +2,7 @@
 mod test {
 
     use core::{marker::PhantomData, str::FromStr};
-    use secp256kfun::{impl_display_debug_serialize, impl_fromstr_deserailize, hex::HexError};
+    use secp256kfun::{hex::HexError, impl_display_debug_serialize, impl_fromstr_deserailize};
 
     #[derive(PartialEq)]
     struct SixBytes<T>([u8; 6], PhantomData<T>);

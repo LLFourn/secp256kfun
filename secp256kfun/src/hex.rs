@@ -9,7 +9,6 @@ use std::string::String;
 #[cfg(feature = "std")]
 use std::vec::Vec;
 
-
 use core::fmt;
 /// Error representing a failed conversion from hex into the bytes for the target type.
 #[derive(Debug, Clone, PartialEq)]
@@ -22,14 +21,13 @@ pub enum HexError {
     InvalidEncoding,
 }
 
-
 impl fmt::Display for HexError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use HexError::*;
         match self {
             InvalidHex => write!(f, "invalid hex string"),
             InvalidLength => write!(f, "hex string had an invalid (odd) length"),
-            InvalidEncoding => write!(f, "hex value did not encode the expected type")
+            InvalidEncoding => write!(f, "hex value did not encode the expected type"),
         }
     }
 }
@@ -46,7 +44,6 @@ pub fn hex_val(c: u8) -> Result<u8, HexError> {
         _ => Err(HexError::InvalidHex),
     }
 }
-
 
 #[cfg(feature = "alloc")]
 /// Encode some bytes as a hex String.
@@ -75,7 +72,7 @@ pub fn encode(bytes: &[u8]) -> String {
 #[cfg(feature = "alloc")]
 pub fn decode(hex: &str) -> Result<Vec<u8>, HexError> {
     if (hex.len() % 2) != 0 {
-        return Err(HexError::InvalidLength)
+        return Err(HexError::InvalidLength);
     }
     let mut bytes = Vec::with_capacity(hex.len() * 2);
 
