@@ -16,7 +16,7 @@ keywords = ["bitcoin", "ecdsa", "secp256k1"]
 features = ["serialize_hex", "serialization"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun", version = "^0.3.1-alpha.0", default-features = false }
+secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", default-features = false }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 
 [dev-dependencies]
