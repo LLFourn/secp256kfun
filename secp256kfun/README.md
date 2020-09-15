@@ -30,7 +30,7 @@ _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the res
 
 ```toml
 [dependencies]
-secp256kfun = "0.2"
+secp256kfun = "0.3"
 ```
 
 ### Should use?
