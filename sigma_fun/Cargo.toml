@@ -1,0 +1,21 @@
+[package]
+name = "signma_fun"
+version = "0.1.0"
+authors = ["LLFourn <lloyd.fourn@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+generic-array = "0.14"
+digest = "0.9"
+secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", default-features = false, optional = true }
+rand_chacha = "0.2"
+
+[dev-dependencies]
+rand = "0.7"
+sha2 = "0.9"
+
+[features]
+default = ["secp256k1"]
+secp256k1 = ["secp256kfun"]
