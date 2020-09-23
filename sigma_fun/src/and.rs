@@ -110,3 +110,5 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for And<A, 
         self.rhs.hash_witness(hash, &witness.1);
     }
 }
+
+crate::impl_display!(And<A,B>);

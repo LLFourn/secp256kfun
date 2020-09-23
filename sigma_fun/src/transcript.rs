@@ -1,6 +1,11 @@
-use crate::rand_core::{CryptoRng, RngCore, SeedableRng};
-use digest::Digest;
-use generic_array::{typenum::U32, GenericArray};
+use crate::{
+    rand_core::{CryptoRng, RngCore, SeedableRng},
+    typenum::{
+        marker_traits::NonZero, type_operators::IsLessOrEqual, PartialDiv, Unsigned, U32, U64,
+    },
+};
+use digest::{BlockInput, Digest};
+use generic_array::{ArrayLength, GenericArray};
 use rand_chacha::ChaCha20Rng;
 
 use crate::Sigma;
@@ -14,7 +19,7 @@ pub trait Transcript<S: Sigma>: Clone {
         witness: &S::Witness,
         in_rng: &mut R,
     ) -> Self::Rng;
-    fn add_announcement(
+    fn get_challenge(
         self,
         sigma: &S,
         announce: &S::Announce,
@@ -31,19 +36,28 @@ impl<H: Digest> core::fmt::Write for WriteHash<H> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Default + Clone, S: Sigma<ChallengeLength = U32>> Transcript<S>
-    for H
+impl<H: BlockInput<BlockSize = U64> + Digest<OutputSize = U32> + Default + Clone, S: Sigma>
+    Transcript<S> for H
+where
+    S::ChallengeLength: IsLessOrEqual<U32>,
+    <S::ChallengeLength as IsLessOrEqual<U32>>::Output: NonZero,
 {
     type Rng = ChaCha20Rng;
 
     fn initialize(sigma: &S) -> Self {
-        let mut name_hash = WriteHash(H::default());
-        sigma.write_name(&mut name_hash);
-        let output = name_hash.0.finalize();
-        let mut hash = H::default();
-        hash.update(output);
-        hash.update(output);
-        hash
+        let hashed_tag = {
+            let mut hash = WriteHash(H::default());
+            sigma.write_name(&mut hash);
+            hash.0.finalize()
+        };
+        let mut tagged_hash = H::default();
+        let fill_block =
+            <<H::BlockSize as PartialDiv<H::OutputSize>>::Output as Unsigned>::to_usize();
+        for _ in 0..fill_block {
+            tagged_hash.update(&hashed_tag[..]);
+        }
+
+        tagged_hash
     }
 
     fn add_statement(&mut self, sigma: &S, statement: &S::Statement) {
@@ -65,12 +79,23 @@ impl<H: Digest<OutputSize = U32> + Default + Clone, S: Sigma<ChallengeLength = U
         ChaCha20Rng::from_seed(secret_seed.into())
     }
 
-    fn add_announcement(
+    fn get_challenge(
         mut self,
         sigma: &S,
         announce: &S::Announce,
     ) -> GenericArray<u8, S::ChallengeLength> {
         sigma.hash_announcement(&mut self, announce);
-        self.finalize()
+        let challenge_bytes = self.finalize();
+        truncate_hash_output::<U32, S::ChallengeLength>(challenge_bytes)
     }
+}
+
+fn truncate_hash_output<I: ArrayLength<u8>, O: ArrayLength<u8>>(
+    input: GenericArray<u8, I>,
+) -> GenericArray<u8, O>
+where
+    O: IsLessOrEqual<I>,
+    <O as IsLessOrEqual<I>>::Output: NonZero,
+{
+    GenericArray::clone_from_slice(&input[..O::to_usize()])
 }

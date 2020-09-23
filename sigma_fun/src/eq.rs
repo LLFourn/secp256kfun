@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::rand_core::{CryptoRng, RngCore};
 use digest::Digest;
-use generic_array::{functional::FunctionalSequence, ArrayLength, GenericArray};
+use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
 
 use crate::Sigma;
 
@@ -11,13 +11,23 @@ pub struct Eq<S, N> {
     n: PhantomData<N>,
 }
 
+impl<S, N> Eq<S, N> {
+    pub fn new(sigma: S) -> Self {
+        Self {
+            sigma,
+            n: PhantomData,
+        }
+    }
+}
+
 impl<S: Sigma, N> Sigma for Eq<S, N>
 where
     N: ArrayLength<S::Statement>
         + ArrayLength<S::Announce>
         + ArrayLength<(S::Announce, S::AnnounceSecret)>
         + ArrayLength<S::AnnounceSecret>
-        + ArrayLength<Option<S::Announce>>,
+        + ArrayLength<Option<S::Announce>>
+        + Unsigned,
 {
     type Witness = S::Witness;
     type Statement = GenericArray<S::Statement, N>;
@@ -32,7 +42,7 @@ where
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
         announce: &Self::Announce,
-        challenge: &generic_array::GenericArray<u8, Self::ChallengeLength>,
+        challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         self.sigma.respond(
             witness,
@@ -83,7 +93,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "eq(").unwrap();
+        write!(w, "eq({},", N::to_u32()).unwrap();
         self.sigma.write_name(w);
         write!(w, ")").unwrap();
     }
@@ -104,3 +114,5 @@ where
         self.sigma.hash_witness(hash, witness)
     }
 }
+
+crate::impl_display!(Eq<S,N>);
