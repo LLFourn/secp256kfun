@@ -1,7 +1,7 @@
 
 
 pub trait Transcript {
-    pub fn add_name(&mut self, name: &str) -> Self;
+    pub fn add_name(&mt self, name: &str) -> Self;
     pub fn write_statement()
 }
 

@@ -9,7 +9,7 @@ use generic_array::{
     ArrayLength, GenericArray,
 };
 pub use secp256kfun as fun;
-use secp256kfun::{derive_nonce, g, marker::*, nonce::NonceGen, s, Point, Scalar};
+use secp256kfun::{g, marker::*, s, Point, Scalar};
 
 pub struct DL<L> {
     len: PhantomData<L>,

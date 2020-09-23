@@ -2,12 +2,13 @@
 #![feature(move_ref_pattern)]
 
 use digest::Digest;
+pub use generic_array::{self, typenum};
 use generic_array::{ArrayLength, GenericArray};
 pub use rand_chacha::rand_core;
 use rand_chacha::rand_core::{CryptoRng, RngCore};
 
 #[cfg(feature = "secp256kfun")]
-mod secp256k1;
+pub mod secp256k1;
 
 mod and;
 pub use and::And;
@@ -71,7 +72,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
     }
 
     pub fn prove<Rng: CryptoRng + RngCore>(
-        &mut self,
+        &self,
         witness: &S::Witness,
         statement: &S::Statement,
         rng: &mut Rng,
@@ -83,7 +84,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
             self.sigma
                 .gen_announce_secret(witness, statement, &mut transcript_rng);
         let announce = self.sigma.announce(statement, &announce_secret);
-        let challenge = transcript.add_announcement(&self.sigma, &announce);
+        let challenge = transcript.get_challenge(&self.sigma, &announce);
         let response =
             self.sigma
                 .respond(witness, statement, announce_secret, &announce, &challenge);
@@ -105,7 +106,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
                 Some(announcement) => announcement,
                 None => return false,
             };
-        let implied_challenge = transcript.add_announcement(&self.sigma, &implied_announcement);
+        let implied_challenge = transcript.get_challenge(&self.sigma, &implied_announcement);
         implied_challenge == proof.challenge
     }
 }
@@ -115,33 +116,17 @@ pub struct CompactProof<S: Sigma> {
     response: S::Response,
 }
 
-// }
-
-// impl<A: Sigma, B: Sigma> Sigma for And<A,B> {
-
-//     pub fn get_statement(witness: &Self::Witness) -> Self::Statement {
-//         (A::get_statement(&witness.0), B::get_statement(&witness.1))
-//     }
-
-//     pub fn respond(witness: &Self::Witness, announce_secret: &S::AnnounceSecret, &challenge: &[u8]) -> Self::Response {
-//         (A::respond(witness, announce_secret, challenge), B::respond(witness, announce_secret, challenge))
-//     }
-
-//     pub fn announce(wintess: &Self::Witness) -> (Self::Announce, Self::AnnounceSecret) {
-//         (A::announce(statement.0), B::announce(statement.1))
-//     }
-
-//     pub fn simulate(statement: &Self::Statement, challenge: Challenge) -> (Self::Announce, Self::Response) {
-//         let simA = A::simulate(&statement.0, challenge);
-//         let simB = B::simulate(&statement.1, challenge);
-//         ((simA.0, simB.0), (simB.1,simA.1))
-//     }
-
-//     pub fn verify_response(statement: &Self::Statement, challenge: Challenge, response: &Self::Response) -> bool {
-//         A::veirfy_response(&statement.0, challenge, &response.0) && B::verify_response(&statement.1, challenge, &response.1)
-//     }
-
-//     pub fn implied_announcement(statement: &Self::Statement, challenge: Challenge, response: &Self::Response) -> Self::Announce {
-//         A::implied_announcement(&statement.0, challenge, &response.0)
-//     }
-// }
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_display {
+    ($name:ident<$($tp:ident),+>) => {
+        impl<$($tp),+> core::fmt::Display for $name<$($tp),+>
+            where $name<$($tp),+>: $crate::Sigma
+        {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                self.write_name(f);
+                Ok(())
+            }
+        }
+    }
+}

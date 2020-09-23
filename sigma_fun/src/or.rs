@@ -180,3 +180,5 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         }
     }
 }
+
+crate::impl_display!(Or<A,B>);
