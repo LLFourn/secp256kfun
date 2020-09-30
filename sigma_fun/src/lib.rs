@@ -10,6 +10,9 @@ use rand_chacha::rand_core::{CryptoRng, RngCore};
 #[cfg(feature = "secp256kfun")]
 pub mod secp256k1;
 
+#[cfg(feature = "ed25519")]
+pub mod ed25519;
+
 mod and;
 pub use and::And;
 mod eq;
