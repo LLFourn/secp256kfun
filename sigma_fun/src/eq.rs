@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
-
-use crate::rand_core::{CryptoRng, RngCore};
+use crate::{
+    rand_core::{CryptoRng, RngCore},
+    Sigma,
+};
+use core::marker::PhantomData;
 use digest::Digest;
 use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
-
-use crate::Sigma;
 
 pub struct Eq<S, N> {
     sigma: S,
