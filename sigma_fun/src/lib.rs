@@ -19,6 +19,9 @@ mod eq;
 pub use eq::Eq;
 mod or;
 pub use or::Or;
+mod all;
+pub use all::All;
+
 mod transcript;
 pub use transcript::*;
 
