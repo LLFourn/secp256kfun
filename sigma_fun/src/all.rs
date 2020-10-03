@@ -6,12 +6,13 @@ use core::marker::PhantomData;
 use digest::Digest;
 use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
 
-pub struct All<S, N> {
+#[derive(Default, Clone, Debug)]
+pub struct All<N, S> {
     sigma: S,
     n: PhantomData<N>,
 }
 
-impl<S, N> All<S, N> {
+impl<S, N> All<N, S> {
     pub fn new(sigma: S) -> Self {
         Self {
             sigma,
@@ -20,7 +21,7 @@ impl<S, N> All<S, N> {
     }
 }
 
-impl<S: Sigma, N> Sigma for All<S, N>
+impl<S: Sigma, N> Sigma for All<N, S>
 where
     N: ArrayLength<S::Witness>
         + ArrayLength<S::Statement>

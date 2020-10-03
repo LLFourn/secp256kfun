@@ -16,7 +16,7 @@ macro_rules! run_dleq {
     ) => {{
         let statement = &$statement;
         let witness = &$witness;
-        let dleq = Eq::<_, U2>::new(sigma_fun::$mod::DL::<$len>::default());
+        let dleq = Eq::<U2, _>::new(sigma_fun::$mod::DL::<$len>::default());
 
         let proof_system = FiatShamir::<_, Sha256>::new(dleq);
         let proof = proof_system.prove(witness, statement, &mut rand::thread_rng());
@@ -31,26 +31,9 @@ macro_rules! run_dleq {
     }};
 }
 
-// macro_rules! run_dleq_ed25519 {
-// 	(challenge_length => $len:ident) => {
-//         let G = ed25519_dalek::constants::ED25519_BASEPOINT_POINT;
-//         let x = Scalar::random(&mut rand::thread_rng());
-//         let h = Scalar::random(&mut rand::thread_rng());
-//         let H = h * G;
-//         let xG = x *G;
-//         let xH = x *H;
-
-//         let statement = GenericArray::from([(G, xG), (H, xH)]);
-//         let dleq = Eq::<_, U2>::new(ed25519::DL::<$len>::default());
-//         assert_eq!(format!("{}", dleq), "eq(2,DL-ed25519)");
-
-//         let proof_system = FiatShamir::<_, Sha256>::new(dleq)
-// 	};
-// }
-//
 #[test]
 fn secp256k1_dleq_has_correct_name() {
-    let dleq = Eq::<_, U2>::new(sigma_fun::secp256k1::DL::<U32>::default());
+    let dleq = Eq::<U2, _>::new(sigma_fun::secp256k1::DL::<U32>::default());
     assert_eq!(&format!("{}", dleq), "eq(2,DL-secp256k1)");
 }
 

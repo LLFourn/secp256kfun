@@ -6,12 +6,13 @@ use core::marker::PhantomData;
 use digest::Digest;
 use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
 
-pub struct Eq<S, N> {
+#[derive(Debug, Clone, Default)]
+pub struct Eq<N, S> {
     sigma: S,
     n: PhantomData<N>,
 }
 
-impl<S, N> Eq<S, N> {
+impl<S, N> Eq<N, S> {
     pub fn new(sigma: S) -> Self {
         Self {
             sigma,
@@ -20,7 +21,7 @@ impl<S, N> Eq<S, N> {
     }
 }
 
-impl<S: Sigma, N> Sigma for Eq<S, N>
+impl<N, S: Sigma> Sigma for Eq<N, S>
 where
     N: ArrayLength<S::Statement>
         + ArrayLength<S::Announce>
@@ -115,4 +116,4 @@ where
     }
 }
 
-crate::impl_display!(Eq<S,N>);
+crate::impl_display!(Eq<N,S>);

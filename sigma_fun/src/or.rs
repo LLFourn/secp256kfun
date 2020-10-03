@@ -5,6 +5,7 @@ use crate::{
 use digest::Digest;
 use generic_array::{functional::FunctionalSequence, GenericArray};
 
+#[derive(Default, Clone, Debug)]
 pub struct Or<A, B> {
     lhs: A,
     rhs: B,

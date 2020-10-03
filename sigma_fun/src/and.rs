@@ -4,6 +4,7 @@ use generic_array::GenericArray;
 
 use crate::Sigma;
 
+#[derive(Default, Clone, Debug)]
 pub struct And<A, B> {
     lhs: A,
     rhs: B,
