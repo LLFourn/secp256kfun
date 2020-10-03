@@ -21,6 +21,7 @@ mod or;
 pub use or::Or;
 mod all;
 pub use all::All;
+pub mod ext;
 
 mod transcript;
 pub use transcript::*;
