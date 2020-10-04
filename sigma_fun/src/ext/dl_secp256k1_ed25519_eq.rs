@@ -1,7 +1,6 @@
 //! Cross curve proof of Discrete Log equality between secp256k1 and ed25519
 //!
 //! Here "equality" means the two secret scalars have the same 252-bit representaion.
-//!
 use crate::{
     ed25519,
     or::Either,
@@ -14,13 +13,12 @@ use crate::{
     },
     All, And, Eq, FiatShamir, Or, Sigma, Transcript,
 };
+use alloc::vec::Vec;
 use curve25519_dalek::{
     constants::ED25519_BASEPOINT_TABLE, edwards::EdwardsPoint as PointQ, scalar::Scalar as ScalarQ,
     traits::Identity,
 };
-use generic_array::{
-    typenum::{U252, U31},
-};
+use generic_array::typenum::{U252, U31};
 static GQ: &'static curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
 /// The underlying proof algorithm we'll be using to prove the relationship between the commitments and the keys.
@@ -77,7 +75,6 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
 
     /// Generates the two corresponding points for the same 252-bit ed25519
     /// secret and generates a proof that they have the same discrete logarithm.
-    /// Returns the points and the proof.
     ///
     /// # Panics
     ///
@@ -167,7 +164,7 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
         (rP, rQ): &(ScalarP<Public, Zero>, ScalarQ),
         (XP, XQ): &(PointP, PointQ),
         commitments: &[(PointP, PointQ)],
-    ) -> Option<Box<<CoreProof as Sigma>::Statement>> {
+    ) -> Option<<CoreProof as Sigma>::Statement> {
         let commitment_statement = self
             .powers_of_two
             .iter()
@@ -193,18 +190,17 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
         let unblindedP = g!(sumP - rP * GP).mark::<(Normal, NonZero)>()?;
         let unblindedQ = sumQ - rQ * GQ;
 
-        let dleq_G_to_H = ((
-                XP.clone(),
-                (self.HP.clone(), unblindedP),
-            ),
-            (XQ.clone(), (self.HQ, unblindedQ)));
+        let dleq_G_to_H = (
+            (XP.clone(), (self.HP.clone(), unblindedP)),
+            (XQ.clone(), (self.HQ, unblindedQ)),
+        );
 
-        Some(Box::new((commitment_statement, dleq_G_to_H)))
+        Some((commitment_statement, dleq_G_to_H))
     }
 
     #[must_use]
     pub fn verify(&self, proof: &CrossCurveDLEQProof) -> bool {
-                                             // Make sure the claimed ed25519 key is in the prime-order subgroup
+        // Make sure the claimed ed25519 key is in the prime-order subgroup
         if proof.commitments.len() != 252 || !proof.claim.1.is_torsion_free() {
             return false;
         }

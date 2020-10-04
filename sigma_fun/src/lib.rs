@@ -1,3 +1,4 @@
+#![no_std]
 #![allow(non_snake_case)]
 #![feature(move_ref_pattern)]
 
@@ -13,15 +14,24 @@ pub mod secp256k1;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 mod and;
 pub use and::And;
 mod eq;
 pub use eq::Eq;
+
+#[cfg(feature = "alloc")]
 mod eq_all;
+#[cfg(feature = "alloc")]
 pub use eq_all::EqAll;
 mod or;
 pub use or::*;
+
+#[cfg(feature = "alloc")]
 mod all;
+#[cfg(feature = "alloc")]
 pub use all::All;
 pub mod ext;
 mod transcript;
