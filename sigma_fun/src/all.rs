@@ -4,7 +4,7 @@ use crate::{
 };
 use core::marker::PhantomData;
 use digest::Digest;
-use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
+use generic_array::{typenum::Unsigned, ArrayLength, GenericArray};
 
 #[derive(Default, Clone, Debug)]
 pub struct All<N, S> {
@@ -32,11 +32,11 @@ where
         + ArrayLength<S::Response>
         + Unsigned,
 {
-    type Witness = GenericArray<S::Witness, N>;
-    type Statement = GenericArray<S::Statement, N>;
-    type AnnounceSecret = GenericArray<S::AnnounceSecret, N>;
-    type Announce = GenericArray<S::Announce, N>;
-    type Response = GenericArray<S::Response, N>;
+    type Witness = Vec<S::Witness>;
+    type Statement = Vec<S::Statement>;
+    type AnnounceSecret = Vec<S::AnnounceSecret>;
+    type Announce = Vec<S::Announce>;
+    type Response = Vec<S::Response>;
     type ChallengeLength = S::ChallengeLength;
 
     fn respond(
@@ -47,18 +47,20 @@ where
         announce: &Self::Announce,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
-        let mut i = 0;
-        announce_secret.map(|announce_secret| {
-            let response = self.sigma.respond(
-                &witness[i],
-                &statement[i],
-                announce_secret,
-                &announce[i],
-                challenge,
-            );
-            i += 1;
-            response
-        })
+        announce_secret
+            .into_iter()
+            .enumerate()
+            .map(|(i, announce_secret)| {
+                let response = self.sigma.respond(
+                    &witness[i],
+                    &statement[i],
+                    announce_secret,
+                    &announce[i],
+                    challenge,
+                );
+                response
+            })
+            .collect()
     }
 
     fn announce(
@@ -66,9 +68,11 @@ where
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
     ) -> Self::Announce {
-        statement.zip(announce_secret, |statement, announce_secret| {
-            self.sigma.announce(statement, announce_secret)
-        })
+        statement
+            .iter()
+            .zip(announce_secret)
+            .map(|(statement, announce_secret)| self.sigma.announce(statement, announce_secret))
+            .collect()
     }
 
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
@@ -77,14 +81,17 @@ where
         statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
-        witness.zip(statement, |witness, statement| {
-            self.sigma.gen_announce_secret(witness, statement, rng)
-        })
+        witness
+            .iter()
+            .zip(statement)
+            .map(|(witness, statement)| self.sigma.gen_announce_secret(witness, statement, rng))
+            .collect()
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {
-        GenericArray::from_exact_iter((0..N::to_usize()).map(|_| self.sigma.sample_response(rng)))
-            .unwrap()
+        (0..N::to_usize())
+            .map(|_| self.sigma.sample_response(rng))
+            .collect()
     }
 
     fn implied_announcement(
@@ -93,21 +100,14 @@ where
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce> {
-        let mut one_failed = false;
-        let all_implied_announcements = statement.zip(response, |statement, response| {
-            let implied_announcement = self
-                .sigma
-                .implied_announcement(&statement, challenge, &response);
-            if implied_announcement.is_none() {
-                one_failed = true;
-            }
-            implied_announcement
-        });
-
-        match one_failed {
-            true => None,
-            false => Some(all_implied_announcements.map(|x| x.unwrap())),
-        }
+        statement
+            .iter()
+            .zip(response)
+            .map(|(statement, response)| {
+                self.sigma
+                    .implied_announcement(&statement, challenge, &response)
+            })
+            .collect()
     }
 
     fn write_name<W: std::fmt::Write>(&self, w: &mut W) {

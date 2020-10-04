@@ -10,7 +10,11 @@ pub struct And<A, B> {
     rhs: B,
 }
 
-impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for And<A, B> {
+impl<A, B> Sigma for And<A, B>
+where
+    A: Sigma,
+    B: Sigma<ChallengeLength = A::ChallengeLength>,
+{
     type Witness = (A::Witness, B::Witness);
     type Statement = (A::Statement, B::Statement);
     type Announce = (A::Announce, B::Announce);
@@ -113,3 +117,29 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for And<A, 
 }
 
 crate::impl_display!(And<A,B>);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn and_dlbp() {
+        use crate::{
+            secp256k1,
+            secp256k1::fun::{g, marker::*, Scalar, G},
+        };
+        use generic_array::typenum::U32;
+        use sha2::Sha256;
+
+        type AndDL = And<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
+
+        let x = Scalar::random(&mut rand::thread_rng());
+        let y = Scalar::random(&mut rand::thread_rng());
+        let xG = g!(x * G).mark::<Normal>();
+        let yG = g!(y * G).mark::<Normal>();
+        let statement = (xG, yG);
+        let proof_system = crate::FiatShamir::<_, Sha256>::new(AndDL::default());
+        let proof = proof_system.prove(&(x, y), &statement, &mut rand::thread_rng());
+        assert!(proof_system.verify(&statement, &proof));
+    }
+}
