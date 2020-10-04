@@ -17,6 +17,7 @@ impl<A, B> Or<A, B> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Either<A, B> {
     Left(A),
     Right(B),
@@ -32,9 +33,8 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
     );
     type ChallengeLength = A::ChallengeLength;
     type Response = (
-        A::Response,
+        (A::Response, GenericArray<u8, Self::ChallengeLength>),
         B::Response,
-        GenericArray<u8, Self::ChallengeLength>,
     );
 
     fn respond(
@@ -45,30 +45,31 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         announce: &Self::Announce,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
-        let (or_announce_secret, sim_challenge) = announce_secret;
-        let xor_challenge = challenge.zip(sim_challenge.clone(), |byte1, byte2| byte1 ^ byte2);
+        let (or_announce_secret, fake_challenge) = announce_secret;
+        let real_challenge = challenge.zip(fake_challenge.clone(), |byte1, byte2| byte1 ^ byte2);
         match (witness, or_announce_secret) {
             (Either::Left(witness), Either::Left((announce_secret, sim_response))) => (
-                self.lhs.respond(
-                    &witness,
-                    &statement.0,
-                    announce_secret,
-                    &announce.0,
-                    &xor_challenge,
+                (
+                    self.lhs.respond(
+                        &witness,
+                        &statement.0,
+                        announce_secret,
+                        &announce.0,
+                        &real_challenge,
+                    ),
+                    real_challenge,
                 ),
                 sim_response,
-                xor_challenge,
             ),
             (Either::Right(witness), Either::Right((sim_response, announce_secret))) => (
-                sim_response,
+                (sim_response, fake_challenge),
                 self.rhs.respond(
                     &witness,
                     &statement.1,
                     announce_secret,
                     &announce.1,
-                    &xor_challenge,
+                    &real_challenge,
                 ),
-                sim_challenge,
             ),
             _ => unreachable!("both witness and announce_secret will be on the same side"),
         }
@@ -131,9 +132,8 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         let mut random_challenge = GenericArray::<u8, Self::ChallengeLength>::default();
         rng.fill_bytes(random_challenge.as_mut_slice());
         (
-            self.lhs.sample_response(rng),
+            (self.lhs.sample_response(rng), random_challenge),
             self.rhs.sample_response(rng),
-            random_challenge,
         )
     }
 
@@ -144,7 +144,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         response: &Self::Response,
     ) -> Option<Self::Announce> {
         let (lhs_statement, rhs_statement) = statement;
-        let (lhs_response, rhs_response, lhs_challenge) = response;
+        let ((lhs_response, lhs_challenge), rhs_response) = response;
         let rhs_challenge = lhs_challenge.zip(challenge, |byte1, byte2| byte1 ^ byte2);
 
         self.lhs
@@ -183,3 +183,44 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
 }
 
 crate::impl_display!(Or<A,B>);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{secp256k1, Either};
+    use generic_array::typenum::U32;
+    use secp256kfun::{g, marker::*, Point, Scalar, G};
+    use sha2::Sha256;
+
+    #[test]
+    fn or_secp256k1() {
+        let x = Scalar::random(&mut rand::thread_rng());
+        let xG = g!(x * G).mark::<Normal>();
+        let Y = Point::random(&mut rand::thread_rng());
+        type OrDL = Or<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
+        let statement = (xG, Y);
+        let proof_system = crate::FiatShamir::<OrDL, Sha256>::default();
+
+        let proof_lhs = proof_system.prove(
+            &Either::Left(x.clone()),
+            &statement,
+            &mut rand::thread_rng(),
+        );
+        assert!(proof_system.verify(&statement, &proof_lhs));
+
+        let wrong_proof_lhs = proof_system.prove(
+            &Either::Right(x.clone()),
+            &statement,
+            &mut rand::thread_rng(),
+        );
+        assert!(!proof_system.verify(&statement, &wrong_proof_lhs));
+
+        let statement = (statement.1, statement.0);
+        let proof_rhs = proof_system.prove(
+            &Either::Right(x.clone()),
+            &statement,
+            &mut rand::thread_rng(),
+        );
+        assert!(proof_system.verify(&statement, &proof_rhs));
+    }
+}

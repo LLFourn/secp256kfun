@@ -3,7 +3,7 @@ use crate::{
     Sigma,
 };
 use core::marker::PhantomData;
-use curve25519_dalek::{edwards::EdwardsPoint, scalar::Scalar};
+use curve25519_dalek::{constants::ED25519_BASEPOINT_TABLE, edwards::EdwardsPoint, scalar::Scalar};
 use digest::Digest;
 use generic_array::{
     typenum::{self, type_operators::IsLessOrEqual, U31},
@@ -76,7 +76,7 @@ where
     }
 
     fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DL-secp256k1").unwrap()
+        write!(w, "DL-ed25519").unwrap()
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -127,7 +127,7 @@ where
         _statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
     ) -> Self::Announce {
-        let G = &curve25519_dalek::constants::ED25519_BASEPOINT_TABLE;
+        let G = &ED25519_BASEPOINT_TABLE;
         announce_secret * G
     }
 
@@ -153,12 +153,14 @@ where
         let X = statement;
         let challenge = normalize_challenge(challenge);
         Some(EdwardsPoint::vartime_double_scalar_mul_basepoint(
-            &challenge, X, response,
+            &-challenge,
+            X,
+            response,
         ))
     }
 
     fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DLBP-secp256k1").unwrap()
+        write!(w, "DLBP-ed25519").unwrap()
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -179,4 +181,23 @@ fn normalize_challenge<L: ArrayLength<u8>>(challenge: &GenericArray<u8, L>) -> S
     challenge_bytes[..challenge.len()].copy_from_slice(challenge.as_slice());
     Scalar::from_canonical_bytes(challenge_bytes)
         .expect("this function is only passed 31 byte arrays at most")
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::FiatShamir;
+    use generic_array::typenum::U31;
+    use sha2::Sha256;
+
+    #[test]
+    fn ed25519_dlbp() {
+        let x = Scalar::random(&mut rand::thread_rng());
+        let G = &ED25519_BASEPOINT_TABLE;
+        let xG = &x * G;
+        let proof_system = FiatShamir::<DLBP<U31>, Sha256>::default();
+        let proof = proof_system.prove(&x, &xG, &mut rand::thread_rng());
+        assert!(proof_system.verify(&xG, &proof));
+    }
 }

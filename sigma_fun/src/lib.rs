@@ -17,12 +17,13 @@ mod and;
 pub use and::And;
 mod eq;
 pub use eq::Eq;
+mod eq_all;
+pub use eq_all::EqAll;
 mod or;
-pub use or::Or;
+pub use or::*;
 mod all;
 pub use all::All;
 pub mod ext;
-
 mod transcript;
 pub use transcript::*;
 
@@ -30,7 +31,7 @@ pub trait Sigma {
     type Witness;
     type Statement;
     type AnnounceSecret;
-    type Announce: core::cmp::Eq;
+    type Announce: core::cmp::Eq + core::fmt::Debug;
     type Response;
     type ChallengeLength: ArrayLength<u8>;
 
@@ -69,6 +70,12 @@ pub trait Sigma {
 pub struct FiatShamir<S, T> {
     transcript: T,
     sigma: S,
+}
+
+impl<S: Default + Sigma, T: Transcript<S>> Default for FiatShamir<S, T> {
+    fn default() -> Self {
+        Self::new(S::default())
+    }
 }
 
 impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
@@ -118,6 +125,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CompactProof<S: Sigma> {
     challenge: GenericArray<u8, S::ChallengeLength>,
     response: S::Response,
