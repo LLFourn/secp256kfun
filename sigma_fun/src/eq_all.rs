@@ -2,9 +2,10 @@ use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use digest::Digest;
-use generic_array::{functional::FunctionalSequence, typenum::Unsigned, ArrayLength, GenericArray};
+use generic_array::{typenum::Unsigned, GenericArray};
 
 #[derive(Debug, Clone, Default)]
 pub struct EqAll<N, S> {
@@ -21,19 +22,11 @@ impl<S, N> EqAll<N, S> {
     }
 }
 
-impl<N, S: Sigma> Sigma for EqAll<N, S>
-where
-    N: ArrayLength<S::Statement>
-        + ArrayLength<S::Announce>
-        + ArrayLength<(S::Announce, S::AnnounceSecret)>
-        + ArrayLength<S::AnnounceSecret>
-        + ArrayLength<Option<S::Announce>>
-        + Unsigned,
-{
+impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
     type Witness = S::Witness;
-    type Statement = GenericArray<S::Statement, N>;
+    type Statement = Vec<S::Statement>;
     type AnnounceSecret = S::AnnounceSecret;
-    type Announce = GenericArray<S::Announce, N>;
+    type Announce = Vec<S::Announce>;
     type Response = S::Response;
     type ChallengeLength = S::ChallengeLength;
 
@@ -68,7 +61,10 @@ where
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
     ) -> Self::Announce {
-        statement.map(|statement| self.sigma.announce(statement, announce_secret))
+        statement
+            .iter()
+            .map(|statement| self.sigma.announce(statement, announce_secret))
+            .collect()
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {
@@ -81,16 +77,13 @@ where
         challenge: &generic_array::GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce> {
-        let announce_opts = statements.map(|statement| {
-            self.sigma
-                .implied_announcement(statement, challenge, response)
-        });
-        for announcement_opt in &announce_opts {
-            if announcement_opt.is_none() {
-                return None;
-            }
-        }
-        Some(announce_opts.map(|announcement| announcement.unwrap()))
+        statements
+            .iter()
+            .map(|statement| {
+                self.sigma
+                    .implied_announcement(statement, challenge, response)
+            })
+            .collect::<Option<Vec<_>>>()
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) {

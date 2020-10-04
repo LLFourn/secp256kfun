@@ -18,6 +18,7 @@ rand = "0.7"
 sha2 = "0.9"
 
 [features]
-default = ["secp256k1", "ed25519"]
+default = ["secp256k1", "ed25519", "alloc"]
+alloc = []
 secp256k1 = ["secp256kfun"]
 ed25519 = ["curve25519-dalek"]

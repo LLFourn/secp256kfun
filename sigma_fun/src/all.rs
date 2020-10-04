@@ -2,9 +2,10 @@ use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use digest::Digest;
-use generic_array::{typenum::Unsigned, ArrayLength, GenericArray};
+use generic_array::{typenum::Unsigned, GenericArray};
 
 #[derive(Default, Clone, Debug)]
 pub struct All<N, S> {
@@ -21,17 +22,7 @@ impl<S, N> All<N, S> {
     }
 }
 
-impl<S: Sigma, N> Sigma for All<N, S>
-where
-    N: ArrayLength<S::Witness>
-        + ArrayLength<S::Statement>
-        + ArrayLength<S::Announce>
-        + ArrayLength<(S::Announce, S::AnnounceSecret)>
-        + ArrayLength<S::AnnounceSecret>
-        + ArrayLength<Option<S::Announce>>
-        + ArrayLength<S::Response>
-        + Unsigned,
-{
+impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
     type Witness = Vec<S::Witness>;
     type Statement = Vec<S::Statement>;
     type AnnounceSecret = Vec<S::AnnounceSecret>;
@@ -110,7 +101,7 @@ where
             .collect()
     }
 
-    fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
         write!(w, "all({},", N::to_u32()).unwrap();
         self.sigma.write_name(w);
         write!(w, ")").unwrap()

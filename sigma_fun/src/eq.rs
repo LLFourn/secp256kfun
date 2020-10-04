@@ -9,7 +9,7 @@ pub struct Eq<A, B> {
     rhs: B,
 }
 
-impl<A,B>  Eq<A,B> {
+impl<A, B> Eq<A, B> {
     pub fn new(lhs: A, rhs: B) -> Self {
         Self { lhs, rhs }
     }
@@ -93,7 +93,7 @@ where
             })
     }
 
-    fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
         write!(w, "eq(").unwrap();
         self.lhs.write_name(w);
         write!(w, ",").unwrap();

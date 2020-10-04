@@ -75,7 +75,7 @@ where
         Some(response * G - challenge * X)
     }
 
-    fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
         write!(w, "DL-ed25519").unwrap()
     }
 
@@ -159,7 +159,7 @@ where
         ))
     }
 
-    fn write_name<W: std::fmt::Write>(&self, w: &mut W) {
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
         write!(w, "DLBP-ed25519").unwrap()
     }
 

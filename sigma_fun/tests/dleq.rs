@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 use sha2::Sha256;
 use sigma_fun::{
+    ed25519, secp256k1,
     typenum::{U20, U31, U32},
     Eq, FiatShamir,
-    secp256k1,
-    ed25519
 };
 
 macro_rules! run_dleq {
@@ -34,7 +33,10 @@ macro_rules! run_dleq {
 
 #[test]
 fn secp256k1_dleq_has_correct_name() {
-    let dleq = Eq::new(secp256k1::DLBP::<U32>::default(), secp256k1::DL::<U32>::default());
+    let dleq = Eq::new(
+        secp256k1::DLBP::<U32>::default(),
+        secp256k1::DL::<U32>::default(),
+    );
     assert_eq!(&format!("{}", dleq), "eq(DLBP-secp256k1,DL-secp256k1)");
 }
 
