@@ -35,6 +35,7 @@ type CoreProof = And<
     // i.e. if the commitmens add up to xH, we show that X = xG.
     And<Eq<secp256k1::DLBP<U31>, secp256k1::DL<U31>>, Eq<ed25519::DLBP<U31>, ed25519::DL<U31>>>,
 >;
+const COMMITMENT_BITS: usize = 252;
 
 #[derive(Debug, Clone)]
 pub struct CrossCurveDLEQProof {
@@ -47,7 +48,7 @@ pub struct CrossCurveDLEQProof {
 pub struct CrossCurveDLEQ<T> {
     HQ: PointQ,
     HP: PointP,
-    proof_system: FiatShamir<CoreProof, T>,
+    core_proof_system: FiatShamir<CoreProof, T>,
     powers_of_two: Vec<(PointP, PointQ)>,
 }
 
@@ -60,15 +61,13 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
                 (H2Q + H2Q),
             ))
         })
-        .take(252)
+        .take(COMMITMENT_BITS)
         .collect();
-
-        let proof_system = FiatShamir::new(CoreProof::default());
 
         Self {
             HP,
             HQ,
-            proof_system,
+            core_proof_system: FiatShamir::new(CoreProof::default()),
             powers_of_two,
         }
     }
@@ -92,14 +91,14 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
             let mut bytes = secret.to_bytes();
             bytes.reverse();
             ScalarP::from_bytes(bytes)
-                .expect("must not overflow")
+                .expect("will never overflow since ed25519 order is lower")
                 .mark::<NonZero>()
                 .expect("must not be zero")
         };
 
         let claim = (g!(secp_secret * GP).mark::<Normal>(), secret * GQ);
 
-        let pedersen_blindings = (0..252)
+        let pedersen_blindings = (0..COMMITMENT_BITS)
             .map(|_| (ScalarP::random(rng), ScalarQ::random(rng)))
             .collect::<Vec<_>>();
 
@@ -148,7 +147,9 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
             (secp_secret, secret.clone()),
         );
 
-        let proof = self.proof_system.prove(&proof_witness, &statement, rng);
+        let proof = self
+            .core_proof_system
+            .prove(&proof_witness, &statement, rng);
 
         CrossCurveDLEQProof {
             claim,
@@ -201,21 +202,21 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
     #[must_use]
     pub fn verify(&self, proof: &CrossCurveDLEQProof) -> bool {
         // Make sure the claimed ed25519 key is in the prime-order subgroup
-        if proof.commitments.len() != 252 || !proof.claim.1.is_torsion_free() {
+        if proof.commitments.len() != COMMITMENT_BITS || !proof.claim.1.is_torsion_free() {
             return false;
         }
         let statement =
             self.generate_statement(&proof.sum_blindings, &proof.claim, &proof.commitments);
         match statement {
-            Some(statement) => self.proof_system.verify(&statement, &proof.proof),
+            Some(statement) => self.core_proof_system.verify(&statement, &proof.proof),
             None => false,
         }
     }
 }
 
-fn to_bits(secret_key: &ScalarQ) -> [bool; 252] {
+fn to_bits(secret_key: &ScalarQ) -> [bool; COMMITMENT_BITS] {
     let bytes = secret_key.as_bytes();
-    let mut bits = [false; 252];
+    let mut bits = [false; COMMITMENT_BITS];
     let mut index = 0;
     for i in 0..32 {
         for j in 0..8 {
