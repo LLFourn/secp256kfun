@@ -65,8 +65,8 @@ where
         g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DL-secp256k1").unwrap()
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DL-secp256k1")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -147,8 +147,8 @@ where
         g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DLBP-secp256k1").unwrap()
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DLBP-secp256k1")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {

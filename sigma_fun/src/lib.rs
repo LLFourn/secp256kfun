@@ -71,7 +71,7 @@ pub trait Sigma {
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce>;
-    fn write_name<W: core::fmt::Write>(&self, write: &mut W);
+    fn write_name<W: core::fmt::Write>(&self, write: &mut W) -> core::fmt::Result;
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement);
     fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce);
     fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness);
@@ -149,8 +149,7 @@ macro_rules! impl_display {
             where $name<$($tp),+>: $crate::Sigma
         {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                self.write_name(f);
-                Ok(())
+                self.write_name(f)
             }
         }
     }

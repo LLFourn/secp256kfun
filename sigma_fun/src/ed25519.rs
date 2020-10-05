@@ -75,8 +75,8 @@ where
         Some(response * G - challenge * X)
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DL-ed25519").unwrap()
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DL-ed25519")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -159,8 +159,8 @@ where
         ))
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "DLBP-ed25519").unwrap()
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DLBP-ed25519")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {

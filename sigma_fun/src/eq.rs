@@ -93,12 +93,12 @@ where
             })
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "eq(").unwrap();
-        self.lhs.write_name(w);
-        write!(w, ",").unwrap();
-        self.rhs.write_name(w);
-        write!(w, ")").unwrap();
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "eq(")?;
+        self.lhs.write_name(w)?;
+        write!(w, ",")?;
+        self.rhs.write_name(w)?;
+        write!(w, ")")
     }
 
     fn hash_statement<H: digest::Digest>(&self, hash: &mut H, statement: &Self::Statement) {

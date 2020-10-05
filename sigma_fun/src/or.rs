@@ -156,12 +156,12 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
             })
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "or(").unwrap();
-        self.lhs.write_name(w);
-        write!(w, ",").unwrap();
-        self.rhs.write_name(w);
-        write!(w, ")").unwrap();
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "or(")?;
+        self.lhs.write_name(w)?;
+        write!(w, ",")?;
+        self.rhs.write_name(w)?;
+        write!(w, ")")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {

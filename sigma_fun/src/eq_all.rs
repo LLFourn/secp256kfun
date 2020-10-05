@@ -86,10 +86,10 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
             .collect::<Option<Vec<_>>>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) {
-        write!(w, "eq-all({},", N::to_u32()).unwrap();
-        self.sigma.write_name(w);
-        write!(w, ")").unwrap();
+    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "eq-all({},", N::to_u32())?;
+        self.sigma.write_name(w)?;
+        write!(w, ")")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statements: &Self::Statement) {
