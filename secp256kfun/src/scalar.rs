@@ -290,6 +290,24 @@ impl HashInto for Scalar {
     }
 }
 
+impl<S> Default for Scalar<S, Zero>
+where
+    S: Secrecy,
+{
+    fn default() -> Self {
+        Scalar::zero().mark::<S>()
+    }
+}
+
+impl<S> Default for Scalar<S, NonZero>
+where
+    S: Secrecy,
+{
+    fn default() -> Self {
+        Scalar::one().mark::<S>()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
