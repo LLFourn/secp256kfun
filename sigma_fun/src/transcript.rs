@@ -47,7 +47,9 @@ where
     fn initialize(sigma: &S) -> Self {
         let hashed_tag = {
             let mut hash = WriteHash(H::default());
-            sigma.write_name(&mut hash);
+            sigma
+                .write_name(&mut hash)
+                .expect("writing to hash won't fail");
             hash.0.finalize()
         };
         let mut tagged_hash = H::default();
