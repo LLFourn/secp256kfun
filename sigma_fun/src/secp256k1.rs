@@ -177,6 +177,8 @@ fn normalize_challenge<L: ArrayLength<u8>>(
     challenge: &GenericArray<u8, L>,
 ) -> Scalar<Public, Zero> {
     let mut challenge_bytes = [0u8; 32];
-    challenge_bytes[..challenge.len()].copy_from_slice(challenge.as_slice());
+    // secp256k1 scalar byte representation is interpreted as big-endian and to
+    // be consistent we always copy the bits into the least signgificant bytes.
+    challenge_bytes[(32 - challenge.len())..].copy_from_slice(challenge.as_slice());
     Scalar::from_bytes_mod_order(challenge_bytes).mark::<Public>()
 }
