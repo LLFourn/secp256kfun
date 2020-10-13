@@ -77,6 +77,10 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         challenge: &generic_array::GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce> {
+        if statements.len() != N::to_usize() {
+            return None;
+        }
+
         statements
             .iter()
             .map(|statement| {
