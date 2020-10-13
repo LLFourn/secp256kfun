@@ -91,6 +91,10 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce> {
+        if statement.len() != N::to_usize() || response.len() != N::to_usize() {
+            return None;
+        }
+
         statement
             .iter()
             .zip(response)
