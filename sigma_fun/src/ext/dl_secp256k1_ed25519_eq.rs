@@ -37,7 +37,12 @@ type CoreProof = And<
 >;
 const COMMITMENT_BITS: usize = 252;
 
-#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    serde(crate = "serde_crate"),
+    derive(serde_crate::Serialize, serde_crate::Deserialize)
+)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CrossCurveDLEQProof {
     claim: (PointP, PointQ),
     sum_blindings: (ScalarP<Public, Zero>, ScalarQ),
@@ -244,5 +249,21 @@ mod test {
         let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
         let proof = proof_system.prove(&secret, &mut rand::thread_rng());
         assert!(proof_system.verify(&proof));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serialization_roundtrip() {
+        let secret = ScalarQ::from(42u64);
+        let HP = PointP::random(&mut rand::thread_rng());
+        let HQ = &ScalarQ::random(&mut rand::thread_rng()) * GQ;
+        let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
+        let proof = proof_system.prove(&secret, &mut rand::thread_rng());
+
+        let proof_serialized = bincode::serialize(&proof).unwrap();
+        let proof_deserialized: CrossCurveDLEQProof =
+            bincode::deserialize(&proof_serialized).unwrap();
+
+        assert_eq!(proof_deserialized, proof);
     }
 }
