@@ -59,10 +59,8 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
     ) -> Self::Announce {
-        statement
-            .iter()
-            .zip(announce_secret)
-            .map(|(statement, announce_secret)| self.sigma.announce(statement, announce_secret))
+        (0..N::to_usize())
+            .map(|i| self.sigma.announce(&statement[i], &announce_secret[i]))
             .collect()
     }
 
@@ -72,10 +70,11 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
-        witness
-            .iter()
-            .zip(statement)
-            .map(|(witness, statement)| self.sigma.gen_announce_secret(witness, statement, rng))
+        (0..N::to_usize())
+            .map(|i| {
+                self.sigma
+                    .gen_announce_secret(&witness[i], &statement[i], rng)
+            })
             .collect()
     }
 
@@ -91,12 +90,14 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announce> {
-        statement
-            .iter()
-            .zip(response)
-            .map(|(statement, response)| {
+        if statement.len() != N::to_usize() || response.len() != N::to_usize() {
+            return None;
+        }
+
+        (0..N::to_usize())
+            .map(|i| {
                 self.sigma
-                    .implied_announcement(&statement, challenge, &response)
+                    .implied_announcement(&statement[i], challenge, &response[i])
             })
             .collect()
     }

@@ -112,7 +112,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
         let response =
             self.sigma
                 .respond(witness, statement, announce_secret, &announce, &challenge);
-        CompactProof {
+        CompactProof::<S> {
             challenge,
             response,
         }
@@ -135,10 +135,18 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct CompactProof<S: Sigma> {
-    challenge: GenericArray<u8, S::ChallengeLength>,
-    response: S::Response,
+pub type CompactProof<S> =
+    CompactProofInternal<GenericArray<u8, <S as Sigma>::ChallengeLength>, <S as Sigma>::Response>;
+
+#[cfg_attr(
+    feature = "serde",
+    serde(crate = "serde_crate"),
+    derive(serde_crate::Serialize, serde_crate::Deserialize)
+)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompactProofInternal<C, R> {
+    challenge: C,
+    response: R,
 }
 
 #[macro_export]
