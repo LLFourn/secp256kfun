@@ -1,10 +1,10 @@
 /// Something marked with Zero might be `0` i.e. the additive identity
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Zero;
 
 /// Something marked with `NonZero` is guaranteed not to be 0.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NonZero;
 

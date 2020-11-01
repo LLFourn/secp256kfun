@@ -6,7 +6,7 @@
 // at commit: d453081f81579b03f8ce8c56494779185f0cc29c
 use crate::field::{Field, FieldStorage};
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 /// A group element of the secp256k1 curve, in affine coordinates.
 pub struct Affine {
     pub x: Field,
@@ -14,7 +14,7 @@ pub struct Affine {
     pub infinity: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /// A group element of the secp256k1 curve, in jacobian coordinates.
 pub struct Jacobian {
     pub x: Field,

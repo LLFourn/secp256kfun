@@ -15,7 +15,7 @@ use rand_core::{CryptoRng, RngCore};
 /// store the full point in memory.
 ///
 /// [`Point<T,S,Z>`]: crate::Point
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct XOnly(pub(crate) backend::XOnly);
 
 impl XOnly {
