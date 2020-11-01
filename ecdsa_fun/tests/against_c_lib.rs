@@ -1,9 +1,11 @@
 #![cfg(feature = "libsecp_compat")]
 use ecdsa_fun::{
     self,
-    fun::{Point, Scalar, TEST_SOUNDNESS},
+    fun::{
+        secp256k1::{self, Message, PublicKey, SecretKey},
+        Point, Scalar, TEST_SOUNDNESS,
+    },
 };
-use secp256k1::{Message, PublicKey, SecretKey};
 
 fn rand_32_bytes() -> [u8; 32] {
     use rand::RngCore;

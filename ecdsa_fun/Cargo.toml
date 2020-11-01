@@ -20,7 +20,8 @@ secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", default-fea
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-secp256k1 = { default-features = false, version = "0.17", features = ["std"] }
+secp256k1 = { default-features = false, version = "0.19", features = ["std"] }
+secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", features = ["libsecp_compat"] }
 rand = "0.7"
 criterion = "0.3"
 hex-literal = "0.2"
