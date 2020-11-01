@@ -13,7 +13,7 @@ macro_rules! debug_assert_bits {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /// Field element for secp256k1.
 pub struct Field {
     /// Store representation of X.

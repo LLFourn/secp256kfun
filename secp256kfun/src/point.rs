@@ -56,6 +56,8 @@ impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
     }
 }
 
+impl<T: Copy, Z: Copy> Copy for Point<T, Public, Z> {}
+
 impl Point<Normal, Public, NonZero> {
     /// Creates a Point the compressed encoding specified in [_Standards for
     /// Efficient Cryptography_]. This is the typical encoding used in

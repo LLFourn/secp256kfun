@@ -125,7 +125,7 @@ impl crate::backend::BackendPoint for Jacobian {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub struct XOnly([u8; 32]);
 
 impl XOnly {
