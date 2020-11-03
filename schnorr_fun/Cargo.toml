@@ -29,7 +29,6 @@ secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", features = 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.3"
-grin_secp256k1zkp = "0.7"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"

@@ -134,27 +134,12 @@ mod test {
     }
 
     #[test]
-    fn scalar_inversion() {
-        // we have to test against this grin secp because that's the one that exposes it
-        use secp256k1zkp::key::SecretKey;
-        let secp = secp256k1zkp::Secp256k1::new();
-        let bytes = rand_32_bytes();
-        let mut sk = SecretKey::from_slice(&secp, &bytes).unwrap();
-        let scalar = Scalar::from_bytes_mod_order(bytes.clone())
-            .mark::<NonZero>()
-            .unwrap();
-        sk.inv_assign(&secp).unwrap();
-        assert_eq!(&scalar.invert().to_bytes()[..], &sk[..]);
-    }
-
-    #[test]
     fn scalar_negation() {
-        use secp256k1zkp::key::SecretKey;
-        let secp = secp256k1zkp::Secp256k1::new();
+        use secp256k1::key::SecretKey;
         let bytes = rand_32_bytes();
-        let mut sk = SecretKey::from_slice(&secp, &bytes).unwrap();
+        let mut sk = SecretKey::from_slice(&bytes).unwrap();
         let scalar = Scalar::from_bytes_mod_order(bytes.clone());
-        sk.neg_assign(&secp).unwrap();
+        sk.negate_assign();
         assert_eq!(&(-scalar).to_bytes()[..], &sk[..]);
     }
 }

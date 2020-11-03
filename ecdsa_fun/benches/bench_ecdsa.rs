@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{marker::*, nonce::Deterministic, Scalar};
+use secp256kfun::{marker::*, nonce::Deterministic, secp256k1, Scalar};
 use sha2::Sha256;
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";

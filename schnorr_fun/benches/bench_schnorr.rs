@@ -1,3 +1,4 @@
+//! This broken and just as a reference until we get proper bip340 benchmarks from proper rust lib
 #![allow(non_upper_case_globals)]
 use criterion::{criterion_group, criterion_main, Criterion};
 use schnorr_fun::{MessageKind, Schnorr};
