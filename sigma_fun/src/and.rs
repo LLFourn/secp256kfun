@@ -121,25 +121,29 @@ crate::impl_display!(And<A,B>);
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::secp256k1::fun::proptest::non_zero_scalar;
+    use ::proptest::prelude::*;
 
-    #[test]
-    fn and_dlbp() {
-        use crate::{
-            secp256k1,
-            secp256k1::fun::{g, marker::*, Scalar, G},
-        };
-        use generic_array::typenum::U32;
-        use sha2::Sha256;
+    proptest! {
+        #[test]
+        fn and_dlbp(
+            x in non_zero_scalar(),
+            y in non_zero_scalar(),
+        ) {
+            use crate::{
+                secp256k1::{self, fun::{g, marker::*, G}},
+            };
+            use generic_array::typenum::U32;
+            use sha2::Sha256;
 
-        type AndDL = And<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
+            type AndDL = And<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
 
-        let x = Scalar::random(&mut rand::thread_rng());
-        let y = Scalar::random(&mut rand::thread_rng());
-        let xG = g!(x * G).mark::<Normal>();
-        let yG = g!(y * G).mark::<Normal>();
-        let statement = (xG, yG);
-        let proof_system = crate::FiatShamir::<_, Sha256>::new(AndDL::default());
-        let proof = proof_system.prove(&(x, y), &statement, &mut rand::thread_rng());
-        assert!(proof_system.verify(&statement, &proof));
+            let xG = g!(x * G).mark::<Normal>();
+            let yG = g!(y * G).mark::<Normal>();
+            let statement = (xG, yG);
+            let proof_system = crate::FiatShamir::<_, Sha256>::new(AndDL::default());
+            let proof = proof_system.prove(&(x, y), &statement, &mut rand::thread_rng());
+            assert!(proof_system.verify(&statement, &proof));
+        }
     }
 }

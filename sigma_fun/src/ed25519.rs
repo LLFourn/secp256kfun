@@ -183,21 +183,45 @@ fn normalize_challenge<L: ArrayLength<u8>>(challenge: &GenericArray<u8, L>) -> S
         .expect("this function is only passed 31 byte arrays at most")
 }
 
+pub mod proptest {
+    use super::*;
+    use ::proptest::prelude::*;
+
+    prop_compose! {
+        pub fn ed25519_scalar()(
+            bytes in any::<[u8; 32]>(),
+        ) -> Scalar {
+            Scalar::from_bytes_mod_order(bytes)
+        }
+    }
+
+    prop_compose! {
+        pub fn ed25519_point()(
+            x in ed25519_scalar(),
+        ) -> EdwardsPoint {
+            &x * &ED25519_BASEPOINT_TABLE
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-
     use super::*;
-    use crate::FiatShamir;
+    use crate::{ed25519::proptest::ed25519_scalar, FiatShamir};
+    use ::proptest::prelude::*;
     use generic_array::typenum::U31;
     use sha2::Sha256;
 
-    #[test]
-    fn ed25519_dlbp() {
-        let x = Scalar::random(&mut rand::thread_rng());
-        let G = &ED25519_BASEPOINT_TABLE;
-        let xG = &x * G;
-        let proof_system = FiatShamir::<DLBP<U31>, Sha256>::default();
-        let proof = proof_system.prove(&x, &xG, &mut rand::thread_rng());
-        assert!(proof_system.verify(&xG, &proof));
+    proptest! {
+        #[test]
+        fn ed25519_dlbp(
+            x in ed25519_scalar(),
+        ) {
+            let G = &ED25519_BASEPOINT_TABLE;
+            let xG = &x * G;
+            let proof_system = FiatShamir::<DLBP<U31>, Sha256>::default();
+            let proof = proof_system.prove(&x, &xG, &mut rand::thread_rng());
+            assert!(proof_system.verify(&xG, &proof));
+        }
     }
 }
