@@ -13,11 +13,11 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 keywords = ["bitcoin", "ecdsa", "secp256k1"]
 
 [package.metadata.docs.rs]
-features = ["serialize_hex", "serialization"]
+features = ["serde", "libsecp_compat"]
 
 [dependencies]
 secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", default-features = false }
-serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
+serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
 
 [dev-dependencies]
 secp256k1 = { default-features = false, version = "0.19", features = ["std"] }
@@ -35,11 +35,8 @@ harness = false
 
 [features]
 default = ["std"]
-all = ["std", "serialize_hex", "libsecp_compat"]
+all = ["std", "serde", "libsecp_compat"]
 libsecp_compat = ["secp256kfun/libsecp_compat"]
 std = ["alloc"]
 alloc = []
-serialization = ["serde", "secp256kfun/serialization"]
-serialize_hex = [ "alloc", "serialization", "secp256kfun/serialize_hex"]
-
-
+serde = ["secp256kfun/serde", "serde_crate"]

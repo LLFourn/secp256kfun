@@ -33,8 +33,9 @@ impl<H: Tagged, NG: AddTag> DLEQ<H, NG> {
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
-    feature = "serialization",
-    derive(serde::Serialize, serde::Deserialize)
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
 )]
 pub struct Proof<S = Public> {
     pub challenge: Scalar<S, Zero>,
@@ -175,7 +176,7 @@ mod test {
         assert!(!dleq.verify(&G, &xG, &H, &xH, &bogus_proof));
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn dleq_proof_serialize_roundtrip() {
         let dleq = dleq_test_instance!();

@@ -175,7 +175,7 @@ When you pass in `G`, which is a `BasePoint`, the compiler will specialize the c
 - Bult-in type-safe "x-only" point compression and decompression.
 - Arithmetic expression macro `g!` (used above) to clearly express group operations.
 - Nonce derivation functionality to help avoid messing this up.
-- `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serialization` or `serialize_hex` features).
+- `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serde` feature).
 - `no_std` support
 - `From` implementations for [rust-secp256k1][2] types with `libsecp_compat` feature.
 
