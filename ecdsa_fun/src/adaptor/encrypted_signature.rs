@@ -30,8 +30,9 @@ secp256kfun::impl_display_debug_serialize! {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
-    feature = "serialization",
-    derive(serde::Serialize, serde::Deserialize)
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
 )]
 pub struct EncryptedSignature<S = Public> {
     pub R: PointNonce<S>,
@@ -43,7 +44,7 @@ pub struct EncryptedSignature<S = Public> {
 #[cfg(test)]
 mod test {
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn encrypted_signature_serde_roundtrip() {
         use super::*;

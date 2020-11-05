@@ -319,7 +319,7 @@ mod test {
     use super::*;
     use crate::{op, s};
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn scalar_serde_rountrip() {
         let original = Scalar::random(&mut rand::thread_rng());

@@ -36,8 +36,8 @@ pub use xonly::XOnly;
 
 #[cfg(feature = "secp256k1")]
 pub extern crate secp256k1;
-#[cfg(feature = "serialization")]
-pub extern crate serde;
+#[cfg(feature = "serde")]
+pub extern crate serde_crate as serde;
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 /// The main basepoint for secp256k1 as specified in [_SEC 2: Recommended Elliptic Curve Domain Parameters_] and used in Bitcoin.

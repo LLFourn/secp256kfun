@@ -404,17 +404,16 @@ macro_rules! impl_display_debug {
 #[macro_export]
 macro_rules! impl_serialize {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
-        #[cfg(feature = "serialization")]
-        impl$(<$($tpl $(:$tcl)?),*>)? serde::Serialize for $type {
-            fn serialize<Ser: serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
-                #[cfg(any(feature = "serialize_hex", test))]
-                {
-                    if serializer.is_human_readable() {
-                        return serializer.collect_str(&self)
-                    }
+        #[cfg(feature = "serde")]
+        impl$(<$($tpl $(:$tcl)?),*>)? $crate::serde::Serialize for $type {
+            fn serialize<Ser: $crate::serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
+
+                if serializer.is_human_readable() {
+                    return serializer.collect_str(&self)
                 }
+
                 //NOTE: idea taken from https://github.com/dalek-cryptography/curve25519-dalek/pull/297/files
-                use serde::ser::SerializeTuple;
+                use $crate::serde::ser::SerializeTuple;
                 let $self = &self;
                 let bytes = $block;
                 let mut tup = serializer.serialize_tuple($len)?;
@@ -472,48 +471,45 @@ macro_rules! impl_fromstr_deserailize {
             }
         }
 
-
-
-        #[cfg(feature = "serialization")]
-        impl<'de, $($($tpl $(: $tcl)?),*)?> serde::Deserialize<'de> for $type  {
-            fn deserialize<Deser: serde::Deserializer<'de>>(
+        #[cfg(feature = "serde")]
+        impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::Deserialize<'de> for $type  {
+            fn deserialize<Deser: $crate::serde::Deserializer<'de>>(
                 deserializer: Deser,
             ) -> Result<$type , Deser::Error> {
-                #[cfg(any(feature = "serialize_hex", test))]
-                {
-                    if deserializer.is_human_readable() {
-                        #[allow(unused_parens)]
-                        struct HexVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
-                        impl<'de, $($($tpl $(: $tcl)?),*)?> serde::de::Visitor<'de> for HexVisitor$(<$($tpl),*>)? {
-                            type Value = $type ;
-                            fn expecting(
-                                &self,
-                                f: &mut core::fmt::Formatter,
-                            ) -> core::fmt::Result {
-                                write!(f, "a {}-byte hex encoded {}", $len, $name)?;
-                                Ok(())
-                            }
 
-                            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<$type , E> {
-                                use $crate::hex::HexError::*;
-                                <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
-                                    InvalidLength => E::invalid_length(v.len(), &format!("{}", $len).as_str()),
-                                    InvalidEncoding => E::invalid_value(serde::de::Unexpected::Str(v), &self),
-                                    InvalidHex => E::custom("invalid hex")
-                                })
-                            }
+                if deserializer.is_human_readable() {
+                    #[allow(unused_parens)]
+                    struct HexVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
+                    impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::de::Visitor<'de> for HexVisitor$(<$($tpl),*>)? {
+                        type Value = $type ;
+                        fn expecting(
+                            &self,
+                            f: &mut core::fmt::Formatter,
+                        ) -> core::fmt::Result {
+                            write!(f, "a valid {}-byte hex encoded {}", $len, $name)?;
+                            Ok(())
                         }
 
-                        #[allow(unused_parens)]
-                        return deserializer.deserialize_str(HexVisitor$((core::marker::PhantomData::<($($tpl),*)>))?);
+                        fn visit_str<E: $crate::serde::de::Error>(self, v: &str) -> Result<$type , E> {
+                            use $crate::hex::HexError::*;
+                            <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
+                                InvalidLength => E::invalid_length(v.len() / 2, &self),
+                                InvalidEncoding => E::invalid_value($crate::serde::de::Unexpected::Str(v), &self),
+                                InvalidHex => E::custom("invalid hex")
+                            })
+                        }
                     }
+
+                    #[allow(unused_parens)]
+                    return deserializer.deserialize_str(HexVisitor$((core::marker::PhantomData::<($($tpl),*)>))?);
                 }
+
 
                 {
                     #[allow(unused_parens)]
                     struct BytesVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
 
-                    impl<'de, $($($tpl $(: $tcl)?),*)?> serde::de::Visitor<'de> for BytesVisitor$(<$($tpl),*>)? {
+                    impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::de::Visitor<'de> for BytesVisitor$(<$($tpl),*>)? {
                         type Value = $type ;
 
                         fn expecting(
@@ -525,16 +521,16 @@ macro_rules! impl_fromstr_deserailize {
                         }
 
                         fn visit_seq<A>(self, mut seq: A) -> Result<$type , A::Error>
-                        where A: serde::de::SeqAccess<'de> {
+                        where A: $crate::serde::de::SeqAccess<'de> {
 
                             let mut $input = [0u8; $len];
                             for i in 0..$len {
                                 $input[i] = seq.next_element()?
-                                    .ok_or_else(|| serde::de::Error::custom(format_args!("invalid length {}, expected {}", i, &self as &dyn serde::de::Expected)))?;
+                                    .ok_or_else(|| $crate::serde::de::Error::invalid_length(i, &self))?;
                             }
 
                             let result = $block;
-                            result.ok_or(serde::de::Error::custom(format_args!("invalid byte encoding, expected {}", &self as &dyn serde::de::Expected)))
+                            result.ok_or($crate::serde::de::Error::custom(format_args!("invalid byte encoding, expected {}", &self as &dyn $crate::serde::de::Expected)))
                         }
                     }
 

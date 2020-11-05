@@ -1,4 +1,4 @@
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 mod test {
 
     use core::{marker::PhantomData, str::FromStr};
@@ -85,13 +85,12 @@ mod test {
     }
 
     #[test]
+    #[should_panic(
+        expected = "invalid byte encoding, expected a valid 6-byte encoding of a six bytes"
+    )]
     fn deserialize_invalid_bytes() {
         let bincode_bytes = hex_literal::hex!("000102030405"); // starting with 00 is invalid
-        let err = bincode::deserialize::<SixBytes<()>>(&bincode_bytes).unwrap_err();
-        assert_eq!(
-            format!("{}", err),
-            "invalid byte encoding, expected a valid 6-byte encoding of a six bytes"
-        );
+        bincode::deserialize::<SixBytes<()>>(&bincode_bytes).unwrap();
     }
 
     #[test]
@@ -103,8 +102,9 @@ mod test {
     }
 
     #[test]
+    #[should_panic(expected = "invalid length 5, expected a valid 6-byte hex encoded six bytes")]
     fn deserialize_wrong_length() {
-        assert!(serde_json::from_str::<SixBytes<()>>(r#""deadbeef01""#).is_err())
+        serde_json::from_str::<SixBytes<()>>(r#""deadbeef01""#).unwrap();
     }
 
     #[test]

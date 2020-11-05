@@ -135,7 +135,7 @@ secp256kfun::impl_display_debug_serialize! {
 #[cfg(test)]
 mod test {
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn signature_serialization_roundtrip() {
         use super::*;

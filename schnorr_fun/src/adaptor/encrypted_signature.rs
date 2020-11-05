@@ -6,8 +6,9 @@ use secp256kfun::{marker::*, Point, Scalar};
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
-    feature = "serialization",
-    derive(serde::Serialize, serde::Deserialize)
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
 )]
 pub struct EncryptedSignature<S = Public> {
     /// The `R` point in the signature
@@ -36,7 +37,7 @@ impl<OldSec> EncryptedSignature<OldSec> {
 
 #[cfg(test)]
 mod test {
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn encrypted_signature_serialization_roundtrip() {
         use super::*;

@@ -14,6 +14,9 @@ extern crate std;
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 
+#[cfg(feature = "serde")]
+extern crate serde_crate as serde;
+
 use fun::{derive_nonce, g, hash::AddTag, marker::*, nonce::NonceGen, s, Point, Scalar, G};
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
