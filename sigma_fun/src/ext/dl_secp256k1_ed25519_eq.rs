@@ -243,7 +243,7 @@ mod test {
         ed25519::proptest::{ed25519_point, ed25519_scalar},
         secp256k1::fun::proptest::point as secp256k1_point,
     };
-    use ::proptest::prelude::*;
+    use secp256kfun::proptest::prelude::*;
     use sha2::Sha256;
 
     proptest! {
