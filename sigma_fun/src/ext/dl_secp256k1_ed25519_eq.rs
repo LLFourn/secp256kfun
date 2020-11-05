@@ -239,31 +239,44 @@ fn to_bits(secret_key: &ScalarQ) -> [bool; COMMITMENT_BITS] {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::{
+        ed25519::proptest::{ed25519_point, ed25519_scalar},
+        secp256k1::fun::proptest::point as secp256k1_point,
+    };
+    use ::proptest::prelude::*;
     use sha2::Sha256;
 
-    #[test]
-    fn dl_secp256k1_ed25519_eq() {
-        let secret = ScalarQ::from(42u64);
-        let HP = PointP::random(&mut rand::thread_rng());
-        let HQ = &ScalarQ::random(&mut rand::thread_rng()) * GQ;
-        let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
-        let proof = proof_system.prove(&secret, &mut rand::thread_rng());
-        assert!(proof_system.verify(&proof));
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn dl_secp256k1_ed25519_eq(
+            secret in ed25519_scalar(),
+            HP in secp256k1_point(),
+            HQ in ed25519_point(),
+        ) {
+            let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
+            let proof = proof_system.prove(&secret, &mut rand::thread_rng());
+            assert!(proof_system.verify(&proof));
+        }
     }
 
     #[cfg(feature = "serde")]
-    #[test]
-    fn serialization_roundtrip() {
-        let secret = ScalarQ::from(42u64);
-        let HP = PointP::random(&mut rand::thread_rng());
-        let HQ = &ScalarQ::random(&mut rand::thread_rng()) * GQ;
-        let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
-        let proof = proof_system.prove(&secret, &mut rand::thread_rng());
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn serialization_roundtrip(
+            secret in ed25519_scalar(),
+            HP in secp256k1_point(),
+            HQ in ed25519_point(),
+        ) {
+            let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
+            let proof = proof_system.prove(&secret, &mut rand::thread_rng());
 
-        let proof_serialized = bincode::serialize(&proof).unwrap();
-        let proof_deserialized: CrossCurveDLEQProof =
-            bincode::deserialize(&proof_serialized).unwrap();
+            let proof_serialized = bincode::serialize(&proof).unwrap();
+            let proof_deserialized: CrossCurveDLEQProof =
+                bincode::deserialize(&proof_serialized).unwrap();
 
-        assert_eq!(proof_deserialized, proof);
+            assert_eq!(proof_deserialized, proof);
+        }
     }
 }
