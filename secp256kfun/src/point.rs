@@ -250,6 +250,14 @@ impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> 
     }
 }
 
+impl<T, S, Z> Eq for Point<T, S, Z> {}
+
+impl<T: Normalized> core::hash::Hash for Point<T, Public, NonZero> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.to_bytes().hash(state)
+    }
+}
+
 impl<S, T: Normalized> Point<T, S, NonZero> {
     /// Returns the x and y coordinates of the point as two 32-byte arrays containing their big endian encoding.
     ///

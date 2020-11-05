@@ -47,8 +47,14 @@ use rand_core::{CryptoRng, RngCore};
 /// [`Secrecy`]: crate::marker::Secrecy
 /// [`Secret`]: crate::marker::Secret
 /// [`ZeroChoice]: crate::marker::ZeroChoice
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
+
+impl<Z> core::hash::Hash for Scalar<Public, Z> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.to_bytes().hash(state)
+    }
+}
 
 impl<Z, S> Scalar<S, Z> {
     /// Serializes the scalar to its 32-byte big-endian representation
