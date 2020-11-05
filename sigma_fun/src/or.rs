@@ -194,9 +194,8 @@ mod test {
         },
         Either,
     };
-    use ::proptest::prelude::*;
     use generic_array::typenum::U32;
-    use secp256kfun::{g, marker::*, G};
+    use secp256kfun::{g, marker::*, proptest::prelude::*, G};
     use sha2::Sha256;
 
     proptest! {
