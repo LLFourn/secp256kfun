@@ -186,51 +186,54 @@ crate::impl_display!(Or<A,B>);
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::{
-        secp256k1::{
-            self,
-            fun::proptest::{non_zero_scalar, point},
-        },
-        Either,
-    };
-    use ::proptest::prelude::*;
-    use generic_array::typenum::U32;
-    use secp256kfun::{g, marker::*, G};
-    use sha2::Sha256;
 
-    proptest! {
-        #[test]
-        fn or_secp256k1(
-            x in non_zero_scalar(),
-            Y in point(),
-        ) {
-            let xG = g!(x * G).mark::<Normal>();
-            type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
-            let statement = (xG, Y);
-            let proof_system = crate::FiatShamir::<OrDL, Sha256>::default();
+    #[cfg(feature = "secp256k1")]
+    mod secp256k1 {
+        use crate::{
+            secp256k1::{
+                self,
+                fun::proptest::{non_zero_scalar, point},
+            },
+            Either, Or,
+        };
+        use ::proptest::prelude::*;
+        use generic_array::typenum::U32;
+        use secp256kfun::{g, marker::*, G};
+        use sha2::Sha256;
 
-            let proof_lhs = proof_system.prove(
-                &Either::Left(x.clone()),
-                &statement,
-                &mut rand::thread_rng(),
-            );
-            assert!(proof_system.verify(&statement, &proof_lhs));
+        proptest! {
+            #[test]
+            fn or_secp256k1(
+                x in non_zero_scalar(),
+                Y in point(),
+            ) {
+                let xG = g!(x * G).mark::<Normal>();
+                type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
+                let statement = (xG, Y);
+                let proof_system = crate::FiatShamir::<OrDL, Sha256>::default();
 
-            let wrong_proof_lhs = proof_system.prove(
-                &Either::Right(x.clone()),
-                &statement,
-                &mut rand::thread_rng(),
-            );
-            assert!(!proof_system.verify(&statement, &wrong_proof_lhs));
+                let proof_lhs = proof_system.prove(
+                    &Either::Left(x.clone()),
+                    &statement,
+                    &mut rand::thread_rng(),
+                );
+                assert!(proof_system.verify(&statement, &proof_lhs));
 
-            let statement = (statement.1, statement.0);
-            let proof_rhs = proof_system.prove(
-                &Either::Right(x.clone()),
-                &statement,
-                &mut rand::thread_rng(),
-            );
-            assert!(proof_system.verify(&statement, &proof_rhs));
+                let wrong_proof_lhs = proof_system.prove(
+                    &Either::Right(x.clone()),
+                    &statement,
+                    &mut rand::thread_rng(),
+                );
+                assert!(!proof_system.verify(&statement, &wrong_proof_lhs));
+
+                let statement = (statement.1, statement.0);
+                let proof_rhs = proof_system.prove(
+                    &Either::Right(x.clone()),
+                    &statement,
+                    &mut rand::thread_rng(),
+                );
+                assert!(proof_system.verify(&statement, &proof_rhs));
+            }
         }
     }
 }

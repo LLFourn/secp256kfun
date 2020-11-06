@@ -22,7 +22,8 @@ bincode = "1"
 proptest = "0.10"
 
 [features]
-default = ["secp256k1", "ed25519", "alloc"]
+all = ["secp256kfun", "ed25519", "alloc"]
+default = ["alloc"]
 alloc = ["serde_crate/alloc"]
 secp256k1 = ["secp256kfun"]
 ed25519 = ["curve25519-dalek"]

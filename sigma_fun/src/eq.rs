@@ -120,23 +120,15 @@ crate::impl_display!(Eq<A,B>);
 
 #[cfg(test)]
 mod test {
+    #![allow(unused_imports)]
     use crate::{
-        ed25519::{
-            self,
-            test::{ed25519_point, ed25519_scalar},
-        },
-        secp256k1::{
-            self,
-            fun::proptest::{
-                non_zero_scalar as secp256k1_non_zero_scalar, point as secp256k1_point,
-            },
-        },
         typenum::{U20, U31, U32},
         Eq, FiatShamir,
     };
     use ::proptest::prelude::*;
     use sha2::Sha256;
 
+    #[allow(unused_macros)]
     macro_rules! run_dleq {
         (
             $mod:ident,challenge_length =>
@@ -162,16 +154,25 @@ mod test {
         }};
     }
 
-    #[test]
-    fn secp256k1_dleq_has_correct_name() {
-        let dleq = Eq::new(
-            secp256k1::DLG::<U32>::default(),
-            secp256k1::DL::<U32>::default(),
-        );
-        assert_eq!(&format!("{}", dleq), "eq(DLG-secp256k1,DL-secp256k1)");
-    }
+    #[cfg(feature = "secp256k1")]
+    mod secp256k1 {
+        use super::*;
+        use crate::secp256k1::{
+            self,
+            fun::proptest::{
+                non_zero_scalar as secp256k1_non_zero_scalar, point as secp256k1_point,
+            },
+        };
+        #[test]
+        fn secp256k1_dleq_has_correct_name() {
+            let dleq = Eq::new(
+                secp256k1::DLG::<U32>::default(),
+                secp256k1::DL::<U32>::default(),
+            );
+            assert_eq!(&format!("{}", dleq), "eq(DLG-secp256k1,DL-secp256k1)");
+        }
 
-    proptest! {
+        proptest! {
             #[test]
             fn test_dleq_secp256k1(
                 x in secp256k1_non_zero_scalar(),
@@ -195,38 +196,47 @@ mod test {
                     challenge_length => U20,
                     statement => statement,
                     witness => x,
-                unrelated_point => unrelated_point
-            );
+                    unrelated_point => unrelated_point
+                );
+            }
         }
     }
 
-    proptest! {
-        #[test]
-        fn test_dleq_ed25519(
-            x in ed25519_scalar(),
-            H in ed25519_point(),
-            unrelated_point in ed25519_point(),
-        ) {
-            use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT};
-            let G = ED25519_BASEPOINT_POINT;
-            let xG = x * G;
-            let xH = x * H;
-            let statement = ((xG), (H, xH));
+    #[cfg(feature = "ed25519")]
+    mod ed25519 {
+        use super::*;
+        use crate::ed25519::{
+            self,
+            test::{ed25519_point, ed25519_scalar},
+        };
+        proptest! {
+            #[test]
+            fn test_dleq_ed25519(
+                x in ed25519_scalar(),
+                H in ed25519_point(),
+                unrelated_point in ed25519_point(),
+            ) {
+                use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT};
+                let G = ED25519_BASEPOINT_POINT;
+                let xG = x * G;
+                let xH = x * H;
+                let statement = ((xG), (H, xH));
 
-            run_dleq!(
-                ed25519,
-                challenge_length => U31,
-                statement => statement,
-                witness => x,
-                unrelated_point => unrelated_point
-            );
-            run_dleq!(
-                ed25519,
-                challenge_length => U20,
-                statement => statement,
-                witness => x,
-                unrelated_point => unrelated_point
-            );
+                run_dleq!(
+                    ed25519,
+                    challenge_length => U31,
+                    statement => statement,
+                    witness => x,
+                    unrelated_point => unrelated_point
+                );
+                run_dleq!(
+                    ed25519,
+                    challenge_length => U20,
+                    statement => statement,
+                    witness => x,
+                    unrelated_point => unrelated_point
+                );
+            }
         }
     }
 }
