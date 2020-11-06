@@ -7,14 +7,16 @@ use generic_array::{ArrayLength, GenericArray};
 pub use rand_chacha::rand_core;
 use rand_chacha::rand_core::{CryptoRng, RngCore};
 
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate alloc;
+
 #[cfg(feature = "secp256kfun")]
 pub mod secp256k1;
 
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
-
-#[cfg(feature = "alloc")]
-extern crate alloc;
 
 mod and;
 pub use and::And;

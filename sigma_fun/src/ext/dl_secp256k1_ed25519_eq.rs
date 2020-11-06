@@ -240,7 +240,7 @@ fn to_bits(secret_key: &ScalarQ) -> [bool; COMMITMENT_BITS] {
 mod test {
     use super::*;
     use crate::{
-        ed25519::proptest::{ed25519_point, ed25519_scalar},
+        ed25519::test::{ed25519_point, ed25519_scalar},
         secp256k1::fun::proptest::point as secp256k1_point,
     };
     use ::proptest::prelude::*;
