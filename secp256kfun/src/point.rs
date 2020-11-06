@@ -258,8 +258,6 @@ impl<T: Normalized> core::hash::Hash for Point<T, Public, NonZero> {
     }
 }
 
-impl<T, S, Z> Eq for Point<T, S, Z> {}
-
 impl<S, T: Normalized> Point<T, S, NonZero> {
     /// Returns the x and y coordinates of the point as two 32-byte arrays containing their big endian encoding.
     ///
