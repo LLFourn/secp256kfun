@@ -2,9 +2,7 @@
 //!
 //! [`proptest`]: https://github.com/altsysrq/proptest
 use crate::{marker::*, Point, Scalar, G};
-use proptest::prelude::*;
-
-pub use proptest::*;
+use ::proptest::prelude::*;
 
 prop_compose! {
     /// Generate a random `Scalar`.

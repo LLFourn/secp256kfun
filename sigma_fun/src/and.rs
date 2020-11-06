@@ -122,7 +122,7 @@ crate::impl_display!(And<A,B>);
 mod test {
     use super::*;
     use crate::secp256k1::fun::proptest::non_zero_scalar;
-    use secp256kfun::proptest::prelude::*;
+    use ::proptest::prelude::*;
 
     proptest! {
         #[test]

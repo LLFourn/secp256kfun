@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use secp256kfun::proptest::prelude::*;
+use ::proptest::prelude::*;
 use sha2::Sha256;
 use sigma_fun::{
     ed25519::{

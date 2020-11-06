@@ -185,7 +185,7 @@ fn normalize_challenge<L: ArrayLength<u8>>(challenge: &GenericArray<u8, L>) -> S
 
 pub mod proptest {
     use super::*;
-    use secp256kfun::proptest::prelude::*;
+    use ::proptest::prelude::*;
 
     prop_compose! {
         pub fn ed25519_scalar()(
@@ -208,8 +208,8 @@ pub mod proptest {
 mod test {
     use super::*;
     use crate::{ed25519::proptest::ed25519_scalar, FiatShamir};
+    use ::proptest::prelude::*;
     use generic_array::typenum::U31;
-    use secp256kfun::proptest::prelude::*;
     use sha2::Sha256;
 
     proptest! {
