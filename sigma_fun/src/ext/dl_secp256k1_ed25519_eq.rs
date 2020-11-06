@@ -21,7 +21,13 @@ use curve25519_dalek::{
 use generic_array::typenum::{U252, U31};
 static GQ: &'static curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
-/// The underlying proof algorithm we'll be using to prove the relationship between the commitments and the keys.
+// The underlying proof algorithm we'll be using to prove the relationship between the commitments
+// and the keys. We are trying to prove that X_p = x * G_p and X_q = x * G_q. The approach is to
+// split x into 2×252 bit pedersen commitments for eacah curve and prove they commit to the same
+// bit.
+//
+// Note the commitments are in the form commit(b) = r * G + b* H where G is the standard basepoint
+// for each curve.
 type CoreProof = And<
     All<
         U252, // For each of the 252 bits of the secret key
@@ -31,8 +37,8 @@ type CoreProof = And<
             And<secp256k1::DLG<U31>, ed25519::DLG<U31>>,
         >,
     >,
-    // Finally we prove the result of the addition of the commitments is the same as the ones calimed
-    // i.e. if the commitmens add up to xH, we show that X = xG.
+    // Finally we do two DLEQ proofs to show that if the commitmens add up to xH_p and xH_q, we show
+    // that X_p = xG_p and X_q = xG_q.
     And<Eq<secp256k1::DLG<U31>, secp256k1::DL<U31>>, Eq<ed25519::DLG<U31>, ed25519::DL<U31>>>,
 >;
 const COMMITMENT_BITS: usize = 252;
@@ -89,11 +95,12 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
         secret: &ScalarQ,
         rng: &mut (impl CryptoRng + RngCore),
     ) -> CrossCurveDLEQProof {
-        // Must be a 252 bit ed25519 key
-        assert!(secret.as_bytes()[31] & 0x20 == 0);
+        // Must be a 252 bit ed25519 key i.e. must not have it's 253rd bit set
+        assert!(secret.as_bytes()[31] & 0b00010000 == 0);
 
         let secp_secret = {
             let mut bytes = secret.to_bytes();
+            // secp256kfun interprets scalars as big endian
             bytes.reverse();
             ScalarP::from_bytes(bytes)
                 .expect("will never overflow since ed25519 order is lower")
@@ -245,6 +252,17 @@ mod test {
     };
     use ::proptest::prelude::*;
     use sha2::Sha256;
+
+    #[test]
+    #[should_panic]
+    /// We can't handle 253 bit scalars
+    fn high_scalar_should_panic() {
+        let high_scalar = -ScalarQ::one();
+        let HP = PointP::random(&mut rand::thread_rng());
+        let HQ = &ScalarQ::random(&mut rand::thread_rng()) * &ED25519_BASEPOINT_TABLE;
+        let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
+        let _ = proof_system.prove(&high_scalar, &mut rand::thread_rng());
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(3))]
