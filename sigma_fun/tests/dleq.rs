@@ -24,7 +24,7 @@ macro_rules! run_dleq {
     ) => {{
         let statement = &$statement;
         let witness = &$witness;
-        let dleq = Eq::new($mod::DLBP::<$len>::default(), $mod::DL::<$len>::default());
+        let dleq = Eq::new($mod::DLG::<$len>::default(), $mod::DL::<$len>::default());
 
         let proof_system = FiatShamir::<_, Sha256>::new(dleq);
         let proof = proof_system.prove(witness, statement, &mut rand::thread_rng());
@@ -42,10 +42,10 @@ macro_rules! run_dleq {
 #[test]
 fn secp256k1_dleq_has_correct_name() {
     let dleq = Eq::new(
-        secp256k1::DLBP::<U32>::default(),
+        secp256k1::DLG::<U32>::default(),
         secp256k1::DL::<U32>::default(),
     );
-    assert_eq!(&format!("{}", dleq), "eq(DLBP-secp256k1,DL-secp256k1)");
+    assert_eq!(&format!("{}", dleq), "eq(DLG-secp256k1,DL-secp256k1)");
 }
 
 proptest! {

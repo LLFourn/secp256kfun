@@ -136,7 +136,7 @@ mod test {
             use generic_array::typenum::U32;
             use sha2::Sha256;
 
-            type AndDL = And<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
+            type AndDL = And<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
 
             let xG = g!(x * G).mark::<Normal>();
             let yG = g!(y * G).mark::<Normal>();

@@ -205,7 +205,7 @@ mod test {
             Y in point(),
         ) {
             let xG = g!(x * G).mark::<Normal>();
-            type OrDL = Or<secp256k1::DLBP<U32>, secp256k1::DLBP<U32>>;
+            type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
             let statement = (xG, Y);
             let proof_system = crate::FiatShamir::<OrDL, Sha256>::default();
 

@@ -93,11 +93,11 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct DLBP<L> {
+pub struct DLG<L> {
     challenge_len: PhantomData<L>,
 }
 
-impl<L: ArrayLength<u8>> Sigma for DLBP<L>
+impl<L: ArrayLength<u8>> Sigma for DLG<L>
 where
     L: IsLessOrEqual<U32>,
     <L as IsLessOrEqual<U32>>::Output: typenum::marker_traits::NonZero,
@@ -148,7 +148,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLBP-secp256k1")
+        write!(w, "DLG-secp256k1")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
