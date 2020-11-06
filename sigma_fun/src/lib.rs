@@ -1,6 +1,5 @@
 #![no_std]
 #![allow(non_snake_case)]
-#![feature(move_ref_pattern)]
 
 use digest::Digest;
 pub use generic_array::{self, typenum};

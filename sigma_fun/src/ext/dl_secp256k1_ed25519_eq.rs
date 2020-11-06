@@ -27,13 +27,13 @@ type CoreProof = And<
         U252, // For each of the 252 bits of the secret key
         // We show that both commitments are a commitment to zero OR to 2^i for i = 0..252
         Or<
-            And<secp256k1::DLBP<U31>, ed25519::DLBP<U31>>,
-            And<secp256k1::DLBP<U31>, ed25519::DLBP<U31>>,
+            And<secp256k1::DLG<U31>, ed25519::DLG<U31>>,
+            And<secp256k1::DLG<U31>, ed25519::DLG<U31>>,
         >,
     >,
     // Finally we prove the result of the addition of the commitments is the same as the ones calimed
     // i.e. if the commitmens add up to xH, we show that X = xG.
-    And<Eq<secp256k1::DLBP<U31>, secp256k1::DL<U31>>, Eq<ed25519::DLBP<U31>, ed25519::DL<U31>>>,
+    And<Eq<secp256k1::DLG<U31>, secp256k1::DL<U31>>, Eq<ed25519::DLG<U31>, ed25519::DL<U31>>>,
 >;
 const COMMITMENT_BITS: usize = 252;
 
@@ -247,7 +247,7 @@ mod test {
     use sha2::Sha256;
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(10))]
+        #![proptest_config(ProptestConfig::with_cases(3))]
         #[test]
         fn dl_secp256k1_ed25519_eq(
             secret in ed25519_scalar(),
@@ -262,7 +262,7 @@ mod test {
 
     #[cfg(feature = "serde")]
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(10))]
+        #![proptest_config(ProptestConfig::with_cases(3))]
         #[test]
         fn serialization_roundtrip(
             secret in ed25519_scalar(),

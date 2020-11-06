@@ -94,11 +94,11 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct DLBP<L> {
+pub struct DLG<L> {
     challenge_len: PhantomData<L>,
 }
 
-impl<L: ArrayLength<u8>> Sigma for DLBP<L>
+impl<L: ArrayLength<u8>> Sigma for DLG<L>
 where
     L: IsLessOrEqual<U31>,
     <L as IsLessOrEqual<U31>>::Output: typenum::marker_traits::NonZero,
@@ -160,7 +160,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLBP-ed25519")
+        write!(w, "DLG-ed25519")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -219,7 +219,7 @@ mod test {
         ) {
             let G = &ED25519_BASEPOINT_TABLE;
             let xG = &x * G;
-            let proof_system = FiatShamir::<DLBP<U31>, Sha256>::default();
+            let proof_system = FiatShamir::<DLG<U31>, Sha256>::default();
             let proof = proof_system.prove(&x, &xG, &mut rand::thread_rng());
             assert!(proof_system.verify(&xG, &proof));
         }
