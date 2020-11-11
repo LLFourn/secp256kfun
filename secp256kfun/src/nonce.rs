@@ -152,10 +152,9 @@ pub trait NonceGen: AddTag {
     /// The type of hash that `begin_derivation` will return.
     type Hash: Digest<OutputSize = U32>;
 
-    /// Takes a secret [`Scalar`] and outputs a hash. Before turining this hash
-    /// into the nonce, you must add all the public inputs from the scheme into
-    /// the hash. So for a signature scheme for example you would add the
-    /// message and the public key.
+    /// Takes a secret [`Scalar`] and outputs a hash. Before turining this hash into the nonce, you
+    /// must add a secret input and all the public inputs from the scheme into the hash. So for a
+    /// signature scheme for example you would add your secret key, the message and the public key.
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash;
 }
 
