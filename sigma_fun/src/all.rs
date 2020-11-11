@@ -26,7 +26,7 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
     type Witness = Vec<S::Witness>;
     type Statement = Vec<S::Statement>;
     type AnnounceSecret = Vec<S::AnnounceSecret>;
-    type Announce = Vec<S::Announce>;
+    type Announcement = Vec<S::Announcement>;
     type Response = Vec<S::Response>;
     type ChallengeLength = S::ChallengeLength;
 
@@ -35,7 +35,7 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         witness: &Self::Witness,
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        announce: &Self::Announce,
+        announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         announce_secret
@@ -58,7 +58,7 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         (0..N::to_usize())
             .map(|i| self.sigma.announce(&statement[i], &announce_secret[i]))
             .collect()
@@ -89,7 +89,7 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         if statement.len() != N::to_usize() || response.len() != N::to_usize() {
             return None;
         }
@@ -114,7 +114,7 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         }
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announcement) {
         for announcement in announcements {
             self.sigma.hash_announcement(hash, announcement)
         }

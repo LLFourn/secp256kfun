@@ -26,7 +26,7 @@ where
     type Witness = Scalar;
     type Statement = (EdwardsPoint, EdwardsPoint);
     type AnnounceSecret = Scalar;
-    type Announce = EdwardsPoint;
+    type Announcement = EdwardsPoint;
     type Response = Scalar;
     type ChallengeLength = L;
 
@@ -35,7 +35,7 @@ where
         witness: &Self::Witness,
         _statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        _announce: &Self::Announce,
+        _announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
@@ -46,7 +46,7 @@ where
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         let G = &statement.0;
         announce_secret * G
     }
@@ -69,7 +69,7 @@ where
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let (G, X) = statement;
         let challenge = normalize_challenge(challenge);
         Some(response * G - challenge * X)
@@ -84,7 +84,7 @@ where
         hash.update(statement.1.compress().as_bytes());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.compress().as_bytes())
     }
 
@@ -106,7 +106,7 @@ where
     type Witness = Scalar;
     type Statement = EdwardsPoint;
     type AnnounceSecret = Scalar;
-    type Announce = EdwardsPoint;
+    type Announcement = EdwardsPoint;
     type Response = Scalar;
     type ChallengeLength = L;
 
@@ -115,7 +115,7 @@ where
         witness: &Self::Witness,
         _statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        _announce: &Self::Announce,
+        _announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
@@ -126,7 +126,7 @@ where
         &self,
         _statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         let G = &ED25519_BASEPOINT_TABLE;
         announce_secret * G
     }
@@ -149,7 +149,7 @@ where
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let X = statement;
         let challenge = normalize_challenge(challenge);
         Some(EdwardsPoint::vartime_double_scalar_mul_basepoint(
@@ -167,7 +167,7 @@ where
         hash.update(statement.compress().as_bytes());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.compress().as_bytes())
     }
 

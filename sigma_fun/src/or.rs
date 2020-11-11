@@ -26,7 +26,7 @@ pub enum Either<A, B> {
 impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B> {
     type Witness = Either<A::Witness, B::Witness>;
     type Statement = (A::Statement, B::Statement);
-    type Announce = (A::Announce, B::Announce);
+    type Announcement = (A::Announcement, B::Announcement);
     type AnnounceSecret = (
         Either<(A::AnnounceSecret, B::Response), (A::Response, B::AnnounceSecret)>,
         GenericArray<u8, Self::ChallengeLength>,
@@ -42,7 +42,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         witness: &Self::Witness,
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        announce: &Self::Announce,
+        announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let (or_announce_secret, fake_challenge) = announce_secret;
@@ -79,7 +79,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         match announce_secret {
             (Either::Left((ref announce_secret, ref sim_response)), sim_challenge) => (
                 self.lhs.announce(&statement.0, announce_secret),
@@ -142,7 +142,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let (lhs_statement, rhs_statement) = statement;
         let ((lhs_response, lhs_challenge), rhs_response) = response;
         let rhs_challenge = lhs_challenge.zip(challenge, |byte1, byte2| byte1 ^ byte2);
@@ -169,7 +169,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         self.rhs.hash_statement(hash, &statement.1);
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         self.lhs.hash_announcement(hash, &announcement.0);
         self.rhs.hash_announcement(hash, &announcement.1)
     }

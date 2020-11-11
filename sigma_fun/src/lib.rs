@@ -42,7 +42,7 @@ pub trait Sigma {
     type Witness;
     type Statement;
     type AnnounceSecret;
-    type Announce: core::cmp::Eq + core::fmt::Debug;
+    type Announcement: core::cmp::Eq + core::fmt::Debug;
     type Response;
     type ChallengeLength: ArrayLength<u8>;
 
@@ -51,14 +51,14 @@ pub trait Sigma {
         witness: &Self::Witness,
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        announce: &Self::Announce,
+        announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response;
     fn announce(
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce;
+    ) -> Self::Announcement;
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
@@ -71,10 +71,10 @@ pub trait Sigma {
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce>;
+    ) -> Option<Self::Announcement>;
     fn write_name<W: core::fmt::Write>(&self, write: &mut W) -> core::fmt::Result;
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement);
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce);
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement);
     fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness);
 }
 

@@ -26,7 +26,7 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
     type Witness = S::Witness;
     type Statement = Vec<S::Statement>;
     type AnnounceSecret = S::AnnounceSecret;
-    type Announce = Vec<S::Announce>;
+    type Announcement = Vec<S::Announcement>;
     type Response = S::Response;
     type ChallengeLength = S::ChallengeLength;
 
@@ -35,7 +35,7 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         witness: &Self::Witness,
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        announce: &Self::Announce,
+        announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         self.sigma.respond(
@@ -60,7 +60,7 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         statement
             .iter()
             .map(|statement| self.sigma.announce(statement, announce_secret))
@@ -76,7 +76,7 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         statements: &Self::Statement,
         challenge: &generic_array::GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         if statements.len() != N::to_usize() {
             return None;
         }
@@ -102,7 +102,7 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         }
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announcement) {
         for announcement in announcements {
             self.sigma.hash_announcement(hash, announcement)
         }

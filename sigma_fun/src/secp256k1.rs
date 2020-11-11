@@ -24,7 +24,7 @@ where
     type Witness = Scalar;
     type Statement = (Point, Point);
     type AnnounceSecret = Scalar;
-    type Announce = Point;
+    type Announcement = Point;
     type Response = Scalar<Public, Zero>;
     type ChallengeLength = L;
 
@@ -33,7 +33,7 @@ where
         witness: &Self::Witness,
         _statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        _announce: &Self::Announce,
+        _announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
@@ -44,7 +44,7 @@ where
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         let G = &statement.0;
         let announce = g!(announce_secret * G);
         announce.mark::<Normal>()
@@ -59,7 +59,7 @@ where
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let (G, X) = statement;
         let challenge = normalize_challenge(challenge);
         g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
@@ -74,7 +74,7 @@ where
         hash.update(statement.1.to_bytes().as_ref());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.to_bytes().as_ref())
     }
 
@@ -105,7 +105,7 @@ where
     type Witness = Scalar;
     type Statement = Point;
     type AnnounceSecret = Scalar;
-    type Announce = Point;
+    type Announcement = Point;
     type Response = Scalar<Public, Zero>;
     type ChallengeLength = L;
 
@@ -114,7 +114,7 @@ where
         witness: &Self::Witness,
         _statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        _announce: &Self::Announce,
+        _announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
@@ -125,7 +125,7 @@ where
         &self,
         _statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         let G = fun::G;
         let announce = g!(announce_secret * G);
         announce.mark::<Normal>()
@@ -140,7 +140,7 @@ where
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let X = statement;
         let G = fun::G;
         let challenge = normalize_challenge(challenge);
@@ -155,7 +155,7 @@ where
         hash.update(statement.to_bytes().as_ref());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.to_bytes().as_ref())
     }
 

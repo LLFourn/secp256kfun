@@ -17,7 +17,7 @@ where
 {
     type Witness = (A::Witness, B::Witness);
     type Statement = (A::Statement, B::Statement);
-    type Announce = (A::Announce, B::Announce);
+    type Announcement = (A::Announcement, B::Announcement);
     type AnnounceSecret = (A::AnnounceSecret, B::AnnounceSecret);
     type Response = (A::Response, B::Response);
     type ChallengeLength = A::ChallengeLength;
@@ -27,7 +27,7 @@ where
         witness: &Self::Witness,
         statement: &Self::Statement,
         announce_secret: Self::AnnounceSecret,
-        announce: &Self::Announce,
+        announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         (
@@ -52,7 +52,7 @@ where
         &self,
         statement: &Self::Statement,
         announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announce {
+    ) -> Self::Announcement {
         (
             self.lhs.announce(&statement.0, &announce_secret.0),
             self.rhs.announce(&statement.1, &announce_secret.1),
@@ -80,7 +80,7 @@ where
         statement: &Self::Statement,
         challenge: &generic_array::GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
-    ) -> Option<Self::Announce> {
+    ) -> Option<Self::Announcement> {
         let (lhs_response, rhs_response) = response;
         let (lhs_statement, rhs_statement) = statement;
         self.lhs
@@ -105,7 +105,7 @@ where
         self.rhs.hash_statement(hash, &statement.1);
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announce) {
+    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
         self.lhs.hash_announcement(hash, &announcement.0);
         self.rhs.hash_announcement(hash, &announcement.1)
     }

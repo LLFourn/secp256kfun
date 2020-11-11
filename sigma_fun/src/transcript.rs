@@ -22,7 +22,7 @@ pub trait Transcript<S: Sigma>: Clone {
     fn get_challenge(
         self,
         sigma: &S,
-        announce: &S::Announce,
+        announce: &S::Announcement,
     ) -> GenericArray<u8, S::ChallengeLength>;
 }
 
@@ -84,7 +84,7 @@ where
     fn get_challenge(
         mut self,
         sigma: &S,
-        announce: &S::Announce,
+        announce: &S::Announcement,
     ) -> GenericArray<u8, S::ChallengeLength> {
         sigma.hash_announcement(&mut self, announce);
         let challenge_bytes = self.finalize();
