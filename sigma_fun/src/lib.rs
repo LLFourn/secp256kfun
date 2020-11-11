@@ -4,8 +4,8 @@
 use digest::Digest;
 pub use generic_array::{self, typenum};
 use generic_array::{ArrayLength, GenericArray};
-pub use rand_chacha::rand_core;
 use rand_chacha::rand_core::{CryptoRng, RngCore};
+pub use rand_chacha::{self, rand_core};
 
 #[cfg(feature = "alloc")]
 #[allow(unused_imports)]
@@ -78,6 +78,7 @@ pub trait Sigma {
     fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness);
 }
 
+#[derive(Clone, Debug)]
 pub struct FiatShamir<S, T> {
     transcript: T,
     sigma: S,

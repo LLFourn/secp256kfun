@@ -136,24 +136,25 @@ mod test {
     macro_rules! run_dleq {
         (
             $mod:ident,challenge_length =>
-                $len:ident,statement =>
-                $statement:expr,witness =>
-                $witness:expr,unrelated_point =>
-                $unrelated_point:expr
+            $len:ident,statement =>
+            $statement:expr,witness =>
+            $witness:expr,unrelated_point =>
+            $unrelated_point:expr
         ) => {{
             let statement = &$statement;
             let witness = &$witness;
-            let dleq = Eq::new($mod::DLG::<$len>::default(), $mod::DL::<$len>::default());
+            let dleq = Eq::<$mod::DLG<$len>, $mod::DL<$len>>::default();
 
             let proof_system = FiatShamir::<_, Sha256>::new(dleq);
             let proof = proof_system.prove(witness, statement, &mut rand::thread_rng());
             assert!(proof_system.verify(statement, &proof));
 
             let mut bogus_statement = statement.clone();
-            bogus_statement.1.0 = $unrelated_point;
+            bogus_statement.1 .0 = $unrelated_point;
             assert!(!proof_system.verify(&bogus_statement, &proof));
 
-            let bogus_proof = proof_system.prove(witness, &bogus_statement, &mut rand::thread_rng());
+            let bogus_proof =
+                proof_system.prove(witness, &bogus_statement, &mut rand::thread_rng());
             assert!(!proof_system.verify(&bogus_statement, &bogus_proof));
         }};
     }
