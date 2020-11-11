@@ -1,29 +1,29 @@
-use super::dleq;
+use super::DLEQ;
 use crate::fun::{marker::*, Point, Scalar};
+use sigma_fun::CompactProof;
 
 /// `PointNonce` is a [`NonZero`] Point that also has an x-coordinate that is NonZero
 /// when reduced modulo the curve order.
 ///
 /// [`NonZero`]: secp256kfun::marker::NonZero
 #[derive(Clone, PartialEq)]
-pub struct PointNonce<S = Public> {
-    pub point: Point<Normal, S>,
-    pub(crate) x_scalar: Scalar<S, NonZero>,
+pub struct PointNonce {
+    pub point: Point,
+    pub(crate) x_scalar: Scalar<Public>,
 }
 
 secp256kfun::impl_fromstr_deserailize! {
     name => "33-byte compressed secp256k1 point",
-    fn from_bytes<S>(bytes: [u8;33]) -> Option<PointNonce<S>> {
+    fn from_bytes(bytes: [u8;33]) -> Option<PointNonce> {
         Point::from_bytes(bytes).and_then(|point| {
-            let point = point.set_secrecy::<S>();
-            Scalar::from_bytes_mod_order(point.to_xonly().into_bytes()).set_secrecy::<S>()
+            Scalar::from_bytes_mod_order(point.to_xonly().into_bytes()).mark::<Public>()
                 .mark::<NonZero>().map(move |x_scalar| PointNonce { point, x_scalar } )
         })
     }
 }
 
 secp256kfun::impl_display_debug_serialize! {
-    fn to_bytes<S>(point_nonce: &PointNonce<S>) -> [u8;33] {
+    fn to_bytes(point_nonce: &PointNonce) -> [u8;33] {
         point_nonce.point.to_bytes()
     }
 }
@@ -34,11 +34,11 @@ secp256kfun::impl_display_debug_serialize! {
     derive(serde::Deserialize, serde::Serialize),
     serde(crate = "serde_crate")
 )]
-pub struct EncryptedSignature<S = Public> {
-    pub R: PointNonce<S>,
-    pub R_hat: Point<Normal, S>,
-    pub s_hat: Scalar<S, NonZero>,
-    pub proof: dleq::Proof,
+pub struct EncryptedSignature {
+    pub R: PointNonce,
+    pub R_hat: Point,
+    pub s_hat: Scalar<Public>,
+    pub proof: CompactProof<DLEQ>,
 }
 
 #[cfg(test)]

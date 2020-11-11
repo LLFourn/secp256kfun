@@ -59,48 +59,42 @@
 //! ```
 use crate::{Signature, ECDSA};
 use secp256kfun::{
-    derive_nonce,
-    digest::{generic_array::typenum::U32, Digest},
-    g,
-    hash::{AddTag, Tagged},
-    marker::*,
-    nonce::NonceGen,
-    s, Point, Scalar, G,
+    derive_nonce_rng, digest::generic_array::typenum::U32, g, hash::AddTag, marker::*,
+    nonce::NonceGen, s, Point, Scalar, G,
 };
+use sigma_fun::{secp256k1, Eq, FiatShamir, Transcript};
 
 mod encrypted_signature;
 pub use encrypted_signature::{EncryptedSignature, PointNonce};
-pub mod dleq;
+
+pub type DLEQ = Eq<secp256k1::DLG<U32>, secp256k1::DL<U32>>;
 
 #[derive(Clone, Debug)]
-pub struct Adaptor<ProofChallengeHash, NonceGen> {
+pub struct Adaptor<Transcript, NonceGen> {
     pub ecdsa: ECDSA<NonceGen>,
-    pub dleq: dleq::DLEQ<ProofChallengeHash, NonceGen>,
+    pub dleq_proof_system: FiatShamir<DLEQ, Transcript>,
 }
 
-impl<CH, NG> Default for Adaptor<CH, NG>
+impl<T, NG> Default for Adaptor<T, NG>
 where
-    ECDSA<NG>: Default,
-    dleq::DLEQ<CH, NG>: Default,
+    NG: Default + AddTag,
+    T: Transcript<DLEQ>,
 {
     fn default() -> Self {
-        Self {
-            ecdsa: ECDSA::<NG>::default(),
-            dleq: dleq::DLEQ::<CH, NG>::default(),
-        }
+        Self::new(NG::default())
     }
 }
 
-impl<H: Tagged, NG: AddTag + Clone> Adaptor<H, NG> {
+impl<T: Transcript<DLEQ>, NG: AddTag> Adaptor<T, NG> {
     pub fn new(nonce_gen: NG) -> Self {
         Self {
-            ecdsa: ECDSA::new(nonce_gen.clone()),
-            dleq: dleq::DLEQ::new(nonce_gen.clone()),
+            ecdsa: ECDSA::new(nonce_gen),
+            dleq_proof_system: FiatShamir::<_, T>::new(DLEQ::default()),
         }
     }
 }
 
-impl<CH: Tagged> Adaptor<CH, ()> {
+impl<T: Transcript<DLEQ>> Adaptor<T, ()> {
     /// Create an `Adaptor` instance that can do verification only
     /// # Example
     /// ```
@@ -112,9 +106,9 @@ impl<CH: Tagged> Adaptor<CH, ()> {
     }
 }
 
-impl<CH, NG> Adaptor<CH, NG>
+impl<T, NG> Adaptor<T, NG>
 where
-    CH: Digest<OutputSize = U32> + Clone,
+    T: Transcript<DLEQ>,
     NG: NonceGen,
 {
     /// Create an encryted signature A.K.A. "adaptor signature" A.K.A. "pre-signature".
@@ -125,19 +119,27 @@ where
     pub fn encrypted_sign(
         &self,
         signing_key: &Scalar,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point,
         message: &[u8; 32],
     ) -> EncryptedSignature {
         let x = signing_key;
         let Y = encryption_key;
         let m = Scalar::from_bytes_mod_order(message.clone()).mark::<Public>();
-        let r = derive_nonce!(
+        let mut rng = derive_nonce_rng!(
             nonce_gen => self.ecdsa.nonce_gen,
             secret => x,
-            public => [Y, &message[..]]
+            public => [Y, &message[..]],
+            seedable_rng => sigma_fun::rand_chacha::ChaCha20Rng
         );
 
-        let (proof, R_hat, R) = self.dleq.prove_guaranteed(&r, &G, Y);
+        let r = Scalar::random(&mut rng);
+        let R_hat = g!(r * G).mark::<Normal>();
+        let R = g!(r * Y).mark::<Normal>();
+
+        let proof = self
+            .dleq_proof_system
+            .prove(&r, &(R_hat, (*Y, R)), &mut rng);
+
         let R_x = Scalar::from_bytes_mod_order(R.to_xonly().into_bytes())
             .mark::<(Public, NonZero)>()
             // The point with x-coordinate = 0 mod q exists, but it will never
@@ -161,7 +163,7 @@ where
     }
 }
 
-impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
+impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     /// Returns the corresponding encryption key for a decryption key
     ///
     /// # Example
@@ -183,9 +185,9 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
     pub fn verify_encrypted_signature(
         &self,
         verification_key: &Point<impl PointType, impl Secrecy>,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point,
         message_hash: &[u8; 32],
-        ciphertext: &EncryptedSignature<impl Secrecy>,
+        ciphertext: &EncryptedSignature,
     ) -> bool {
         let X = verification_key;
         let Y = encryption_key;
@@ -197,7 +199,10 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
             s_hat,
         } = ciphertext;
 
-        if !self.dleq.verify(&G, R_hat, Y, &R.point, &proof) {
+        if !self
+            .dleq_proof_system
+            .verify(&(*R_hat, (*Y, R.point)), &proof)
+        {
             return false;
         }
         let s_hat_inv = s_hat.invert();
@@ -222,7 +227,7 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
     pub fn decrypt_signature(
         &self,
         decryption_key: &Scalar<impl Secrecy, NonZero>,
-        EncryptedSignature { R, s_hat, .. }: EncryptedSignature<impl Secrecy>,
+        EncryptedSignature { R, s_hat, .. }: EncryptedSignature,
     ) -> Signature {
         let y = decryption_key;
         let mut s = s!(s_hat * { y.invert() });
@@ -250,7 +255,7 @@ impl<CH: Digest<OutputSize = U32> + Clone, NG> Adaptor<CH, NG> {
         &self,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
         signature: &Signature<impl Secrecy>,
-        ciphertext: &EncryptedSignature<impl Secrecy>,
+        ciphertext: &EncryptedSignature,
     ) -> Option<Scalar> {
         // Check we are not looking at some unrelated signature
         if ciphertext.R.x_scalar != signature.R_x
