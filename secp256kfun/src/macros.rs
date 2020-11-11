@@ -341,6 +341,48 @@ macro_rules! derive_nonce {
     }}
 }
 
+/// Macro to derive a rng for producing multiple nonces.
+///
+/// This works like [`derive_nonce`] except that it produces an rng with the output rather than a
+/// scalar.
+///
+/// # Examples
+///
+/// ```
+/// use secp256kfun::{Scalar, derive_nonce_rng, hash::AddTag, nonce::{NonceGen,Deterministic}};
+/// use sha2::Sha256;
+/// let secret_scalar = Scalar::random(&mut rand::thread_rng());
+/// let nonce_gen = Deterministic::<Sha256>::default().add_protocol_tag("my-protocol");
+/// let mut rng = derive_nonce_rng!(
+///     nonce_gen => nonce_gen,
+///     secret => &secret_scalar,
+///     public => [b"public-inputs-to-the-algorithm".as_ref()],
+///     seedable_rng => rand::rngs::StdRng
+/// );
+/// let r1 = Scalar::random(&mut rng);
+/// let r2 = Scalar::random(&mut rng);
+/// ```
+///
+/// [`derive_nonce`]: crate::derive_nonce
+#[macro_export]
+macro_rules! derive_nonce_rng {
+    (
+        nonce_gen => $nonce_gen:expr,
+        secret => $secret:expr,
+        public => [$($public:expr),+],
+        seedable_rng => $rng:ty
+    ) => {{
+        use $crate::hash::HashAdd;
+        use core::borrow::Borrow;
+        use $crate::nonce::NonceGen;
+        use $crate::rand_core::SeedableRng;
+        use $crate::digest::Digest;
+
+        let hash = $nonce_gen.begin_derivation($secret.borrow())$(.add($public.borrow()))+;
+        <$rng>::from_seed(hash.finalize().into())
+    }}
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_display_debug {
