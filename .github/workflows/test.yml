@@ -22,7 +22,6 @@ jobs:
           args: --all -- --check
 
   test-nostd:
-    name: test-nostd
     runs-on: ubuntu-latest
 
     steps:
@@ -38,9 +37,24 @@ jobs:
       run: ( cd schnorr_fun && cargo test --no-default-features --release --verbose )
     - name: ecdsa_fun-test
       run: ( cd ecdsa_fun && cargo test --no-default-features --release --verbose )
+    - name: sigma_fun-test
+      run: (cd sigma_fun && cargo test --no-default-features --release --verbose)
+
+  test-all-features:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --release --all-features
 
   test-default:
-    name: test-default
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -55,9 +69,7 @@ jobs:
         args: --release
 
   test-serde:
-    name: test-serde
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
@@ -71,6 +83,8 @@ jobs:
       run: ( cd schnorr_fun && cargo test --no-default-features --features=serde --release --verbose )
     - name: ecdsa_fun-test
       run: ( cd ecdsa_fun && cargo test --no-default-features --features=serde --release --verbose )
+    - name: sigma_fun-test
+      run: ( cd sigma_fun && cargo test --no-default-features --features=serde --release --verbose )
 
   doc-build:
      name: doc-build
