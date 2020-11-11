@@ -18,6 +18,7 @@ features = ["serde", "libsecp_compat"]
 [dependencies]
 secp256kfun = { path = "../secp256kfun", version = "^0.3.2-alpha.0", default-features = false }
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
+sigma_fun = { path = "../sigma_fun", version = "0.1.0", features = ["secp256k1"]}
 
 [dev-dependencies]
 secp256k1 = { default-features = false, version = "0.19", features = ["std"] }
@@ -39,4 +40,4 @@ all = ["std", "serde", "libsecp_compat"]
 libsecp_compat = ["secp256kfun/libsecp_compat"]
 std = ["alloc"]
 alloc = []
-serde = ["secp256kfun/serde", "serde_crate"]
+serde = ["secp256kfun/serde", "serde_crate", "sigma_fun/serde"]
