@@ -66,7 +66,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DL-secp256k1")
+        write!(w, "DL(secp256k1)")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -148,7 +148,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLG-secp256k1")
+        write!(w, "DLG(secp256k1)")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {

@@ -169,7 +169,7 @@ mod test {
                 secp256k1::DLG::<U32>::default(),
                 secp256k1::DL::<U32>::default(),
             );
-            assert_eq!(&format!("{}", dleq), "eq(DLG-secp256k1,DL-secp256k1)");
+            assert_eq!(&format!("{}", dleq), "eq(DLG(secp256k1),DL(secp256k1))");
         }
 
         proptest! {

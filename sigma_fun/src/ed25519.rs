@@ -76,7 +76,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DL-ed25519")
+        write!(w, "DL(ed25519)")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -160,7 +160,7 @@ where
     }
 
     fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLG-ed25519")
+        write!(w, "DLG(ed25519)")
     }
 
     fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
