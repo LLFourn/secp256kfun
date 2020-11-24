@@ -341,17 +341,8 @@ impl<T: Normalized, S> HashInto for Point<T, S, NonZero> {
 }
 
 crate::impl_display_debug! {
-    fn to_bytes<S,Z>(point: &Point<Jacobian, S, Z>) -> Result<[u8;33], &str> {
-        match Clone::clone(*point).mark::<(Normal, NonZero)>() {
-            Some(nzpoint) => Ok(nzpoint.to_bytes()),
-            None => Err("Zero"),
-        }
-    }
-}
-
-crate::impl_display_debug! {
-    fn to_bytes<T: Normalized, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
-        match Clone::clone(*point).mark::<NonZero>() {
+    fn to_bytes<T: PointType, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
+        match Clone::clone(*point).mark::<(Normal,NonZero)>() {
             Some(nzpoint) => Ok(nzpoint.to_bytes()),
             None => Err("Zero"),
         }
