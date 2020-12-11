@@ -66,6 +66,17 @@ impl Point<Normal, Public, NonZero> {
     /// encode an x-coordinate on the curve.  If these conditions are not then
     /// it will return `None`.
     ///
+    /// # Examples
+    /// ```
+    /// use secp256kfun::{Point, G};
+    /// let bytes = [
+    ///     2, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155, 252,
+    ///     219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152,
+    /// ];
+    /// let point = Point::from_bytes(bytes).unwrap();
+    /// assert_eq!(point, *G);
+    /// ```
+    ///
     /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
     pub fn from_bytes(bytes: [u8; 33]) -> Option<Self> {
         let y_odd = match bytes[0] {
@@ -79,6 +90,19 @@ impl Point<Normal, Public, NonZero> {
 
         backend::Point::norm_from_bytes_y_oddness(x_bytes, y_odd)
             .map(|p| Point::from_inner(p, Normal))
+    }
+
+    /// Convenience method for calling [`from_bytes`] wth a slice.
+    /// Returns None if [`from_bytes`] would or if `slice` is not 33 bytes long.
+    ///
+    /// [`from_bytes`]: Self::from_bytes
+    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+        if slice.len() != 33 {
+            return None;
+        }
+        let mut bytes = [0u8; 33];
+        bytes.copy_from_slice(slice);
+        Self::from_bytes(bytes)
     }
 
     /// Creates a Point from a 65-byte uncompressed encoding specified in
