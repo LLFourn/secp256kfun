@@ -1,6 +1,7 @@
 #![no_std]
 #![allow(non_snake_case)]
 
+use core::fmt::Debug;
 use digest::Digest;
 pub use generic_array::{self, typenum};
 use generic_array::{ArrayLength, GenericArray};
@@ -39,11 +40,11 @@ mod transcript;
 pub use transcript::*;
 
 pub trait Sigma {
-    type Witness;
-    type Statement;
-    type AnnounceSecret;
-    type Announcement: core::cmp::Eq + core::fmt::Debug;
-    type Response;
+    type Witness: Debug;
+    type Statement: Debug;
+    type AnnounceSecret: Debug;
+    type Announcement: core::cmp::Eq + Debug;
+    type Response: Debug;
     type ChallengeLength: ArrayLength<u8>;
 
     fn respond(
