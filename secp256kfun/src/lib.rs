@@ -1,10 +1,12 @@
 #![feature(rustc_attrs, min_specialization, external_doc)]
 #![doc(include = "../README.md")]
 #![no_std]
-#![allow(non_snake_case)]
-#![deny(missing_docs)]
+//FIXME: Remove this non_autolinks thing once rust#44732 is fixed
+#![allow(non_snake_case, non_autolinks)]
+#![deny(missing_docs, warnings)]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
+#[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 
