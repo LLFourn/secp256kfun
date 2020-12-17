@@ -1,9 +1,12 @@
+//! Proofs of knowledge of discrete logarithm for the secp256k1 curve using [`secp256kfun`].
+//!
+//! [`secp256kfun`]: crate::secp256k1::fun
 use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
 use core::marker::PhantomData;
-use digest::Digest;
+use digest::Update;
 use generic_array::{
     typenum::{self, type_operators::IsLessOrEqual, U32},
     ArrayLength, GenericArray,
@@ -11,7 +14,8 @@ use generic_array::{
 pub use secp256kfun as fun;
 use secp256kfun::{g, marker::*, s, Point, Scalar};
 
-#[derive(Clone, Debug, Default)]
+/// Proves knowledge of `x` such that `A = x * B` for some `A` and `B` included in the statement.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DL<L> {
     challenge_len: PhantomData<L>,
 }
@@ -69,30 +73,33 @@ where
         write!(w, "DL(secp256k1)")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.0.to_bytes().as_ref());
         hash.update(statement.1.to_bytes().as_ref());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.to_bytes().as_ref())
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         hash.update(witness.to_bytes().as_ref())
     }
 
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         _witness: &Self::Witness,
-        _statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         Scalar::random(rng)
     }
 }
 
-#[derive(Clone, Debug, Default)]
+/// Proves knowledge of `x` such that `A = x * G` for some `A` included in the statement.
+/// [`G`] is the standard basepoint for secp256k1 and is ommited from the statement.
+///
+/// [`G`]: secp256kfun::G
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DLG<L> {
     challenge_len: PhantomData<L>,
 }
@@ -151,22 +158,21 @@ where
         write!(w, "DLG(secp256k1)")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.to_bytes().as_ref());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.to_bytes().as_ref())
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         hash.update(witness.to_bytes().as_ref())
     }
 
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         _witness: &Self::Witness,
-        _statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         Scalar::random(rng)

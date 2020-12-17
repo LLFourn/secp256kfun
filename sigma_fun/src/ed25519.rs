@@ -1,19 +1,30 @@
+//! Proofs of knowledge of discrete logarithm on Edwards twist of curve25519 using  using [`curve25519-dalek`].
+//!
+//! **WARNING**: This does not check whether the points are in the prime-order subgroup. For the
+//! proof to be completely sound this needs to be checked by the verifier with [`is_torsion_free`].
+//! This code is mostly here to demonstrate that you can prove a secp256k1 and ed25519 public key
+//! have the same secret key for use in cross-chain atomic swaps between Bitcoin and Monero. If you
+//! are developing a cryptosystem from scratch you should use [`ristretto`] instead.
+//!
+//!
+//! [`curve25519-dalek`]: crate::ed25519::curve25519_dalek
+//! [`is_torsion_free`]: crate::ed25519::curve25519_dalek::edwards::EdwardsPoint::is_torsion_free
+//! [`ristretto`]: crate::ed25519::curve25519_dalek::ristretto
 use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
 use core::marker::PhantomData;
+pub use curve25519_dalek;
 use curve25519_dalek::{constants::ED25519_BASEPOINT_TABLE, edwards::EdwardsPoint, scalar::Scalar};
-use digest::Digest;
+use digest::Update;
 use generic_array::{
     typenum::{self, type_operators::IsLessOrEqual, U31},
     ArrayLength, GenericArray,
 };
 
-/// Proof of Knowledge of the discrete logarithm between two ed25519 points
-/// **WARNING**: This does not check whether the points are in the prime-order subgroup.
-/// For the proof to be sound this needs to be checked beforehand by the verifier.
-#[derive(Clone, Debug, Default)]
+/// Proves knowledge of `x` such that `A = x * B` for some `A` and `B` included in the statement.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DL<L> {
     challenge_len: PhantomData<L>,
 }
@@ -54,7 +65,6 @@ where
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         _witness: &Self::Witness,
-        _statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         Scalar::random(rng)
@@ -79,21 +89,23 @@ where
         write!(w, "DL(ed25519)")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.0.compress().as_bytes());
         hash.update(statement.1.compress().as_bytes());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.compress().as_bytes())
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         hash.update(witness.to_bytes().as_ref())
     }
 }
 
-#[derive(Clone, Debug, Default)]
+/// Proves knowledge of `x` such that `A = x * G` for some `A` included in the statement.
+/// `G` is the standard basepoint used in the ed25519 signature scheme and is not included in the statement.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DLG<L> {
     challenge_len: PhantomData<L>,
 }
@@ -134,7 +146,6 @@ where
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         _witness: &Self::Witness,
-        _statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         Scalar::random(rng)
@@ -163,15 +174,15 @@ where
         write!(w, "DLG(ed25519)")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.compress().as_bytes());
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         hash.update(announcement.compress().as_bytes())
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         hash.update(witness.to_bytes().as_ref())
     }
 }
@@ -207,6 +218,8 @@ pub mod test {
         }
     }
 
+    type Transcript = crate::HashTranscript<Sha256, rand_chacha::ChaCha20Rng>;
+
     proptest! {
         #[test]
         fn ed25519_dlg(
@@ -214,8 +227,8 @@ pub mod test {
         ) {
             let G = &ED25519_BASEPOINT_TABLE;
             let xG = &x * G;
-            let proof_system = FiatShamir::<DLG<U31>, Sha256>::default();
-            let proof = proof_system.prove(&x, &xG, &mut rand::thread_rng());
+            let proof_system = FiatShamir::<DLG<U31>, Transcript>::default();
+            let proof = proof_system.prove(&x, &xG, Some(&mut rand::thread_rng()));
             assert!(proof_system.verify(&xG, &proof));
         }
     }
@@ -227,8 +240,8 @@ pub mod test {
         ) {
             let G = &Scalar::random(&mut rand::thread_rng()) * &ED25519_BASEPOINT_TABLE;
             let xG = &x * G;
-            let proof_system = FiatShamir::<DL<U31>, Sha256>::default();
-            let proof = proof_system.prove(&x, &(G, xG), &mut rand::thread_rng());
+            let proof_system = FiatShamir::<DL<U31>, Transcript>::default();
+            let proof = proof_system.prove(&x, &(G, xG), Some(&mut rand::thread_rng()));
             assert!(proof_system.verify(&(G, xG), &proof));
         }
     }

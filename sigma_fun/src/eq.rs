@@ -2,14 +2,20 @@ use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
+use digest::Update;
 
-#[derive(Default, Clone, Debug)]
+/// Combinator for showing that two Sigma protocols have the same witness.
+///
+/// Note: right now checking whether A and B support secure eq composition is done heurisitically.
+/// In the future there will be an explicit trait for this.
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct Eq<A, B> {
     lhs: A,
     rhs: B,
 }
 
 impl<A, B> Eq<A, B> {
+    /// Create a `Eq<A,B>` protocol from two other Sigma protocols.
     pub fn new(lhs: A, rhs: B) -> Self {
         Self { lhs, rhs }
     }
@@ -66,10 +72,9 @@ where
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
-        statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
-        self.lhs.gen_announce_secret(witness, &statement.0, rng)
+        self.lhs.gen_announce_secret(witness, rng)
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {
@@ -101,21 +106,17 @@ where
         write!(w, ")")
     }
 
-    fn hash_statement<H: digest::Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         self.lhs.hash_statement(hash, &statement.0);
         self.rhs.hash_statement(hash, &statement.1);
     }
 
-    fn hash_announcement<H: digest::Digest>(
-        &self,
-        hash: &mut H,
-        announcement: &Self::Announcement,
-    ) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         self.lhs.hash_announcement(hash, &announcement.0);
         self.rhs.hash_announcement(hash, &announcement.1);
     }
 
-    fn hash_witness<H: digest::Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         self.lhs.hash_witness(hash, witness);
     }
 }
@@ -127,9 +128,10 @@ mod test {
     #![allow(unused_imports)]
     use crate::{
         typenum::{U20, U31, U32},
-        Eq, FiatShamir,
+        Eq, FiatShamir, HashTranscript,
     };
     use ::proptest::prelude::*;
+    use rand_chacha::ChaCha20Rng;
     use sha2::Sha256;
 
     #[allow(unused_macros)]
@@ -143,10 +145,10 @@ mod test {
         ) => {{
             let statement = &$statement;
             let witness = &$witness;
-            let dleq = Eq::<$mod::DLG<$len>, $mod::DL<$len>>::default();
+            type DLEQ = Eq<$mod::DLG<$len>, $mod::DL<$len>>;
 
-            let proof_system = FiatShamir::<_, Sha256>::new(dleq);
-            let proof = proof_system.prove(witness, statement, &mut rand::thread_rng());
+            let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
+            let proof = proof_system.prove(witness, statement, Some(&mut rand::thread_rng()));
             assert!(proof_system.verify(statement, &proof));
 
             let mut bogus_statement = statement.clone();
@@ -154,7 +156,7 @@ mod test {
             assert!(!proof_system.verify(&bogus_statement, &proof));
 
             let bogus_proof =
-                proof_system.prove(witness, &bogus_statement, &mut rand::thread_rng());
+                proof_system.prove(witness, &bogus_statement, Some(&mut rand::thread_rng()));
             assert!(!proof_system.verify(&bogus_statement, &bogus_proof));
         }};
     }

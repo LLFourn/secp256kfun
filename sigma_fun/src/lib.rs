@@ -1,19 +1,23 @@
+//!
 #![no_std]
 #![allow(non_snake_case)]
+#![feature(external_doc)]
+#![cfg_attr(feautre = "secp256k1", doc(include = "../README.md"))]
+#![deny(missing_docs, warnings)]
 
 use core::fmt::Debug;
-use digest::Digest;
+use digest::Update;
 pub use generic_array::{self, typenum};
 use generic_array::{ArrayLength, GenericArray};
-use rand_chacha::rand_core::{CryptoRng, RngCore};
-pub use rand_chacha::{self, rand_core};
+pub use rand_core;
+use rand_core::{CryptoRng, RngCore};
 
 #[cfg(feature = "alloc")]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 
-#[cfg(feature = "secp256kfun")]
+#[cfg(feature = "secp256k1")]
 pub mod secp256k1;
 
 #[cfg(feature = "ed25519")]
@@ -38,15 +42,42 @@ pub use all::All;
 pub mod ext;
 mod transcript;
 pub use transcript::*;
+mod fiat_shamir;
+pub use fiat_shamir::*;
 
+/// The `Sigma` trait is used to define a Sigma protocol.
 pub trait Sigma {
+    /// The witness for the relation.
     type Witness: Debug;
+    /// The elements of the statement the prover is proving.
     type Statement: Debug;
+    /// The type for the secret the prover creates when generating the proof.
     type AnnounceSecret: Debug;
+    /// The type for the public announcement the prover sends in the first round of the protocol.
     type Announcement: core::cmp::Eq + Debug;
+    /// The type for the response the prover sends in the last round of the protocol.
     type Response: Debug;
+    /// The length as a [`typenum`]
+    ///
+    /// [`typenum`]: crate::typenum
     type ChallengeLength: ArrayLength<u8>;
 
+    /// Generates the prover's announcement message.
+    fn announce(
+        &self,
+        statement: &Self::Statement,
+        announce_secret: &Self::AnnounceSecret,
+    ) -> Self::Announcement;
+    /// Generates the secret data to create the announcement
+    fn gen_announce_secret<Rng: CryptoRng + RngCore>(
+        &self,
+        witness: &Self::Witness,
+        rng: &mut Rng,
+    ) -> Self::AnnounceSecret;
+    /// Uniformly samples a response from the response space of the Sigma protocol.
+    fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response;
+
+    /// Generates the prover's response for the verifier's challenge.
     fn respond(
         &self,
         witness: &Self::Witness,
@@ -55,101 +86,25 @@ pub trait Sigma {
         announce: &Self::Announcement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response;
-    fn announce(
-        &self,
-        statement: &Self::Statement,
-        announce_secret: &Self::AnnounceSecret,
-    ) -> Self::Announcement;
-    fn gen_announce_secret<Rng: CryptoRng + RngCore>(
-        &self,
-        witness: &Self::Witness,
-        statement: &Self::Statement,
-        rng: &mut Rng,
-    ) -> Self::AnnounceSecret;
-    fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response;
+    /// Computes what the announcement must be for the `response` to be valid.
     fn implied_announcement(
         &self,
         statement: &Self::Statement,
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announcement>;
+    /// Writes the sigma protocol's name.
+    ///
+    /// When using [`FiatShamir`] this is written into the transcript.
+    ///
+    /// [`FiatShamir`]: crate::FiatShamir
     fn write_name<W: core::fmt::Write>(&self, write: &mut W) -> core::fmt::Result;
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement);
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement);
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness);
-}
-
-#[derive(Clone, Debug)]
-pub struct FiatShamir<S, T> {
-    transcript: T,
-    sigma: S,
-}
-
-impl<S: Default + Sigma, T: Transcript<S>> Default for FiatShamir<S, T> {
-    fn default() -> Self {
-        Self::new(S::default())
-    }
-}
-
-impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
-    pub fn new(sigma: S) -> Self {
-        let transcript = Transcript::initialize(&sigma);
-
-        Self { transcript, sigma }
-    }
-
-    pub fn prove<Rng: CryptoRng + RngCore>(
-        &self,
-        witness: &S::Witness,
-        statement: &S::Statement,
-        rng: &mut Rng,
-    ) -> CompactProof<S> {
-        let mut transcript = self.transcript.clone();
-        transcript.add_statement(&self.sigma, statement);
-        let mut transcript_rng = transcript.gen_rng(&self.sigma, witness, rng);
-        let announce_secret =
-            self.sigma
-                .gen_announce_secret(witness, statement, &mut transcript_rng);
-        let announce = self.sigma.announce(statement, &announce_secret);
-        let challenge = transcript.get_challenge(&self.sigma, &announce);
-        let response =
-            self.sigma
-                .respond(witness, statement, announce_secret, &announce, &challenge);
-        CompactProof::<S> {
-            challenge,
-            response,
-        }
-    }
-
-    #[must_use]
-    pub fn verify(&self, statement: &S::Statement, proof: &CompactProof<S>) -> bool {
-        let mut transcript = self.transcript.clone();
-        transcript.add_statement(&self.sigma, statement);
-        let implied_announcement =
-            match self
-                .sigma
-                .implied_announcement(statement, &proof.challenge, &proof.response)
-            {
-                Some(announcement) => announcement,
-                None => return false,
-            };
-        let implied_challenge = transcript.get_challenge(&self.sigma, &implied_announcement);
-        implied_challenge == proof.challenge
-    }
-}
-
-pub type CompactProof<S> =
-    CompactProofInternal<GenericArray<u8, <S as Sigma>::ChallengeLength>, <S as Sigma>::Response>;
-
-#[cfg_attr(
-    feature = "serde",
-    serde(crate = "serde_crate"),
-    derive(serde_crate::Serialize, serde_crate::Deserialize)
-)]
-#[derive(Debug, Clone, PartialEq)]
-pub struct CompactProofInternal<C, R> {
-    challenge: C,
-    response: R,
+    /// Hashes the statement.
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement);
+    /// Hashes the announcement.
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement);
+    /// Hashes the witness.
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness);
 }
 
 #[macro_export]

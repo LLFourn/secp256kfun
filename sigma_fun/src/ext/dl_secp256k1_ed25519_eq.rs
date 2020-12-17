@@ -1,6 +1,21 @@
-//! Cross curve proof of Discrete Log equality between secp256k1 and ed25519
+//! Cross curve proof of Discrete Log equality between secp256k1 and ed25519.
 //!
-//! Here "equality" means the two secret scalars have the same 252-bit representaion.
+//!
+//! Here "equality" means the two secret scalars have the same 252-bit representaion. To prove they
+//! have the same representation we make two sets of 252 pedersen commiments and show that:
+//!
+//! 1. For i=0..252 we show the ith commitment is either to 0 or 2^i
+//! 2. That the commiments are the same value for both sets.
+//! 3. The sum of the commitments equals to the claimed public keys on each curve.
+//!
+//! [`CrossCurveDLEQ`] is the main prover/verifier.
+//! The underlying Sigma protocol it uses is in [`CoreProof`].
+//!
+//! This was partially inspired by [MRL-0010] but it re-imagines it as a Sigma protocol.
+//!
+//! # Example
+//!
+//! [MRL-0010]: https://web.getmonero.org/resources/research-lab/pubs/MRL-0010.pdf
 use crate::{
     ed25519,
     or::Either,
@@ -11,7 +26,7 @@ use crate::{
         rand_core::{CryptoRng, RngCore},
         s, Point as PointP, Scalar as ScalarP, G as GP,
     },
-    All, And, Eq, FiatShamir, Or, Sigma, Transcript,
+    All, And, Eq, FiatShamir, Or, ProverTranscript, Sigma, Transcript,
 };
 use alloc::vec::Vec;
 use curve25519_dalek::{
@@ -21,14 +36,14 @@ use curve25519_dalek::{
 use generic_array::typenum::{U252, U31};
 static GQ: &'static curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
-// The underlying proof algorithm we'll be using to prove the relationship between the commitments
-// and the keys. We are trying to prove that X_p = x * G_p and X_q = x * G_q. The approach is to
-// split x into 2×252 bit pedersen commitments for eacah curve and prove they commit to the same
-// bit.
+/// The underlying proof algorithm we'll be using to prove the relationship between the commitments
+/// and the keys. We are trying to prove that X_p = x * G_p and X_q = x * G_q. The approach is to
+/// split x into 2×252 bit pedersen commitments for each curve and prove they commit to the same
+/// bit.
 //
-// Note the commitments are in the form commit(b) = r * G + b* H where G is the standard basepoint
-// for each curve.
-type CoreProof = And<
+/// Note the commitments are in the form commit(b) = r * G + b* H where G is the standard basepoint
+/// for each curve.
+pub type CoreProof = And<
     All<
         U252, // For each of the 252 bits of the secret key
         // We show that both commitments are a commitment to zero OR to 2^i for i = 0..252
@@ -43,6 +58,7 @@ type CoreProof = And<
 >;
 const COMMITMENT_BITS: usize = 252;
 
+/// The proof the a public key on secp256k1 and ed25519 have the same 252-bit secret key.
 #[cfg_attr(
     feature = "serde",
     serde(crate = "serde_crate"),
@@ -50,12 +66,17 @@ const COMMITMENT_BITS: usize = 252;
 )]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CrossCurveDLEQProof {
-    claim: (PointP, PointQ),
-    sum_blindings: (ScalarP<Public, Zero>, ScalarQ),
-    commitments: Vec<(PointP, PointQ)>,
-    proof: crate::CompactProof<CoreProof>,
+    /// The sum of the Pedersen blindings
+    pub sum_blindings: (ScalarP<Public, Zero>, ScalarQ),
+    /// The 252 pairs of commitments
+    pub commitments: Vec<(PointP, PointQ)>,
+    /// The core proof which shows the pairs of commitments commit to the same bit and the resulting
+    /// sum is the claimed points.
+    pub proof: crate::CompactProof<CoreProof>,
 }
 
+///
+#[derive(Debug, Clone)]
 pub struct CrossCurveDLEQ<T> {
     HQ: PointQ,
     HP: PointP,
@@ -63,7 +84,8 @@ pub struct CrossCurveDLEQ<T> {
     powers_of_two: Vec<(PointP, PointQ)>,
 }
 
-impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
+impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
+    /// Creates a new prover given the the additional point to be used inthe Pedersen commitment for each curve.
     pub fn new(HP: PointP, HQ: PointQ) -> Self {
         let powers_of_two = core::iter::successors(Some((HP.clone(), HQ.clone())), |(H2P, H2Q)| {
             // compute 2^i * H for i = 0..252 by successively adding the result of the last addition
@@ -78,13 +100,15 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
         Self {
             HP,
             HQ,
-            core_proof_system: FiatShamir::new(CoreProof::default()),
+            core_proof_system: FiatShamir::<CoreProof, T>::default(),
             powers_of_two,
         }
     }
 
     /// Generates the two corresponding points for the same 252-bit ed25519
     /// secret and generates a proof that they have the same discrete logarithm.
+    ///
+    /// Returns the proof and the two points that form the equality claim.
     ///
     /// # Panics
     ///
@@ -94,7 +118,10 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
         &self,
         secret: &ScalarQ,
         rng: &mut (impl CryptoRng + RngCore),
-    ) -> CrossCurveDLEQProof {
+    ) -> (CrossCurveDLEQProof, (PointP, PointQ))
+    where
+        T: ProverTranscript<CoreProof>,
+    {
         // Must be a 252 bit ed25519 key i.e. must not have it's 253rd bit set
         assert!(secret.as_bytes()[31] & 0b00010000 == 0);
 
@@ -161,14 +188,16 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
 
         let proof = self
             .core_proof_system
-            .prove(&proof_witness, &statement, rng);
+            .prove(&proof_witness, &statement, Some(rng));
 
-        CrossCurveDLEQProof {
+        (
+            CrossCurveDLEQProof {
+                sum_blindings,
+                commitments,
+                proof,
+            },
             claim,
-            sum_blindings,
-            commitments,
-            proof,
-        }
+        )
     }
 
     /// Genrates the statement for the core proof from the commitments
@@ -212,13 +241,13 @@ impl<T: Transcript<CoreProof>> CrossCurveDLEQ<T> {
     }
 
     #[must_use]
-    pub fn verify(&self, proof: &CrossCurveDLEQProof) -> bool {
+    /// Verify the claimed points have the same 252-bit discrete logarithm
+    pub fn verify(&self, proof: &CrossCurveDLEQProof, claim: (PointP, PointQ)) -> bool {
         // Make sure the claimed ed25519 key is in the prime-order subgroup
-        if proof.commitments.len() != COMMITMENT_BITS || !proof.claim.1.is_torsion_free() {
+        if proof.commitments.len() != COMMITMENT_BITS || !claim.1.is_torsion_free() {
             return false;
         }
-        let statement =
-            self.generate_statement(&proof.sum_blindings, &proof.claim, &proof.commitments);
+        let statement = self.generate_statement(&proof.sum_blindings, &claim, &proof.commitments);
         match statement {
             Some(statement) => self.core_proof_system.verify(&statement, &proof.proof),
             None => false,
@@ -249,9 +278,12 @@ mod test {
     use crate::{
         ed25519::test::{ed25519_point, ed25519_scalar},
         secp256k1::fun::proptest::point as secp256k1_point,
+        HashTranscript,
     };
     use ::proptest::prelude::*;
+    use rand_chacha::ChaCha20Rng;
     use sha2::Sha256;
+    type Transcript = HashTranscript<Sha256, ChaCha20Rng>;
 
     #[test]
     #[should_panic]
@@ -260,7 +292,7 @@ mod test {
         let high_scalar = -ScalarQ::one();
         let HP = PointP::random(&mut rand::thread_rng());
         let HQ = &ScalarQ::random(&mut rand::thread_rng()) * &ED25519_BASEPOINT_TABLE;
-        let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
+        let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
         let _ = proof_system.prove(&high_scalar, &mut rand::thread_rng());
     }
 
@@ -272,9 +304,9 @@ mod test {
             HP in secp256k1_point(),
             HQ in ed25519_point(),
         ) {
-            let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
-            let proof = proof_system.prove(&secret, &mut rand::thread_rng());
-            assert!(proof_system.verify(&proof));
+            let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
+            let (proof, claim) = proof_system.prove(&secret, &mut rand::thread_rng());
+            assert!(proof_system.verify(&proof, claim));
         }
     }
 
@@ -287,8 +319,8 @@ mod test {
             HP in secp256k1_point(),
             HQ in ed25519_point(),
         ) {
-            let proof_system = CrossCurveDLEQ::<Sha256>::new(HP, HQ);
-            let proof = proof_system.prove(&secret, &mut rand::thread_rng());
+            let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
+            let (proof, _) = proof_system.prove(&secret, &mut rand::thread_rng());
 
             let proof_serialized = bincode::serialize(&proof).unwrap();
             let proof_deserialized: CrossCurveDLEQProof =
