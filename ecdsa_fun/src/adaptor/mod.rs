@@ -12,16 +12,17 @@
 //!
 //! ```
 //! use ecdsa_fun::{
-//!     adaptor::{Adaptor, EncryptedSignature},
+//!     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
 //!     fun::{digest::Digest, g, marker::*, nonce, Scalar, G},
 //! };
 //! use rand::rngs::ThreadRng;
+//! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
-//! // use deterministic nonce generation
-//! let adaptor = Adaptor::<Sha256, nonce::Deterministic<Sha256>>::default();
 //! // use synthetic nonce generation (preferred)
-//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-//! let adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
+//! type NonceGen = nonce::Synthetic<Sha256, nonce::GlobalRng<ThreadRng>>;
+//! // needed internally to create/verify the DLEQ proof
+//! type Transcript = HashTranscript<Sha256, ChaCha20Rng>;
+//! let adaptor = Adaptor::<Transcript, NonceGen>::default();
 //! let secret_signing_key = Scalar::random(&mut rand::thread_rng());
 //! let verification_key = adaptor.ecdsa.verification_key_for(&secret_signing_key);
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
@@ -62,7 +63,8 @@ use secp256kfun::{
     derive_nonce_rng, digest::generic_array::typenum::U32, g, hash::AddTag, marker::*,
     nonce::NonceGen, s, Point, Scalar, G,
 };
-use sigma_fun::{secp256k1, Eq, FiatShamir, Transcript};
+pub use sigma_fun::HashTranscript;
+use sigma_fun::{secp256k1, Eq, FiatShamir, ProverTranscript, Transcript};
 
 mod encrypted_signature;
 pub use encrypted_signature::*;
@@ -70,36 +72,36 @@ pub use encrypted_signature::*;
 pub type DLEQ = Eq<secp256k1::DLG<U32>, secp256k1::DL<U32>>;
 
 #[derive(Clone, Debug)]
-pub struct Adaptor<Transcript, NonceGen> {
+pub struct Adaptor<T, NonceGen> {
     pub ecdsa: ECDSA<NonceGen>,
-    pub dleq_proof_system: FiatShamir<DLEQ, Transcript>,
+    pub dleq_proof_system: FiatShamir<DLEQ, T>,
 }
 
 impl<T, NG> Default for Adaptor<T, NG>
 where
     NG: Default + AddTag,
-    T: Transcript<DLEQ>,
+    T: Transcript<DLEQ> + Default,
 {
     fn default() -> Self {
         Self::new(NG::default())
     }
 }
 
-impl<T: Transcript<DLEQ>, NG: AddTag> Adaptor<T, NG> {
+impl<T: Transcript<DLEQ> + Default, NG: AddTag> Adaptor<T, NG> {
     pub fn new(nonce_gen: NG) -> Self {
         Self {
             ecdsa: ECDSA::new(nonce_gen),
-            dleq_proof_system: FiatShamir::<_, T>::new(DLEQ::default()),
+            dleq_proof_system: FiatShamir::<DLEQ, T>::default(),
         }
     }
 }
 
-impl<T: Transcript<DLEQ>> Adaptor<T, ()> {
+impl<T: Transcript<DLEQ> + Default> Adaptor<T, ()> {
     /// Create an `Adaptor` instance that can do verification only
     /// # Example
     /// ```
-    /// use ecdsa_fun::adaptor::Adaptor;
-    /// let adaptor = Adaptor::<sha2::Sha256, _>::verify_only();
+    /// use ecdsa_fun::adaptor::{Adaptor, HashTranscript};
+    /// let adaptor = Adaptor::<HashTranscript<sha2::Sha256>, _>::verify_only();
     /// ```
     pub fn verify_only() -> Self {
         Self::new(())
@@ -111,6 +113,9 @@ where
     T: Transcript<DLEQ>,
     NG: NonceGen,
 {
+}
+
+impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     /// Create an encryted signature A.K.A. "adaptor signature" A.K.A. "pre-signature".
     ///
     /// See the [synopsis] for usage.
@@ -121,7 +126,11 @@ where
         signing_key: &Scalar,
         encryption_key: &Point,
         message: &[u8; 32],
-    ) -> EncryptedSignature {
+    ) -> EncryptedSignature
+    where
+        T: ProverTranscript<DLEQ>,
+        NG: NonceGen,
+    {
         let x = signing_key;
         let Y = encryption_key;
         let m = Scalar::from_bytes_mod_order(message.clone()).mark::<Public>();
@@ -129,7 +138,7 @@ where
             nonce_gen => self.ecdsa.nonce_gen,
             secret => x,
             public => [Y, &message[..]],
-            seedable_rng => sigma_fun::rand_chacha::ChaCha20Rng
+            seedable_rng => rand_chacha::ChaCha20Rng
         );
 
         let r = Scalar::random(&mut rng);
@@ -138,7 +147,7 @@ where
 
         let proof = self
             .dleq_proof_system
-            .prove(&r, &(R_hat, (*Y, R)), &mut rng);
+            .prove(&r, &(R_hat, (*Y, R)), Some(&mut rng));
 
         let R_x = Scalar::from_bytes_mod_order(R.to_xonly().into_bytes())
             .mark::<(Public, NonZero)>()
@@ -162,15 +171,13 @@ where
         }
         .into()
     }
-}
 
-impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     /// Returns the corresponding encryption key for a decryption key
     ///
     /// # Example
     /// ```
-    /// use ecdsa_fun::{ adaptor::Adaptor, fun::Scalar };
-    /// let adaptor = Adaptor::<sha2::Sha256,()>::default();
+    /// # use ecdsa_fun::{ adaptor::{Adaptor, HashTranscript}, fun::Scalar };
+    /// # let adaptor = Adaptor::<HashTranscript::<sha2::Sha256>,()>::default();
     /// let secret_decryption_key = Scalar::random(&mut rand::thread_rng());
     /// let public_encryption_key = adaptor.encryption_key_for(&secret_decryption_key);
     pub fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
@@ -286,12 +293,14 @@ mod test {
     use super::*;
     use crate::fun::nonce;
     use rand::rngs::ThreadRng;
+    use rand_chacha::ChaCha20Rng;
     use sha2::Sha256;
+    use sigma_fun::HashTranscript;
 
     #[test]
     fn end_to_end() {
         let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-        let ecdsa_adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
+        let ecdsa_adaptor = Adaptor::<HashTranscript<Sha256, ChaCha20Rng>, _>::new(nonce_gen);
         for _ in 0..20 {
             let msg = b"hello world you are beautiful!!!";
             let signing_key = Scalar::random(&mut rand::thread_rng());
