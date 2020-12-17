@@ -7,13 +7,13 @@ use sigma_fun::CompactProof;
 ///
 /// [`NonZero`]: secp256kfun::marker::NonZero
 #[derive(Clone, PartialEq)]
-pub struct PointNonce {
+pub(crate) struct PointNonce {
     pub point: Point,
-    pub(crate) x_scalar: Scalar<Public>,
+    pub x_scalar: Scalar<Public>,
 }
 
 secp256kfun::impl_fromstr_deserailize! {
-    name => "33-byte compressed secp256k1 point",
+    name => "compressed secp256k1 point",
     fn from_bytes(bytes: [u8;33]) -> Option<PointNonce> {
         Point::from_bytes(bytes).and_then(|point| {
             Scalar::from_bytes_mod_order(point.to_xonly().into_bytes()).mark::<Public>()
@@ -34,11 +34,49 @@ secp256kfun::impl_display_debug_serialize! {
     derive(serde::Deserialize, serde::Serialize),
     serde(crate = "serde_crate")
 )]
-pub struct EncryptedSignature {
+pub(crate) struct EncryptedSignatureInternal {
     pub R: PointNonce,
     pub R_hat: Point,
     pub s_hat: Scalar<Public>,
     pub proof: CompactProof<DLEQ>,
+}
+
+/// An "encrypted" ECDSA signature A.K.A. adaptor signature.
+///
+/// The implementation interally relies on a [`sigma_fun`] to produce the discrete logarithm
+/// equality proof. This can only be created by [`Adaptor::encrypted_sign`].
+///
+/// [`Adaptor::encrypted_sign`]: crate::adaptor::Adaptor::encrypted_sign
+#[derive(Clone, PartialEq)]
+pub struct EncryptedSignature(pub(crate) EncryptedSignatureInternal);
+
+#[cfg(feature = "serde")]
+secp256kfun::impl_display_debug_serialize! {
+    fn to_bytes(es: &EncryptedSignature) -> [u8;162] {
+        let mut bytes = [0u8;162];
+        bytes.copy_from_slice(bincode::serialize(&es.0).unwrap().as_slice());
+        bytes
+    }
+}
+
+#[cfg(feature = "serde")]
+secp256kfun::impl_fromstr_deserailize! {
+    name => "ECDSA adaptor signature",
+    fn from_bytes(bytes: [u8;162]) -> Option<EncryptedSignature> {
+        bincode::deserialize(&bytes[..]).ok().map(EncryptedSignature)
+    }
+}
+
+impl From<EncryptedSignatureInternal> for EncryptedSignature {
+    fn from(es: EncryptedSignatureInternal) -> Self {
+        EncryptedSignature(es)
+    }
+}
+
+impl From<EncryptedSignature> for EncryptedSignatureInternal {
+    fn from(es: EncryptedSignature) -> Self {
+        es.0
+    }
 }
 
 #[cfg(test)]

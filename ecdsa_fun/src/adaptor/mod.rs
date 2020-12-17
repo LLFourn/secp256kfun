@@ -65,7 +65,7 @@ use secp256kfun::{
 use sigma_fun::{secp256k1, Eq, FiatShamir, Transcript};
 
 mod encrypted_signature;
-pub use encrypted_signature::{EncryptedSignature, PointNonce};
+pub use encrypted_signature::*;
 
 pub type DLEQ = Eq<secp256k1::DLG<U32>, secp256k1::DL<U32>>;
 
@@ -151,7 +151,7 @@ where
             .mark::<(Public, NonZero)>()
             .expect("computationally unreachable");
 
-        EncryptedSignature {
+        EncryptedSignatureInternal {
             R: PointNonce {
                 point: R,
                 x_scalar: R_x,
@@ -160,6 +160,7 @@ where
             s_hat,
             proof,
         }
+        .into()
     }
 }
 
@@ -192,12 +193,12 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
         let X = verification_key;
         let Y = encryption_key;
         let m = Scalar::from_bytes_mod_order(message_hash.clone());
-        let EncryptedSignature {
+        let EncryptedSignature(EncryptedSignatureInternal {
             R,
             R_hat,
             proof,
             s_hat,
-        } = ciphertext;
+        }) = ciphertext;
 
         if !self
             .dleq_proof_system
@@ -227,8 +228,9 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     pub fn decrypt_signature(
         &self,
         decryption_key: &Scalar<impl Secrecy, NonZero>,
-        EncryptedSignature { R, s_hat, .. }: EncryptedSignature,
+        ciphertext: EncryptedSignature,
     ) -> Signature {
+        let EncryptedSignature(EncryptedSignatureInternal { R, s_hat, .. }) = ciphertext;
         let y = decryption_key;
         let mut s = s!(s_hat * { y.invert() });
         s.conditional_negate(s.is_high());
@@ -257,14 +259,14 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
         signature: &Signature<impl Secrecy>,
         ciphertext: &EncryptedSignature,
     ) -> Option<Scalar> {
+        let EncryptedSignature(EncryptedSignatureInternal { s_hat, R, .. }) = ciphertext;
         // Check we are not looking at some unrelated signature
-        if ciphertext.R.x_scalar != signature.R_x
+        if R.x_scalar != signature.R_x
                 // Enforce low_s
             || (signature.s.is_high() && self.ecdsa.enforce_low_s)
         {
             return None;
         }
-        let EncryptedSignature { s_hat, .. } = ciphertext;
         let s = &signature.s;
         let y = s!({ s.invert() } * s_hat);
         let Y = g!(y * G);
