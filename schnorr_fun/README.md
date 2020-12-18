@@ -1,4 +1,9 @@
-# SchnorrFun!
+# SchnorrFun!  [![crates_badge]][crates_url] [![docs_badge]][docs_url] 
+
+[docs_badge]: https://docs.rs/schnorr_fun/badge.svg
+[docs_url]: https://docs.rs/schnorr_fun
+[crates_badge]: https://img.shields.io/crates/v/schnorr_fun.svg
+[crates_url]: https://crates.io/crates/schnorr_fun
 
 Generate and verify Schnorr signatures on secp256k1. Uses [secp256kfun].
 

@@ -1,6 +1,11 @@
-# SigmaFUN!
+# SigmaFUN! [![crates_badge]][crates_url] [![docs_badge]][docs_url] 
 
-A framework for making Sigma protocols fun!
+[docs_badge]: https://docs.rs/sigma_fun/badge.svg
+[docs_url]: https://docs.rs/sigma_fun
+[crates_badge]: https://img.shields.io/crates/v/sigma_fun.svg
+[crates_url]: https://crates.io/crates/sigma_fun
+
+A rust library for making Sigma protocols fun!
 
 ## Use
 
@@ -10,8 +15,8 @@ A framework for making Sigma protocols fun!
 sigma_fun = {version = "0.1", no-default-features = true, features = ["alloc"]}
 # To create secp256k1 non-interactive proofs and serialize them
 sigma_fun = { version = "0.1", features = ["secp256k1", "serde"] }
-# needed for non-interactive proofs
-rand_chacha = "0.3"
+# you need a hash function and an rng non-interactive proofs
+rand_chacha = "0.2"
 sha2 = "0.9"
 ```
 
@@ -160,5 +165,6 @@ let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng(
 - [ZKP](https://crates.io/crates/zkp) -- Helped inspire this library and is much more developed. `zkp` is opinionated about hash function (sha3) and group (ristretto) and only supports `eq` and `and` type composition.
 
 [`serde`]: https://docs.rs/serde
-[`Sigma`]: https://docs.rs/sigma_fun/trait.Sigma.html
+[`Sigma`]: https://docs.rs/sigma_fun/latest/sigma_fun/trait.Sigma.html
 [Shoenmaker]: https://www.win.tue.nl/~berry/CryptographicProtocols/LectureNotes.pdf
+

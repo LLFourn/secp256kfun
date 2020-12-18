@@ -1,4 +1,9 @@
-# ECDSAFun!
+# ECDSAFun! [![crates_badge]][crates_url] [![docs_badge]][docs_url] 
+
+[docs_badge]: https://docs.rs/ecdsa_fun/badge.svg
+[docs_url]: https://docs.rs/ecdsa_fun
+[crates_badge]: https://img.shields.io/crates/v/ecdsa_fun.svg
+[crates_url]: https://crates.io/crates/ecdsa_fun
 
 Generate and verify ECDSA signatures on secp256k1.
 Uses [secp256kfun].
