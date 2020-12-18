@@ -13,7 +13,7 @@ readme = "README.md"
 keywords = ["bitcoin", "secp256k1"]
 
 [package.metadata.docs.rs]
-features = ["serde", "libsecp_compat"]
+features = ["all"]
 
 [dependencies]
 digest = "0.9"

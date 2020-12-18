@@ -1,6 +1,6 @@
 # SigmaFUN!
 
-A framework for making sigma protocols fun!
+A framework for making Sigma protocols fun!
 
 ## Use
 
@@ -27,16 +27,14 @@ Sigma protocols are three-round *honest verifier zero knowledge protocols* and a
 They are extremely useful because they are easy to make non-interactive through the Fiat-Shamir transform and support various types of composition.
 Sigma protocols can be used to construct signature schemes, verifiable random functions, authentication schemes, anonymous credential schemes and many more exotic things.
 
-For a basic background on Sigma protocols see section 5 of
-[Shoenmaker](https://www.win.tue.nl/~berry/CryptographicProtocols/LectureNotes.pdf)'s excellent
-lecture notes.
+For a basic background on Sigma protocols see section 5 of [Shoenmaker]'s excellent lecture notes.
 
 ## Composition
 
-One of the best aspects of Sigma protocols is that if you have two Sigma protocols for proving
-statements `A` and `B` you can easily compose them into a protocol for proving `A or B`. The
-resulting protocol will also be a Sigma protocol! At the moment this library supports the following
-combinators:
+Sigma protocols can be securely combined with each other to form a new Sigma protocol. For example,
+if you have two Sigma protocols for proving statements `A` and `B` you can compose them into a
+protocol for proving `A or B`. The resulting protocol will also be a Sigma protocol! At the moment
+this library supports the following combinators:
 
 - `or(A,B)`  proves that one of the two statements is true. 
 - `and(A,B)` proves both statements are true.
@@ -49,11 +47,11 @@ Unfortunately, at the moment `n` in `all` and `eq-all` must be known at compile 
 
 ## The `Sigma` trait
 
-This library provides a `Sigma` trait which can be implemented for any Sigma protocol regardless of how the underlying proof is structured.
-Anything implementing `Sigma` can then be composed with the combinators to create more intricate Sigma protocols.
+This library provides a [`Sigma`] trait which can be implemented for any Sigma protocol regardless of how the underlying proof is structured.
+Anything implementing [`Sigma`] can then be composed with the combinators to create more intricate Sigma protocols.
 Finally, the protocol can be made non-interactive with the resulting proofs implementing [`serde`] serialization traits.
 
-In this library we instantiate Sigma protocols with five main algorithms:
+We define the [`Sigma`] trait with five main core functions:
 
 - **`gen_announce_secret(rng) -> announce_secret`**: Generates the secret random value used in the proof from a given random number generator `rng`
 
@@ -99,6 +97,13 @@ The verifier can just check that the hash was computed correctly and the respons
 
 ## Example
 
+
+A Pedersen commitment is in the form `C = r * G + c * H` where `c` is the value commited to a value for `h` such that `H = h * G` is unknown to the committer.
+For a background on Pedersen commitments see [Shoenmaker] section 3.2.2.
+Suppose we want to prove that `c` is either 0 or 1 in Zero knowledge to someone who only knows `C`.
+Here is how to construct a protocol using a non-interactive proof that we know `r` such that `C = r * G` OR `C - H = r * G`.
+This proves that `c` is equal to 0 or 1.
+
 ```rust 
 use std::string::ToString;
 use sigma_fun::{ typenum::U16, FiatShamir, HashTranscript, Either, Or, secp256k1::{ self, fun::{Point, Scalar, G, marker::*, g}}};
@@ -119,7 +124,7 @@ let (C,r) = {
     (C,r)
 };
 
-// Our strategy is to prove that we know x such that either C = x * G or C - H = x * G using 
+// Our strategy is to prove that we know r such that either C = r * G or C - H = r * G using 
 // an OR composition between two standard knowledge of discrete logarithm proofs.
 let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().unwrap());
 // since we are commiting to 1 we know the witness for the right hand side statement.
@@ -130,10 +135,11 @@ type Protocol = Or::<secp256k1::DLG<L>, secp256k1::DLG<L>>;
 
 // Every protocol has an unambiguous name which is hashed into the transcript for protocol separation purposes.
 assert_eq!(Protocol::default().to_string(), "or(DLG(secp256k1),DLG(secp256k1))");
-// we want an non-interactive proof system so we apply the Fiat-Shamir transform with Sha256 doing the transform.
+// we want a non-interactive proof system so we apply the Fiat-Shamir transform with Sha256 as the challenge hash.
+// We use ChaCha20Rng to help produce our announcement.
 let proof_system  = FiatShamir::<Protocol, HashTranscript<Sha256, ChaCha20Rng>>::default();
 
-// Make the non-interactive proof
+// Make the non-interactive proof -- pass in a system rng to make the proof more robust.
 let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng()));
 
 // The verifier gets sent (C, proof)
@@ -144,12 +150,15 @@ let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng(
     let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().unwrap());
     // and verify it against the proof
     assert!(proof_system.verify(&statement, &proof));
+    // The verifier is convinced of the statement and nothing else
 }
 
 ```
 
 ## See Also
 
-- [ZKP](https://crates.io/crates/zkp) crate -- Helped inspire this library. `zkp` is opinionated about hash function (sha3) and group (ristretto) and only supports `eq` and `and` type composition.
+- [ZKP](https://crates.io/crates/zkp) -- Helped inspire this library and is much more developed. `zkp` is opinionated about hash function (sha3) and group (ristretto) and only supports `eq` and `and` type composition.
 
 [`serde`]: https://docs.rs/serde
+[`Sigma`]: https://docs.rs/sigma_fun/trait.Sigma.html
+[Shoenmaker]: https://www.win.tue.nl/~berry/CryptographicProtocols/LectureNotes.pdf

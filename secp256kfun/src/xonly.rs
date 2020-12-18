@@ -14,7 +14,7 @@ use rand_core::{CryptoRng, RngCore};
 /// because sometimes all you need is the x-coordinate and you don't want to
 /// store the full point in memory.
 ///
-/// [`Point<T,S,Z>`]: crate::Point
+/// [`Point<EvenY,S,Z>`]: crate::Point
 #[derive(Clone, Copy, Eq, Hash)]
 pub struct XOnly(pub(crate) backend::XOnly);
 

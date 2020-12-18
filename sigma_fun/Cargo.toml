@@ -3,6 +3,8 @@ name = "sigma_fun"
 version = "0.1.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2018"
+license = "0BSD"
+description = "A framework for making Sigma protocols fun!"
 
 [package.metadata.docs.rs]
 features = ["all"]
