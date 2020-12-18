@@ -4,6 +4,6 @@ members = [
     "secp256kfun",
     "schnorr_fun",
     "ecdsa_fun",
-    "parity_backend",
+    "secp256kfun_parity_backend",
     "sigma_fun"
 ]

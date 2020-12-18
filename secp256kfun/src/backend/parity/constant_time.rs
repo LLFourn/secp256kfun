@@ -1,5 +1,5 @@
 use super::{BasePoint, XOnly, G_TABLE};
-use parity_backend::{
+use secp256kfun_parity_backend::{
     field::Field,
     group::{Affine, Jacobian, JACOBIAN_INFINITY},
     scalar::Scalar,
