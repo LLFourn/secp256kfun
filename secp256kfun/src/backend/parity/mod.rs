@@ -1,5 +1,5 @@
-pub use parity_backend::scalar::Scalar;
-use parity_backend::{
+pub use secp256kfun_parity_backend::scalar::Scalar;
+use secp256kfun_parity_backend::{
     ecmult::{ECMultContext, ECMultGenContext},
     field::Field,
     group::{Affine, Jacobian, JACOBIAN_INFINITY},

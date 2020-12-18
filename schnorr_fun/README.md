@@ -9,14 +9,14 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 
 ``` toml
 [dependencies]
-schnorr_fun = "0.3"
+schnorr_fun = "0.4"
 sha2 = "0.9"
 ```
 
 ### Should use?
 
 This library and [secp256kfun] are experimental.
-BIP-340 is still in review so APIs are subject to change.
+
 
 ## Synopsis
 

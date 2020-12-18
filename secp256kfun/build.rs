@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use parity_backend::{
+use secp256kfun_parity_backend::{
     ecmult::{ECMultContext, ECMultGenContext},
     group::AffineStorage,
 };
@@ -39,7 +39,7 @@ fn write_ecmult_gen_table(file: &mut File) -> Result<(), io::Error> {
         for i in 0..16 {
             let pg: AffineStorage = prec[j][i].clone().into();
             file.write_fmt(format_args!(
-                "        parity_backend::group::AffineStorage::new(parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {}), parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {})),",
+                "        secp256kfun_parity_backend::group::AffineStorage::new(secp256kfun_parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {}), secp256kfun_parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {})),",
                 pg.x.0[7], pg.x.0[6], pg.x.0[5], pg.x.0[4], pg.x.0[3], pg.x.0[2], pg.x.0[1], pg.x.0[0],
                 pg.y.0[7], pg.y.0[6], pg.y.0[5], pg.y.0[4], pg.y.0[3], pg.y.0[2], pg.y.0[1], pg.y.0[0]
             ))?;
@@ -59,7 +59,7 @@ fn write_ecmult_table(file: &mut File) -> Result<(), io::Error> {
     for pg in pre_g {
         file.write_fmt(
             format_args!(
-                "    parity_backend::group::AffineStorage::new(parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {}), parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {})),",
+                "    secp256kfun_parity_backend::group::AffineStorage::new(secp256kfun_parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {}), secp256kfun_parity_backend::field::FieldStorage::new({}, {}, {}, {}, {}, {}, {}, {})),",
                 pg.x.0[7], pg.x.0[6], pg.x.0[5], pg.x.0[4], pg.x.0[3], pg.x.0[2], pg.x.0[1], pg.x.0[0],
                 pg.y.0[7], pg.y.0[6], pg.y.0[5], pg.y.0[4], pg.y.0[3], pg.y.0[2], pg.y.0[1], pg.y.0[0]
             )
