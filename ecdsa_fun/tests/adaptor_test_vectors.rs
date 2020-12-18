@@ -3,7 +3,7 @@ extern crate serde_crate as serde;
 
 static DLC_SPEC_JSON: &'static str = include_str!("./test_vectors.json");
 use ecdsa_fun::{
-    adaptor::{Adaptor, EncryptedSignature},
+    adaptor::{Adaptor, EncryptedSignature, HashTranscript},
     fun::{Point, Scalar},
     Signature,
 };
@@ -27,7 +27,7 @@ struct TestVector {
 
 #[test]
 fn run_test_vectors() {
-    let ecdsa_adaptor = Adaptor::<Sha256, _>::verify_only();
+    let ecdsa_adaptor = Adaptor::<HashTranscript<Sha256>, _>::verify_only();
     let test_vectors = serde_json::from_str::<Vec<TestVector>>(DLC_SPEC_JSON).unwrap();
     for t in test_vectors {
         if run_test_vector(&ecdsa_adaptor, &t) {
@@ -38,7 +38,7 @@ fn run_test_vectors() {
     }
 }
 
-fn run_test_vector(ecdsa_adaptor: &Adaptor<Sha256, ()>, t: &TestVector) -> bool {
+fn run_test_vector(ecdsa_adaptor: &Adaptor<HashTranscript<Sha256>, ()>, t: &TestVector) -> bool {
     if !ecdsa_adaptor.verify_encrypted_signature(
         &t.public_signing_key,
         &t.encryption_key,

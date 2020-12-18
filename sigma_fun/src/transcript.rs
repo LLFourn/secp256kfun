@@ -1,24 +1,31 @@
+use core::marker::PhantomData;
+
 use crate::{
     rand_core::{CryptoRng, RngCore, SeedableRng},
     typenum::{
         marker_traits::NonZero, type_operators::IsLessOrEqual, PartialDiv, Unsigned, U32, U64,
     },
+    Sigma,
 };
-use digest::{BlockInput, Digest};
-use generic_array::{ArrayLength, GenericArray};
-use rand_chacha::ChaCha20Rng;
+use digest::{BlockInput, FixedOutput, Update};
+use generic_array::GenericArray;
 
-use crate::Sigma;
+/// A trait for a Fiat-Shamir proof transcript.
+///
+/// Really this is just a trait around a cryptographic hash that can produce a Fiat-Shamir challenge
+/// from the statement and the announcement.
 pub trait Transcript<S: Sigma>: Clone {
-    type Rng: CryptoRng + RngCore;
-    fn initialize(sigma: &S) -> Self;
+    /// Initializes the transcript. This must be called once when the prover is created. It
+    /// shouldn't be called before each proof. Rather it should be called once and then the
+    /// transcript should be cloned for each proof.
+    fn initialize(&mut self, sigma: &S);
+
+    /// Adds the prover's statement to the transcript. This must be called before [`get_challenge`].
+    ///
+    /// [`get_challenge`]: Self::get_challenge
     fn add_statement(&mut self, sigma: &S, statement: &S::Statement);
-    fn gen_rng<R: CryptoRng + RngCore>(
-        &self,
-        sigma: &S,
-        witness: &S::Witness,
-        in_rng: &mut R,
-    ) -> Self::Rng;
+
+    /// Gets the verifier's synthetic challenge for the non-interactive proof.
     fn get_challenge(
         self,
         sigma: &S,
@@ -26,59 +33,83 @@ pub trait Transcript<S: Sigma>: Clone {
     ) -> GenericArray<u8, S::ChallengeLength>;
 }
 
+/// A `Transcript` that can also generate a rng.
+///
+/// The prover needs an rng to generate it's [`AnnounceSecret`].
+///
+/// [`AnnounceSecret`]: crate::Sigma::AnnounceSecret
+pub trait ProverTranscript<S: Sigma> {
+    /// The type of Rng the transcript generates.
+    type Rng: CryptoRng + RngCore;
+    /// Generates an RNG from the transcript state and an input rng (`in_rng`) which should provide
+    /// system randomness.
+    fn gen_rng<R: CryptoRng + RngCore>(
+        &self,
+        sigma: &S,
+        witness: &S::Witness,
+        in_rng: Option<&mut R>,
+    ) -> Self::Rng;
+}
+
+#[derive(Clone, Debug)]
+/// A transcript which consists of a hash with fixed length output and a seedable RNG.
+///
+/// The [`SeedableRng`] specified must have the same seed length as the hash's output length.
+/// `R` may be set to `()` but the it won't implement [`ProverTranscript`].
+///
+/// [`SeedableRng`]: rand_core::SeedableRng
+pub struct HashTranscript<H, R = ()> {
+    hash: H,
+    rng: PhantomData<R>,
+}
+
+impl<H: Default, R> Default for HashTranscript<H, R> {
+    fn default() -> Self {
+        HashTranscript {
+            hash: H::default(),
+            rng: PhantomData,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct WriteHash<H>(H);
 
-impl<H: Digest> core::fmt::Write for WriteHash<H> {
+impl<H: Update> core::fmt::Write for WriteHash<H> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.0.update(s.as_bytes());
         Ok(())
     }
 }
 
-impl<H: BlockInput<BlockSize = U64> + Digest<OutputSize = U32> + Default + Clone, S: Sigma>
-    Transcript<S> for H
+/// Implements a transcript for any hash that outputs 32 bytes but with a block size of 64 bytes (e.g. SHA256).
+///
+/// The implementation first tags the SHA256 instance with the Sigma protocol's name.
+impl<H, S: Sigma, R: Clone> Transcript<S> for HashTranscript<H, R>
 where
     S::ChallengeLength: IsLessOrEqual<U32>,
     <S::ChallengeLength as IsLessOrEqual<U32>>::Output: NonZero,
+    H: BlockInput<BlockSize = U64> + FixedOutput<OutputSize = U32> + Update + Default + Clone,
 {
-    type Rng = ChaCha20Rng;
-
-    fn initialize(sigma: &S) -> Self {
+    fn initialize(&mut self, sigma: &S) {
         let hashed_tag = {
             let mut hash = WriteHash(H::default());
             sigma
                 .write_name(&mut hash)
                 .expect("writing to hash won't fail");
-            hash.0.finalize()
+            hash.0.finalize_fixed()
         };
-        let mut tagged_hash = H::default();
+        // I started doing this with plans to make this more generic than it is.
+        // This loop will always run twice
         let fill_block =
             <<H::BlockSize as PartialDiv<H::OutputSize>>::Output as Unsigned>::to_usize();
         for _ in 0..fill_block {
-            tagged_hash.update(&hashed_tag[..]);
+            self.hash.update(&hashed_tag[..]);
         }
-
-        tagged_hash
     }
 
     fn add_statement(&mut self, sigma: &S, statement: &S::Statement) {
-        sigma.hash_statement(self, statement);
-    }
-
-    fn gen_rng<R: CryptoRng + RngCore>(
-        &self,
-        sigma: &S,
-        witness: &S::Witness,
-        in_rng: &mut R,
-    ) -> Self::Rng {
-        let mut rng_hash = self.clone();
-        sigma.hash_witness(&mut rng_hash, witness);
-        let mut randomness = [0u8; 32];
-        in_rng.fill_bytes(&mut randomness);
-        rng_hash.update(randomness);
-        let secret_seed = rng_hash.finalize();
-        ChaCha20Rng::from_seed(secret_seed.into())
+        sigma.hash_statement(&mut self.hash, statement);
     }
 
     fn get_challenge(
@@ -86,18 +117,37 @@ where
         sigma: &S,
         announce: &S::Announcement,
     ) -> GenericArray<u8, S::ChallengeLength> {
-        sigma.hash_announcement(&mut self, announce);
-        let challenge_bytes = self.finalize();
-        truncate_hash_output::<U32, S::ChallengeLength>(challenge_bytes)
+        sigma.hash_announcement(&mut self.hash, announce);
+        let challenge_bytes = self.hash.finalize_fixed();
+        // truncate the hash output
+        GenericArray::clone_from_slice(&challenge_bytes[..S::ChallengeLength::to_usize()])
     }
 }
 
-fn truncate_hash_output<I: ArrayLength<u8>, O: ArrayLength<u8>>(
-    input: GenericArray<u8, I>,
-) -> GenericArray<u8, O>
+/// Implements a prover transcript for a 32-byte hash with a rng that takes a 32-byte seed.
+impl<S, H, R> ProverTranscript<S> for HashTranscript<H, R>
 where
-    O: IsLessOrEqual<I>,
-    <O as IsLessOrEqual<I>>::Output: NonZero,
+    S: Sigma,
+    H: Update + FixedOutput<OutputSize = U32> + Clone,
+    R: SeedableRng + CryptoRng + RngCore + Clone,
+    R::Seed: From<GenericArray<u8, U32>>,
 {
-    GenericArray::clone_from_slice(&input[..O::to_usize()])
+    type Rng = R;
+
+    fn gen_rng<SysRng: CryptoRng + RngCore>(
+        &self,
+        sigma: &S,
+        witness: &S::Witness,
+        in_rng: Option<&mut SysRng>,
+    ) -> Self::Rng {
+        let mut rng_hash = self.hash.clone();
+        sigma.hash_witness(&mut rng_hash, witness);
+        if let Some(rng) = in_rng {
+            let mut randomness = [0u8; 32];
+            rng.fill_bytes(&mut randomness);
+            rng_hash.update(randomness);
+        }
+        let secret_seed = rng_hash.finalize_fixed();
+        R::from_seed(secret_seed.into())
+    }
 }

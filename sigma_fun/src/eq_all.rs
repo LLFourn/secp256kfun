@@ -4,16 +4,18 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use digest::Digest;
+use digest::Update;
 use generic_array::{typenum::Unsigned, GenericArray};
 
-#[derive(Debug, Clone, Default)]
+/// Combinator for proving any number of statements of the same kind have the same witness.
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct EqAll<N, S> {
     sigma: S,
     n: PhantomData<N>,
 }
 
 impl<S, N> EqAll<N, S> {
+    /// Create a `EqAll<N,S>` from a Sigma protocol `S`.
     pub fn new(sigma: S) -> Self {
         Self {
             sigma,
@@ -50,10 +52,9 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
-        statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
-        self.sigma.gen_announce_secret(witness, &statement[0], rng)
+        self.sigma.gen_announce_secret(witness, rng)
     }
 
     fn announce(
@@ -96,19 +97,19 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
         write!(w, ")")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statements: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statements: &Self::Statement) {
         for statement in statements {
             self.sigma.hash_statement(hash, statement)
         }
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcements: &Self::Announcement) {
         for announcement in announcements {
             self.sigma.hash_announcement(hash, announcement)
         }
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         self.sigma.hash_witness(hash, witness)
     }
 }

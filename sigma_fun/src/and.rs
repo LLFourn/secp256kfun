@@ -1,13 +1,20 @@
 use crate::rand_core::{CryptoRng, RngCore};
-use digest::Digest;
+use digest::Update;
 use generic_array::GenericArray;
 
 use crate::Sigma;
 
-#[derive(Default, Clone, Debug)]
+/// Combinator for proving that both `A` and `B` are true where `A` and `B` are not the same relation.
+///
+/// If `A = B` it's generally preferable to use [`all`] instead.
+///
+/// [`all`]: crate::All;
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct And<A, B> {
-    lhs: A,
-    rhs: B,
+    /// The first statement
+    pub lhs: A,
+    /// The second statement
+    pub rhs: B,
 }
 
 impl<A, B> Sigma for And<A, B>
@@ -62,12 +69,11 @@ where
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
-        statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         (
-            self.lhs.gen_announce_secret(&witness.0, &statement.0, rng),
-            self.rhs.gen_announce_secret(&witness.1, &statement.1, rng),
+            self.lhs.gen_announce_secret(&witness.0, rng),
+            self.rhs.gen_announce_secret(&witness.1, rng),
         )
     }
 
@@ -100,17 +106,17 @@ where
         write!(w, ")")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         self.lhs.hash_statement(hash, &statement.0);
         self.rhs.hash_statement(hash, &statement.1);
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         self.lhs.hash_announcement(hash, &announcement.0);
         self.rhs.hash_announcement(hash, &announcement.1)
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         self.lhs.hash_witness(hash, &witness.0);
         self.rhs.hash_witness(hash, &witness.1);
     }
@@ -122,8 +128,10 @@ crate::impl_display!(And<A,B>);
 mod test {
     #[cfg(feature = "secp256k1")]
     mod secp256k1 {
-        use crate::{secp256k1::fun::proptest::non_zero_scalar, And};
+        use crate::{secp256k1::fun::proptest::non_zero_scalar, And, HashTranscript};
         use ::proptest::prelude::*;
+        use rand_chacha::ChaCha20Rng;
+        use sha2::Sha256;
 
         proptest! {
             #[test]
@@ -135,15 +143,15 @@ mod test {
                     secp256k1::{self, fun::{g, marker::*, G}},
                 };
                 use generic_array::typenum::U32;
-                use sha2::Sha256;
 
                 type AndDL = And<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
 
                 let xG = g!(x * G).mark::<Normal>();
                 let yG = g!(y * G).mark::<Normal>();
                 let statement = (xG, yG);
-                let proof_system = crate::FiatShamir::<_, Sha256>::new(AndDL::default());
-                let proof = proof_system.prove(&(x, y), &statement, &mut rand::thread_rng());
+
+                let proof_system = crate::FiatShamir::<AndDL, HashTranscript<Sha256, ChaCha20Rng>>::default();
+                let proof = proof_system.prove(&(x, y), &statement, Some(&mut rand::thread_rng()));
                 assert!(proof_system.verify(&statement, &proof));
             }
         }

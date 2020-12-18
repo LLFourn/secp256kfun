@@ -4,16 +4,18 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use digest::Digest;
+use digest::Update;
 use generic_array::{typenum::Unsigned, GenericArray};
 
-#[derive(Default, Clone, Debug)]
+/// Combinator for proving all of N statements of the same type is true.
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct All<N, S> {
     sigma: S,
     n: PhantomData<N>,
 }
 
 impl<S, N> All<N, S> {
+    /// Create a `All<N,S>` protocol from a Sigma protocol `S`.
     pub fn new(sigma: S) -> Self {
         Self {
             sigma,
@@ -67,14 +69,10 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
-        statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         (0..N::to_usize())
-            .map(|i| {
-                self.sigma
-                    .gen_announce_secret(&witness[i], &statement[i], rng)
-            })
+            .map(|i| self.sigma.gen_announce_secret(&witness[i], rng))
             .collect()
     }
 
@@ -108,19 +106,19 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         write!(w, ")")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statements: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statements: &Self::Statement) {
         for statement in statements {
             self.sigma.hash_statement(hash, statement)
         }
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcements: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcements: &Self::Announcement) {
         for announcement in announcements {
             self.sigma.hash_announcement(hash, announcement)
         }
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witnesses: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witnesses: &Self::Witness) {
         for witness in witnesses {
             self.sigma.hash_witness(hash, witness)
         }

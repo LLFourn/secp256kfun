@@ -2,24 +2,29 @@ use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
 };
-use digest::Digest;
+use digest::Update;
 use generic_array::{functional::FunctionalSequence, GenericArray};
 
-#[derive(Default, Clone, Debug)]
+/// Combinator for proving that `A` OR `B` is true.
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct Or<A, B> {
     lhs: A,
     rhs: B,
 }
 
 impl<A, B> Or<A, B> {
+    /// Create a `Or<A,B>` protocol from two other Sigma protocols
     pub fn new(lhs: A, rhs: B) -> Self {
         Self { lhs, rhs }
     }
 }
 
+/// Enum for the prover to choose which of the two statements she knows.
 #[derive(Debug, Clone)]
 pub enum Either<A, B> {
+    /// A witness for the left-hand statement is known
     Left(A),
+    /// A witness for the right-hand statement is known
     Right(B),
 }
 
@@ -99,7 +104,6 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
     fn gen_announce_secret<Rng: CryptoRng + RngCore>(
         &self,
         witness: &Self::Witness,
-        statement: &Self::Statement,
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         let mut sim_challenge = GenericArray::<u8, Self::ChallengeLength>::default();
@@ -108,20 +112,14 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
             Either::Left(ref witness) => {
                 let sim_response = self.rhs.sample_response(rng);
                 (
-                    Either::Left((
-                        self.lhs.gen_announce_secret(witness, &statement.0, rng),
-                        sim_response,
-                    )),
+                    Either::Left((self.lhs.gen_announce_secret(witness, rng), sim_response)),
                     sim_challenge,
                 )
             }
             Either::Right(ref witness) => {
                 let sim_response = self.lhs.sample_response(rng);
                 (
-                    Either::Right((
-                        sim_response,
-                        self.rhs.gen_announce_secret(witness, &statement.1, rng),
-                    )),
+                    Either::Right((sim_response, self.rhs.gen_announce_secret(witness, rng))),
                     sim_challenge,
                 )
             }
@@ -164,17 +162,17 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         write!(w, ")")
     }
 
-    fn hash_statement<H: Digest>(&self, hash: &mut H, statement: &Self::Statement) {
+    fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         self.lhs.hash_statement(hash, &statement.0);
         self.rhs.hash_statement(hash, &statement.1);
     }
 
-    fn hash_announcement<H: Digest>(&self, hash: &mut H, announcement: &Self::Announcement) {
+    fn hash_announcement<H: Update>(&self, hash: &mut H, announcement: &Self::Announcement) {
         self.lhs.hash_announcement(hash, &announcement.0);
         self.rhs.hash_announcement(hash, &announcement.1)
     }
 
-    fn hash_witness<H: Digest>(&self, hash: &mut H, witness: &Self::Witness) {
+    fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         match witness {
             Either::Left(witness) => self.lhs.hash_witness(hash, witness),
             Either::Right(witness) => self.rhs.hash_witness(hash, witness),
@@ -194,10 +192,11 @@ mod test {
                 self,
                 fun::proptest::{non_zero_scalar, point},
             },
-            Either, Or,
+            Either, HashTranscript, Or,
         };
         use ::proptest::prelude::*;
         use generic_array::typenum::U32;
+        use rand_chacha::ChaCha20Rng;
         use secp256kfun::{g, marker::*, G};
         use sha2::Sha256;
 
@@ -210,19 +209,19 @@ mod test {
                 let xG = g!(x * G).mark::<Normal>();
                 type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
                 let statement = (xG, Y);
-                let proof_system = crate::FiatShamir::<OrDL, Sha256>::default();
+                let proof_system = crate::FiatShamir::<OrDL, HashTranscript<Sha256,ChaCha20Rng>>::default();
 
                 let proof_lhs = proof_system.prove(
                     &Either::Left(x.clone()),
                     &statement,
-                    &mut rand::thread_rng(),
+                    Some(&mut rand::thread_rng()),
                 );
                 assert!(proof_system.verify(&statement, &proof_lhs));
 
                 let wrong_proof_lhs = proof_system.prove(
                     &Either::Right(x.clone()),
                     &statement,
-                    &mut rand::thread_rng(),
+                    Some(&mut rand::thread_rng()),
                 );
                 assert!(!proof_system.verify(&statement, &wrong_proof_lhs));
 
@@ -230,7 +229,7 @@ mod test {
                 let proof_rhs = proof_system.prove(
                     &Either::Right(x.clone()),
                     &statement,
-                    &mut rand::thread_rng(),
+                    Some(&mut rand::thread_rng()),
                 );
                 assert!(proof_system.verify(&statement, &proof_rhs));
             }

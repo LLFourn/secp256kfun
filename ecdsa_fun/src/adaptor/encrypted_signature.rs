@@ -88,9 +88,13 @@ mod test {
         use super::*;
         use crate::{adaptor::Adaptor, fun::nonce};
         use rand::rngs::ThreadRng;
+        use rand_chacha::ChaCha20Rng;
         use sha2::Sha256;
-        let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-        let ecdsa_adaptor = Adaptor::<Sha256, _>::new(nonce_gen);
+        use sigma_fun::HashTranscript;
+
+        type NonceGen = nonce::Synthetic<Sha256, nonce::GlobalRng<ThreadRng>>;
+        type Transcript = HashTranscript<Sha256, ChaCha20Rng>;
+        let ecdsa_adaptor = Adaptor::<Transcript, NonceGen>::default();
         let secret_key = Scalar::random(&mut rand::thread_rng());
         let encryption_key = Point::random(&mut rand::thread_rng());
         let encrypted_signature = ecdsa_adaptor.encrypted_sign(
