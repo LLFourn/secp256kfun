@@ -78,7 +78,7 @@ pub use fiat_shamir::*;
 /// the trait is implemented for a sigma protocol for all lengths less than some maximum like so:
 ///
 /// ```ignore
-/// use generic_array::{
+/// use sigma_fun::generic_array::{
 ///     typenum::{self, type_operators::IsLessOrEqual, U32},
 ///     ArrayLength, GenericArray,
 /// };
