@@ -56,7 +56,7 @@ This library provides a [`Sigma`] trait which can be implemented for any Sigma p
 Anything implementing [`Sigma`] can then be composed with the combinators to create more intricate Sigma protocols.
 Finally, the protocol can be made non-interactive with the resulting proofs implementing [`serde`] serialization traits.
 
-We define the [`Sigma`] trait with five main core functions:
+We define the [`Sigma`] trait with five core functions:
 
 - **`gen_announce_secret(rng) -> announce_secret`**: Generates the secret random value used in the proof from a given random number generator `rng`
 
