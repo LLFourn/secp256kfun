@@ -46,6 +46,56 @@ mod fiat_shamir;
 pub use fiat_shamir::*;
 
 /// The `Sigma` trait is used to define a Sigma protocol.
+///
+/// You will need to implement this yourself if you are unable to build your sigma protocol by
+/// composing it from existing sigma protocols.
+///
+/// The role of the main functions of the trait are depicted below:
+///
+///```ignore
+/// Prover(witness, statement, rng)                                                 Verifier(statement)
+/// ======
+/// announce_secret = gen_announce_secret(rng)
+/// announcement = announce(statement, announce_secret)
+///                                                       announcement
+///                                                   +------------------->
+///                                                        challenge         *uniformly sample ChallengeLength bytes*
+///                                                   <-------------------+
+/// response = respond(witness, statement,
+///                    announce_secret, announcement,
+///                    challenge)
+///
+///                                                        response
+///                                                   +------------------->
+///                                                                                             check
+///                                                                         implied_announcement(statement, challenge, response)
+///                                                                                               ==
+///                                                                                          announcement
+/// ```
+///
+/// The values taken and returned by the functions are all defined as associated types. In addition
+/// there is `ChallengeLength` associated type which defines the length of the challenge. Usually
+/// the trait is implemented for a sigma protocol for all lengths less than some maximum like so:
+///
+/// ```ignore
+/// use generic_array::{
+///     typenum::{self, type_operators::IsLessOrEqual, U32},
+///     ArrayLength, GenericArray,
+/// };
+/// use sigma_fun::Sigma;
+/// struct MySigma<L> {
+///     // store the typenum in our type
+///     challenge_len: core::marker::PhantomData<L>,
+/// }
+/// // implement Sigma for any length less than or eqaul to 32-bytes.
+/// impl<L: ArrayLength<u8>> Sigma for MySigma<L>
+/// where
+///    L: IsLessOrEqual<U32>,
+///    <L as IsLessOrEqual<U32>>::Output: typenum::marker_traits::NonZero
+///    {
+///    // ...
+///    }
+/// ```
 pub trait Sigma {
     /// The witness for the relation.
     type Witness: Debug;

@@ -24,12 +24,12 @@ sha2 = "0.9"
 
 Highly experimental and breaking changes to the API and to the backwards compatibility of the proofs may happen at any time.
 
-There could easily be mistakes especially in the more complicated proofs in the `ext` module!
+There could easily be implementation mistakes especially in the more complicated proofs in the `ext` module!
 
 ## "Sigma" Protocols
 
-Sigma protocols are three-round *honest verifier zero knowledge protocols* and are one of the most fundamental Zero-Knowledge proof systems.
-They are extremely useful because they are easy to make non-interactive through the Fiat-Shamir transform and support various types of composition.
+Sigma protocols are three-round *honest verifier zero knowledge protocols* and one of the most fundamental Zero-Knowledge proof systems.
+They are useful because they are easy to make non-interactive through the Fiat-Shamir heuristic and support various types of [composition](#composition).
 Sigma protocols can be used to construct signature schemes, verifiable random functions, authentication schemes, anonymous credential schemes and many more exotic things.
 
 For a basic background on Sigma protocols see section 5 of [Shoenmaker]'s excellent lecture notes.
@@ -74,7 +74,7 @@ Each Sigma protocol also has defines its `ChallengeLength` as an associated type
 With these algorithms the interactive Sigma protocol plays out like this:
 
 ```ignore
-Prover(witness, statement)                                                 Verifier(statement)
+Prover(witness, statement, rng)                                                 Verifier(statement)
 ======
 announce_secret = gen_announce_secret(rng)
 announcement = announce(statement, announce_secret)
@@ -102,12 +102,11 @@ The verifier can just check that the hash was computed correctly and the respons
 
 ## Example
 
-
 A Pedersen commitment is in the form `C = r * G + c * H` where `c` is the value commited to a value for `h` such that `H = h * G` is unknown to the committer.
 For a background on Pedersen commitments see [Shoenmaker] section 3.2.2.
 Suppose we want to prove that `c` is either 0 or 1 in Zero knowledge to someone who only knows `C`.
-Here is how to construct a protocol using a non-interactive proof that we know `r` such that `C = r * G` OR `C - H = r * G`.
-This proves that `c` is equal to 0 or 1.
+We can construct a non-interactive proof for this claim by showing that we know `r` such that `C = r * G` OR `C - H = r * G`.
+
 
 ```rust 
 use std::string::ToString;
@@ -115,23 +114,23 @@ use sigma_fun::{ typenum::U16, FiatShamir, HashTranscript, Either, Or, secp256k1
 use sha2::Sha256;
 use rand_chacha::ChaCha20Rng;
 
-// Pretend to choose H securely
+// Pretend to choose H securely in a public setup
 let H = Point::random(&mut rand::thread_rng());
 // our commitment will be to 1
 let c = Scalar::from(1u32);
-// lets use a 16-byte (128-bit) challenge length
+// We use a 16-byte (128-bit) challenge length
 type L = U16;
 
 let (C,r) = {
     // make a pedersen commitment
     let r = Scalar::random(&mut rand::thread_rng());
-    let C = g!(r * G + c * H).mark::<(Normal,NonZero)>().unwrap();
+    let C = g!(r * G + c * H).mark::<(Normal,NonZero)>().expect("zero is computationally unreachable");
     (C,r)
 };
 
 // Our strategy is to prove that we know r such that either C = r * G or C - H = r * G using 
 // an OR composition between two standard knowledge of discrete logarithm proofs.
-let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().unwrap());
+let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().expect("zero is computationally unreachable"));
 // since we are commiting to 1 we know the witness for the right hand side statement.
 let witness =  Either::Right(r);
 
