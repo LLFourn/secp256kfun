@@ -89,9 +89,10 @@ where
 
 impl<T: Transcript<DLEQ> + Default, NG: AddTag> Adaptor<T, NG> {
     pub fn new(nonce_gen: NG) -> Self {
+        let sigma = DLEQ::default();
         Self {
             ecdsa: ECDSA::new(nonce_gen),
-            dleq_proof_system: FiatShamir::<DLEQ, T>::default(),
+            dleq_proof_system: FiatShamir::new(sigma, T::default(), Some("DLEQ")),
         }
     }
 }

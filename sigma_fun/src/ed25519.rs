@@ -85,10 +85,6 @@ where
         Some(response * G - challenge * X)
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DL(ed25519)")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.0.compress().as_bytes());
         hash.update(statement.1.compress().as_bytes());
@@ -170,10 +166,6 @@ where
         ))
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLG(ed25519)")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.compress().as_bytes());
     }
@@ -193,6 +185,21 @@ fn normalize_challenge<L: ArrayLength<u8>>(challenge: &GenericArray<u8, L>) -> S
     Scalar::from_canonical_bytes(challenge_bytes)
         .expect("this function is only passed 31 byte arrays at most")
 }
+
+impl<L> crate::Writable for DL<L> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DL(ed25519)")
+    }
+}
+
+impl<L> crate::Writable for DLG<L> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DLG(ed25519)")
+    }
+}
+
+crate::impl_display!(DL<L>);
+crate::impl_display!(DLG<L>);
 
 #[cfg(test)]
 pub mod test {

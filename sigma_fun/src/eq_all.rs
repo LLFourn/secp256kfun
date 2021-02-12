@@ -9,12 +9,12 @@ use generic_array::{typenum::Unsigned, GenericArray};
 
 /// Combinator for proving any number of statements of the same kind have the same witness.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct EqAll<N, S> {
+pub struct EqAll<S, N> {
     sigma: S,
     n: PhantomData<N>,
 }
 
-impl<S, N> EqAll<N, S> {
+impl<S, N> EqAll<S, N> {
     /// Create a `EqAll<N,S>` from a Sigma protocol `S`.
     pub fn new(sigma: S) -> Self {
         Self {
@@ -24,7 +24,7 @@ impl<S, N> EqAll<N, S> {
     }
 }
 
-impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
+impl<N: Unsigned, S: Sigma> Sigma for EqAll<S, N> {
     type Witness = S::Witness;
     type Statement = Vec<S::Statement>;
     type AnnounceSecret = S::AnnounceSecret;
@@ -91,12 +91,6 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
             .collect::<Option<Vec<_>>>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "eq-all({},", N::to_u32())?;
-        self.sigma.write_name(w)?;
-        write!(w, ")")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statements: &Self::Statement) {
         for statement in statements {
             self.sigma.hash_statement(hash, statement)
@@ -114,4 +108,12 @@ impl<N: Unsigned, S: Sigma> Sigma for EqAll<N, S> {
     }
 }
 
-crate::impl_display!(EqAll<N,S>);
+impl<S: Sigma, N: Unsigned> crate::Writable for EqAll<S, N> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "eq-all({},", N::to_u32())?;
+        self.sigma.write_to(w)?;
+        write!(w, ")")
+    }
+}
+
+crate::impl_display!(EqAll<S,N>);
