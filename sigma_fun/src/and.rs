@@ -8,7 +8,7 @@ use crate::Sigma;
 ///
 /// If `A = B` it's generally preferable to use [`all`] instead.
 ///
-/// [`all`]: crate::All;
+/// [`all`]: crate::All
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct And<A, B> {
     /// The first statement
