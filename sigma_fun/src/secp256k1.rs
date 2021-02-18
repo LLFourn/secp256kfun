@@ -69,10 +69,6 @@ where
         g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DL(secp256k1)")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.0.to_bytes().as_ref());
         hash.update(statement.1.to_bytes().as_ref());
@@ -92,6 +88,12 @@ where
         rng: &mut Rng,
     ) -> Self::AnnounceSecret {
         Scalar::random(rng)
+    }
+}
+
+impl<L> crate::Writable for DL<L> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DL(secp256k1)")
     }
 }
 
@@ -154,10 +156,6 @@ where
         g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "DLG(secp256k1)")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         hash.update(statement.to_bytes().as_ref());
     }
@@ -188,3 +186,12 @@ fn normalize_challenge<L: ArrayLength<u8>>(
     challenge_bytes[(32 - challenge.len())..].copy_from_slice(challenge.as_slice());
     Scalar::from_bytes_mod_order(challenge_bytes).mark::<Public>()
 }
+
+impl<L> crate::Writable for DLG<L> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "DLG(secp256k1)")
+    }
+}
+
+crate::impl_display!(DL<L>);
+crate::impl_display!(DLG<L>);

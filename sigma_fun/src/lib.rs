@@ -44,6 +44,8 @@ mod transcript;
 pub use transcript::*;
 mod fiat_shamir;
 pub use fiat_shamir::*;
+mod writable;
+pub use writable::*;
 
 /// The `Sigma` trait is used to define a Sigma protocol.
 ///
@@ -96,7 +98,7 @@ pub use fiat_shamir::*;
 ///    // ...
 ///    }
 /// ```
-pub trait Sigma {
+pub trait Sigma: Writable {
     /// The witness for the relation.
     type Witness: Debug;
     /// The elements of the statement the prover is proving.
@@ -143,12 +145,7 @@ pub trait Sigma {
         challenge: &GenericArray<u8, Self::ChallengeLength>,
         response: &Self::Response,
     ) -> Option<Self::Announcement>;
-    /// Writes the sigma protocol's name.
-    ///
-    /// When using [`FiatShamir`] this is written into the transcript.
-    ///
-    /// [`FiatShamir`]: crate::FiatShamir
-    fn write_name<W: core::fmt::Write>(&self, write: &mut W) -> core::fmt::Result;
+
     /// Hashes the statement.
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement);
     /// Hashes the announcement.
@@ -165,7 +162,8 @@ macro_rules! impl_display {
             where $name<$($tp),+>: $crate::Sigma
         {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                self.write_name(f)
+                use $crate::Writable;
+                self.write_to(f)
             }
         }
     }

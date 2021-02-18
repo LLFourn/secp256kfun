@@ -98,14 +98,6 @@ where
             })
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "eq(")?;
-        self.lhs.write_name(w)?;
-        write!(w, ",")?;
-        self.rhs.write_name(w)?;
-        write!(w, ")")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
         self.lhs.hash_statement(hash, &statement.0);
         self.rhs.hash_statement(hash, &statement.1);
@@ -118,6 +110,16 @@ where
 
     fn hash_witness<H: Update>(&self, hash: &mut H, witness: &Self::Witness) {
         self.lhs.hash_witness(hash, witness);
+    }
+}
+
+impl<A: crate::Writable, B: crate::Writable> crate::Writable for Eq<A, B> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "eq(")?;
+        self.lhs.write_to(w)?;
+        write!(w, ",")?;
+        self.rhs.write_to(w)?;
+        write!(w, ")")
     }
 }
 

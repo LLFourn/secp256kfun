@@ -9,12 +9,12 @@ use generic_array::{typenum::Unsigned, GenericArray};
 
 /// Combinator for proving all of N statements of the same type is true.
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct All<N, S> {
+pub struct All<S, N> {
     sigma: S,
     n: PhantomData<N>,
 }
 
-impl<S, N> All<N, S> {
+impl<S, N> All<S, N> {
     /// Create a `All<N,S>` protocol from a Sigma protocol `S`.
     pub fn new(sigma: S) -> Self {
         Self {
@@ -24,7 +24,7 @@ impl<S, N> All<N, S> {
     }
 }
 
-impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
+impl<N: Unsigned, S: Sigma> Sigma for All<S, N> {
     type Witness = Vec<S::Witness>;
     type Statement = Vec<S::Statement>;
     type AnnounceSecret = Vec<S::AnnounceSecret>;
@@ -100,12 +100,6 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
             .collect()
     }
 
-    fn write_name<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
-        write!(w, "all({},", N::to_u32())?;
-        self.sigma.write_name(w)?;
-        write!(w, ")")
-    }
-
     fn hash_statement<H: Update>(&self, hash: &mut H, statements: &Self::Statement) {
         for statement in statements {
             self.sigma.hash_statement(hash, statement)
@@ -122,6 +116,14 @@ impl<N: Unsigned, S: Sigma> Sigma for All<N, S> {
         for witness in witnesses {
             self.sigma.hash_witness(hash, witness)
         }
+    }
+}
+
+impl<S: crate::Writable, N: Unsigned> crate::Writable for All<S, N> {
+    fn write_to<W: core::fmt::Write>(&self, w: &mut W) -> core::fmt::Result {
+        write!(w, "all({},", N::to_u32())?;
+        self.sigma.write_to(w)?;
+        write!(w, ")")
     }
 }
 

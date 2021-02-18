@@ -5,7 +5,7 @@ use crate::{
     typenum::{
         marker_traits::NonZero, type_operators::IsLessOrEqual, PartialDiv, Unsigned, U32, U64,
     },
-    Sigma,
+    Sigma, Writable,
 };
 use digest::{BlockInput, FixedOutput, Update};
 use generic_array::GenericArray;
@@ -13,12 +13,12 @@ use generic_array::GenericArray;
 /// A trait for a Fiat-Shamir proof transcript.
 ///
 /// Really this is just a trait around a cryptographic hash that can produce a Fiat-Shamir challenge
-/// from the statement and the announcement.
+/// from the statement and the announcement. The usual workflow is to call `add_name` and then clone
+/// the transcript for each new statement.
 pub trait Transcript<S: Sigma>: Clone {
-    /// Initializes the transcript. This must be called once when the prover is created. It
-    /// shouldn't be called before each proof. Rather it should be called once and then the
-    /// transcript should be cloned for each proof.
-    fn initialize(&mut self, sigma: &S);
+    /// The name unambigiously determines the semantics of the statement and announcement which
+    /// are subsequently added to the transcript.
+    fn add_name<N: Writable + ?Sized>(&mut self, name: &N);
 
     /// Adds the prover's statement to the transcript. This must be called before [`get_challenge`].
     ///
@@ -29,7 +29,7 @@ pub trait Transcript<S: Sigma>: Clone {
     fn get_challenge(
         self,
         sigma: &S,
-        announce: &S::Announcement,
+        announcement: &S::Announcement,
     ) -> GenericArray<u8, S::ChallengeLength>;
 }
 
@@ -84,18 +84,19 @@ impl<H: Update> core::fmt::Write for WriteHash<H> {
 
 /// Implements a transcript for any hash that outputs 32 bytes but with a block size of 64 bytes (e.g. SHA256).
 ///
-/// The implementation first tags the SHA256 instance with the Sigma protocol's name.
+/// The implementation first [BIP-340] tags the SHA256 instance with the Sigma protocol's name.
+///
+/// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 impl<H, S: Sigma, R: Clone> Transcript<S> for HashTranscript<H, R>
 where
     S::ChallengeLength: IsLessOrEqual<U32>,
     <S::ChallengeLength as IsLessOrEqual<U32>>::Output: NonZero,
     H: BlockInput<BlockSize = U64> + FixedOutput<OutputSize = U32> + Update + Default + Clone,
 {
-    fn initialize(&mut self, sigma: &S) {
+    fn add_name<N: Writable + ?Sized>(&mut self, name: &N) {
         let hashed_tag = {
             let mut hash = WriteHash(H::default());
-            sigma
-                .write_name(&mut hash)
+            name.write_to(&mut hash)
                 .expect("writing to hash won't fail");
             hash.0.finalize_fixed()
         };

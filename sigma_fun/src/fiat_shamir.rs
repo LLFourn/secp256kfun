@@ -3,6 +3,8 @@ use rand_core::{CryptoRng, RngCore};
 
 /// Applies the Fiat-Shamir transform to a given [`Sigma`] protocol given a [`Transcript`].
 ///
+///
+/// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 /// [`Transcript`]: crate::Transcript
 /// [`Sigma`]: crate::Sigma
 #[derive(Clone, Debug)]
@@ -15,7 +17,7 @@ pub struct FiatShamir<S, T> {
 
 impl<S: Default + Sigma, T: Transcript<S> + Default> Default for FiatShamir<S, T> {
     fn default() -> Self {
-        Self::new(S::default(), T::default())
+        Self::new(S::default(), T::default(), None)
     }
 }
 
@@ -25,8 +27,11 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
     ///
     /// [`Transcript`]: crate::Transcript
     /// [`Sigma`]: crate::Sigma
-    pub fn new(sigma: S, mut transcript: T) -> Self {
-        transcript.initialize(&sigma);
+    pub fn new(sigma: S, mut transcript: T, override_name: Option<&str>) -> Self {
+        match override_name {
+            Some(name) => transcript.add_name(name),
+            None => transcript.add_name(&sigma),
+        };
 
         Self { transcript, sigma }
     }
@@ -86,8 +91,8 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
 /// [`FiatShamir`]: crate::FiatShamir
 #[cfg_attr(
     feature = "serde",
-    serde(crate = "serde_crate"),
-    derive(serde_crate::Serialize, serde_crate::Deserialize)
+    derive(serde_crate::Serialize, serde_crate::Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompactProof<S: Sigma> {

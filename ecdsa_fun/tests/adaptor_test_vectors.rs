@@ -15,7 +15,33 @@ use sha2::Sha256;
     derive(serde::Deserialize, serde::Serialize),
     serde(crate = "serde_crate")
 )]
-struct TestVector {
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum TestVector {
+    Verification(Verification),
+    Recovery(Recovery),
+    Serialization(Serialization),
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
+struct Recovery {
+    encryption_key: Point,
+    signature: Signature,
+    adaptor_sig: EncryptedSignature,
+    decryption_key: Option<Scalar>,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
+struct Verification {
     adaptor_sig: EncryptedSignature,
     public_signing_key: Point,
     encryption_key: Point,
@@ -25,20 +51,53 @@ struct TestVector {
     error: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
+struct Serialization {
+    adaptor_sig: String,
+    error: Option<String>,
+}
+
 #[test]
 fn run_test_vectors() {
     let ecdsa_adaptor = Adaptor::<HashTranscript<Sha256>, _>::verify_only();
     let test_vectors = serde_json::from_str::<Vec<TestVector>>(DLC_SPEC_JSON).unwrap();
     for t in test_vectors {
-        if run_test_vector(&ecdsa_adaptor, &t) {
-            assert_eq!(t.error, None)
-        } else {
-            assert!(t.error.is_some())
+        match t {
+            TestVector::Verification(t) => {
+                if run_test_vector(&ecdsa_adaptor, &t) {
+                    assert_eq!(t.error, None)
+                } else {
+                    assert!(t.error.is_some())
+                }
+            }
+            TestVector::Recovery(t) => {
+                let decryption_key = ecdsa_adaptor.recover_decryption_key(
+                    &t.encryption_key,
+                    &t.signature,
+                    &t.adaptor_sig,
+                );
+                assert_eq!(decryption_key, t.decryption_key);
+            }
+            TestVector::Serialization(t) => {
+                use core::str::FromStr;
+                match EncryptedSignature::from_str(&t.adaptor_sig) {
+                    Ok(encrypted_sig) => {
+                        assert!(t.error.is_none());
+                        assert_eq!(encrypted_sig.to_string(), t.adaptor_sig);
+                    }
+                    Err(_) => assert!(t.error.is_some()),
+                }
+            }
         }
     }
 }
 
-fn run_test_vector(ecdsa_adaptor: &Adaptor<HashTranscript<Sha256>, ()>, t: &TestVector) -> bool {
+fn run_test_vector(ecdsa_adaptor: &Adaptor<HashTranscript<Sha256>, ()>, t: &Verification) -> bool {
     if !ecdsa_adaptor.verify_encrypted_signature(
         &t.public_signing_key,
         &t.encryption_key,

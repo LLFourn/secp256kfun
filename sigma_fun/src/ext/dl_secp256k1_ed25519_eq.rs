@@ -36,21 +36,23 @@ use curve25519_dalek::{
 use generic_array::typenum::{U252, U31};
 static GQ: &'static curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
-/// The underlying proof algorithm we'll be using to prove the relationship between the commitments
-/// and the keys. We are trying to prove that X_p = x * G_p and X_q = x * G_q. The approach is to
-/// split x into 2×252 bit pedersen commitments for each curve and prove they commit to the same
-/// bit.
+/// The underlying sigma protocol we will use to prove the relationship between the two sets of commitments.
+///
+/// We are trying to prove that `X_p = x * G_p` and `X_q = x * G_q`. The approach is
+/// to split x into two sets of 252 bit pedersen commitments for each curve and prove that the
+/// corresponding commitments commit to the same bit.
 //
 /// Note the commitments are in the form commit(b) = r * G + b* H where G is the standard basepoint
 /// for each curve.
 pub type CoreProof = And<
     All<
-        U252, // For each of the 252 bits of the secret key
+        // For each of the 252 bits of the secret key
         // We show that both commitments are a commitment to zero OR to 2^i for i = 0..252
         Or<
             And<secp256k1::DLG<U31>, ed25519::DLG<U31>>,
             And<secp256k1::DLG<U31>, ed25519::DLG<U31>>,
         >,
+        U252,
     >,
     // Finally we do two DLEQ proofs to show that if the commitmens add up to xH_p and xH_q, we show
     // that X_p = xG_p and X_q = xG_q.
@@ -61,8 +63,8 @@ const COMMITMENT_BITS: usize = 252;
 /// The proof the a public key on secp256k1 and ed25519 have the same 252-bit secret key.
 #[cfg_attr(
     feature = "serde",
-    serde(crate = "serde_crate"),
-    derive(serde_crate::Serialize, serde_crate::Deserialize)
+    derive(serde_crate::Serialize, serde_crate::Deserialize),
+    serde(crate = "serde_crate")
 )]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CrossCurveDLEQProof {
@@ -75,7 +77,8 @@ pub struct CrossCurveDLEQProof {
     pub proof: crate::CompactProof<CoreProof>,
 }
 
-///
+/// The proof system which prepares the high level statement to be proved/verified with
+/// [`CoreProof`].
 #[derive(Debug, Clone)]
 pub struct CrossCurveDLEQ<T> {
     HQ: PointQ,
