@@ -16,7 +16,7 @@ sigma_fun = {version = "0.1", no-default-features = true, features = ["alloc"]}
 # To create secp256k1 non-interactive proofs and serialize them
 sigma_fun = { version = "0.1", features = ["secp256k1", "serde"] }
 # you need a hash function and an rng for non-interactive proofs
-rand_chacha = "0.2"
+rand_chacha = "0.3"
 sha2 = "0.9"
 ```
 
