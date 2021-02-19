@@ -20,6 +20,7 @@ pub mod nonce;
 
 pub use digest;
 pub use rand_core;
+pub use subtle;
 
 mod point;
 mod scalar;

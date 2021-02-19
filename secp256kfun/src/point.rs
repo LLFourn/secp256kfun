@@ -364,6 +364,18 @@ impl<T: Normalized, S> HashInto for Point<T, S, NonZero> {
     }
 }
 
+impl<T: Default, S, Z> subtle::ConditionallySelectable for Point<T, S, Z>
+where
+    Self: Copy,
+{
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        Point::from_inner(
+            backend::Point::conditional_select(&a.0, &b.0, choice),
+            T::default(),
+        )
+    }
+}
+
 crate::impl_display_debug! {
     fn to_bytes<T: PointType, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
         match Clone::clone(*point).mark::<(Normal,NonZero)>() {
