@@ -1549,3 +1549,25 @@ impl Into<FieldStorage> for Field {
         r
     }
 }
+
+
+impl subtle::ConditionallySelectable for Field {
+        fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+                Field {
+                        n: [
+                                u32::conditional_select(&a.n[0], &b.n[0], choice),
+                                u32::conditional_select(&a.n[1], &b.n[1], choice),
+                                u32::conditional_select(&a.n[2], &b.n[2], choice),
+                                u32::conditional_select(&a.n[3], &b.n[3], choice),
+                                u32::conditional_select(&a.n[4], &b.n[4], choice),
+                                u32::conditional_select(&a.n[5], &b.n[5], choice),
+                                u32::conditional_select(&a.n[6], &b.n[6], choice),
+                                u32::conditional_select(&a.n[7], &b.n[7], choice),
+                                u32::conditional_select(&a.n[8], &b.n[8], choice),
+                                u32::conditional_select(&a.n[9], &b.n[9], choice),
+                        ],
+                    magnitude: u32::conditional_select(&a.magnitude, &b.magnitude, choice),
+                    normalized: u8::conditional_select(&(a.normalized as u8), &(b.normalized as u8), choice) != 0,
+                }
+        }
+}

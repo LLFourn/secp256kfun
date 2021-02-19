@@ -24,7 +24,9 @@ use crate::{
         g,
         marker::*,
         rand_core::{CryptoRng, RngCore},
-        s, Point as PointP, Scalar as ScalarP, G as GP,
+        s,
+        subtle::{self, ConditionallySelectable},
+        Point as PointP, Scalar as ScalarP, G as GP,
     },
     All, And, Eq, FiatShamir, Or, ProverTranscript, Sigma, Transcript,
 };
@@ -165,11 +167,16 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
                 let zero_commit_q = rQ * GQ;
                 let one_commit_q = &zero_commit_q + H2Q;
 
-                //TODO: constant time choice
-                match bit {
-                    false => (zero_commit_p.mark::<(Public, Normal)>(), zero_commit_q),
-                    true => (one_commit_p.mark::<Normal>(), one_commit_q),
-                }
+                // Make sure to do a constant time choice here
+                let bit = subtle::Choice::from(*bit as u8);
+                (
+                    PointP::conditional_select(
+                        &zero_commit_p.mark::<(Public, Normal)>(),
+                        &one_commit_p.mark::<Normal>(),
+                        bit,
+                    ),
+                    PointQ::conditional_select(&zero_commit_q, &one_commit_q, bit),
+                )
             })
             .collect::<Vec<_>>();
 

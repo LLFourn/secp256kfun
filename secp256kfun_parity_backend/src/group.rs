@@ -218,6 +218,7 @@ impl Affine {
     }
 }
 
+
 pub fn set_table_gej_var(r: &mut [Affine], a: &[Jacobian], zr: &[Field]) {
     debug_assert!(r.len() == a.len());
 
@@ -647,6 +648,17 @@ impl Jacobian {
         self.y *= &zz;
         self.y *= s;
         self.z *= s;
+    }
+}
+
+impl subtle::ConditionallySelectable for Jacobian {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        Jacobian {
+            x: Field::conditional_select(&a.x, &b.x, choice),
+            y: Field::conditional_select(&a.y, &b.y, choice),
+            z: Field::conditional_select(&a.z, &b.z, choice),
+            infinity: u8::conditional_select(&(a.infinity as u8), &(b.infinity as u8), choice) != 0,
+        }
     }
 }
 

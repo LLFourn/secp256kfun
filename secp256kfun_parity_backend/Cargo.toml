@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 crunchy = "0.2"
-subtle = { version = "2.2", default-features = false }
+subtle = { version = "2", package = "subtle-ng", default-features = false }
 
 
 [features]
