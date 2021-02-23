@@ -1,7 +1,7 @@
 
 [package]
 name = "schnorr_fun"
-version = "0.4.2-alpha.0"
+version = "0.5.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2018"
 license = "0BSD"
@@ -40,8 +40,8 @@ harness = false
 
 [features]
 default = ["std"]
-all = ["std","serde"]
-alloc = []
-std = ["alloc"]
+all = ["std","serde", "libsecp_compat"]
+alloc = ["secp256kfun/alloc"]
+std = ["alloc", "secp256kfun/std"]
 serde = ["serde_crate", "secp256kfun/serde"]
 libsecp_compat = ["secp256kfun/libsecp_compat"]
