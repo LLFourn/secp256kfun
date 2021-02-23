@@ -22,11 +22,22 @@ use subtle::ConstantTimeEq;
 /// ```
 ///
 /// [`mark`]: crate::marker::Mark::mark
-#[derive(Debug, Clone, Copy)]
-pub struct Slice<'a, S> {
+#[derive(Debug)]
+pub struct Slice<'a, S = Public> {
     pub(crate) inner: &'a [u8],
     secrecy: PhantomData<S>,
 }
+
+impl<'a, S> Clone for Slice<'a, S> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner,
+            secrecy: PhantomData,
+        }
+    }
+}
+
+impl<'a, S> Copy for Slice<'a, S> {}
 
 impl<'a, 'b, S1, S2> PartialEq<Slice<'b, S2>> for Slice<'a, S1> {
     default fn eq(&self, rhs: &Slice<'b, S2>) -> bool {

@@ -41,12 +41,15 @@ mod test {
     #[test]
     fn encrypted_signature_serialization_roundtrip() {
         use super::*;
-        use crate::{adaptor::*, fun::Scalar};
+        use crate::{adaptor::*, fun::Scalar, Message};
         let schnorr = crate::test_instance!();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let encryption_key = Point::random(&mut rand::thread_rng());
-        let encrypted_signature =
-            schnorr.encrypted_sign(&kp, &encryption_key, b"test".as_ref().mark::<Public>());
+        let encrypted_signature = schnorr.encrypted_sign(
+            &kp,
+            &encryption_key,
+            Message::<Public>::plain("test", b"foo"),
+        );
         let serialized = bincode::serialize(&encrypted_signature).unwrap();
         assert_eq!(serialized.len(), 65);
         let deserialized = bincode::deserialize::<EncryptedSignature>(&serialized).unwrap();

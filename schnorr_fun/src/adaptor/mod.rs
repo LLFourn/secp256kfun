@@ -14,16 +14,16 @@
 //! use schnorr_fun::{
 //!     adaptor::{Adaptor, EncryptedSign},
 //!     fun::{marker::*, nonce, Scalar},
-//!     MessageKind, Schnorr,
+//!     Message, Schnorr,
 //! };
 //! use sha2::Sha256;
 //! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-//! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen, MessageKind::Plain { tag: "my-app" });
+//! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen);
 //! let signing_keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 //! let verification_key = signing_keypair.verification_key();
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
 //! let encryption_key = schnorr.encryption_key_for(&decryption_key);
-//! let message = b"send 1 BTC to Bob".as_ref().mark::<Public>();
+//! let message = Message::<Public>::plain("text-bitcoin", b"send 1 BTC to Bob");
 //!
 //! // Alice knows: signing_keypair, encryption_key
 //! // Bob knows: decryption_key, verification_key
@@ -54,9 +54,9 @@ use crate::{
         g,
         marker::*,
         nonce::NonceGen,
-        s, Point, Scalar, Slice,
+        s, Point, Scalar,
     },
-    KeyPair, Schnorr, Signature,
+    KeyPair, Message, Schnorr, Signature,
 };
 mod encrypted_signature;
 pub use encrypted_signature::EncryptedSignature;
@@ -74,7 +74,7 @@ pub trait EncryptedSign {
         &self,
         signing_keypair: &KeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: Slice<'_, impl Secrecy>,
+        message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature;
 }
 
@@ -87,7 +87,7 @@ where
         &self,
         signing_key: &KeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: Slice<'_, impl Secrecy>,
+        message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature {
         let (x, X) = signing_key.as_tuple();
         let Y = encryption_key;
@@ -128,7 +128,7 @@ pub trait Adaptor {
     ///
     /// # Example
     /// ```
-    /// # use schnorr_fun::{adaptor::Adaptor, fun::Scalar, Schnorr, MessageKind};
+    /// # use schnorr_fun::{adaptor::Adaptor, fun::Scalar, Schnorr};
     /// # let schnorr = schnorr_fun::test_instance!();
     /// let decryption_key = Scalar::random(&mut rand::thread_rng());
     /// let encryption_key = schnorr.encryption_key_for(&decryption_key);
@@ -145,7 +145,7 @@ pub trait Adaptor {
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: Slice<'_, impl Secrecy>,
+        message: Message<'_, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool;
 
@@ -202,7 +202,7 @@ where
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        message: Slice<'_, impl Secrecy>,
+        message: Message<'_, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool {
         let EncryptedSignature {
@@ -275,10 +275,7 @@ where
 mod test {
 
     use super::*;
-    use crate::{
-        nonce::{self, Deterministic},
-        MessageKind,
-    };
+    use crate::nonce::{self, Deterministic};
     use secp256kfun::TEST_SOUNDNESS;
 
     fn test_schnorr<NG: NonceGen>(schnorr: Schnorr<sha2::Sha256, NG>) {
@@ -287,7 +284,7 @@ mod test {
             let verification_key = signing_keypair.verification_key();
             let decryption_key = Scalar::random(&mut rand::thread_rng());
             let encryption_key = schnorr.encryption_key_for(&decryption_key);
-            let message = b"give 100 coins to Bob".as_ref().mark::<Public>();
+            let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
 
             let encrypted_signature =
                 schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);
@@ -313,8 +310,8 @@ mod test {
         fn sign_plain_message() {
             use sha2::Sha256;
             use rand::rngs::ThreadRng;
-            test_schnorr(Schnorr::new(Deterministic::<Sha256>::default(),MessageKind::Plain{ tag: "test" }));
-            test_schnorr(Schnorr::new(nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default(), MessageKind::Plain { tag: "test" }));
+            test_schnorr(Schnorr::new(Deterministic::<Sha256>::default()));
+            test_schnorr(Schnorr::new(nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default()));
         }
     }
 }

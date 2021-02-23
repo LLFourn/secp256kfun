@@ -3,12 +3,12 @@ use crate::{
         self, derive_nonce,
         digest::{generic_array::typenum::U32, Digest},
         g,
-        hash::{AddTag, HashAdd, Tagged},
+        hash::{HashAdd, Tagged},
         marker::*,
-        nonce::{NonceChallengeBundle, NonceGen},
-        s, Point, Scalar, Slice, XOnly,
+        nonce::{AddTag, NonceGen},
+        s, Point, Scalar, XOnly,
     },
-    KeyPair, Signature,
+    KeyPair, Message, Signature,
 };
 
 /// An instance of a [BIP-340] style Schnorr signature scheme.
@@ -26,58 +26,22 @@ use crate::{
 pub struct Schnorr<CH, NG = (), GT = BasePoint> {
     /// The generator point the Schnorr signature scheme is defined with.
     G: Point<GT>,
-    /// The [`NonceGen`] and NonceChalengeBundlesh.
+    /// The [`NonceGen`] used to generate nonces.
     ///
     /// [`NonceGen`]: crate::nonce::NonceGen
-    nonce_challenge_bundle: NonceChallengeBundle<CH, NG>,
-    application_tag: Option<[u8; 64]>,
-}
-
-/// Describes the kind of messages that will be signed with a [`Schnorr`] instance.
-///
-/// [`Schnorr`]: crate::Schnorr
-#[derive(Debug, Clone, Copy)]
-pub enum MessageKind {
-    /// Sign a pre-hashed message.
-    /// This is used by [BIP-341] to authorize transactions.
-    /// If you also want to sign hashed messages in your applicatin you should use a [_tagged hash_] specific to your application.
-    ///
-    /// [BIP-341]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-    /// [_tagged hash_]: crate::fun::hash::Tagged
-    Prehashed,
-    /// Sign an ordinary variable length message.
-    Plain {
-        /// You must provide a tag to separate signatures from your application
-        /// from other applications. If two [`Schnorr`] instances are created
-        /// with a different `tag` then a signature valid for one will never be
-        /// valid for the other. It will also never be valid for `Prehashed`
-        /// instances. The specific method of domain separation used is
-        /// described [here].
-        ///
-        /// [here]: https://github.com/sipa/bips/issues/207#issuecomment-673681901
-        tag: &'static str,
-    },
+    nonce_gen: NG,
+    /// The challenge hash
+    challenge_hash: CH,
 }
 
 impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, (), BasePoint> {
-    /// Create a new instance that doesn't
+    /// Create a new instance that can only verify signatures.
     ///
-    /// Creates a `Schnorr` instance to verifying signatures of a particular [`MessageKind`].
     /// The instance will use the standard value of [`G`].
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use schnorr_fun::{MessageKind, Schnorr};
-    /// // An instance that can verify Bitcoin Taproot transactions
-    /// let taproot_schnorr = Schnorr::<sha2::Sha256>::verify_only(MessageKind::Prehashed);
-    /// // An instance for verifying transactions in your application
-    /// let myapp_schnorr = Schnorr::<sha2::Sha256>::verify_only(MessageKind::Plain { tag: "myapp" });
-    /// ```
-    /// [`MessageKind`]: crate::MessageKind
-    /// [`G`]: crate::fun::G
-    pub fn verify_only(msgkind: MessageKind) -> Self {
-        Self::new((), msgkind)
+    /// [`G`]: secp256kfun::G
+    pub fn verify_only() -> Self {
+        Self::new(())
     }
 }
 
@@ -94,43 +58,22 @@ where
     /// use rand::rngs::ThreadRng;
     /// use schnorr_fun::{
     ///     nonce::{Deterministic, GlobalRng, Synthetic},
-    ///     MessageKind, Schnorr,
+    ///     Schnorr,
     /// };
     /// use sha2::Sha256;
     /// // Use synthetic nonces (preferred)
     /// let nonce_gen = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default();
     /// // Use deterministic nonces.
     /// let nonce_gen = Deterministic::<Sha256>::default();
-    /// // Sign pre-hashed messges as in BIP-341.
-    /// let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone(), MessageKind::Prehashed);
-    /// // Sign ordinary messages in your own application.
-    /// let schnorr = Schnorr::<Sha256, _>::new(nonce_gen, MessageKind::Plain { tag: "my-app" });
+    /// let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
+    /// // then go and sign/verify messages!
     /// ```
-    pub fn new(nonce_gen: NG, msgkind: MessageKind) -> Self {
-        let mut nonce_challenge_bundle = NonceChallengeBundle {
-            challenge_hash: CH::default(),
-            nonce_gen,
-        }
-        .add_protocol_tag("BIP0340");
-
-        let application_tag = match msgkind {
-            MessageKind::Prehashed => None,
-            MessageKind::Plain { tag } => {
-                assert!(tag.len() <= 64);
-                // Only add the application tag to nonce gen since we will be
-                // separately adding the tag to the challenge hash in self.challenge()
-                nonce_challenge_bundle.nonce_gen =
-                    nonce_challenge_bundle.nonce_gen.add_application_tag(tag);
-                let mut application_tag = [0u8; 64];
-                application_tag[..tag.len()].copy_from_slice(tag.as_bytes());
-                Some(application_tag)
-            }
-        };
-
+    pub fn new(nonce_gen: NG) -> Self {
+        let nonce_gen = nonce_gen.add_tag("BIP0340");
         Self {
             G: fun::G.clone(),
-            nonce_challenge_bundle,
-            application_tag,
+            nonce_gen,
+            challenge_hash: CH::default().tagged("BIP0340/challenge".as_bytes()),
         }
     }
 }
@@ -145,19 +88,20 @@ where
     /// # Examples
     ///
     /// ```
-    /// use schnorr_fun::{
-    ///     fun::{marker::*, Scalar},
-    ///     MessageKind,
-    /// };
+    /// # use schnorr_fun::{
+    /// #     Message,
+    /// #     fun::{marker::*, Scalar},
+    /// # };
     /// # let schnorr = schnorr_fun::test_instance!();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-    /// let message = b"Chancellor on brink of second bailout for banks"
-    ///     .as_ref()
-    ///     .mark::<Public>();
+    /// let message = Message::<Public>::plain(
+    ///     "times-of-london",
+    ///     b"Chancellor on brink of second bailout for banks",
+    /// );
     /// let signature = schnorr.sign(&keypair, message);
     /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
     /// ```
-    pub fn sign(&self, keypair: &KeyPair, message: Slice<'_, impl Secrecy>) -> Signature {
+    pub fn sign(&self, keypair: &KeyPair, message: Message<'_, impl Secrecy>) -> Signature {
         let (x, X) = keypair.as_tuple();
 
         let mut r = derive_nonce!(
@@ -177,7 +121,7 @@ where
     ///
     /// [`NonceGen`]: crate::nonce::NonceGen
     pub fn nonce_gen(&self) -> &NG {
-        &self.nonce_challenge_bundle.nonce_gen
+        &self.nonce_gen
     }
 }
 
@@ -189,7 +133,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
 
     /// Returns the challenge hash being used to sign/verify signatures
     pub fn challenge_hash(&self) -> CH {
-        self.nonce_challenge_bundle.challenge_hash.clone()
+        self.challenge_hash.clone()
     }
     /// Converts a non-zero scalar to a key-pair by interpreting it as a secret key.
     ///
@@ -205,9 +149,10 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         KeyPair { sk, pk }
     }
 
-    /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by BIP-340.
+    /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by [BIP-340].
     ///
-    /// Concretely computes the hash `H(R || X || m)`.
+    /// Concretely computes the hash `H(R || X || m)`. The [`Secrecy`] of the message is inherited
+    /// by the returned scalar.
     ///
     /// # Example
     ///
@@ -216,10 +161,10 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// ```
     /// use schnorr_fun::{
     ///     fun::{marker::*, s, Scalar, XOnly},
-    ///     Schnorr, Signature,
+    ///     Message, Schnorr, Signature,
     /// };
     /// # let schnorr = schnorr_fun::test_instance!();
-    /// let message = b"we rolled our own sign!".as_ref().mark::<Public>();
+    /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
     /// let R = XOnly::from_scalar_mul(schnorr.G(), &mut r);
@@ -228,15 +173,17 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// let signature = Signature { R, s };
     /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
     /// ```
-    pub fn challenge<S: Secrecy>(&self, R: &XOnly, X: &XOnly, m: Slice<'_, S>) -> Scalar<S, Zero> {
-        let hash = self.nonce_challenge_bundle.challenge_hash.clone();
-        let mut hash = hash.add(R).add(X);
-
-        if let Some(tag) = self.application_tag {
-            hash.update(&tag[..]);
-        }
-
-        let challenge = Scalar::from_hash(hash.add(&m));
+    ///
+    /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
+    /// [`Secrecy`]: secp256kfun::marker::Secrecy
+    pub fn challenge<S: Secrecy>(
+        &self,
+        R: &XOnly,
+        X: &XOnly,
+        m: Message<'_, S>,
+    ) -> Scalar<S, Zero> {
+        let hash = self.challenge_hash.clone();
+        let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
 
         challenge
             // Since the challenge pre-image is adversarially controlled we
@@ -246,24 +193,44 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
             .mark::<S>()
     }
 
-    /// Verifies a signature on a message under a given public key.  Note that a full
-    /// `Point<EvenY,..>` is passed in rather than a `XOnly` because it's more efficient
-    /// for repeated verification (where as `XOnly` is more efficient for repeated
+    /// Verifies a signature on a message under a given public key.
+    ///
+    /// Note that a full `Point<EvenY,..>` is passed in rather than a `XOnly` because it's more
+    /// efficient for repeated verification (where as `XOnly` is more efficient for repeated
     /// signing).
     ///
-    /// For an example see the [Synopsis](crate#synopsis)
+    /// # Example
+    ///
+    /// ```
+    /// use schnorr_fun::{
+    ///     fun::{marker::*, nonce, Scalar, hex, Point},
+    ///     Message, Schnorr, Signature
+    /// };
+    /// use sha2::Sha256;
+    /// use core::str::FromStr;
+    ///
+    /// let schnorr = Schnorr::<Sha256>::verify_only();
+    /// let public_key = Point::<EvenY, Public>::from_str("d69c3509bb99e412e68b0fe8544e72837dfa30746d8be2aa65975f29d22dc7b9").unwrap();
+    /// let signature = Signature::<Public>::from_str("00000000000000000000003b78ce563f89a0ed9414f5aa28ad0d96d6795f9c6376afb1548af603b3eb45c9f8207dee1060cb71c04e80f593060b07d28308d7f4").unwrap();
+    /// let message = hex::decode("4df3c3f68fcc83b27e9d42c90431a72499f17875c81a599b566c9889b9696703").unwrap();
+    /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
+    ///
+    /// // We could also say the message is secret if we don't want to leak which message we are
+    /// // verifying through execution time.
+    /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
+    /// ```
     #[must_use]
     pub fn verify(
         &self,
         public_key: &Point<EvenY, impl Secrecy>,
-        message: Slice<'_, impl Secrecy>,
+        message: Message<'_, impl Secrecy>,
         signature: &Signature<impl Secrecy>,
     ) -> bool {
         let X = public_key;
         let (R, s) = signature.as_tuple();
         let c = self.challenge(R, &X.to_xonly(), message);
-        let R_tmp = g!(s * self.G - c * X).mark::<Normal>();
-        R_tmp == *R
+        let R_implied = g!(s * self.G - c * X).mark::<Normal>();
+        R_implied == *R
     }
 
     /// _Anticipates_ a Schnorr signature given the nonce `R` that will be used ahead of time.
@@ -273,7 +240,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         &self,
         X: &Point<EvenY, impl Secrecy>,
         R: &Point<EvenY, impl Secrecy>,
-        m: Slice<'_, impl Secrecy>,
+        m: Message<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
         let c = self.challenge(&R.to_xonly(), &X.to_xonly(), m);
         g!(R + c * X)
@@ -292,7 +259,7 @@ pub mod test {
             for _ in 0..TEST_SOUNDNESS {
                 let schnorr = crate::test_instance!();
                 let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let msg = b"Chancellor on brink of second bailout for banks".as_ref().mark::<Public>();
+                let msg = Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
                 let signature = schnorr.sign(&keypair,msg);
                 let anticipated_signature = schnorr.anticipate_signature(
                     &keypair.verification_key(),
@@ -313,8 +280,8 @@ pub mod test {
             for _ in 0..TEST_SOUNDNESS {
                 let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
                 let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let msg_atkdwn = b"attack at dawn".as_ref().mark::<Public>();
-                let msg_rtrtnoon = b"retreat at noon".as_ref().mark::<Public>();
+                let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
+                let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
                 let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
                 let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
                 let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
@@ -333,19 +300,16 @@ pub mod test {
 
         fn deterministic_nonces_for_different_message_kinds() {
             use sha2::Sha256;
-            let schnorr_1 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Prehashed);
-            let schnorr_2 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Plain { tag: "two" });
-            let schnorr_3 = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default(), MessageKind::Plain { tag: "three" });
+             use core::str::FromStr;
+            let schnorr = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default());
             let x =  Scalar::from_str("18451f9e08af9530814243e202a4a977130e672079f5c14dcf15bd4dee723072").unwrap();
-            let keypair = schnorr_1.new_keypair(x);
-            let message = b"foo".as_ref().mark::<Public>();
-            assert_ne!(schnorr_1.sign(&keypair, message).R, schnorr_2.sign(&keypair, message).R);
-            assert_ne!(schnorr_1.sign(&keypair, message).R, schnorr_3.sign(&keypair, message).R);
+            let keypair = schnorr.new_keypair(x);
+            assert_ne!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")).R, schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")).R);
+            assert_ne!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")).R, schnorr.sign(&keypair, Message::<Public>::plain("two", b"foo")).R);
 
             // make sure deterministic signatures don't change
-            use core::str::FromStr;
-            assert_eq!(schnorr_1.sign(&keypair, message), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
-            assert_eq!(schnorr_2.sign(&keypair, message), Signature::<Public>::from_str("6cad3863f4d01494ce4c40f3422e4916c616356d730bc4ffe33e386f038b328ba1dc9621e626992c2612f33cdb35f4be4badc464c1f4bf3de15517e7aedcf615").unwrap());
+            assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
+            assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
         }
     }
 }
