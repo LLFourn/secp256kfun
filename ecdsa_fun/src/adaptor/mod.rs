@@ -60,8 +60,12 @@
 //! ```
 use crate::{Signature, ECDSA};
 use secp256kfun::{
-    derive_nonce_rng, digest::generic_array::typenum::U32, g, hash::AddTag, marker::*,
-    nonce::NonceGen, s, Point, Scalar, G,
+    derive_nonce_rng,
+    digest::generic_array::typenum::U32,
+    g,
+    marker::*,
+    nonce::{AddTag, NonceGen},
+    s, Point, Scalar, G,
 };
 pub use sigma_fun::HashTranscript;
 use sigma_fun::{secp256k1, Eq, FiatShamir, ProverTranscript, Transcript};

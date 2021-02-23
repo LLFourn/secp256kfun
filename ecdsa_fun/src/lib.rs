@@ -17,7 +17,12 @@ mod libsecp_compat;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-use fun::{derive_nonce, g, hash::AddTag, marker::*, nonce::NonceGen, s, Point, Scalar, G};
+use fun::{
+    derive_nonce, g,
+    marker::*,
+    nonce::{AddTag, NonceGen},
+    s, Point, Scalar, G,
+};
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
 mod signature;
@@ -68,7 +73,7 @@ impl<NG> ECDSA<NG> {
         NG: AddTag,
     {
         ECDSA {
-            nonce_gen: nonce_gen.add_protocol_tag("ECDSA"),
+            nonce_gen: nonce_gen.add_tag("secp256kfun/ecdsa_fun"),
             enforce_low_s: false,
         }
     }

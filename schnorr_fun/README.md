@@ -29,21 +29,17 @@ This library and [secp256kfun] are experimental.
 use schnorr_fun::{
     fun::{marker::*, Scalar, nonce},
     Schnorr,
-    MessageKind,
+    Message
 };
 use sha2::Sha256;
 use rand::rngs::ThreadRng;
 // Use synthetic nonces
 let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-// Create a BIP-341 compatible instance
-let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone(),MessageKind::Prehashed);
-// Or create an instance for your own application
-let schnorr = Schnorr::<Sha256,_>::new(nonce_gen, MessageKind::Plain { tag: "my-app" });
+let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
 // Generate your public/private key-pair
 let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-let message = b"Chancellor on brink of second bailout for banks"
-    .as_ref()
-    .mark::<Public>();
+// Sign a variable length message
+let message = Message::<Public>::plain("the-times-of-london", b"Chancellor on brink of second bailout for banks");
 // Sign the message with our keypair
 let signature = schnorr.sign(&keypair, message);
 // Get the verifier's key

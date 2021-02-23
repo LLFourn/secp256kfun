@@ -121,13 +121,12 @@ pub struct GlobalRng<R> {
 ///
 /// ```
 /// use secp256kfun::{
-///     hash::AddTag,
+///     nonce::AddTag,
 ///     nonce::{Deterministic, NonceGen},
 /// };
 /// use sha2::Sha256;
 /// let nonce_gen = Deterministic::<Sha256>::default()
-///     .add_protocol_tag("BIP340") // for example
-///     .add_application_tag("my-app");
+///     .add_tag("BIP0340"); // To create [BIP-340] signatures.
 /// ```
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 /// [`Synthetic`]: crate::nonce::Synthetic
@@ -148,7 +147,7 @@ pub struct Deterministic<H> {
 ///
 /// In general it's better to use the [`derive_nonce`] macro than to call
 /// `begin_derivation` directly.
-pub trait NonceGen: AddTag {
+pub trait NonceGen {
     /// The type of hash that `begin_derivation` will return.
     type Hash: Digest<OutputSize = U32>;
 
@@ -166,12 +165,7 @@ impl<H: Tagged + Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H>
 }
 
 impl<H: Tagged> AddTag for Deterministic<H> {
-    fn add_application_tag(mut self, tag: &str) -> Self {
-        self.nonce_hash = self.nonce_hash.tagged(tag.as_bytes());
-        self
-    }
-
-    fn add_protocol_tag(self, tag: &str) -> Self {
+    fn add_tag(self, tag: &str) -> Self {
         Self {
             nonce_hash: self
                 .nonce_hash
@@ -205,12 +199,7 @@ where
 }
 
 impl<H: Tagged, R> AddTag for Synthetic<H, R> {
-    fn add_application_tag(mut self, tag: &str) -> Self {
-        self.nonce_hash = self.nonce_hash.tagged(tag.as_bytes());
-        self
-    }
-
-    fn add_protocol_tag(self, tag: &str) -> Self {
+    fn add_tag(self, tag: &str) -> Self {
         Self {
             nonce_hash: self
                 .nonce_hash
@@ -221,59 +210,25 @@ impl<H: Tagged, R> AddTag for Synthetic<H, R> {
     }
 }
 
-/// A struct to keep tagging of a Fiat-Shamir challenge hash and a [`NonceGen`]
-/// in sync.
-///
-/// This exists because changing the challenge hash without changing nonce
-/// generation can be a catastrophic mistake. Any time you are doing the
-/// [_Fiat-Shamir_] transform you should use this. Internally this follows the
-/// structure of [BIP-340] for protocol tagging so if you do:
-///
-/// ```
-/// use rand::rngs::ThreadRng;
-/// use secp256kfun::{
-///     hash::AddTag,
-///     nonce::{GlobalRng, NonceChallengeBundle, Synthetic},
-/// };
-/// use sha2::Sha256;
-/// let nonce_gen = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default();
-/// let fs = NonceChallengeBundle {
-///     challenge_hash: Sha256::default(),
-///     nonce_gen,
-/// }
-/// .add_protocol_tag("BIP0340");
-/// ```
-/// You get a perfectly compliant [BIP-340] challenge and nonce state.
-///
-/// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-/// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
-#[derive(Clone, Debug, Default)]
-pub struct NonceChallengeBundle<H, NG> {
-    /// The challenge hash for the Fiat-Shamir based scheme.
-    pub challenge_hash: H,
-    /// The nonce genertor for the Firat-Shamir based scheme.
-    pub nonce_gen: NG,
+/// Trait for things that can domain separate themselves.
+pub trait AddTag {
+    /// Tells the invocant to return a new version of itself modified with the
+    /// tag. This is to ensure that a `NonceGen` does not produce the
+    /// same outputs for two different tags even if they have the same
+    /// public inputs.
+    ///
+    /// Internally, the implementations provided in this library use the scheme described in [BIP-340].
+    ///
+    /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
+    fn add_tag(self, tag: &str) -> Self;
 }
 
-impl<H: Tagged, NG: AddTag> AddTag for NonceChallengeBundle<H, NG> {
-    /// Tags both the [`NonceGen`] and the challenge hash with a protocol
-    /// specific tag.
-    fn add_protocol_tag(self, tag: &str) -> Self {
-        Self {
-            nonce_gen: self.nonce_gen.add_protocol_tag(tag),
-            challenge_hash: self
-                .challenge_hash
-                .tagged(&[tag.as_bytes(), b"/challenge"].concat()),
-        }
-    }
-
-    /// Tags both the [`NonceGen`] and the challenge hash with an application
-    /// specific tag.
-    fn add_application_tag(self, tag: &str) -> Self {
-        Self {
-            nonce_gen: self.nonce_gen.add_application_tag(tag),
-            challenge_hash: self.challenge_hash.tagged(tag.as_bytes()),
-        }
+/// AddTag is implemented for () so you can use implement things generically for
+/// `AddTag` even for things that have some field set to () (for example
+/// `NonceGen` when you're doing verification only).
+impl AddTag for () {
+    fn add_tag(self, _tag: &str) -> Self {
+        ()
     }
 }
 
@@ -297,8 +252,8 @@ mod test {
     #[test]
     fn deterministic_tests() {
         use core::str::FromStr;
-        let nonce_gen_1 = Deterministic::<Sha256>::default().add_protocol_tag("PROTO_ONE");
-        let nonce_gen_2 = Deterministic::<Sha256>::default().add_protocol_tag("PROTO_TWO");
+        let nonce_gen_1 = Deterministic::<Sha256>::default().add_tag("PROTO_ONE");
+        let nonce_gen_2 = Deterministic::<Sha256>::default().add_tag("PROTO_TWO");
 
         let one = s!(1);
         let two = s!(2);
@@ -307,8 +262,8 @@ mod test {
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, two));
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_2, one));
 
-        let app_nonce_gen_1 = nonce_gen_1.clone().add_application_tag("MY_APP");
-        let app_nonce_gen_2 = nonce_gen_2.clone().add_application_tag("MY_APP");
+        let app_nonce_gen_1 = nonce_gen_1.clone().add_tag("MY_APP");
+        let app_nonce_gen_2 = nonce_gen_2.clone().add_tag("MY_APP");
 
         assert_ne!(
             get_nonce!(nonce_gen_1, one),
@@ -331,8 +286,7 @@ mod test {
 
     #[test]
     fn synthetic_nonce_gen_is_random() {
-        let nonce_gen_1 =
-            Synthetic::<Sha256, GlobalRng<ThreadRng>>::default().add_protocol_tag("PROTO_ONE");
+        let nonce_gen_1 = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default().add_tag("PROTO_ONE");
 
         let one = s!(1);
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, one));

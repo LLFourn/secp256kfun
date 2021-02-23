@@ -139,10 +139,10 @@ mod test {
     #[test]
     fn signature_serialization_roundtrip() {
         use super::*;
-        use crate::fun::Scalar;
+        use crate::{fun::Scalar, Message};
         let schnorr = crate::test_instance!();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-        let signature = schnorr.sign(&kp, b"test".as_ref().mark::<Public>());
+        let signature = schnorr.sign(&kp, Message::<Public>::plain("test", b"foo"));
         let serialized = bincode::serialize(&signature).unwrap();
         assert_eq!(serialized.len(), 64);
         let deserialized = bincode::deserialize::<Signature>(&serialized).unwrap();

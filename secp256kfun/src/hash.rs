@@ -96,35 +96,3 @@ impl<D: Digest> HashAdd for D {
         self
     }
 }
-
-/// Trait for things that can domain separate themselves.
-///
-/// i.e. given a protocol or application tag can produce a new version that will
-/// not give the same outputs for a given input if the tags are different.
-pub trait AddTag {
-    /// Tells the invocant to return a new version of itself modifies with the
-    /// protocol tag. This is to ensure that the `AddTag` does not produce the
-    /// same outputs for tow different protocols even if they have the same
-    /// public inputs. By "protocol" we mean type of cryptographic scheme. For
-    /// example, for the [BIP-340] signature scheme you would use "BIP340" as
-    /// the tag.
-    ///
-    /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-    fn add_protocol_tag(self, tag: &str) -> Self;
-    /// Tells the `AddTag` to further domain separate itself for a particular
-    /// application. This is useful when you are domain separating signatures in
-    /// your application from other signatures.
-    fn add_application_tag(self, tag: &str) -> Self;
-}
-
-/// AddTag is implemented for () so you can use implement things generically for
-/// `AddTag` even for things that have some field set to () (for example
-/// `NonceGen` when you're doing verification only).
-impl AddTag for () {
-    fn add_protocol_tag(self, _tag: &str) -> Self {
-        ()
-    }
-    fn add_application_tag(self, _tag: &str) -> Self {
-        ()
-    }
-}

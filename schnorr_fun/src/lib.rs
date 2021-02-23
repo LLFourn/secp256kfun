@@ -23,6 +23,8 @@ mod keypair;
 pub use keypair::KeyPair;
 mod schnorr;
 pub use schnorr::*;
+mod message;
+pub use message::*;
 
 #[macro_export]
 #[doc(hidden)]
@@ -30,7 +32,6 @@ macro_rules! test_instance {
     () => {
         $crate::Schnorr::<sha2::Sha256, _>::new(
             $crate::nonce::Deterministic::<sha2::Sha256>::default(),
-            $crate::MessageKind::Plain { tag: "test" },
         )
     };
 }
