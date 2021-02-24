@@ -19,7 +19,7 @@ Fun does not mean (yet -- please help!):
 - **stable**: This library will frequently add/remove/change APIs for the foreseeable future. It also needs a nightly compiler for [_specialization_] (it uses the `min_specialization` feature).
 - **well reviewed or tested**: This code is fresh and experimental and not rigorously tested.
 - **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying [parity/libsecp256k1][4] is resistant against timing attacks etc.
-- **performant**: The library is in general not as performant as [libsecp256k1][1], at least on 64-bit platforms.
+- **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
 I hope you can build very satisfying implementations of cryptographic schemes with this library.
@@ -30,7 +30,7 @@ _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the res
 
 ```toml
 [dependencies]
-secp256kfun = "0.4"
+secp256kfun = "0.5"
 ```
 
 ### Should use?
@@ -53,11 +53,7 @@ Here's the distinguishing features of this library.
 Both secp256k1 points and scalars have a notional _zero_ element.
 Unfortunately, in things surrounding Bitcoin, the zero scalar and zero point are illegal values in most cases.
 The _high-level_ [rust-secp256k1][2] deals with zero problem by returning a `Result` in its API whenever the return value might be zero.
-This is annoying for two reasons:
-
-1. Sometimes zero is fine and now you have an error case where you should just have zero.
-2. In many cases, we can rule out zero as a result of a computation through some context specific information.
-
+This causes friction because you have an error case where you should just have zero.
 At worst, this can lead to a habitual use of `.unwrap` to ignore the errors that the engineer *thinks* are unreachable.
 A mistaken `.unwrap` is often a security bug if a malicious party can trigger it.
 
@@ -110,7 +106,7 @@ match sum.mark::<(Normal, NonZero)>() {
 
 ## Variable time or Constant time?
 
-If a function's execution time depends on its inputs, then information about those inputs may leak to anyone that can measure its execution time.
+If a function's execution time is not indepent of its inputs, then information about those inputs may leak to anyone that can measure its execution time.
 Therefore it is crucial that functions that take secret inputs run in _constant time_.
 Good low-level libraries tend to have one constant time version of an algorithm and then a faster variable time version. In _high-level_ libraries the experts have made the choice for you.
 Here's a question that demonstrates the problem with this: **Should a signature verification algorithm run in variable time or constant time?**
