@@ -1,7 +1,7 @@
 /// Every `T` of a [`Point<T,S,Z>`] implements the `PointType` trait.
 ///
 /// There are several different point types.
-/// - [`Normal`]: A point represented internally with Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hahsed.
+/// - [`Normal`]: A point represented internally with Affine coordinates, with x and y coordinates (if it's not zero). These can be directly serialized or hashed.
 /// - [`Jacobian`]: A non-normal represented internally in Jacobian coordinates. Usually the result of a point operation. Before being serialized or hashed, you have to normalize it.
 /// - [`BasePoint`]: A normal point that has pre-computed multiplication tables like [`G`].
 /// - [`EvenY`]: A normal point whose y-coordinate is known to be _even_ at compile time.
