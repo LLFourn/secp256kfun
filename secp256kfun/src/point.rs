@@ -486,7 +486,7 @@ mod test {
             use core::str::FromStr;
             assert_eq!(
                 G.to_bytes_uncompressed().as_ref(),
-                hex_literal::hex!("04 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798 483ADA77 26A3C465 5DA4FBFC 0E1108A8 FD17B448 A6855419 9C47D08F FB10D4B8").as_ref(),
+                crate::hex::decode("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
                 "G.to_bytes_uncompressed()"
             );
 
@@ -494,17 +494,17 @@ mod test {
 
             assert_eq!(
                 G.to_bytes().as_ref(),
-                hex_literal::hex!("02 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798").as_ref(),
+                crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "G.to_bytes()"
             );
 
             assert_eq!(
-                &Point::from_bytes(hex_literal::hex!("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")).unwrap(),
+                &Point::from_slice(&crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 G
             );
 
             assert_eq!(
-                &Point::from_bytes(hex_literal::hex!("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")).unwrap(),
+                &Point::from_slice(&crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 &Point::<Normal,Secret,_>::from_str("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
             );
 
@@ -513,17 +513,16 @@ mod test {
             assert_eq!(
                 neg_G.to_bytes_uncompressed().as_ref(),
                 // raku -e 'say (-0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8 mod 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F).base(16).comb().batch(8).map(*.join).join(" ")'
-                hex_literal::hex!(
-                    "04 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798 B7C52588 D95C3B9A A25B0403 F1EEF757 02E84BB7 597AABE6 63B82F6F 04EF2777"
-                )
-                    .as_ref(),
+                crate::hex::decode(
+                    "0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798B7C52588D95C3B9AA25B0403F1EEF75702E84BB7597AABE663B82F6F04EF2777"
+                ).unwrap(),
                 "-G.to_bytes_uncompressed()"
             );
 
 
             assert_eq!(
                 neg_G.to_bytes().as_ref(),
-                hex_literal::hex!("03 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798").as_ref(),
+                crate::hex::decode("0379BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "-G.to_bytes()"
             );
         }
