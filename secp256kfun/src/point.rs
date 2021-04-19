@@ -376,7 +376,7 @@ where
     }
 }
 
-crate::impl_display_debug! {
+crate::impl_debug! {
     fn to_bytes<T: PointType, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
         match Clone::clone(*point).mark::<(Normal,NonZero)>() {
             Some(nzpoint) => Ok(nzpoint.to_bytes()),
@@ -385,7 +385,7 @@ crate::impl_display_debug! {
     }
 }
 
-crate::impl_serialize! {
+crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<Normal, S, NonZero>) -> [u8;33] {
         point.to_bytes()
     }
@@ -393,7 +393,7 @@ crate::impl_serialize! {
 
 // For YChoice points they serialize and deserialize like XOnlys except when
 // deserializing we don't throw away y-coordinate
-crate::impl_serialize! {
+crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<EvenY, S, NonZero>) -> [u8;32] {
         point.to_xonly().as_bytes().clone()
     }
@@ -549,6 +549,14 @@ mod test {
             assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
             let mult_point = g!({Scalar::random(&mut rand::thread_rng())} * G);
             assert!(format!("{:?}", mult_point).starts_with("Point<Jacobian,Public,NonZero>"));
+        }
+
+        #[cfg(feature="serde")]
+        fn point_even_y_deserialization_roundtrip() {
+            let hex_G_x = r#""79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798""#;
+            let point = serde_json::from_str::<Point<EvenY>>(hex_G_x).unwrap();
+            assert_eq!(&point, G);
+            assert_eq!(serde_json::to_string(&point).unwrap(), hex_G_x.to_lowercase());
         }
     }
 }

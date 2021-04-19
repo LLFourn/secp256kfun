@@ -51,8 +51,8 @@ pub mod proptest;
 /// ```
 /// use secp256kfun::G;
 /// assert_eq!(
-///     format!("{}", G),
-///     "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+///     format!("{:?}", G),
+///     "Point<BasePoint,Public,NonZero>(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)"
 /// );
 /// ```
 ///

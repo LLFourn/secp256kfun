@@ -385,17 +385,8 @@ macro_rules! derive_nonce_rng {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_display_debug {
+macro_rules! impl_debug {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type_name:ident$(<$($tpr:path),+>)?) -> $($tail:tt)*) => {
-        impl$(<$($tpl $(:$tcl)?),*>)? core::fmt::Display for $type_name$(<$($tpr),+>)? {
-            /// Displays as hex.
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                let $self = &self;
-                $crate::impl_display_debug!(@output f, $self, $($tail)*);
-                Ok(())
-            }
-        }
-
         impl$(<$($tpl $(:$tcl)?),*>)? core::fmt::Debug for $type_name$(<$($tpr),+>)? {
             /// Formats the type as hex and any markers on the type.
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -403,11 +394,11 @@ macro_rules! impl_display_debug {
                 write!(f, "{}", stringify!($type_name))?;
                 $(
                     write!(f, "<")?;
-                    $crate::impl_display_debug!(@recursive_print f, $(core::any::type_name::<$tpr>().rsplit("::").next().unwrap()),*);
+                    $crate::impl_debug!(@recursive_print f, $(core::any::type_name::<$tpr>().rsplit("::").next().unwrap()),*);
                     write!(f, ">")?;
                 )?
                     write!(f, "(")?;
-                $crate::impl_display_debug!(@output f, $self, $($tail)*);
+                $crate::impl_debug!(@output f, $self, $($tail)*);
                 write!(f, ")")?;
                 Ok(())
             }
@@ -435,7 +426,7 @@ macro_rules! impl_display_debug {
     (@recursive_print $f:ident, $next:expr, $($tt:tt)+) => {
         $f.write_str($next)?;
         $f.write_str(",")?;
-        $crate::impl_display_debug!(@recursive_print $f, $($tt)+)
+        $crate::impl_debug!(@recursive_print $f, $($tt)+)
     };
     (@recursive_print $f:ident, $next:expr) => {
         $f.write_str($next)?;
@@ -444,20 +435,21 @@ macro_rules! impl_display_debug {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_serialize {
+macro_rules! impl_display_serialize {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
         #[cfg(feature = "serde")]
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::serde::Serialize for $type {
             fn serialize<Ser: $crate::serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
+                use $crate::serde::ser::SerializeTuple;
+                use $crate::hex;
+                let $self = &self;
+                let bytes = $block;
 
                 if serializer.is_human_readable() {
-                    return serializer.collect_str(&self)
+                    return serializer.serialize_str(&hex::encode(&bytes[..]))
                 }
 
                 //NOTE: idea taken from https://github.com/dalek-cryptography/curve25519-dalek/pull/297/files
-                use $crate::serde::ser::SerializeTuple;
-                let $self = &self;
-                let bytes = $block;
                 let mut tup = serializer.serialize_tuple($len)?;
                 for byte in bytes.iter() {
                     tup.serialize_element(byte)?;
@@ -465,15 +457,29 @@ macro_rules! impl_serialize {
                 tup.end()
             }
         }
+
+        impl$(<$($tpl $(:$tcl)?),*>)? core::fmt::Display for $type {
+            /// Displays as hex.
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                let $self = &self;
+                let bytes = $block;
+                for byte in bytes.iter() {
+                    write!(f, "{:02x}", byte)?
+                }
+                Ok(())
+            }
+        }
     }
+
+
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_display_debug_serialize {
     ($($tt:tt)+) => {
-        $crate::impl_serialize!($($tt)+);
-        $crate::impl_display_debug!($($tt)+);
+        $crate::impl_display_serialize!($($tt)+);
+        $crate::impl_debug!($($tt)+);
     };
 }
 
