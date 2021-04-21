@@ -482,47 +482,45 @@ mod test {
             operations_test!(p.mark::<Public>())
         }
 
-        fn G_to_and_from_bytes() {
+        fn g_to_and_from_bytes() {
             use core::str::FromStr;
             assert_eq!(
-                G.to_bytes_uncompressed().as_ref(),
-                crate::hex::decode("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
+                G.to_bytes_uncompressed(),
+                crate::hex::decode_array("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
                 "G.to_bytes_uncompressed()"
             );
 
             assert_eq!(Point::from_bytes_uncompressed(G.to_bytes_uncompressed()).unwrap(), *G);
 
             assert_eq!(
-                G.to_bytes().as_ref(),
-                crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
+                G.to_bytes(),
+                crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "G.to_bytes()"
             );
 
             assert_eq!(
-                &Point::from_slice(&crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
+                &Point::from_bytes(crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 G
             );
 
             assert_eq!(
-                &Point::from_slice(&crate::hex::decode("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
+                &Point::from_bytes(crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 &Point::<Normal,Secret,_>::from_str("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
             );
 
-            let neg_G = -G;
+            let neg_g = -G;
 
             assert_eq!(
-                neg_G.to_bytes_uncompressed().as_ref(),
+                neg_g.to_bytes_uncompressed(),
                 // raku -e 'say (-0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8 mod 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F).base(16).comb().batch(8).map(*.join).join(" ")'
-                crate::hex::decode(
+                crate::hex::decode_array(
                     "0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798B7C52588D95C3B9AA25B0403F1EEF75702E84BB7597AABE663B82F6F04EF2777"
                 ).unwrap(),
                 "-G.to_bytes_uncompressed()"
             );
-
-
             assert_eq!(
-                neg_G.to_bytes().as_ref(),
-                crate::hex::decode("0379BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
+                neg_g.to_bytes(),
+                crate::hex::decode_array("0379BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "-G.to_bytes()"
             );
         }

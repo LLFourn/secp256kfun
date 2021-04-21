@@ -441,12 +441,15 @@ macro_rules! impl_display_serialize {
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::serde::Serialize for $type {
             fn serialize<Ser: $crate::serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
                 use $crate::serde::ser::SerializeTuple;
-                use $crate::hex;
                 let $self = &self;
                 let bytes = $block;
 
-                if serializer.is_human_readable() {
-                    return serializer.serialize_str(&hex::encode(&bytes[..]))
+                #[cfg(feature = "alloc")]
+                {
+                    use $crate::hex;
+                    if serializer.is_human_readable() {
+                        return serializer.serialize_str(&hex::encode(&bytes[..]))
+                    }
                 }
 
                 //NOTE: idea taken from https://github.com/dalek-cryptography/curve25519-dalek/pull/297/files

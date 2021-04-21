@@ -131,8 +131,8 @@ impl Scalar<Secret, NonZero> {
     /// hash.update(b"Chancellor on brink of second bailout for banks".as_ref());
     /// let scalar = Scalar::from_hash(hash);
     /// # assert_eq!(
-    /// #     scalar.to_bytes().as_ref(),
-    /// #     secp256kfun::hex::decode("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d").unwrap().as_slice()
+    /// #     scalar.to_bytes(),
+    /// #     secp256kfun::hex::decode_array("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d").unwrap()
     /// # );
     /// ```
     pub fn from_hash(hash: impl Digest<OutputSize = U32>) -> Self {
@@ -170,9 +170,7 @@ impl Scalar<Secret, Zero> {
     /// let scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// let scalar_overflowed = Scalar::from_bytes_mod_order(
-    ///     hex::decode("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
-    ///         .unwrap()
-    ///         .try_into()
+    ///     hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
     ///         .unwrap(),
     /// );
     /// assert_eq!(scalar_overflowed, Scalar::one())
@@ -322,7 +320,6 @@ where
 mod test {
     use super::*;
     use crate::{hex, op, s};
-    use core::convert::TryInto;
 
     #[cfg(feature = "serde")]
     #[test]
@@ -366,7 +363,7 @@ mod test {
             assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_none());
 
             assert!(Scalar::from_slice(
-                hex::decode("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap().as_ref()
+                hex::decode_array::<32>("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap().as_ref()
             )
                     .is_none());
         }
@@ -381,7 +378,7 @@ mod test {
 
             assert_eq!(
                 Scalar::from_slice_mod_order(
-                    hex::decode(
+                    hex::decode_array::<32>(
                         "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
                     ).unwrap().as_ref()
                 )
@@ -398,9 +395,9 @@ mod test {
 
             assert_eq!(
                 minus_1,
-                Scalar::from_bytes_mod_order(hex::decode(
+                Scalar::from_bytes_mod_order(hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
-                ).unwrap().try_into().unwrap())
+                ).unwrap())
             );
             assert_eq!(s!(two - three), minus_1);
             assert_eq!(s!(three - two), one);
