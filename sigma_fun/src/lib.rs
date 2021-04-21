@@ -1,8 +1,8 @@
 //!
 #![no_std]
 #![allow(non_snake_case)]
-#![feature(external_doc)]
-#![cfg_attr(feature = "secp256k1", doc(include = "../README.md"))]
+#![feature(extended_key_value_attributes)]
+#![cfg_attr(feature = "secp256k1", doc = include_str!("../README.md"))]
 #![deny(missing_docs, warnings)]
 
 use core::fmt::Debug;

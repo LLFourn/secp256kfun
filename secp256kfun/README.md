@@ -43,7 +43,7 @@ This library vendors [parity/libsecp256k1][4] into the `parity_backend` director
 
 ## Documentation
 
-https://docs.rs/secp256kfun
+[docs.rs/secp256kfun](https://docs.rs/secp256kfun)
 
 # Features
 Here's the distinguishing features of this library.
