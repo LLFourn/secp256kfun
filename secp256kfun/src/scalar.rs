@@ -132,7 +132,7 @@ impl Scalar<Secret, NonZero> {
     /// let scalar = Scalar::from_hash(hash);
     /// # assert_eq!(
     /// #     scalar.to_bytes(),
-    /// #     hex_literal::hex!("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d")
+    /// #     secp256kfun::hex::decode_array("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d").unwrap()
     /// # );
     /// ```
     pub fn from_hash(hash: impl Digest<OutputSize = U32>) -> Self {
@@ -165,12 +165,14 @@ impl Scalar<Secret, Zero> {
     /// Converts 32 bytes into a scalar by reducing it modulo the curve order `q`.
     /// # Example
     /// ```
-    /// use secp256kfun::Scalar;
+    /// # use core::convert::TryInto;
+    /// use secp256kfun::{hex, Scalar};
     /// let scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    /// let scalar_overflowed = Scalar::from_bytes_mod_order(hex_literal::hex!(
-    ///     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
-    /// ));
+    /// let scalar_overflowed = Scalar::from_bytes_mod_order(
+    ///     hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+    ///         .unwrap(),
+    /// );
     /// assert_eq!(scalar_overflowed, Scalar::one())
     /// ```
     pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
@@ -317,7 +319,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{op, s};
+    use crate::{hex, op, s};
 
     #[cfg(feature = "serde")]
     #[test]
@@ -361,8 +363,7 @@ mod test {
             assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_none());
 
             assert!(Scalar::from_slice(
-                hex_literal::hex!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-                    .as_ref()
+                hex::decode_array::<32>("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap().as_ref()
             )
                     .is_none());
         }
@@ -377,10 +378,9 @@ mod test {
 
             assert_eq!(
                 Scalar::from_slice_mod_order(
-                    hex_literal::hex!(
+                    hex::decode_array::<32>(
                         "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
-                    )
-                        .as_ref()
+                    ).unwrap().as_ref()
                 )
                     .unwrap(),
                 Scalar::from(1)
@@ -395,9 +395,9 @@ mod test {
 
             assert_eq!(
                 minus_1,
-                Scalar::from_bytes_mod_order(hex_literal::hex!(
+                Scalar::from_bytes_mod_order(hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
-                ))
+                ).unwrap())
             );
             assert_eq!(s!(two - three), minus_1);
             assert_eq!(s!(three - two), one);

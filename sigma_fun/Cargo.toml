@@ -33,7 +33,7 @@ rand_chacha = "0.3"
 [features]
 all = ["secp256k1", "ed25519", "alloc", "serde"]
 default = ["alloc", "secp256k1"]
-alloc = ["serde_crate/alloc"]
+alloc = ["serde_crate/alloc", "secp256kfun/alloc"]
 secp256k1 = ["secp256kfun"]
 ed25519 = ["curve25519-dalek"]
 serde = ["serde_crate", "secp256kfun/serde", "curve25519-dalek/serde", "generic-array/serde"]

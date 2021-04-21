@@ -62,17 +62,17 @@ pub fn encode(bytes: &[u8]) -> String {
     hex
 }
 
+#[cfg(feature = "alloc")]
 /// Decode some hex bytes into a `Vec<u8>`.
 ///
 /// # Examples
 /// ```
-/// use secp256kfun::{ G, hex};
+/// use secp256kfun::{G, hex};
 /// let G_bytes =  hex::decode("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
 /// assert_eq!(&G_bytes[..], G.to_bytes().as_ref());
-#[cfg(feature = "alloc")]
 pub fn decode(hex: &str) -> Result<Vec<u8>, HexError> {
     if (hex.len() % 2) != 0 {
-        return Err(HexError::InvalidLength);
+        return Err(HexError::InvalidHex);
     }
     let mut bytes = Vec::with_capacity(hex.len() * 2);
 
@@ -80,5 +80,26 @@ pub fn decode(hex: &str) -> Result<Vec<u8>, HexError> {
         bytes.push(hex_val(hex_byte[0])? << 4 | hex_val(hex_byte[1])?)
     }
 
+    Ok(bytes)
+}
+
+/// Decode some hex bytes into a fixed length array.
+///
+/// # Examples
+/// ```
+/// use secp256kfun::{G, hex};
+/// let G_bytes : [u8;33] = hex::decode_array("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
+/// assert_eq!(G_bytes, G.to_bytes());
+pub fn decode_array<const N: usize>(hex: &str) -> Result<[u8; N], HexError> {
+    let mut bytes = [0u8; N];
+    if hex.len() % 2 != 0 {
+        return Err(HexError::InvalidHex);
+    }
+    if hex.len() != N * 2 {
+        return Err(HexError::InvalidLength);
+    }
+    for (hex_byte, byte) in hex.as_bytes().chunks(2).zip(bytes.iter_mut()) {
+        *byte = hex_val(hex_byte[0])? << 4 | hex_val(hex_byte[1])?
+    }
     Ok(bytes)
 }

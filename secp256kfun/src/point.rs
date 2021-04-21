@@ -376,7 +376,7 @@ where
     }
 }
 
-crate::impl_display_debug! {
+crate::impl_debug! {
     fn to_bytes<T: PointType, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
         match Clone::clone(*point).mark::<(Normal,NonZero)>() {
             Some(nzpoint) => Ok(nzpoint.to_bytes()),
@@ -385,7 +385,7 @@ crate::impl_display_debug! {
     }
 }
 
-crate::impl_serialize! {
+crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<Normal, S, NonZero>) -> [u8;33] {
         point.to_bytes()
     }
@@ -393,7 +393,7 @@ crate::impl_serialize! {
 
 // For YChoice points they serialize and deserialize like XOnlys except when
 // deserializing we don't throw away y-coordinate
-crate::impl_serialize! {
+crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<EvenY, S, NonZero>) -> [u8;32] {
         point.to_xonly().as_bytes().clone()
     }
@@ -431,41 +431,41 @@ mod test {
 
     macro_rules! operations_test {
         ($P:expr) => {{
-            let P = $P;
-            let I = Point::zero();
+            let p = $P;
+            let i = Point::zero();
 
-            expression_eq!([P] == [P]);
-            expression_eq!([P] != [I]);
-            expression_eq!([P] == [P]);
-            expression_eq!([1 * P] == [P]);
-            expression_eq!([-1 * P] == [-P]);
+            expression_eq!([p] == [p]);
+            expression_eq!([p] != [i]);
+            expression_eq!([p] == [p]);
+            expression_eq!([1 * p] == [p]);
+            expression_eq!([-1 * p] == [-p]);
 
-            expression_eq!([P - P] == [I]);
-            expression_eq!([I + P] == [P]);
+            expression_eq!([p - p] == [i]);
+            expression_eq!([i + p] == [p]);
 
-            expression_eq!([P + I] == [P]);
-            expression_eq!([I - P] == [-P]);
-            expression_eq!([P - I] == [P]);
-            expression_eq!([P + P] != [P]);
-            expression_eq!([0 * P] == [I]);
-            expression_eq!([-(P + P)] == [-P + -P]);
-            expression_eq!([P + P] == [2 * P]);
-            expression_eq!([P + P + P] == [3 * P]);
-            expression_eq!([-P - P - P] == [-3 * P]);
+            expression_eq!([p + i] == [p]);
+            expression_eq!([i - p] == [-p]);
+            expression_eq!([p - i] == [p]);
+            expression_eq!([p + p] != [p]);
+            expression_eq!([0 * p] == [i]);
+            expression_eq!([-(p + p)] == [-p + -p]);
+            expression_eq!([p + p] == [2 * p]);
+            expression_eq!([p + p + p] == [3 * p]);
+            expression_eq!([-p - p - p] == [-3 * p]);
 
             let add_100_times = {
-                let P = P.clone().mark::<(Zero, Jacobian)>();
-                let I = g!(P - P);
-                assert_eq!(I, Point::zero());
-                (0..100).fold(I, |acc, _| g!(acc + P))
+                let p = p.clone().mark::<(Zero, Jacobian)>();
+                let i = g!(p - p);
+                assert_eq!(i, Point::zero());
+                (0..100).fold(i, |acc, _| g!(acc + p))
             };
 
-            expression_eq!([add_100_times] == [100 * P]);
+            expression_eq!([add_100_times] == [100 * p]);
 
-            let undo = { (0..100).fold(add_100_times.clone(), |acc, _| g!(acc - P)) };
+            let undo = { (0..100).fold(add_100_times.clone(), |acc, _| g!(acc - p)) };
 
-            expression_eq!([undo] == [add_100_times - 100 * P]);
-            expression_eq!([undo] == [I]);
+            expression_eq!([undo] == [add_100_times - 100 * p]);
+            expression_eq!([undo] == [i]);
         }};
     }
 
@@ -477,71 +477,68 @@ mod test {
             operations_test!(G.clone().mark::<(Secret, Jacobian)>());
             operations_test!(Point::random(&mut rand::thread_rng()).mark::<Secret>());
             operations_test!(Point::random(&mut rand::thread_rng()).mark::<Public>());
-            let P = crate::op::scalar_mul_point(&Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),G);
-            operations_test!(&P);
-            operations_test!(P.mark::<Public>())
+            let p = crate::op::scalar_mul_point(&Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),G);
+            operations_test!(&p);
+            operations_test!(p.mark::<Public>())
         }
 
-        fn G_to_and_from_bytes() {
+        fn g_to_and_from_bytes() {
             use core::str::FromStr;
             assert_eq!(
-                G.to_bytes_uncompressed().as_ref(),
-                hex_literal::hex!("04 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798 483ADA77 26A3C465 5DA4FBFC 0E1108A8 FD17B448 A6855419 9C47D08F FB10D4B8").as_ref(),
+                G.to_bytes_uncompressed(),
+                crate::hex::decode_array("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
                 "G.to_bytes_uncompressed()"
             );
 
             assert_eq!(Point::from_bytes_uncompressed(G.to_bytes_uncompressed()).unwrap(), *G);
 
             assert_eq!(
-                G.to_bytes().as_ref(),
-                hex_literal::hex!("02 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798").as_ref(),
+                G.to_bytes(),
+                crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "G.to_bytes()"
             );
 
             assert_eq!(
-                &Point::from_bytes(hex_literal::hex!("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")).unwrap(),
+                &Point::from_bytes(crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 G
             );
 
             assert_eq!(
-                &Point::from_bytes(hex_literal::hex!("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")).unwrap(),
+                &Point::from_bytes(crate::hex::decode_array("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap()).unwrap(),
                 &Point::<Normal,Secret,_>::from_str("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
             );
 
-            let neg_G = -G;
+            let neg_g = -G;
 
             assert_eq!(
-                neg_G.to_bytes_uncompressed().as_ref(),
+                neg_g.to_bytes_uncompressed(),
                 // raku -e 'say (-0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8 mod 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F).base(16).comb().batch(8).map(*.join).join(" ")'
-                hex_literal::hex!(
-                    "04 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798 B7C52588 D95C3B9A A25B0403 F1EEF757 02E84BB7 597AABE6 63B82F6F 04EF2777"
-                )
-                    .as_ref(),
+                crate::hex::decode_array(
+                    "0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798B7C52588D95C3B9AA25B0403F1EEF75702E84BB7597AABE663B82F6F04EF2777"
+                ).unwrap(),
                 "-G.to_bytes_uncompressed()"
             );
-
-
             assert_eq!(
-                neg_G.to_bytes().as_ref(),
-                hex_literal::hex!("03 79BE667E F9DCBBAC 55A06295 CE870B07 029BFCDB 2DCE28D9 59F2815B 16F81798").as_ref(),
+                neg_g.to_bytes(),
+                crate::hex::decode_array("0379BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798").unwrap(),
                 "-G.to_bytes()"
             );
         }
         fn zero_cases() {
             use crate::s;
-            let I = Point::zero();
+            let i = Point::zero();
             let forty_two =  s!(42);
             let forty_two_pub = s!(42).mark::<Public>();
-            assert!(I.is_zero());
-            expression_eq!([I] == [I]);
-            expression_eq!([I] == [-I]);
-            expression_eq!([I + I] ==  [I]);
-            expression_eq!([I - I] ==  [I]);
+            assert!(i.is_zero());
+            expression_eq!([i] == [i]);
+            expression_eq!([i] == [-i]);
+            expression_eq!([i + i] ==  [i]);
+            expression_eq!([i - i] ==  [i]);
             // see: https://github.com/LLFourn/secp256kfun/issues/13
-            expression_eq!([forty_two * I] == [I]);
-            expression_eq!([forty_two_pub * I] == [I]);
-            expression_eq!([forty_two * G + forty_two * I] == [forty_two * G]);
-            expression_eq!([forty_two_pub * G + forty_two_pub * I] == [forty_two_pub * G]);
+            expression_eq!([forty_two * i] == [i]);
+            expression_eq!([forty_two_pub * i] == [i]);
+            expression_eq!([forty_two * G + forty_two * i] == [forty_two * G]);
+            expression_eq!([forty_two_pub * G + forty_two_pub * i] == [forty_two_pub * G]);
         }
 
         #[cfg(feature = "alloc")]
@@ -550,6 +547,14 @@ mod test {
             assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
             let mult_point = g!({Scalar::random(&mut rand::thread_rng())} * G);
             assert!(format!("{:?}", mult_point).starts_with("Point<Jacobian,Public,NonZero>"));
+        }
+
+        #[cfg(feature = "serde")]
+        fn point_even_y_json_deserialization_roundtrip() {
+            let point = Point::random(&mut rand::thread_rng());
+            let string = serde_json::to_string(&point).unwrap();
+            let deser_point: Point = serde_json::from_str(&string).unwrap();
+            assert_eq!(point, deser_point);
         }
     }
 }

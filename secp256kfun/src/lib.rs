@@ -1,10 +1,9 @@
-#![feature(rustc_attrs, min_specialization, external_doc)]
-#![doc(include = "../README.md")]
+//!
+#![feature(rustc_attrs, min_specialization, extended_key_value_attributes)]
 #![no_std]
-//FIXME: Remove this non_autolinks thing once rust#44732 is fixed
-#![allow(non_snake_case, non_autolinks)]
+#![allow(non_snake_case)]
 #![deny(missing_docs, warnings)]
-
+#![doc = include_str!("../README.md")]
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 #[allow(unused_imports)]
 #[macro_use]
@@ -51,8 +50,8 @@ pub mod proptest;
 /// ```
 /// use secp256kfun::G;
 /// assert_eq!(
-///     format!("{}", G),
-///     "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+///     format!("{:?}", G),
+///     "Point<BasePoint,Public,NonZero>(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798)"
 /// );
 /// ```
 ///
@@ -62,4 +61,5 @@ pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero>
     &Point::from_inner(backend::G_JACOBIAN, marker::BasePoint(backend::G_TABLE));
 
 #[doc(hidden)]
+/// How many times to repeat tests
 pub const TEST_SOUNDNESS: usize = 20;

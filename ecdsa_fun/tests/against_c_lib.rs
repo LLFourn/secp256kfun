@@ -2,6 +2,7 @@
 use ecdsa_fun::{
     self,
     fun::{
+        hex,
         secp256k1::{self, Message, PublicKey, SecretKey},
         Point, Scalar, TEST_SOUNDNESS,
     },
@@ -59,7 +60,8 @@ fn ecdsa_verify_high_message() {
     let verification_key = ecdsa.verification_key_for(&secret_key);
     let c_secret_key = SecretKey::from_slice(&secret_key.to_bytes()).unwrap();
     let message =
-        hex_literal::hex!("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+            .unwrap();
     let c_message = Message::from_slice(&message[..]).unwrap();
     let c_signature = secp.sign(&c_message, &c_secret_key);
     let signature = ecdsa_fun::Signature::from_bytes(c_signature.serialize_compact()).unwrap();
@@ -77,7 +79,8 @@ fn ecdsa_sign_high_message() {
     let c_public_key = PublicKey::from_secret_key(&secp, &c_secret_key);
 
     let message =
-        hex_literal::hex!("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+            .unwrap();
     let signature = ecdsa.sign(&secret_key, &message);
     let c_message = Message::from_slice(&message[..]).unwrap();
     let c_siganture = secp256k1::Signature::from_compact(&signature.to_bytes()).unwrap();

@@ -2,7 +2,10 @@
 mod test {
 
     use core::{marker::PhantomData, str::FromStr};
-    use secp256kfun::{hex::HexError, impl_display_debug_serialize, impl_fromstr_deserailize};
+    use secp256kfun::{
+        hex::{self, HexError},
+        impl_display_debug_serialize, impl_fromstr_deserailize,
+    };
 
     #[derive(PartialEq)]
     struct SixBytes<T>([u8; 6], PhantomData<T>);
@@ -49,7 +52,10 @@ mod test {
     #[test]
     fn from_str_roundtrip() {
         let parsed = SixBytes::<()>::from_str("deadbeef0123").unwrap();
-        assert_eq!(parsed.to_six_bytes(), hex_literal::hex!("deadbeef0123"));
+        assert_eq!(
+            parsed.to_six_bytes(),
+            hex::decode_array("deadbeef0123").unwrap()
+        );
         assert_eq!(format!("{}", parsed).as_str(), "deadbeef0123");
     }
 
@@ -78,10 +84,14 @@ mod test {
 
     #[test]
     fn serialize_roundtrip() {
-        let six_bytes = &SixBytes::<()>::from_six_bytes(hex_literal::hex!("010203040506")).unwrap();
+        let six_bytes =
+            &SixBytes::<()>::from_six_bytes(hex::decode_array("010203040506").unwrap()).unwrap();
         let serialized = bincode::serialize(six_bytes).unwrap();
         let six_bytes = bincode::deserialize::<SixBytes<()>>(&serialized).expect("valid bincode");
-        assert_eq!(six_bytes.to_six_bytes(), hex_literal::hex!("010203040506"));
+        assert_eq!(
+            six_bytes.to_six_bytes(),
+            hex::decode_array("010203040506").unwrap()
+        );
     }
 
     #[test]
@@ -89,20 +99,25 @@ mod test {
         expected = "invalid byte encoding, expected a valid 6-byte encoding of a six bytes"
     )]
     fn deserialize_invalid_bytes() {
-        let bincode_bytes = hex_literal::hex!("000102030405"); // starting with 00 is invalid
+        let bincode_bytes = hex::decode_array::<6>("000102030405").unwrap(); // starting with 00 is invalid
         bincode::deserialize::<SixBytes<()>>(&bincode_bytes).unwrap();
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn serialize_hex_roundtrip() {
         let json_string = r#""deadbeef0123""#;
         let six_bytes = serde_json::from_str::<SixBytes<()>>(json_string).expect("valid json");
-        assert_eq!(six_bytes.to_six_bytes(), hex_literal::hex!("deadbeef0123"));
+        assert_eq!(
+            six_bytes.to_six_bytes(),
+            hex::decode_array("deadbeef0123").unwrap()
+        );
         assert_eq!(serde_json::to_string(&six_bytes).unwrap(), json_string)
     }
 
     #[test]
     #[should_panic(expected = "invalid length 5, expected a valid 6-byte hex encoded six bytes")]
+    #[cfg(feature = "alloc")]
     fn deserialize_wrong_length() {
         serde_json::from_str::<SixBytes<()>>(r#""deadbeef01""#).unwrap();
     }
@@ -111,7 +126,8 @@ mod test {
     fn display() {
         struct MyMarker;
         let six_bytes =
-            SixBytes::<MyMarker>::from_six_bytes(hex_literal::hex!("deadbeef0123")).unwrap();
+            SixBytes::<MyMarker>::from_six_bytes(hex::decode_array("deadbeef0123").unwrap())
+                .unwrap();
 
         assert_eq!(format!("{}", six_bytes), "deadbeef0123");
         assert_eq!(
