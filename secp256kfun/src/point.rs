@@ -431,41 +431,41 @@ mod test {
 
     macro_rules! operations_test {
         ($P:expr) => {{
-            let P = $P;
-            let I = Point::zero();
+            let p = $P;
+            let i = Point::zero();
 
-            expression_eq!([P] == [P]);
-            expression_eq!([P] != [I]);
-            expression_eq!([P] == [P]);
-            expression_eq!([1 * P] == [P]);
-            expression_eq!([-1 * P] == [-P]);
+            expression_eq!([p] == [p]);
+            expression_eq!([p] != [i]);
+            expression_eq!([p] == [p]);
+            expression_eq!([1 * p] == [p]);
+            expression_eq!([-1 * p] == [-p]);
 
-            expression_eq!([P - P] == [I]);
-            expression_eq!([I + P] == [P]);
+            expression_eq!([p - p] == [i]);
+            expression_eq!([i + p] == [p]);
 
-            expression_eq!([P + I] == [P]);
-            expression_eq!([I - P] == [-P]);
-            expression_eq!([P - I] == [P]);
-            expression_eq!([P + P] != [P]);
-            expression_eq!([0 * P] == [I]);
-            expression_eq!([-(P + P)] == [-P + -P]);
-            expression_eq!([P + P] == [2 * P]);
-            expression_eq!([P + P + P] == [3 * P]);
-            expression_eq!([-P - P - P] == [-3 * P]);
+            expression_eq!([p + i] == [p]);
+            expression_eq!([i - p] == [-p]);
+            expression_eq!([p - i] == [p]);
+            expression_eq!([p + p] != [p]);
+            expression_eq!([0 * p] == [i]);
+            expression_eq!([-(p + p)] == [-p + -p]);
+            expression_eq!([p + p] == [2 * p]);
+            expression_eq!([p + p + p] == [3 * p]);
+            expression_eq!([-p - p - p] == [-3 * p]);
 
             let add_100_times = {
-                let P = P.clone().mark::<(Zero, Jacobian)>();
-                let I = g!(P - P);
-                assert_eq!(I, Point::zero());
-                (0..100).fold(I, |acc, _| g!(acc + P))
+                let p = p.clone().mark::<(Zero, Jacobian)>();
+                let i = g!(p - p);
+                assert_eq!(i, Point::zero());
+                (0..100).fold(i, |acc, _| g!(acc + p))
             };
 
-            expression_eq!([add_100_times] == [100 * P]);
+            expression_eq!([add_100_times] == [100 * p]);
 
-            let undo = { (0..100).fold(add_100_times.clone(), |acc, _| g!(acc - P)) };
+            let undo = { (0..100).fold(add_100_times.clone(), |acc, _| g!(acc - p)) };
 
-            expression_eq!([undo] == [add_100_times - 100 * P]);
-            expression_eq!([undo] == [I]);
+            expression_eq!([undo] == [add_100_times - 100 * p]);
+            expression_eq!([undo] == [i]);
         }};
     }
 
@@ -477,9 +477,9 @@ mod test {
             operations_test!(G.clone().mark::<(Secret, Jacobian)>());
             operations_test!(Point::random(&mut rand::thread_rng()).mark::<Secret>());
             operations_test!(Point::random(&mut rand::thread_rng()).mark::<Public>());
-            let P = crate::op::scalar_mul_point(&Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),G);
-            operations_test!(&P);
-            operations_test!(P.mark::<Public>())
+            let p = crate::op::scalar_mul_point(&Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),G);
+            operations_test!(&p);
+            operations_test!(p.mark::<Public>())
         }
 
         fn G_to_and_from_bytes() {
@@ -528,19 +528,19 @@ mod test {
         }
         fn zero_cases() {
             use crate::s;
-            let I = Point::zero();
+            let i = Point::zero();
             let forty_two =  s!(42);
             let forty_two_pub = s!(42).mark::<Public>();
-            assert!(I.is_zero());
-            expression_eq!([I] == [I]);
-            expression_eq!([I] == [-I]);
-            expression_eq!([I + I] ==  [I]);
-            expression_eq!([I - I] ==  [I]);
+            assert!(i.is_zero());
+            expression_eq!([i] == [i]);
+            expression_eq!([i] == [-i]);
+            expression_eq!([i + i] ==  [i]);
+            expression_eq!([i - i] ==  [i]);
             // see: https://github.com/LLFourn/secp256kfun/issues/13
-            expression_eq!([forty_two * I] == [I]);
-            expression_eq!([forty_two_pub * I] == [I]);
-            expression_eq!([forty_two * G + forty_two * I] == [forty_two * G]);
-            expression_eq!([forty_two_pub * G + forty_two_pub * I] == [forty_two_pub * G]);
+            expression_eq!([forty_two * i] == [i]);
+            expression_eq!([forty_two_pub * i] == [i]);
+            expression_eq!([forty_two * G + forty_two * i] == [forty_two * G]);
+            expression_eq!([forty_two_pub * G + forty_two_pub * i] == [forty_two_pub * G]);
         }
 
         #[cfg(feature = "alloc")]
