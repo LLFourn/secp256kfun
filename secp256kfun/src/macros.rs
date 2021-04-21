@@ -528,33 +528,35 @@ macro_rules! impl_fromstr_deserailize {
                 deserializer: Deser,
             ) -> Result<$type , Deser::Error> {
 
-                if deserializer.is_human_readable() {
-                    #[allow(unused_parens)]
-                    struct HexVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
-                    impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::de::Visitor<'de> for HexVisitor$(<$($tpl),*>)? {
-                        type Value = $type ;
-                        fn expecting(
-                            &self,
-                            f: &mut core::fmt::Formatter,
-                        ) -> core::fmt::Result {
-                            write!(f, "a valid {}-byte hex encoded {}", $len, $name)?;
-                            Ok(())
+                #[cfg(feature = "alloc")]
+                {
+                    if deserializer.is_human_readable() {
+                        #[allow(unused_parens)]
+                        struct HexVisitor$(<$($tpl),*>)?$((core::marker::PhantomData<($($tpl),*)> ))?;
+                        impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::de::Visitor<'de> for HexVisitor$(<$($tpl),*>)? {
+                            type Value = $type ;
+                            fn expecting(
+                                &self,
+                                f: &mut core::fmt::Formatter,
+                            ) -> core::fmt::Result {
+                                write!(f, "a valid {}-byte hex encoded {}", $len, $name)?;
+                                Ok(())
+                            }
+
+                            fn visit_str<E: $crate::serde::de::Error>(self, v: &str) -> Result<$type , E> {
+                                use $crate::hex::HexError::*;
+                                <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
+                                    InvalidLength => E::invalid_length(v.len() / 2, &self),
+                                    InvalidEncoding => E::invalid_value($crate::serde::de::Unexpected::Str(v), &self),
+                                    InvalidHex => E::custom("invalid hex")
+                                })
+                            }
                         }
 
-                        fn visit_str<E: $crate::serde::de::Error>(self, v: &str) -> Result<$type , E> {
-                            use $crate::hex::HexError::*;
-                            <$type  as core::str::FromStr>::from_str(v).map_err(|e| match e {
-                                InvalidLength => E::invalid_length(v.len() / 2, &self),
-                                InvalidEncoding => E::invalid_value($crate::serde::de::Unexpected::Str(v), &self),
-                                InvalidHex => E::custom("invalid hex")
-                            })
-                        }
+                        #[allow(unused_parens)]
+                        return deserializer.deserialize_str(HexVisitor$((core::marker::PhantomData::<($($tpl),*)>))?);
                     }
-
-                    #[allow(unused_parens)]
-                    return deserializer.deserialize_str(HexVisitor$((core::marker::PhantomData::<($($tpl),*)>))?);
                 }
-
 
                 {
                     #[allow(unused_parens)]

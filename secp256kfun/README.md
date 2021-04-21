@@ -171,13 +171,13 @@ When you pass in `G`, which is a `BasePoint`, the compiler will specialize the c
 - Built-in type-safe "x-only" point compression and decompression.
 - Arithmetic expression macro `g!` (used above) to clearly express group operations.
 - Nonce derivation functionality to help avoid messing this up.
-- `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serde` feature).
+- `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serde` feature -- hex requires `alloc` feature as well).
 - `no_std` support
 - `From` implementations for [rust-secp256k1][2] types with `libsecp_compat` feature.
 
 
 [1]: https://github.com/bitcoin-core/secp256k1
-[2]: https://github.com/rust-bitcoin/rust-secp256k1/ 
+[2]: https://github.com/rust-bitcoin/rust-secp256k1/
 [3]: https://github.com/dalek-cryptography/curve25519-dalek
 [4]: https://github.com/paritytech/libsecp256k1
 [_specialization_]: https://github.com/rust-lang/rust/issues/31844

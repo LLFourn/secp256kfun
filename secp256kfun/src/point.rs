@@ -549,12 +549,12 @@ mod test {
             assert!(format!("{:?}", mult_point).starts_with("Point<Jacobian,Public,NonZero>"));
         }
 
-        #[cfg(feature="serde")]
-        fn point_even_y_deserialization_roundtrip() {
-            let hex_G_x = r#""79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798""#;
-            let point = serde_json::from_str::<Point<EvenY>>(hex_G_x).unwrap();
-            assert_eq!(&point, G);
-            assert_eq!(serde_json::to_string(&point).unwrap(), hex_G_x.to_lowercase());
+        #[cfg(feature = "serde")]
+        fn point_even_y_json_deserialization_roundtrip() {
+            let point = Point::random(&mut rand::thread_rng());
+            let string = serde_json::to_string(&point).unwrap();
+            let deser_point: Point = serde_json::from_str(&string).unwrap();
+            assert_eq!(point, deser_point);
         }
     }
 }
