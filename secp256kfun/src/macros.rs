@@ -580,3 +580,34 @@ macro_rules! impl_fromstr_deserailize {
 
     };
 }
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! maybe_specialized {
+    (fn $name:ident($($args:tt)*) -> $ret:ty {
+        $($body:tt)*
+    }) => {
+        #[cfg(not(feature = "nightly"))]
+        fn $name($( $args )*) -> $ret {
+            $( $body )*
+        }
+
+        #[cfg(feature = "nightly")]
+        default fn $name($( $args )*) -> $ret {
+            $( $body )*
+        }
+    };
+    (fn $name:ident($($args:tt)*) {
+        $($body:tt)*
+    }) => {
+        #[cfg(not(feature = "nightly"))]
+        fn $name($( $args )*) {
+            $( $body )*
+        }
+
+        #[cfg(feature = "nightly")]
+        default fn $name($( $args )*) {
+            $( $body )*
+        }
+    };
+}

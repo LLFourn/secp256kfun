@@ -21,70 +21,31 @@ jobs:
           command: fmt
           args: --all -- --check
 
-  test-nostd:
+  test:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        args: [
+            --no-default-features,
+            --no-default-features --features=serde,
+            --no-default-features --features=std,
+            --all-features,
+        ]
+        rust: [nightly, stable]
+        exclude:
+          - rust: stable
+            args: --all-features
+          - rust: nightly
+            args: --no-default-features
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-    - name: secp256kfun-test
-      run: ( cd secp256kfun && cargo test --no-default-features --release --verbose )
-    - name: schnorr_fun-test
-      run: ( cd schnorr_fun && cargo test --no-default-features --release --verbose )
-    - name: ecdsa_fun-test
-      run: ( cd ecdsa_fun && cargo test --no-default-features --release --verbose )
-    - name: sigma_fun-test
-      run: (cd sigma_fun && cargo test --no-default-features --release --verbose)
-
-  test-all-features:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --release --all-features
-
-  test-default:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --release
-
-  test-serde:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-    - name: secp256kfun-test
-      run: ( cd secp256kfun && cargo test --no-default-features --features=serde --release --verbose )
-    - name: schnorr_fun-test
-      run: ( cd schnorr_fun && cargo test --no-default-features --features=serde --release --verbose )
-    - name: ecdsa_fun-test
-      run: ( cd ecdsa_fun && cargo test --no-default-features --features=serde --release --verbose )
-    - name: sigma_fun-test
-      run: ( cd sigma_fun && cargo test --no-default-features --features=serde --release --verbose )
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - uses: Swatinem/rust-cache@v1.2.0
+      - run: cargo test ${{ matrix.args }} --release --verbose
 
   doc-build:
      name: doc-build

@@ -1,8 +1,7 @@
 //!
 #![no_std]
 #![allow(non_snake_case)]
-#![feature(extended_key_value_attributes)]
-#![cfg_attr(feature = "secp256k1", doc = include_str!("../README.md"))]
+// #![cfg_attr(feature = "secp256k1", doc = include_str!("../README.md"))] TODO: Activate with 1.54
 #![deny(missing_docs, warnings)]
 
 use core::fmt::Debug;

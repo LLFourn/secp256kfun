@@ -1,7 +1,7 @@
+//!
 #![no_std]
 #![allow(non_snake_case)]
-#![feature(extended_key_value_attributes)]
-#![doc = include_str!("../README.md")]
+// #![doc = include_str!("../README.md")] TODO: Activate with 1.54
 #![deny(warnings, missing_docs)]
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 #[macro_use]
