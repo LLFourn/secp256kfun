@@ -320,6 +320,8 @@ where
 mod test {
     use super::*;
     use crate::{hex, op, s};
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     #[cfg(feature = "serde")]
     #[test]
@@ -330,88 +332,103 @@ mod test {
         assert_eq!(deserialized, original)
     }
 
-    crate::test_plus_wasm! {
-        fn random() {
-            let scalar_1 = Scalar::random(&mut rand::thread_rng());
-            let scalar_2 = Scalar::random(&mut rand::thread_rng());
-            assert_ne!(scalar_1, scalar_2);
-        }
+    #[test]
+    fn random() {
+        let scalar_1 = Scalar::random(&mut rand::thread_rng());
+        let scalar_2 = Scalar::random(&mut rand::thread_rng());
+        assert_ne!(scalar_1, scalar_2);
+    }
 
-        fn invert() {
-            let x = Scalar::random(&mut rand::thread_rng());
-            assert!(s!(x  * {x.invert()}) == Scalar::from(1));
-        }
+    #[test]
+    fn invert() {
+        let x = Scalar::random(&mut rand::thread_rng());
+        assert!(s!(x * { x.invert() }) == Scalar::from(1));
+    }
 
-        fn neg() {
-            let x = Scalar::random(&mut rand::thread_rng());
-            assert_eq!(s!(x - x), Scalar::zero());
-            assert_eq!(-Scalar::zero(), Scalar::zero())
-        }
+    #[test]
+    fn neg() {
+        let x = Scalar::random(&mut rand::thread_rng());
+        assert_eq!(s!(x - x), Scalar::zero());
+        assert_eq!(-Scalar::zero(), Scalar::zero())
+    }
 
-        fn one() {
-            assert_eq!(Scalar::one(), Scalar::from(1));
-            assert_eq!(Scalar::minus_one(), -Scalar::one());
-            assert_eq!(op::scalar_mul(&s!(3), &Scalar::minus_one()), -s!(3));
-        }
+    #[test]
+    fn one() {
+        assert_eq!(Scalar::one(), Scalar::from(1));
+        assert_eq!(Scalar::minus_one(), -Scalar::one());
+        assert_eq!(op::scalar_mul(&s!(3), &Scalar::minus_one()), -s!(3));
+    }
 
-        fn zero() {
-            assert_eq!(Scalar::zero(), Scalar::from(0));
-        }
+    #[test]
+    fn zero() {
+        assert_eq!(Scalar::zero(), Scalar::from(0));
+    }
 
-        fn from_slice() {
-            assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_some());
-            assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_none());
+    #[test]
+    fn from_slice() {
+        assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_some());
+        assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_none());
 
-            assert!(Scalar::from_slice(
-                hex::decode_array::<32>("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap().as_ref()
+        assert!(Scalar::from_slice(
+            hex::decode_array::<32>(
+                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
             )
-                    .is_none());
-        }
+            .unwrap()
+            .as_ref()
+        )
+        .is_none());
+    }
 
-        fn from_slice_mod_order() {
-            assert_eq!(
-                Scalar::from_slice_mod_order(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
-                    .unwrap()
-                    .to_bytes(),
-                *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            );
+    #[test]
+    fn from_slice_mod_order() {
+        assert_eq!(
+            Scalar::from_slice_mod_order(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
+                .unwrap()
+                .to_bytes(),
+            *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        );
 
-            assert_eq!(
-                Scalar::from_slice_mod_order(
-                    hex::decode_array::<32>(
-                        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
-                    ).unwrap().as_ref()
+        assert_eq!(
+            Scalar::from_slice_mod_order(
+                hex::decode_array::<32>(
+                    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
                 )
-                    .unwrap(),
-                Scalar::from(1)
+                .unwrap()
+                .as_ref()
             )
-        }
+            .unwrap(),
+            Scalar::from(1)
+        )
+    }
 
-        fn scalar_subtraction_is_not_commutative() {
-            let two = Scalar::from(2);
-            let three = Scalar::from(3);
-            let minus_1 = Scalar::minus_one();
-            let one = Scalar::from(1);
+    #[test]
+    fn scalar_subtraction_is_not_commutative() {
+        let two = Scalar::from(2);
+        let three = Scalar::from(3);
+        let minus_1 = Scalar::minus_one();
+        let one = Scalar::from(1);
 
-            assert_eq!(
-                minus_1,
-                Scalar::from_bytes_mod_order(hex::decode_array(
+        assert_eq!(
+            minus_1,
+            Scalar::from_bytes_mod_order(
+                hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
-                ).unwrap())
-            );
-            assert_eq!(s!(two - three), minus_1);
-            assert_eq!(s!(three - two), one);
-        }
+                )
+                .unwrap()
+            )
+        );
+        assert_eq!(s!(two - three), minus_1);
+        assert_eq!(s!(three - two), one);
+    }
 
+    #[test]
+    fn nz_scalar_to_scalar_subtraction_is_not_commutative() {
+        let two = s!(2);
+        let three = s!(3);
+        let minus_1 = Scalar::minus_one();
+        let one = Scalar::from(1);
 
-        fn nz_scalar_to_scalar_subtraction_is_not_commutative() {
-            let two = s!(2);
-            let three = s!(3);
-            let minus_1 = Scalar::minus_one();
-            let one = Scalar::from(1);
-
-            assert_eq!(s!(two - three), minus_1);
-            assert_eq!(s!(three - two), one);
-        }
+        assert_eq!(s!(two - three), minus_1);
+        assert_eq!(s!(three - two), one);
     }
 }

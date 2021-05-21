@@ -253,63 +253,79 @@ pub mod test {
 
     use super::*;
     use crate::fun::TEST_SOUNDNESS;
-    crate::fun::test_plus_wasm! {
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
-        fn anticipated_signature_on_should_correspond_to_actual_signature() {
-            for _ in 0..TEST_SOUNDNESS {
-                let schnorr = crate::test_instance!();
-                let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let msg = Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
-                let signature = schnorr.sign(&keypair,msg);
-                let anticipated_signature = schnorr.anticipate_signature(
-                    &keypair.verification_key(),
-                    &signature.R.to_point(),
-                    msg,
-                );
-
-                assert_eq!(
-                    anticipated_signature,
-                    g!(signature.s * schnorr.G),
-                    "should anticipate the same value as actual signature"
-                )
-            }
-        }
-
-        fn sign_deterministic() {
+    #[test]
+    fn anticipated_signature_on_should_correspond_to_actual_signature() {
+        for _ in 0..TEST_SOUNDNESS {
             let schnorr = crate::test_instance!();
-            for _ in 0..TEST_SOUNDNESS {
-                let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-                let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
-                let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
-                let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
-                let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
-                let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
-                let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
+            let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+            let msg = Message::<Public>::plain(
+                "test",
+                b"Chancellor on brink of second bailout for banks",
+            );
+            let signature = schnorr.sign(&keypair, msg);
+            let anticipated_signature = schnorr.anticipate_signature(
+                &keypair.verification_key(),
+                &signature.R.to_point(),
+                msg,
+            );
 
-                assert!(schnorr.verify(
-                    &keypair_1.verification_key(),
-                    msg_atkdwn,
-                    &signature_1
-                ));
-                assert_eq!(signature_1, signature_2);
-                assert_ne!(signature_3.R, signature_1.R);
-                assert_ne!(signature_1.R, signature_4.R);
-            }
+            assert_eq!(
+                anticipated_signature,
+                g!(signature.s * schnorr.G),
+                "should anticipate the same value as actual signature"
+            )
         }
+    }
 
-        fn deterministic_nonces_for_different_message_kinds() {
-            use sha2::Sha256;
-             use core::str::FromStr;
-            let schnorr = Schnorr::<Sha256,_>::new(Deterministic::<Sha256>::default());
-            let x =  Scalar::from_str("18451f9e08af9530814243e202a4a977130e672079f5c14dcf15bd4dee723072").unwrap();
-            let keypair = schnorr.new_keypair(x);
-            assert_ne!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")).R, schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")).R);
-            assert_ne!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")).R, schnorr.sign(&keypair, Message::<Public>::plain("two", b"foo")).R);
+    #[test]
+    fn sign_deterministic() {
+        let schnorr = crate::test_instance!();
+        for _ in 0..TEST_SOUNDNESS {
+            let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+            let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+            let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
+            let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
+            let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
+            let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
+            let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
+            let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
 
-            // make sure deterministic signatures don't change
-            assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
-            assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
+            assert!(schnorr.verify(&keypair_1.verification_key(), msg_atkdwn, &signature_1));
+            assert_eq!(signature_1, signature_2);
+            assert_ne!(signature_3.R, signature_1.R);
+            assert_ne!(signature_1.R, signature_4.R);
         }
+    }
+
+    #[test]
+    fn deterministic_nonces_for_different_message_kinds() {
+        use core::str::FromStr;
+        use sha2::Sha256;
+        let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
+        let x =
+            Scalar::from_str("18451f9e08af9530814243e202a4a977130e672079f5c14dcf15bd4dee723072")
+                .unwrap();
+        let keypair = schnorr.new_keypair(x);
+        assert_ne!(
+            schnorr.sign(&keypair, Message::<Public>::raw(b"foo")).R,
+            schnorr
+                .sign(&keypair, Message::<Public>::plain("one", b"foo"))
+                .R
+        );
+        assert_ne!(
+            schnorr
+                .sign(&keypair, Message::<Public>::plain("one", b"foo"))
+                .R,
+            schnorr
+                .sign(&keypair, Message::<Public>::plain("two", b"foo"))
+                .R
+        );
+
+        // make sure deterministic signatures don't change
+        assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
+        assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
     }
 }

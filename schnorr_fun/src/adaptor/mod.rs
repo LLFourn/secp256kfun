@@ -277,6 +277,8 @@ mod test {
     use super::*;
     use crate::nonce::{self, Deterministic};
     use secp256kfun::TEST_SOUNDNESS;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
     fn test_schnorr<NG: NonceGen>(schnorr: Schnorr<sha2::Sha256, NG>) {
         for _ in 0..TEST_SOUNDNESS {
@@ -306,12 +308,15 @@ mod test {
             assert_eq!(rec_decryption_key, decryption_key);
         }
     }
-    secp256kfun::test_plus_wasm! {
-        fn sign_plain_message() {
-            use sha2::Sha256;
-            use rand::rngs::ThreadRng;
-            test_schnorr(Schnorr::new(Deterministic::<Sha256>::default()));
-            test_schnorr(Schnorr::new(nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default()));
-        }
+
+    #[test]
+    fn sign_plain_message() {
+        use rand::rngs::ThreadRng;
+        use sha2::Sha256;
+        test_schnorr(Schnorr::new(Deterministic::<Sha256>::default()));
+        test_schnorr(Schnorr::new(nonce::Synthetic::<
+            Sha256,
+            nonce::GlobalRng<ThreadRng>,
+        >::default()));
     }
 }

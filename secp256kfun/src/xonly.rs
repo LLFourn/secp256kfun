@@ -163,33 +163,34 @@ crate::impl_display_debug_serialize! {
 #[cfg(test)]
 mod test {
     use super::*;
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    crate::test_plus_wasm! {
-        fn xonly_random() {
-            let _ = XOnly::random(&mut rand::thread_rng());
-        }
+    #[test]
+    fn xonly_random() {
+        let _ = XOnly::random(&mut rand::thread_rng());
+    }
 
-        fn from_str() {
-            use crate::G;
-            use core::str::FromStr;
+    #[test]
+    fn from_str() {
+        use crate::G;
+        use core::str::FromStr;
 
-            assert_eq!(
-                XOnly::from_str(
-                    "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
-                )
-                    .unwrap()
-                    .to_point(),
-                *G
-            );
-        }
+        assert_eq!(
+            XOnly::from_str("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",)
+                .unwrap()
+                .to_point(),
+            *G
+        );
+    }
 
-        fn xonly_to_point() {
-            for _ in 0..crate::TEST_SOUNDNESS {
-                let xonly_even = XOnly::random(&mut rand::thread_rng());
+    #[test]
+    fn xonly_to_point() {
+        for _ in 0..crate::TEST_SOUNDNESS {
+            let xonly_even = XOnly::random(&mut rand::thread_rng());
 
-                let point_even = xonly_even.to_point();
-                assert!(point_even.is_y_even());
-            }
+            let point_even = xonly_even.to_point();
+            assert!(point_even.is_y_even());
         }
     }
 }
