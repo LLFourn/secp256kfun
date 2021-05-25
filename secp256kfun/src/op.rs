@@ -484,14 +484,14 @@ pub(crate) trait NormPointUnary {
 impl<T, S, Z> PointUnary for Point<T, Z, S> {
     maybe_specialized! {
         fn negate(mut self) -> backend::Point {
-            ConstantTime::point_neg(&mut self.0);
+            ConstantTime::any_point_neg(&mut self.0);
             self.0
         }
     }
 
     maybe_specialized! {
         fn conditional_negate(mut self, cond: bool) -> backend::Point {
-            ConstantTime::point_conditional_negate(&mut self.0, cond);
+            ConstantTime::any_point_conditional_negate(&mut self.0, cond);
             self.0
         }
     }
@@ -501,6 +501,19 @@ impl<T, S, Z> PointUnary for Point<T, Z, S> {
             ConstantTime::point_normalize(&mut self.0);
             self.0
         }
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<Z> PointUnary for Point<Jacobian, Z, Secret> {
+    fn negate(mut self) -> backend::Point {
+        ConstantTime::point_neg(&mut self.0);
+        self.0
+    }
+
+    fn conditional_negate(mut self, cond: bool) -> backend::Point {
+        ConstantTime::point_conditional_negate(&mut self.0, cond);
+        self.0
     }
 }
 

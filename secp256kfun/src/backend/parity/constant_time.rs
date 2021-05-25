@@ -235,6 +235,19 @@ impl crate::backend::TimeSensitive for ConstantTime {
         scalar.inv()
     }
 
+    fn any_point_neg(point: &mut Jacobian) {
+        point.y.normalize_weak();
+        point.y = point.y.neg(1);
+        point.y.normalize();
+    }
+
+    fn any_point_conditional_negate(point: &mut Jacobian, cond: bool) {
+        point.y.normalize_weak();
+        let mut neg_y = point.y.neg(1);
+        neg_y.normalize();
+        point.y.cmov(&neg_y, cond)
+    }
+
     fn point_neg(point: &mut Jacobian) {
         point.y.normalize_weak();
         point.y = point.y.neg(1);

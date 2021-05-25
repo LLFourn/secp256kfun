@@ -41,6 +41,10 @@ pub trait TimeSensitive {
         Self::point_neg(&mut rhs);
         Self::point_add_point(lhs, &rhs)
     }
+    // "any" variants are because doing a jacobian point neg is not good enough for a normalized
+    // point neg so for the general case we have to have a slower one that works for both.
+    fn any_point_neg(point: &mut Point);
+    fn any_point_conditional_negate(point: &mut Point, cond: bool);
     fn point_neg(point: &mut Point);
     fn point_sub_norm_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_conditional_negate(point: &mut Point, cond: bool);
