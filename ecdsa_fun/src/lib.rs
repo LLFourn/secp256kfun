@@ -1,5 +1,4 @@
-#![feature(extended_key_value_attributes)]
-#![doc = include_str!("../README.md")]
+// #![doc = include_str!("../README.md")] TODO: Activate with 1.54
 #![no_std]
 #![allow(non_snake_case)]
 

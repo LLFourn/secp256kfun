@@ -204,6 +204,14 @@ impl crate::backend::TimeSensitive for VariableTime {
         ConstantTime::scalar_invert(scalar)
     }
 
+    fn any_point_neg(_point: &mut Jacobian) {
+        unreachable!("this should never get hit by secp256kfun");
+    }
+
+    fn any_point_conditional_negate(_point: &mut Jacobian, _cond: bool) {
+        unreachable!("this should never get hit by secp256kfun");
+    }
+
     fn point_neg(point: &mut Jacobian) {
         ConstantTime::point_neg(point)
     }

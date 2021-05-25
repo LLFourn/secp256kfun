@@ -88,8 +88,8 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
     }
 }
 
-/// A zero sized type that wraps an instance of an RNG that implementes
-/// `Default` e.g. [`OsRng`]. `GlobalRng` implements
+/// A zero sized type that wraps an RNG that implementes
+/// `Default` e.g. [`ThreadRng`]. `GlobalRng` implements
 /// [`NonceRng`] and care has been taken to ensure it is `Sync`.
 ///
 /// # Examples
@@ -107,7 +107,7 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
 /// assert!(is_sync(nonce_rng));
 /// ```
 ///
-/// [`OsRng`]: rand_core::OsRng
+/// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
 #[derive(Debug, Default, Clone)]
 pub struct GlobalRng<R> {
     // Using fn(R) ensures that it is sync even if R is not sync

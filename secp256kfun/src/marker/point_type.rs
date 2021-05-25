@@ -46,10 +46,10 @@ pub struct EvenY;
 pub struct BasePoint(pub(crate) crate::backend::BasePoint);
 
 /// A marker trait that indicates a `PointType` uses a affine internal representation.
-#[rustc_specialization_trait]
+#[cfg_attr(feature = "nightly", rustc_specialization_trait)]
 pub trait Normalized: PointType {}
 
-#[rustc_specialization_trait]
+#[cfg_attr(feature = "nightly", rustc_specialization_trait)]
 pub(crate) trait NotBasePoint: Default {}
 
 impl Normalized for EvenY {}

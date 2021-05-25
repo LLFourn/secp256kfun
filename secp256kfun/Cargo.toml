@@ -43,13 +43,13 @@ wasm-bindgen-test = "0.3"
 
 
 [features]
-default = ["std"]
-all = ["std", "serde", "libsecp_compat"]
+default = ["std", "nightly"]
+all = ["std", "serde", "libsecp_compat", "nightly"]
 alloc = []
 std = ["alloc"]
 libsecp_compat = ["secp256k1"]
 serde = [ "serde_crate" ]
-
+nightly = [ ]
 
 [[bench]]
 name = "bench_ecmult"

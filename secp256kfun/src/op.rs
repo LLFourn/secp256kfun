@@ -91,22 +91,29 @@ pub(crate) trait PointBinary {
 }
 
 impl<T1, S1, Z1, T2, S2, Z2> PointBinary for (&Point<S1, T1, Z1>, &Point<S2, T2, Z2>) {
-    default fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::point_add_point(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn add(self) -> backend::Point {
+            let (lhs, rhs) = self;
+            ConstantTime::point_add_point(&lhs.0, &rhs.0)
+        }
     }
 
-    default fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::point_sub_point(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn sub(self) -> backend::Point {
+            let (lhs, rhs) = self;
+            ConstantTime::point_sub_point(&lhs.0, &rhs.0)
+        }
     }
 
-    default fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        ConstantTime::point_eq_point(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn eq(self) -> bool {
+            let (lhs, rhs) = self;
+            ConstantTime::point_eq_point(&lhs.0, &rhs.0)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2, T1: Normalized, S1, S2, T2> PointBinary for (&Point<S1, T1, Z1>, &Point<T2, S2, Z2>) {
     default fn add(self) -> backend::Point {
         let (lhs, rhs) = self;
@@ -124,6 +131,7 @@ impl<Z1, Z2, T1: Normalized, S1, S2, T2> PointBinary for (&Point<S1, T1, Z1>, &P
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2, S1, S2, T2: Normalized> PointBinary
     for (&Point<S1, Jacobian, Z1>, &Point<T2, S2, Z2>)
 {
@@ -143,6 +151,7 @@ impl<Z1, Z2, S1, S2, T2: Normalized> PointBinary
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2> PointBinary for (&Point<Public, Jacobian, Z1>, &Point<Jacobian, Public, Z2>) {
     fn add(self) -> backend::Point {
         let (lhs, rhs) = self;
@@ -160,6 +169,7 @@ impl<Z1, Z2> PointBinary for (&Point<Public, Jacobian, Z1>, &Point<Jacobian, Pub
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2, T1: Normalized, T2> PointBinary for (&Point<Public, T1, Z1>, &Point<T2, Public, Z2>) {
     fn add(self) -> backend::Point {
         let (lhs, rhs) = self;
@@ -177,6 +187,7 @@ impl<Z1, Z2, T1: Normalized, T2> PointBinary for (&Point<Public, T1, Z1>, &Point
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2, T2: Normalized> PointBinary
     for (&Point<Public, Jacobian, Z1>, &Point<T2, Public, Z2>)
 {
@@ -201,23 +212,28 @@ pub(crate) trait PointEqXOnly {
 }
 
 impl<T, S, Z> PointEqXOnly for Point<T, S, Z> {
-    default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
-        ConstantTime::point_eq_xonly(&self.0, &xonly.0)
+    maybe_specialized! {
+        fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
+            ConstantTime::point_eq_xonly(&self.0, &xonly.0)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T, Z> PointEqXOnly for Point<T, Public, Z> {
     default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
         VariableTime::point_eq_xonly(&self.0, &xonly.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T: Normalized, Z> PointEqXOnly for Point<T, Secret, Z> {
     default fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
         ConstantTime::norm_point_eq_xonly(&self.0, &xonly.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T: Normalized, Z> PointEqXOnly for Point<T, Public, Z> {
     fn point_eq_xonly(&self, xonly: &XOnly) -> bool {
         VariableTime::norm_point_eq_xonly(&self.0, &xonly.0)
@@ -228,36 +244,48 @@ pub(crate) trait MulPoint<S2, T2> {
     fn mul_point<Z2>(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point;
 }
 
+// we don't use the maybe_specialized! macro here because matching against fn level type parameters is tricky
 impl<Z1, S1, S2, T2> MulPoint<S2, T2> for Scalar<S1, Z1> {
+    #[cfg(not(feature = "nightly"))]
+    fn mul_point<Z2>(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
+        ConstantTime::scalar_mul_point(&self.0, &rhs.0)
+    }
+
+    #[cfg(feature = "nightly")]
     default fn mul_point<Z2>(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
         ConstantTime::scalar_mul_point(&self.0, &rhs.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, S1, S2, T2: NotBasePoint + Normalized> MulPoint<S2, T2> for Scalar<S1, Z1> {
     default fn mul_point<Z2>(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
         ConstantTime::scalar_mul_norm_point(&self.0, &rhs.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, S1, S2> MulPoint<S2, BasePoint> for Scalar<S1, Z1> {
     default fn mul_point<Z2>(&self, rhs: &Point<BasePoint, S2, Z2>) -> backend::Point {
         ConstantTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1> MulPoint<Public, Jacobian> for Scalar<Public, Z1> {
     fn mul_point<Z2>(&self, rhs: &Point<Jacobian, Public, Z2>) -> backend::Point {
         VariableTime::scalar_mul_point(&self.0, &rhs.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, T2: Normalized + NotBasePoint> MulPoint<Public, T2> for Scalar<Public, Z1> {
     fn mul_point<Z2>(&self, rhs: &Point<T2, Public, Z2>) -> backend::Point {
         VariableTime::scalar_mul_norm_point(&self.0, &rhs.0)
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1> MulPoint<Public, BasePoint> for Scalar<Public, Z1> {
     fn mul_point<Z2>(&self, rhs: &Point<BasePoint, Public, Z2>) -> backend::Point {
         VariableTime::scalar_mul_basepoint(&self.0, &(rhs.1).0)
@@ -276,14 +304,17 @@ impl<XZ, XS, AZ, AS, AT, YZ, YS, BZ, BS, BT> DoubleMul
         &Point<BT, BS, BZ>,
     )
 {
-    default fn double_mul(self) -> backend::Point {
-        let (x, A, y, B) = self;
-        let xA = x.mul_point(A);
-        let yB = y.mul_point(B);
-        VariableTime::point_add_point(&xA, &yB)
+    maybe_specialized! {
+        fn double_mul(self) -> backend::Point {
+            let (x, A, y, B) = self;
+            let xA = x.mul_point(A);
+            let yB = y.mul_point(B);
+            VariableTime::point_add_point(&xA, &yB)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<XZ, AZ, YZ, BZ, BT> DoubleMul
     for (
         &Scalar<Public, XZ>,
@@ -298,6 +329,7 @@ impl<XZ, AZ, YZ, BZ, BT> DoubleMul
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<XZ, AZ, YZ, BZ, AT: Normalized + NotBasePoint> DoubleMul
     for (
         &Scalar<Public, XZ>,
@@ -306,7 +338,7 @@ impl<XZ, AZ, YZ, BZ, AT: Normalized + NotBasePoint> DoubleMul
         &Point<BasePoint, Public, BZ>,
     )
 {
-    default fn double_mul(self) -> backend::Point {
+    fn double_mul(self) -> backend::Point {
         let (x, A, y, B) = self;
         VariableTime::basepoint_double_mul(&y.0, &(B.1).0, &x.0, &A.0)
     }
@@ -320,27 +352,36 @@ pub(crate) trait ScalarBinary {
 }
 
 impl<Z1, S1, Z2, S2> ScalarBinary for (&Scalar<S1, Z1>, &Scalar<S2, Z2>) {
-    default fn mul(self) -> backend::Scalar {
-        let (lhs, rhs) = self;
-        ConstantTime::scalar_mul(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn mul(self) -> backend::Scalar {
+            let (lhs, rhs) = self;
+            ConstantTime::scalar_mul(&lhs.0, &rhs.0)
+        }
     }
 
-    default fn add(self) -> backend::Scalar {
-        let (lhs, rhs) = self;
-        ConstantTime::scalar_add(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn add(self) -> backend::Scalar {
+            let (lhs, rhs) = self;
+            ConstantTime::scalar_add(&lhs.0, &rhs.0)
+        }
     }
 
-    default fn sub(self) -> backend::Scalar {
-        let (lhs, rhs) = self;
-        ConstantTime::scalar_sub(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn sub(self) -> backend::Scalar {
+            let (lhs, rhs) = self;
+            ConstantTime::scalar_sub(&lhs.0, &rhs.0)
+        }
     }
 
-    default fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        ConstantTime::scalar_eq(&lhs.0, &rhs.0)
+    maybe_specialized! {
+        fn eq(self) -> bool {
+            let (lhs, rhs) = self;
+            ConstantTime::scalar_eq(&lhs.0, &rhs.0)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z1, Z2> ScalarBinary for (&Scalar<Public, Z1>, &Scalar<Public, Z2>) {
     fn mul(self) -> backend::Scalar {
         let (lhs, rhs) = self;
@@ -372,29 +413,40 @@ pub(crate) trait ScalarUnary {
 }
 
 impl<Z, S> ScalarUnary for Scalar<S, Z> {
-    default fn negate(&self) -> backend::Scalar {
-        let mut negated = self.0.clone();
-        ConstantTime::scalar_cond_negate(&mut negated, true);
-        negated
+    maybe_specialized! {
+        fn negate(&self) -> backend::Scalar {
+            let mut negated = self.0.clone();
+            ConstantTime::scalar_cond_negate(&mut negated, true);
+            negated
+        }
     }
 
-    default fn invert(&self) -> backend::Scalar {
-        ConstantTime::scalar_invert(&self.0)
+    maybe_specialized! {
+        fn invert(&self) -> backend::Scalar {
+            ConstantTime::scalar_invert(&self.0)
+        }
     }
 
-    default fn conditional_negate(&mut self, cond: bool) {
-        ConstantTime::scalar_cond_negate(&mut self.0, cond)
+    maybe_specialized! {
+        fn conditional_negate(&mut self, cond: bool) {
+            ConstantTime::scalar_cond_negate(&mut self.0, cond)
+        }
     }
 
-    default fn is_high(&self) -> bool {
-        ConstantTime::scalar_is_high(&self.0)
+    maybe_specialized! {
+        fn is_high(&self) -> bool {
+            ConstantTime::scalar_is_high(&self.0)
+        }
     }
 
-    default fn is_zero(&self) -> bool {
-        ConstantTime::scalar_is_zero(&self.0)
+    maybe_specialized! {
+        fn is_zero(&self) -> bool {
+            ConstantTime::scalar_is_zero(&self.0)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z> ScalarUnary for Scalar<Public, Z> {
     fn negate(&self) -> backend::Scalar {
         let mut negated = self.0.clone();
@@ -430,22 +482,42 @@ pub(crate) trait NormPointUnary {
 }
 
 impl<T, S, Z> PointUnary for Point<T, Z, S> {
-    default fn negate(mut self) -> backend::Point {
+    maybe_specialized! {
+        fn negate(mut self) -> backend::Point {
+            ConstantTime::any_point_neg(&mut self.0);
+            self.0
+        }
+    }
+
+    maybe_specialized! {
+        fn conditional_negate(mut self, cond: bool) -> backend::Point {
+            ConstantTime::any_point_conditional_negate(&mut self.0, cond);
+            self.0
+        }
+    }
+
+    maybe_specialized! {
+        fn normalize(mut self) -> backend::Point {
+            ConstantTime::point_normalize(&mut self.0);
+            self.0
+        }
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<Z> PointUnary for Point<Jacobian, Z, Secret> {
+    fn negate(mut self) -> backend::Point {
         ConstantTime::point_neg(&mut self.0);
         self.0
     }
 
-    default fn conditional_negate(mut self, cond: bool) -> backend::Point {
+    fn conditional_negate(mut self, cond: bool) -> backend::Point {
         ConstantTime::point_conditional_negate(&mut self.0, cond);
-        self.0
-    }
-
-    default fn normalize(mut self) -> backend::Point {
-        ConstantTime::point_normalize(&mut self.0);
         self.0
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T: Normalized, S, Z> PointUnary for Point<T, Z, S> {
     default fn negate(mut self) -> backend::Point {
         ConstantTime::norm_point_neg(&mut self.0);
@@ -462,6 +534,7 @@ impl<T: Normalized, S, Z> PointUnary for Point<T, Z, S> {
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<Z> PointUnary for Point<Jacobian, Z, Public> {
     default fn negate(mut self) -> backend::Point {
         VariableTime::point_neg(&mut self.0);
@@ -479,6 +552,7 @@ impl<Z> PointUnary for Point<Jacobian, Z, Public> {
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T: Normalized, Z> PointUnary for Point<T, Z, Public> {
     fn negate(mut self) -> backend::Point {
         VariableTime::norm_point_neg(&mut self.0);
@@ -492,11 +566,14 @@ impl<T: Normalized, Z> PointUnary for Point<T, Z, Public> {
 }
 
 impl<T: Normalized, Z, S> NormPointUnary for Point<T, Z, S> {
-    default fn is_y_even(&self) -> bool {
-        ConstantTime::norm_point_is_y_even(&self.0)
+    maybe_specialized! {
+        fn is_y_even(&self) -> bool {
+            ConstantTime::norm_point_is_y_even(&self.0)
+        }
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<T: Normalized, Z> NormPointUnary for Point<T, Z, Public> {
     fn is_y_even(&self) -> bool {
         VariableTime::norm_point_is_y_even(&self.0)

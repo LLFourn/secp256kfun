@@ -1,9 +1,9 @@
 //!
-#![feature(rustc_attrs, min_specialization, extended_key_value_attributes)]
+#![cfg_attr(feature = "nightly", feature(rustc_attrs, min_specialization))]
 #![no_std]
 #![allow(non_snake_case)]
 #![deny(missing_docs, warnings)]
-#![doc = include_str!("../README.md")]
+// #![doc = include_str!("../README.md")] TODO: Activate with 1.54
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 #[allow(unused_imports)]
 #[macro_use]
@@ -26,11 +26,12 @@ mod scalar;
 mod slice;
 mod xonly;
 
+#[macro_use]
+mod macros;
 mod backend;
 pub mod marker;
 pub mod op;
 
-mod macros;
 pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;

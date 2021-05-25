@@ -7,3 +7,4 @@ members = [
     "secp256kfun_parity_backend",
     "sigma_fun"
 ]
+resolver = "2"

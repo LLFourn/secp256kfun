@@ -280,21 +280,6 @@ macro_rules! g {
         $crate::_g!(@scalar [] $($t)+) }};
 }
 
-/// Makes all tests within the block valid wasm32 tests as well with wasm_bindgen_test
-#[doc(hidden)]
-#[macro_export]
-macro_rules! test_plus_wasm {
-    ($($test:item)*) => {
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::*;
-        $(
-            #[cfg_attr(not(target_arch = "wasm32"), test)]
-            #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
-            $test
-         )*
-    };
-}
-
 /// Macro to make nonce derivation clear and explicit.
 ///
 /// Nonce derivation is a sensitive action where mistakes can have catastrophic
@@ -593,5 +578,36 @@ macro_rules! impl_fromstr_deserailize {
             }
         }
 
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! maybe_specialized {
+    (fn $name:ident($($args:tt)*) -> $ret:ty {
+        $($body:tt)*
+    }) => {
+        #[cfg(not(feature = "nightly"))]
+        fn $name($( $args )*) -> $ret {
+            $( $body )*
+        }
+
+        #[cfg(feature = "nightly")]
+        default fn $name($( $args )*) -> $ret {
+            $( $body )*
+        }
+    };
+    (fn $name:ident($($args:tt)*) {
+        $($body:tt)*
+    }) => {
+        #[cfg(not(feature = "nightly"))]
+        fn $name($( $args )*) {
+            $( $body )*
+        }
+
+        #[cfg(feature = "nightly")]
+        default fn $name($( $args )*) {
+            $( $body )*
+        }
     };
 }

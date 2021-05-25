@@ -40,12 +40,20 @@ impl<'a, S> Clone for Slice<'a, S> {
 impl<'a, S> Copy for Slice<'a, S> {}
 
 impl<'a, 'b, S1, S2> PartialEq<Slice<'b, S2>> for Slice<'a, S1> {
+    #[cfg(not(feature = "nightly"))]
+    fn eq(&self, rhs: &Slice<'b, S2>) -> bool {
+        // by default do comparison constant time
+        self.inner.ct_eq(rhs.inner).into()
+    }
+
+    #[cfg(feature = "nightly")]
     default fn eq(&self, rhs: &Slice<'b, S2>) -> bool {
         // by default do comparison constant time
         self.inner.ct_eq(rhs.inner).into()
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<'a, 'b> PartialEq<Slice<'b, Public>> for Slice<'a, Public> {
     fn eq(&self, rhs: &Slice<'b, Public>) -> bool {
         // if both are public do variable time
