@@ -4,7 +4,7 @@ mod test {
     use core::{marker::PhantomData, str::FromStr};
     use secp256kfun::{
         hex::{self, HexError},
-        impl_display_debug_serialize, impl_fromstr_deserailize,
+        impl_display_debug_serialize, impl_fromstr_deserialize,
     };
 
     #[derive(PartialEq)]
@@ -36,7 +36,7 @@ mod test {
         }
     }
 
-    impl_fromstr_deserailize! {
+    impl_fromstr_deserialize! {
         name => "six bytes",
         fn from_bytes<T>(bytes: [u8;6]) -> Option<SixBytes<T>> {
             SixBytes::from_six_bytes(bytes)

@@ -12,7 +12,7 @@ pub(crate) struct PointNonce {
     pub x_scalar: Scalar<Public>,
 }
 
-secp256kfun::impl_fromstr_deserailize! {
+secp256kfun::impl_fromstr_deserialize! {
     name => "compressed secp256k1 point",
     fn from_bytes(bytes: [u8;33]) -> Option<PointNonce> {
         Point::from_bytes(bytes).and_then(|point| {
@@ -60,7 +60,7 @@ secp256kfun::impl_display_debug_serialize! {
 }
 
 #[cfg(feature = "serde")]
-secp256kfun::impl_fromstr_deserailize! {
+secp256kfun::impl_fromstr_deserialize! {
     name => "ECDSA adaptor signature",
     fn from_bytes(bytes: [u8;162]) -> Option<EncryptedSignature> {
         bincode::deserialize(&bytes[..]).ok().map(EncryptedSignature)

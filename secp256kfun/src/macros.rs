@@ -476,7 +476,7 @@ macro_rules! impl_display_debug_serialize {
 #[macro_export]
 #[cfg_attr(rustfmt, rustfmt::skip)]
 #[doc(hidden)]
-macro_rules! impl_fromstr_deserailize {
+macro_rules! impl_fromstr_deserialize {
     (
         name => $name:literal,
         fn from_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($input:ident : [u8;$len:literal]) ->  Option<$type:path> $block:block
@@ -564,7 +564,7 @@ macro_rules! impl_fromstr_deserailize {
                             let mut $input = [0u8; $len];
                             for i in 0..$len {
                                 $input[i] = seq.next_element()?
-                                    .ok_or_else(|| $crate::serde::de::Error::invalid_length(i, &self))?;
+                                .ok_or_else(|| $crate::serde::de::Error::invalid_length(i, &self))?;
                             }
 
                             let result = $block;
