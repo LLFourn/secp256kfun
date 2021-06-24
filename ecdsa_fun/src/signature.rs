@@ -38,7 +38,7 @@ impl Signature<Public> {
     }
 }
 
-secp256kfun::impl_fromstr_deserailize! {
+secp256kfun::impl_fromstr_deserialize! {
     name => "secp256k1 ECDSA signature",
     fn from_bytes<S: Secrecy>(bytes: [u8;64]) -> Option<Signature<S>> {
         Signature::from_bytes(bytes).map(|signature| signature.mark::<S>())

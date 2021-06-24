@@ -399,14 +399,14 @@ crate::impl_display_serialize! {
     }
 }
 
-crate::impl_fromstr_deserailize! {
+crate::impl_fromstr_deserialize! {
     name => "secp256k1 x-coordinate",
     fn from_bytes<S>(bytes: [u8;32]) -> Option<Point<EvenY,S, NonZero>> {
         backend::Point::norm_from_bytes_y_oddness(bytes, false).map(|point| Point::from_inner(point, EvenY))
     }
 }
 
-crate::impl_fromstr_deserailize! {
+crate::impl_fromstr_deserialize! {
     name => "33-byte encoded secp256k1 point",
     fn from_bytes<S>(bytes: [u8;33]) -> Option<Point<Normal,S, NonZero>> {
         Point::from_bytes(bytes).map(|point| point.set_secrecy::<S>())
