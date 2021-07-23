@@ -5,6 +5,6 @@ members = [
     "schnorr_fun",
     "ecdsa_fun",
     "secp256kfun_parity_backend",
-    "sigma_fun"
+    "sigma_fun",
 ]
 resolver = "2"

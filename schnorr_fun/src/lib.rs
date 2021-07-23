@@ -14,6 +14,8 @@ extern crate std;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
+extern crate bitcoin_hashes;
+
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
 mod signature;
@@ -25,6 +27,8 @@ mod schnorr;
 pub use schnorr::*;
 mod message;
 pub use message::*;
+mod musig2;
+pub use musig2::Musig;
 
 #[macro_export]
 #[doc(hidden)]
