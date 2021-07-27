@@ -1,25 +1,38 @@
-use bitcoin_hashes::borrow_slice_impl;
-use bitcoin_hashes::hash_newtype;
-use bitcoin_hashes::hex_fmt_impl;
-use bitcoin_hashes::index_impl;
-use bitcoin_hashes::serde_impl;
-use bitcoin_hashes::sha256t_hash_newtype;
-use bitcoin_hashes::{sha256, Hash, HashEngine};
-use secp256kfun::g;
-use secp256kfun::marker::{Jacobian, Mark, NonZero};
-use secp256kfun::{Point, Scalar, XOnly};
+use bitcoin_hashes::{
+    borrow_slice_impl, hash_newtype, hex_fmt_impl, index_impl, serde_impl, sha256t_hash_newtype,
+    Hash, HashEngine,
+};
+use secp256kfun::{
+    g,
+    marker::{Jacobian, Mark, NonZero},
+    Point, Scalar, XOnly,
+};
 
 /// The SHA-256 midstate value for the "KeyAgg coefficient" hash.
-const MIDSTATE_KEYAGGHASH: [u8; 32] = [
+const MIDSTATE_KEYAGG_COEFFICIENT_HASH: [u8; 32] = [
     110, 240, 44, 90, 6, 164, 128, 222, 31, 41, 134, 101, 29, 17, 52, 242, 86, 160, 176, 99, 82,
     218, 65, 71, 242, 128, 217, 212, 68, 132, 190, 21,
 ];
-// 6ef02c5a06a480de1f2986651d1134f256a0b06352da4147f280d9d44484be15
+
+/// The SHA-256 midstate value for the "KeyAgg list" hash.
+const MIDSTATE_KEYAGG_LIST_HASH: [u8; 32] = [
+    179, 153, 213, 224, 200, 255, 243, 2, 107, 173, 172, 113, 7, 197, 183, 241, 151, 1, 226, 239,
+    42, 114, 236, 248, 32, 26, 76, 123, 171, 20, 138, 56,
+];
 
 sha256t_hash_newtype!(
-    KeyAggHash,
-    KeyAggTag,
-    MIDSTATE_KEYAGGHASH,
+    KeyAggCoefficientHash,
+    KeyAggCoefficientTag,
+    MIDSTATE_KEYAGG_COEFFICIENT_HASH,
+    64,
+    doc = "Tagged hash for key aggregation",
+    true
+);
+
+sha256t_hash_newtype!(
+    KeyAggListHash,
+    KeyAggListTag,
+    MIDSTATE_KEYAGG_LIST_HASH,
     64,
     doc = "Tagged hash for key aggregation",
     true
@@ -40,7 +53,7 @@ impl<'a> Musig<'a> {
         if keys.len() < 2 {
             return None;
         }
-        let mut engine = sha256::Hash::engine();
+        let mut engine = KeyAggListHash::engine();
         let mut second = None;
         for k in keys.iter() {
             engine.input(k.as_bytes());
@@ -50,7 +63,7 @@ impl<'a> Musig<'a> {
                 }
             }
         }
-        let keys_hash = sha256::Hash::from_engine(engine).into_inner();
+        let keys_hash = KeyAggListHash::from_engine(engine).into_inner();
         Some(Musig {
             keys,
             keys_hash,
@@ -66,10 +79,10 @@ impl<'a> Musig<'a> {
         if Some(&self.keys[index]) == self.second {
             return Some(Scalar::one());
         } else {
-            let mut engine = KeyAggHash::engine();
+            let mut engine = KeyAggCoefficientHash::engine();
             engine.input(&self.keys_hash);
             engine.input(self.keys[index].as_bytes());
-            let hash = KeyAggHash::from_engine(engine);
+            let hash = KeyAggCoefficientHash::from_engine(engine);
             let s = Scalar::from_bytes(hash.into_inner());
             s.and_then(|s| s.mark::<NonZero>())
         }
@@ -90,24 +103,36 @@ impl<'a> Musig<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{KeyAggHash, Musig, MIDSTATE_KEYAGGHASH};
-    use bitcoin_hashes::hex::{FromHex, ToHex};
-    use bitcoin_hashes::Hash;
+    use super::{Musig, MIDSTATE_KEYAGG_COEFFICIENT_HASH};
+    use crate::musig2::MIDSTATE_KEYAGG_LIST_HASH;
+    use bitcoin_hashes::{hex::FromHex, sha256, Hash, HashEngine};
     use secp256kfun::XOnly;
     use std::vec::Vec;
 
     #[test]
-    fn test_keyagghash() {
-        let v =
-            Vec::<u8>::from_hex("6ef02c5a06a480de1f2986651d1134f256a0b06352da4147f280d9d44484be15")
-                .unwrap();
-        assert_eq!(MIDSTATE_KEYAGGHASH.to_vec(), v);
+    fn test_keyagg_hash() {
+        let test = vec![
+            (
+                "KeyAgg coefficient",
+                MIDSTATE_KEYAGG_COEFFICIENT_HASH,
+                "6ef02c5a06a480de1f2986651d1134f256a0b06352da4147f280d9d44484be15",
+            ),
+            (
+                "KeyAgg list",
+                MIDSTATE_KEYAGG_LIST_HASH,
+                "b399d5e0c8fff3026badac7107c5b7f19701e2ef2a72ecf8201a4c7bab148a38",
+            ),
+        ];
 
-        let h = KeyAggHash::hash(b"");
-        assert_eq!(
-            h.to_hex(),
-            "c73cff1ec19568213104330a946930c4ee2ea7c65a1c43973a038a372620a055"
-        );
+        for (tag, midstate, midstate_hex) in test {
+            let tag_hash = sha256::Hash::hash(tag.as_bytes());
+            let mut engine = sha256::Hash::engine();
+            engine.input(&tag_hash);
+            engine.input(&tag_hash);
+            assert_eq!(engine.midstate().into_inner(), midstate);
+            let v = Vec::<u8>::from_hex(midstate_hex).unwrap();
+            assert_eq!(midstate.to_vec(), v);
+        }
     }
 
     #[test]
@@ -135,9 +160,9 @@ mod tests {
 
         let x1_x2_x3 = vec![x1, x2, x3];
         let expected_x1_x2_x3 = XOnly::from_bytes([
-            0xEA, 0x06, 0x7B, 0x01, 0x67, 0x24, 0x5A, 0x6F, 0xED, 0xB1, 0xB1, 0x22, 0xBB, 0x03,
-            0xAB, 0x7E, 0x5D, 0x48, 0x6C, 0x81, 0x83, 0x42, 0xE0, 0xE9, 0xB6, 0x41, 0x79, 0xAD,
-            0x32, 0x8D, 0x9D, 0x19,
+            0xE5, 0x83, 0x01, 0x40, 0x51, 0x21, 0x95, 0xD7, 0x4C, 0x83, 0x07, 0xE3, 0x96, 0x37,
+            0xCB, 0xE5, 0xFB, 0x73, 0x0E, 0xBE, 0xAB, 0x80, 0xEC, 0x51, 0x4C, 0xF8, 0x8A, 0x87,
+            0x7C, 0xEE, 0xEE, 0x0B,
         ])
         .unwrap();
         assert_eq!(
@@ -147,9 +172,9 @@ mod tests {
 
         let x3_x2_x1 = vec![x3, x2, x1];
         let expected_x3_x2_x1 = XOnly::from_bytes([
-            0x14, 0xE1, 0xF8, 0x3E, 0x9E, 0x25, 0x60, 0xFB, 0x2A, 0x6C, 0x04, 0x24, 0x55, 0x6C,
-            0x86, 0x8D, 0x9F, 0xB4, 0x63, 0x35, 0xD4, 0xF7, 0x8D, 0x22, 0x7D, 0x5D, 0x1D, 0x3C,
-            0x89, 0x90, 0x6F, 0x1E,
+            0xD7, 0x0C, 0xD6, 0x9A, 0x26, 0x47, 0xF7, 0x39, 0x09, 0x73, 0xDF, 0x48, 0xCB, 0xFA,
+            0x2C, 0xCC, 0x40, 0x7B, 0x8B, 0x2D, 0x60, 0xB0, 0x8C, 0x5F, 0x16, 0x41, 0x18, 0x5C,
+            0x79, 0x98, 0xA2, 0x90,
         ])
         .unwrap();
         assert_eq!(
@@ -159,9 +184,9 @@ mod tests {
 
         let x1_x1_x1 = vec![x1, x1, x1];
         let expected_x1_x1_x1 = XOnly::from_bytes([
-            0x70, 0x28, 0x8D, 0xF2, 0xB7, 0x60, 0x3D, 0xBE, 0xA0, 0xC7, 0xB7, 0x41, 0xDD, 0xAA,
-            0xB9, 0x46, 0x81, 0x14, 0x4E, 0x0B, 0x19, 0x08, 0x6C, 0x69, 0xB2, 0x34, 0x89, 0xE4,
-            0xF5, 0xB7, 0x01, 0x9A,
+            0x81, 0xA8, 0xB0, 0x93, 0x91, 0x2C, 0x9E, 0x48, 0x14, 0x08, 0xD0, 0x97, 0x76, 0xCE,
+            0xFB, 0x48, 0xAE, 0xB8, 0xB6, 0x54, 0x81, 0xB6, 0xBA, 0xAF, 0xB3, 0xC5, 0x81, 0x01,
+            0x06, 0x71, 0x7B, 0xEB,
         ])
         .unwrap();
         assert_eq!(
@@ -171,9 +196,9 @@ mod tests {
 
         let x1_x1_x2_x2 = vec![x1, x1, x2, x2];
         let expected_x1_x1_x2_x2 = XOnly::from_bytes([
-            0x93, 0xEE, 0xD8, 0x24, 0xF2, 0x3C, 0x5A, 0xE1, 0xC1, 0x05, 0xE7, 0x31, 0x09, 0x97,
-            0x3F, 0xCD, 0x4A, 0xE3, 0x3A, 0x9F, 0xA0, 0x2F, 0x0A, 0xC8, 0x5A, 0x3E, 0x55, 0x89,
-            0x07, 0x53, 0xB0, 0x67,
+            0x2E, 0xB1, 0x88, 0x51, 0x88, 0x7E, 0x7B, 0xDC, 0x5E, 0x83, 0x0E, 0x89, 0xB1, 0x9D,
+            0xDB, 0xC2, 0x80, 0x78, 0xF1, 0xFA, 0x88, 0xAA, 0xD0, 0xAD, 0x01, 0xCA, 0x06, 0xFE,
+            0x4F, 0x80, 0x21, 0x0B,
         ])
         .unwrap();
         assert_eq!(
