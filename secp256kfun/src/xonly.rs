@@ -147,7 +147,7 @@ impl<T, Z, S> PartialEq<Point<T, S, Z>> for XOnly {
     }
 }
 
-crate::impl_fromstr_deserailize! {
+crate::impl_fromstr_deserialize! {
     name => "secp256k1 x-coordinate",
     fn from_bytes(bytes: [u8;32]) -> Option<XOnly> {
         XOnly::from_bytes(bytes)
