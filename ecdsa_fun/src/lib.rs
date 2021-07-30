@@ -26,6 +26,7 @@ pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
 mod signature;
 pub use signature::Signature;
+#[cfg(feature = "adaptor")]
 pub mod adaptor;
 
 /// An instance of the ECDSA signature scheme.
