@@ -173,6 +173,7 @@ mod test {
             },
         };
         #[test]
+        #[cfg(feature = "alloc")]
         fn secp256k1_dleq_has_correct_name() {
             let dleq = Eq::new(
                 secp256k1::DLG::<U32>::default(),
