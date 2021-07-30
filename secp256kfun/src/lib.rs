@@ -1,9 +1,10 @@
 //!
-#![cfg_attr(feature = "nightly", feature(rustc_attrs, min_specialization))]
+#![cfg_attr(feature = "nightly", feature(min_specialization, rustc_attrs))]
 #![no_std]
 #![allow(non_snake_case)]
 #![deny(missing_docs, warnings)]
-// #![doc = include_str!("../README.md")] TODO: Activate with 1.54
+#![doc = include_str!("../README.md")]
+
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 #[allow(unused_imports)]
 #[macro_use]
