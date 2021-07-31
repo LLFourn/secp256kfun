@@ -1,4 +1,4 @@
-// #![doc = include_str!("../README.md")] TODO: Activate with 1.54
+#![doc = include_str!("../README.md")]
 #![no_std]
 #![allow(non_snake_case)]
 
