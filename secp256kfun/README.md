@@ -174,6 +174,7 @@ When you pass in `G`, which is a `BasePoint`, the compiler will specialize the c
 - `serde` serialization/deserialization for binary and hex for human-readable formats (enable with `serde` feature -- hex requires `alloc` feature as well).
 - `no_std` support
 - `From` implementations for [rust-secp256k1][2] types with `libsecp_compat` feature.
+- Optimized arithmetic with the `nightly` feature.
 
 
 [1]: https://github.com/bitcoin-core/secp256k1

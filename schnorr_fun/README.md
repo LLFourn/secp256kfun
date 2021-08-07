@@ -22,7 +22,6 @@ sha2 = "0.9"
 
 This library and [secp256kfun] are experimental.
 
-
 ## Synopsis
 
 ```rust
