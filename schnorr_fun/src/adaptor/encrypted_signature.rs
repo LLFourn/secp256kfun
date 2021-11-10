@@ -16,7 +16,7 @@ pub struct EncryptedSignature<S = Public> {
     /// The _one-time encrypted_ `s` value of the signature.
     pub s_hat: Scalar<S, Zero>,
     /// Whether the decryptor should negate their decryption key prior to decryption.
-    /// This exists as a side effect of using "x-only" public keys.
+    /// This exists as a side effect of using "x-only" (EvenY) signature nonces.
     pub needs_negation: bool,
 }
 
