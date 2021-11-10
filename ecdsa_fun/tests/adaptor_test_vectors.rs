@@ -1,4 +1,4 @@
-#![cfg(all(feature = "serde", feature = "alloc"))]
+#![cfg(all(feature = "serde", feature = "alloc", feature = "adaptor"))]
 extern crate serde_crate as serde;
 
 static DLC_SPEC_JSON: &'static str = include_str!("./test_vectors.json");
