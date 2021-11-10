@@ -1,4 +1,11 @@
+#[cfg(not(feature = "parity-backend"))]
+mod k256;
+#[cfg(not(feature = "parity-backend"))]
+pub use k256::*;
+
+#[cfg(feature = "parity-backend")]
 mod parity;
+#[cfg(feature = "parity-backend")]
 pub use parity::*;
 
 pub trait BackendScalar: Sized {
@@ -55,6 +62,11 @@ pub trait TimeSensitive {
     fn norm_point_is_y_even(point: &Point) -> bool;
     fn norm_point_conditional_negate(point: &mut Point, cond: bool);
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Point) -> Point;
+    fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
+        let xA = Self::scalar_mul_point(x, A);
+        let yB = Self::scalar_mul_point(y, B);
+        Self::point_add_point(&xA, &yB)
+    }
     fn scalar_add(lhs: &Scalar, rhs: &Scalar) -> Scalar;
     fn scalar_sub(lhs: &Scalar, rhs: &Scalar) -> Scalar;
     fn scalar_cond_negate(scalar: &mut Scalar, neg: bool);

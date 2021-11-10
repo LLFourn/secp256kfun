@@ -36,7 +36,7 @@ name = "bench_ecdsa"
 harness = false
 
 [features]
-default = ["std", "nightly", "adaptor"]
+default = ["std", "adaptor"]
 all = ["std", "serde", "libsecp_compat", "adaptor"]
 libsecp_compat = ["secp256kfun/libsecp_compat"]
 std = ["alloc"]

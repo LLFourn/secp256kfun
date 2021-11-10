@@ -39,7 +39,7 @@ harness = false
 
 
 [features]
-default = ["std", "nightly"]
+default = ["std"]
 all = ["std","serde", "libsecp_compat"]
 alloc = ["secp256kfun/alloc"]
 std = ["alloc", "secp256kfun/std"]

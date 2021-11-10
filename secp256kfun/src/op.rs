@@ -23,6 +23,7 @@
 //! [`Scalars`]: crate::Scalar
 //! [`specialized`]: https://github.com/rust-lang/rust/issues/31844
 //! [`G`]: crate::G
+#[allow(unused_imports)]
 use crate::{
     backend::{self, ConstantTime, TimeSensitive, VariableTime},
     marker::*,
@@ -73,7 +74,7 @@ pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(PointBinary::sub((A, B)), Jacobian)
+    Point::from_inner(PointBinary::sub(A, B), Jacobian)
 }
 
 /// Adds two points together
@@ -81,129 +82,107 @@ pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
 ) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(PointBinary::add((A, B)), Jacobian)
+    Point::from_inner(PointBinary::add(A, B), Jacobian)
 }
 
-pub(crate) trait PointBinary {
-    fn add(self) -> backend::Point;
-    fn sub(self) -> backend::Point;
-    fn eq(self) -> bool;
+pub(crate) trait PointBinary<T2, S2, Z2> {
+    fn add(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point;
+    fn sub(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point;
+    fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool;
 }
 
-impl<T1, S1, Z1, T2, S2, Z2> PointBinary for (&Point<S1, T1, Z1>, &Point<S2, T2, Z2>) {
+impl<T1, S1, Z1, T2, S2, Z2> PointBinary<T2, S2, Z2> for Point<T1, S1, Z1> {
     maybe_specialized! {
-        fn add(self) -> backend::Point {
-            let (lhs, rhs) = self;
-            ConstantTime::point_add_point(&lhs.0, &rhs.0)
+        fn add(&self, rhs: &Point<T2,S2,Z2>) -> backend::Point {
+            ConstantTime::point_add_point(&self.0, &rhs.0)
         }
     }
 
     maybe_specialized! {
-        fn sub(self) -> backend::Point {
-            let (lhs, rhs) = self;
-            ConstantTime::point_sub_point(&lhs.0, &rhs.0)
+        fn sub(&self, rhs: &Point<T2,S2,Z2>) -> backend::Point {
+            ConstantTime::point_sub_point(&self.0, &rhs.0)
         }
     }
 
     maybe_specialized! {
-        fn eq(self) -> bool {
-            let (lhs, rhs) = self;
-            ConstantTime::point_eq_point(&lhs.0, &rhs.0)
+        fn eq(&self,rhs: &Point<T2,S2,Z2>) -> bool {
+            ConstantTime::point_eq_point(&self.0, &rhs.0)
         }
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<Z1, Z2, T1: Normalized, S1, S2, T2> PointBinary for (&Point<S1, T1, Z1>, &Point<T2, S2, Z2>) {
-    default fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::point_add_norm_point(&rhs.0, &lhs.0)
+impl<Z1, Z2, T1: Normalized, S1, S2, T2> PointBinary<T2, S2, Z2> for Point<T1, S1, Z1> {
+    default fn add(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
+        ConstantTime::point_add_norm_point(&rhs.0, &self.0)
     }
 
-    default fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::norm_point_sub_point(&lhs.0, &rhs.0)
+    default fn sub(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
+        ConstantTime::norm_point_sub_point(&self.0, &rhs.0)
     }
 
-    default fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        ConstantTime::point_eq_norm_point(&rhs.0, &lhs.0)
+    default fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
+        ConstantTime::point_eq_norm_point(&rhs.0, &self.0)
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<Z1, Z2, S1, S2, T2: Normalized> PointBinary
-    for (&Point<S1, Jacobian, Z1>, &Point<T2, S2, Z2>)
-{
-    default fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::point_add_norm_point(&lhs.0, &rhs.0)
+impl<Z1, Z2, S1, S2, T2: Normalized> PointBinary<T2, S2, Z2> for Point<Jacobian, S1, Z1> {
+    default fn add(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
+        ConstantTime::point_add_norm_point(&self.0, &rhs.0)
     }
 
-    default fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        ConstantTime::point_sub_norm_point(&lhs.0, &rhs.0)
+    default fn sub(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point {
+        ConstantTime::point_sub_norm_point(&self.0, &rhs.0)
     }
 
-    default fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        ConstantTime::point_eq_norm_point(&lhs.0, &rhs.0)
+    default fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
+        ConstantTime::point_eq_norm_point(&self.0, &rhs.0)
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<Z1, Z2> PointBinary for (&Point<Public, Jacobian, Z1>, &Point<Jacobian, Public, Z2>) {
-    fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::point_add_point(&lhs.0, &rhs.0)
+impl<Z1, Z2> PointBinary<Jacobian, Public, Z2> for Point<Jacobian, Public, Z1> {
+    fn add(&self, rhs: &Point<Jacobian, Public, Z2>) -> backend::Point {
+        VariableTime::point_add_point(&self.0, &rhs.0)
     }
 
-    fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::point_sub_point(&lhs.0, &rhs.0)
+    fn sub(&self, rhs: &Point<Jacobian, Public, Z2>) -> backend::Point {
+        VariableTime::point_sub_point(&self.0, &rhs.0)
     }
 
-    fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        VariableTime::point_eq_point(&lhs.0, &rhs.0)
+    fn eq(&self, rhs: &Point<Jacobian, Public, Z2>) -> bool {
+        VariableTime::point_eq_point(&self.0, &rhs.0)
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<Z1, Z2, T1: Normalized, T2> PointBinary for (&Point<Public, T1, Z1>, &Point<T2, Public, Z2>) {
-    fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::point_add_norm_point(&rhs.0, &lhs.0)
+impl<Z1, Z2, T1: Normalized, T2> PointBinary<T2, Public, Z2> for Point<T1, Public, Z1> {
+    fn add(&self, rhs: &Point<T2, Public, Z2>) -> backend::Point {
+        VariableTime::point_add_norm_point(&rhs.0, &self.0)
     }
 
-    fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::norm_point_sub_point(&lhs.0, &rhs.0)
+    fn sub(&self, rhs: &Point<T2, Public, Z2>) -> backend::Point {
+        VariableTime::norm_point_sub_point(&self.0, &rhs.0)
     }
 
-    fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        VariableTime::point_eq_norm_point(&rhs.0, &lhs.0)
+    fn eq(&self, rhs: &Point<T2, Public, Z2>) -> bool {
+        VariableTime::point_eq_norm_point(&rhs.0, &self.0)
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<Z1, Z2, T2: Normalized> PointBinary
-    for (&Point<Public, Jacobian, Z1>, &Point<T2, Public, Z2>)
-{
-    fn add(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::point_add_norm_point(&lhs.0, &rhs.0)
+impl<Z1, Z2, T2: Normalized> PointBinary<T2, Public, Z2> for Point<Public, Jacobian, Z1> {
+    fn add(&self, rhs: &Point<T2, Public, Z2>) -> backend::Point {
+        VariableTime::point_add_norm_point(&self.0, &rhs.0)
     }
 
-    fn sub(self) -> backend::Point {
-        let (lhs, rhs) = self;
-        VariableTime::point_sub_norm_point(&lhs.0, &rhs.0)
+    fn sub(&self, rhs: &Point<T2, Public, Z2>) -> backend::Point {
+        VariableTime::point_sub_norm_point(&self.0, &rhs.0)
     }
 
-    fn eq(self) -> bool {
-        let (lhs, rhs) = self;
-        VariableTime::point_eq_norm_point(&lhs.0, &rhs.0)
+    fn eq(&self, rhs: &Point<T2, Public, Z2>) -> bool {
+        VariableTime::point_eq_norm_point(&self.0, &rhs.0)
     }
 }
 
@@ -307,18 +286,61 @@ impl<XZ, XS, AZ, AS, AT, YZ, YS, BZ, BS, BT> DoubleMul
     maybe_specialized! {
         fn double_mul(self) -> backend::Point {
             let (x, A, y, B) = self;
-            let xA = x.mul_point(A);
-            let yB = y.mul_point(B);
-            VariableTime::point_add_point(&xA, &yB)
+            ConstantTime::point_double_mul(&x.0, &A.0, &y.0, &B.0)
         }
     }
 }
 
 #[cfg(feature = "nightly")]
-impl<XZ, AZ, YZ, BZ, BT> DoubleMul
+impl<XZ, YZ, AT: NotBasePoint, BZ, BT: NotBasePoint, S1, S2> DoubleMul
+    for (
+        &Scalar<S1, XZ>,
+        &Point<AT, Public, NonZero>,
+        &Scalar<S2, YZ>,
+        &Point<BT, Public, BZ>,
+    )
+{
+    fn double_mul(self) -> backend::Point {
+        let (x, A, y, B) = self;
+        VariableTime::point_double_mul(&x.0, &A.0, &y.0, &B.0)
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<XZ, YZ, BZ, BT, S1, S2> DoubleMul
+    for (
+        &Scalar<S1, XZ>,
+        &Point<BasePoint, Public, NonZero>,
+        &Scalar<S2, YZ>,
+        &Point<BT, Public, BZ>,
+    )
+{
+    default fn double_mul(self) -> backend::Point {
+        let (x, A, y, B) = self;
+        ConstantTime::basepoint_double_mul(&x.0, &(A.1).0, &y.0, &B.0)
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<XZ, AT: NotBasePoint, AS, AZ, YZ, S1, S2> DoubleMul
+    for (
+        &Scalar<S1, XZ>,
+        &Point<AT, AS, AZ>,
+        &Scalar<S2, YZ>,
+        &Point<BasePoint, Public, NonZero>,
+    )
+{
+    default fn double_mul(self) -> backend::Point {
+        let (x, A, y, B) = self;
+        ConstantTime::basepoint_double_mul(&y.0, &(B.1).0, &x.0, &A.0)
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<XZ, YZ, BZ, BT> DoubleMul
     for (
         &Scalar<Public, XZ>,
-        &Point<BasePoint, Public, AZ>,
+        &Point<BasePoint, Public, NonZero>,
         &Scalar<Public, YZ>,
         &Point<BT, Public, BZ>,
     )
@@ -330,12 +352,12 @@ impl<XZ, AZ, YZ, BZ, BT> DoubleMul
 }
 
 #[cfg(feature = "nightly")]
-impl<XZ, AZ, YZ, BZ, AT: Normalized + NotBasePoint> DoubleMul
+impl<XZ, AZ, YZ, AT: NotBasePoint> DoubleMul
     for (
         &Scalar<Public, XZ>,
         &Point<AT, Public, AZ>,
         &Scalar<Public, YZ>,
-        &Point<BasePoint, Public, BZ>,
+        &Point<BasePoint, Public, NonZero>,
     )
 {
     fn double_mul(self) -> backend::Point {
@@ -577,5 +599,35 @@ impl<T: Normalized, Z, S> NormPointUnary for Point<T, Z, S> {
 impl<T: Normalized, Z> NormPointUnary for Point<T, Z, Public> {
     fn is_y_even(&self) -> bool {
         VariableTime::norm_point_is_y_even(&self.0)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{g, marker::*, Point, Scalar, G};
+    use core::str::FromStr;
+
+    #[test]
+    fn double_mul_spec_edgecase() {
+        // a random that took some time to track down.
+        let s = Scalar::<Secret, NonZero>::from_str(
+            "45941667583c8cfd65e01f696b1864c5c6a896a2722b6ebaddaf332a31ab42a9",
+        )
+        .unwrap();
+        let minus_c = Scalar::<Public, Zero>::from_str(
+            "90a10ba834c19b1e89c3ce7d7d733a8cd9c16e73c2f7b45aa5495f7a20765a8f",
+        )
+        .unwrap();
+        let X = Point::<Normal, Public, NonZero>::from_str(
+            "02fe8d1eb1bcb3432b1db5833ff5f2226d9cb5e65cee430558c18ed3a3c86ce1af",
+        )
+        .unwrap()
+        .mark::<Zero>();
+        let R_implied = g!(s * G + minus_c * X).mark::<Normal>();
+        let R_expected = Point::<Normal, Public, NonZero>::from_str(
+            "025cbdf0646e5db4eaa398f365f2ea7a0e3d419b7e0330e39ce92bddedcac4f9bc",
+        )
+        .unwrap();
+        assert_eq!(R_implied, R_expected);
     }
 }

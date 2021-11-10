@@ -270,7 +270,7 @@ impl<T: PointType, S, Z> core::ops::Neg for &Point<T, S, Z> {
 
 impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> {
     fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
-        op::PointBinary::eq((self, rhs))
+        op::PointBinary::eq(self, rhs)
     }
 }
 
@@ -494,6 +494,36 @@ mod test {
         );
         operations_test!(&p);
         operations_test!(p.mark::<Public>())
+    }
+
+    macro_rules! mixed_operations_test {
+        ($P:expr, $Q:expr) => {{
+            let p = $P;
+            let q = $Q;
+            let i = Point::zero();
+            expression_eq!([p] == [q]);
+            expression_eq!([p + p + p] == [q + q + q]);
+            expression_eq!([p + q] == [q + p]);
+            expression_eq!([p - q] == [i]);
+            expression_eq!([p - q] == [q - p]);
+            expression_eq!([p - q - q] == [q - p - p]);
+        }};
+    }
+
+    #[test]
+    fn mixed_operations() {
+        mixed_operations_test!(G.clone(), G.clone().mark::<Jacobian>());
+        mixed_operations_test!(
+            G.clone().mark::<Secret>(),
+            G.clone().mark::<(Secret, Jacobian)>()
+        );
+        let p = g!(42 * G);
+        mixed_operations_test!(p, p);
+        mixed_operations_test!(p, p.mark::<Normal>());
+        mixed_operations_test!(p.mark::<Normal>(), p);
+        mixed_operations_test!(p.mark::<Normal>(), p);
+        mixed_operations_test!(p.mark::<Secret>(), p);
+        mixed_operations_test!(p, p.mark::<Secret>());
     }
 
     #[test]

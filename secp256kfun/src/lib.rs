@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "nightly", feature(min_specialization, rustc_attrs))]
 #![no_std]
 #![allow(non_snake_case)]
-#![deny(missing_docs, warnings)]
+#![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]

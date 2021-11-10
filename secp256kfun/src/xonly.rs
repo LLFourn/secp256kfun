@@ -1,5 +1,5 @@
 use crate::{
-    backend::{self, BackendXOnly, TimeSensitive},
+    backend::{self, BackendXOnly},
     hash::HashInto,
     marker::*,
     Point, Scalar,
@@ -124,6 +124,7 @@ impl HashInto for XOnly {
 
 impl PartialEq<XOnly> for XOnly {
     fn eq(&self, rhs: &XOnly) -> bool {
+        use crate::backend::TimeSensitive;
         // XOnly should have secrecy too so we can do it in vartime if public
         crate::backend::ConstantTime::xonly_eq(&self.0, &rhs.0)
     }
