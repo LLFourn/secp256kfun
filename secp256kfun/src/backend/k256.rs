@@ -1,9 +1,6 @@
 use core::ops::{Add, Neg};
-
 pub use secp256kfun_k256_backend::Scalar;
-use secp256kfun_k256_backend::{
-    lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint,
-};
+use secp256kfun_k256_backend::{lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint};
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
 use super::{BackendPoint, BackendScalar, BackendXOnly, TimeSensitive};
@@ -317,6 +314,7 @@ impl TimeSensitive for ConstantTime {
 
 pub struct VariableTime;
 
+// delegate everything to constant time for now
 impl TimeSensitive for VariableTime {
     fn scalar_mul_norm_point(lhs: &Scalar, rhs: &Point) -> Point {
         ConstantTime::scalar_mul_norm_point(lhs, rhs)
