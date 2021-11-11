@@ -2,11 +2,6 @@ use core::ops::{Add, Neg};
 
 pub use secp256kfun_k256_backend::Scalar;
 use secp256kfun_k256_backend::{
-    elliptic_curve::{
-        group::{ff::PrimeField, prime::PrimeCurveAffine},
-        weierstrass::DecompressPoint,
-        Group,
-    },
     lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint,
 };
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
