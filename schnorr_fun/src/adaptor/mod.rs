@@ -102,8 +102,7 @@ where
             // R_hat = r * G is sampled pseudorandomly for every Y which means R_hat + Y is also
             // be pseudoranodm and therefore will not be zero.
             // NOTE: Crucially we add Y to the nonce derivation to ensure this is true.
-            .mark::<NonZero>()
-            .expect("computationally unreachable");
+            .expect_nonzero("computationally unreachable");
 
         let (R, needs_negation) = R.into_point_with_even_y();
         // We correct r here but we can't correct the decryption key (y) so we
@@ -194,7 +193,7 @@ where
     CH: Digest<OutputSize = U32> + Clone,
 {
     fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
-        g!(decryption_key * { self.G() }).mark::<Normal>()
+        g!(decryption_key * { self.G() }).normalize()
     }
 
     #[must_use]
@@ -211,7 +210,7 @@ where
             needs_negation,
         } = encrypted_signature;
         let X = verification_key;
-        let Y = encryption_key.clone().mark::<Normal>();
+        let Y = encryption_key;
 
         //  needs_negation => R_hat = R + Y
         // !needs_negation => R_hat = R - Y
@@ -261,10 +260,7 @@ where
         let implied_encryption_key = g!(y * { self.G() });
 
         if implied_encryption_key == *encryption_key {
-            Some(
-                y.mark::<NonZero>()
-                    .expect("unreachable - encryption_key is NonZero and y*G equals it"),
-            )
+            Some(y.expect_nonzero("unreachable - encryption_key is NonZero and y*G equals it"))
         } else {
             None
         }

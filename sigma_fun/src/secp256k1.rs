@@ -51,7 +51,7 @@ where
     ) -> Self::Announcement {
         let G = &statement.0;
         let announce = g!(announce_secret * G);
-        announce.mark::<Normal>()
+        announce.normalize()
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {

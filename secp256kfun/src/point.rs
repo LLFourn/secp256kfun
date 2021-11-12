@@ -243,11 +243,43 @@ impl Point<Normal, Public, Zero> {
     }
 }
 
+impl<T, S> Point<T, S, Zero> {
+    /// Converts a point marked with `Zero` to one that is marked `NonZero`.
+    /// You must provide a justification for this as the `reason`.
+    /// **If you're wrong the method will panic with the reason**.
+    ///
+    /// This is shorthand for:
+    ///
+    /// ```ignore
+    /// use secp256kfun::marker::*;
+    /// point.mark::<NonZero>().expect(reason);
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{g, G};
+    /// let two_g = g!(G + G).expect_nonzero("2 * G is not zero");
+    /// ```
+    pub fn expect_nonzero(self, reason: &str) -> Point<T, S, NonZero> {
+        self.mark::<NonZero>().expect(reason)
+    }
+}
+
 impl<Z, T> Point<T, Public, Z> {
     /// Checks if this point's x-coordiante is the equal to the scalar mod the
     /// curve order. This is only useful for ECDSA implementations.
     pub fn x_eq_scalar<Z2>(&self, scalar: &Scalar<Public, Z2>) -> bool {
         crate::backend::VariableTime::point_x_eq_scalar(&self.0, &scalar.0)
+    }
+}
+
+impl<S, Z> Point<Jacobian, S, Z> {
+    /// Normalize a point.
+    ///
+    /// Shorthand for calling [`.mark::<Normal>()`](crate::Mark::mark).
+    pub fn normalize(self) -> Point<Normal, S, Z> {
+        self.mark::<Normal>()
     }
 }
 

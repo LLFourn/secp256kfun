@@ -50,7 +50,7 @@ impl<S: Secrecy> Arbitrary for Point<Normal, S, NonZero> {
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         any::<Point<Jacobian, S>>()
-            .prop_map(|point| point.mark::<Normal>())
+            .prop_map(|point| point.normalize())
             .boxed()
     }
 }

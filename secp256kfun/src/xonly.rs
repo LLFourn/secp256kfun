@@ -107,8 +107,8 @@ impl XOnly {
     /// assert_ne!(secret_key, original);
     /// assert_eq!(-secret_key, original);
     /// ```
-    // This GT can't be an impl PointType yet because of https://github.com/rust-lang/rust/issues/44491
     pub fn from_scalar_mul<GT>(G: &Point<GT>, x: &mut Scalar<impl Secrecy>) -> Self {
+        // use op directly since macro doesn't support &mut
         let X = crate::op::scalar_mul_point(x, G).mark::<Normal>();
         let needs_negation = !X.is_y_even();
         x.conditional_negate(needs_negation);

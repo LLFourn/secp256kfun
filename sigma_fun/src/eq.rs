@@ -190,8 +190,8 @@ mod test {
                 unrelated_point in any::<Point>(),
             ) {
                 use crate::secp256k1::fun::{g, marker::*, G};
-                let xG = g!(x * G).mark::<Normal>();
-                let xH = g!(x * H).mark::<Normal>();
+                let xG = g!(x * G).normalize();
+                let xH = g!(x * H).normalize();
                 let statement = ((xG), (H, xH));
 
                 run_dleq!(

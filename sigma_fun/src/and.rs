@@ -142,14 +142,14 @@ mod test {
                 y in any::<Scalar>(),
             ) {
                 use crate::{
-                    secp256k1::{self, fun::{g, marker::*, G}},
+                    secp256k1::{self, fun::{g, G}},
                 };
                 use generic_array::typenum::U32;
 
                 type AndDL = And<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
 
-                let xG = g!(x * G).mark::<Normal>();
-                let yG = g!(y * G).mark::<Normal>();
+                let xG = g!(x * G).normalize();
+                let yG = g!(y * G).normalize();
                 let statement = (xG, yG);
 
                 let proof_system = crate::FiatShamir::<AndDL, HashTranscript<Sha256, ChaCha20Rng>>::default();

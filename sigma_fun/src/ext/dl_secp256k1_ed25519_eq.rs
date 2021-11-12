@@ -95,7 +95,9 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
         let powers_of_two = core::iter::successors(Some((HP.clone(), HQ.clone())), |(H2P, H2Q)| {
             // compute 2^i * H for i = 0..252 by successively adding the result of the last addition
             Some((
-                g!(H2P + H2P).mark::<(Normal, NonZero)>().unwrap(),
+                g!(H2P + H2P)
+                    .normalize()
+                    .expect_nonzero("power of two addition"),
                 (H2Q + H2Q),
             ))
         })
@@ -136,11 +138,10 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             bytes.reverse();
             ScalarP::from_bytes(bytes)
                 .expect("will never overflow since ed25519 order is lower")
-                .mark::<NonZero>()
-                .expect("must not be zero")
+                .expect_nonzero("must not be zero")
         };
 
-        let claim = (g!(secp_secret * GP).mark::<Normal>(), secret * GQ);
+        let claim = (g!(secp_secret * GP).normalize(), secret * GQ);
 
         let pedersen_blindings = (0..COMMITMENT_BITS)
             .map(|_| (ScalarP::random(rng), ScalarQ::random(rng)))
@@ -160,10 +161,10 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             .zip(bits.iter())
             .zip(pedersen_blindings.iter())
             .map(|(((H2P, H2Q), bit), (rP, rQ))| {
-                let zero_commit_p = g!(rP * GP).mark::<Secret>();
+                let zero_commit_p = g!(rP * GP);
                 let one_commit_p = g!(zero_commit_p + H2P)
-                    .mark::<NonZero>()
-                    .expect("computationally unreachable since zero_comit_p is random");
+                    .expect_nonzero("computationally unreachable since zero_comit_p is random");
+
                 let zero_commit_q = rQ * GQ;
                 let one_commit_q = &zero_commit_q + H2Q;
 
@@ -171,8 +172,8 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
                 let bit = subtle::Choice::from(*bit as u8);
                 (
                     PointP::conditional_select(
-                        &zero_commit_p.mark::<(Public, Normal)>(),
-                        &one_commit_p.mark::<Normal>(),
+                        &zero_commit_p.normalize(),
+                        &one_commit_p.normalize(),
                         bit,
                     ),
                     PointQ::conditional_select(&zero_commit_q, &one_commit_q, bit),
