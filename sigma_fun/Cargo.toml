@@ -27,7 +27,7 @@ secp256kfun = { path = "../secp256kfun", version = "0.7.0-pre.0", default-featur
 rand = "0.8"
 sha2 = "0.9"
 bincode = "1"
-proptest = "0.10"
+proptest = "1"
 rand_chacha = "0.3"
 
 [features]

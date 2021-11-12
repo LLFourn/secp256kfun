@@ -319,6 +319,7 @@ where
 mod test {
     use super::*;
     use crate::{hex, op, s};
+    use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
@@ -338,17 +339,49 @@ mod test {
         assert_ne!(scalar_1, scalar_2);
     }
 
-    #[test]
-    fn invert() {
-        let x = Scalar::random(&mut rand::thread_rng());
-        assert!(s!(x * { x.invert() }) == Scalar::from(1));
+    proptest! {
+        #[test]
+        fn invert(x in any::<Scalar>(), y in any::<Scalar<Public>>()) {
+            assert_eq!(s!(x * { x.invert() }), s!(1));
+            assert_eq!(s!(y * { y.invert() }), s!(1));
+        }
+
+        #[test]
+        fn sub(a in any::<Scalar>(),
+               b in any::<Scalar<Public>>(),
+               c in any::<Scalar<Public,Zero>>(),
+               d in any::<Scalar<Secret,Zero>>(),
+        ) {
+            assert_eq!(s!(a - a), s!(0));
+            assert_eq!(s!(b - b), s!(0));
+            assert_eq!(s!(c - c), s!(0));
+            assert_eq!(s!(d - d), s!(0));
+            assert_eq!(s!(a - a), s!(-a + a));
+            assert_eq!(s!(a - b), s!(-b + a));
+            assert_eq!(s!(a - c), s!(-c + a));
+            assert_eq!(s!(a - d), s!(-d + a));
+
+            if a != b {
+                assert_ne!(s!(a - b), s!(b - a));
+            }
+
+            if c != d {
+                assert_ne!(s!(c - d), s!(d - c));
+            }
+        }
+
+
     }
 
     #[test]
-    fn neg() {
-        let x = Scalar::random(&mut rand::thread_rng());
-        assert_eq!(s!(x - x), Scalar::zero());
-        assert_eq!(-Scalar::zero(), Scalar::zero())
+    fn scalar_subtraction_is_not_commutative() {
+        let two = s!(2);
+        let three = s!(3);
+        let minus_1 = s!(-1);
+        let one = s!(1);
+
+        assert_eq!(s!(two - three), minus_1);
+        assert_eq!(s!(three - two), one);
     }
 
     #[test]
@@ -401,14 +434,9 @@ mod test {
     }
 
     #[test]
-    fn scalar_subtraction_is_not_commutative() {
-        let two = Scalar::from(2);
-        let three = Scalar::from(3);
-        let minus_1 = Scalar::minus_one();
-        let one = Scalar::from(1);
-
+    fn minus_one() {
         assert_eq!(
-            minus_1,
+            Scalar::minus_one(),
             Scalar::from_bytes_mod_order(
                 hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
@@ -416,8 +444,6 @@ mod test {
                 .unwrap()
             )
         );
-        assert_eq!(s!(two - three), minus_1);
-        assert_eq!(s!(three - two), one);
     }
 
     #[test]

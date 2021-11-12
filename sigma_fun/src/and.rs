@@ -130,7 +130,7 @@ crate::impl_display!(And<A,B>);
 mod test {
     #[cfg(feature = "secp256k1")]
     mod secp256k1 {
-        use crate::{secp256k1::fun::proptest::non_zero_scalar, And, HashTranscript};
+        use crate::{secp256k1::fun::Scalar, And, HashTranscript};
         use ::proptest::prelude::*;
         use rand_chacha::ChaCha20Rng;
         use sha2::Sha256;
@@ -138,8 +138,8 @@ mod test {
         proptest! {
             #[test]
             fn and_dlg(
-                x in non_zero_scalar(),
-                y in non_zero_scalar(),
+                x in any::<Scalar>(),
+                y in any::<Scalar>(),
             ) {
                 use crate::{
                     secp256k1::{self, fun::{g, marker::*, G}},

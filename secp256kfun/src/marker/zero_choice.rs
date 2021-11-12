@@ -12,7 +12,7 @@ pub struct NonZero;
 ///
 /// Note it is rarely useful to define a function over any `Z: ZeroChoice`.
 /// This trait mostly just exists for consistency.
-pub trait ZeroChoice {}
+pub trait ZeroChoice: Default + Clone + PartialEq + Copy + 'static {}
 
 impl ZeroChoice for Zero {}
 impl ZeroChoice for NonZero {}

@@ -16,7 +16,7 @@
 /// ```
 /// [`G`]: crate::G
 /// [`Point<T,S,Z>`]: crate::Point
-pub trait PointType: Sized + Clone + Copy {
+pub trait PointType: Sized + Clone + Copy + 'static {
     /// The point type returned from the negation of a point of this type.
     type NegationType: Default;
 }
