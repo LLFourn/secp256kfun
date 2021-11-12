@@ -1,6 +1,5 @@
 //! Scalar arithmetic (integers mod the secp256k1 group order)
 use crate::{backend, hash::HashInto, marker::*, op};
-use backend::BackendScalar;
 use core::marker::PhantomData;
 use digest::{generic_array::typenum::U32, Digest};
 use rand_core::{CryptoRng, RngCore};
@@ -59,7 +58,7 @@ impl<Z> core::hash::Hash for Scalar<Public, Z> {
 impl<Z, S> Scalar<S, Z> {
     /// Serializes the scalar to its 32-byte big-endian representation
     pub fn to_bytes(&self) -> [u8; 32] {
-        backend::Scalar::to_bytes(&self.0)
+        backend::BackendScalar::to_bytes(&self.0)
     }
 
     /// Negates the scalar in-place if `cond` is true.
@@ -147,7 +146,7 @@ impl Scalar<Secret, NonZero> {
     ///
     /// [`NonZeroU32`]: core::num::NonZeroU32
     pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
-        Self::from_inner(backend::Scalar::from_u32(int.get()))
+        Self::from_inner(backend::BackendScalar::from_u32(int.get()))
     }
 
     /// Returns the integer `1` as a `Scalar<Secret, NonZero>`.
@@ -157,7 +156,7 @@ impl Scalar<Secret, NonZero> {
 
     /// Returns the integer -1 (modulo the curve order) as a `Scalar<Secret, NonZero>`.
     pub fn minus_one() -> Self {
-        Self::from_inner(backend::Scalar::minus_one())
+        Self::from_inner(backend::BackendScalar::minus_one())
     }
 }
 
@@ -176,7 +175,7 @@ impl Scalar<Secret, Zero> {
     /// assert_eq!(scalar_overflowed, Scalar::one())
     /// ```
     pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
-        Self::from_inner(backend::Scalar::from_bytes_mod_order(bytes))
+        Self::from_inner(backend::BackendScalar::from_bytes_mod_order(bytes))
     }
 
     /// Exactly like [`from_bytes_mod_order`] except
@@ -214,7 +213,7 @@ impl Scalar<Secret, Zero> {
     /// assert!(Scalar::from_bytes([255u8; 32]).is_none());
     /// ```
     pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
-        backend::Scalar::from_bytes(bytes).map(Self::from_inner)
+        backend::BackendScalar::from_bytes(bytes).map(Self::from_inner)
     }
 
     /// Creates a scalar from 32 big-endian encoded bytes in a slice. If the
@@ -238,7 +237,7 @@ impl Scalar<Secret, Zero> {
     /// assert_eq!(s!(zero * x), zero);
     /// assert_eq!(s!(x + zero), x);
     pub fn zero() -> Self {
-        Self::from_inner(backend::Scalar::zero())
+        Self::from_inner(backend::BackendScalar::zero())
     }
 }
 
@@ -250,7 +249,7 @@ impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
 
 impl From<u32> for Scalar<Secret, Zero> {
     fn from(int: u32) -> Self {
-        Self::from_inner(backend::Scalar::from_u32(int))
+        Self::from_inner(backend::BackendScalar::from_u32(int))
     }
 }
 

@@ -26,17 +26,19 @@ jobs:
     strategy:
       matrix:
         args: [
-            --no-default-features,
-            --no-default-features --features=serde,
-            --no-default-features --features=std,
-            --all-features,
+            "--no-default-features",
+            # // test seperately from --all-features since for secp256kfun this will enable parity backend
+            "--no-default-features --features=std,serde,libsecp_compat",
+            "--no-default-features --features=std,serde,libsecp_compat,nightly",
+            "--all-features",
+            ""
         ]
         rust: [nightly, stable]
         exclude:
           - rust: stable
             args: --all-features
-          - rust: nightly
-            args: --no-default-features
+          - rust: stable
+            args: "--no-default-features --features=std,serde,libsecp_compat,nightly"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1

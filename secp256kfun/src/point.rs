@@ -1,5 +1,5 @@
 use crate::{
-    backend::{self, BackendPoint},
+    backend::{self, BackendPoint, TimeSensitive},
     hash::HashInto,
     marker::*,
     op, Scalar, XOnly,
@@ -270,7 +270,7 @@ impl<T: PointType, S, Z> core::ops::Neg for &Point<T, S, Z> {
 
 impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> {
     fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
-        op::PointBinary::eq((self, rhs))
+        op::PointBinary::eq(self, rhs)
     }
 }
 
@@ -310,12 +310,8 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
     /// [`from_bytes`]: crate::Point::from_bytes
     pub fn to_bytes(&self) -> [u8; 33] {
-        let mut bytes = [0u8; 33];
         let (x, y) = self.coordinates();
-        bytes[0] = y[31] & 0x01;
-        bytes[0] |= 0x02;
-        bytes[1..].copy_from_slice(&x[..]);
-        bytes
+        coords_to_bytes(x, y)
     }
 
     /// Encodes a point as its compressed encoding as specified by [_Standards for Efficient Cryptography_].
@@ -376,11 +372,24 @@ where
     }
 }
 
+fn coords_to_bytes(x: [u8; 32], y: [u8; 32]) -> [u8; 33] {
+    let mut bytes = [0u8; 33];
+    bytes[0] = y[31] & 0x01;
+    bytes[0] |= 0x02;
+    bytes[1..].copy_from_slice(&x[..]);
+    bytes
+}
+
 crate::impl_debug! {
-    fn to_bytes<T: PointType, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
-        match Clone::clone(*point).mark::<(Normal,NonZero)>() {
-            Some(nzpoint) => Ok(nzpoint.to_bytes()),
-            None => Err("Zero"),
+    fn to_bytes<T, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
+        let mut p = point.0.clone();
+        backend::VariableTime::point_normalize(&mut p);
+        if backend::Point::is_zero(&p) {
+            Err("Zero")
+        }
+        else {
+            let (x, y) = backend::Point::norm_to_coordinates(&p);
+            Ok(coords_to_bytes(x,y))
         }
     }
 }
@@ -485,6 +494,36 @@ mod test {
         );
         operations_test!(&p);
         operations_test!(p.mark::<Public>())
+    }
+
+    macro_rules! mixed_operations_test {
+        ($P:expr, $Q:expr) => {{
+            let p = $P;
+            let q = $Q;
+            let i = Point::zero();
+            expression_eq!([p] == [q]);
+            expression_eq!([p + p + p] == [q + q + q]);
+            expression_eq!([p + q] == [q + p]);
+            expression_eq!([p - q] == [i]);
+            expression_eq!([p - q] == [q - p]);
+            expression_eq!([p - q - q] == [q - p - p]);
+        }};
+    }
+
+    #[test]
+    fn mixed_operations() {
+        mixed_operations_test!(G.clone(), G.clone().mark::<Jacobian>());
+        mixed_operations_test!(
+            G.clone().mark::<Secret>(),
+            G.clone().mark::<(Secret, Jacobian)>()
+        );
+        let p = g!(42 * G);
+        mixed_operations_test!(p, p);
+        mixed_operations_test!(p, p.mark::<Normal>());
+        mixed_operations_test!(p.mark::<Normal>(), p);
+        mixed_operations_test!(p.mark::<Normal>(), p);
+        mixed_operations_test!(p.mark::<Secret>(), p);
+        mixed_operations_test!(p, p.mark::<Secret>());
     }
 
     #[test]
