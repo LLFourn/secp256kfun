@@ -241,6 +241,29 @@ impl Scalar<Secret, Zero> {
     }
 }
 
+impl<S> Scalar<S, Zero> {
+    /// Converts a scalar marked with `Zero` to one that is marked `NonZero`.
+    /// You must provide a justification for this as the `reason`.
+    /// **If you're wrong the method will panic with the reason**.
+    ///
+    /// This is shorthand for:
+    ///
+    /// ```ignore
+    /// use secp256kfun::marker::{Mark, NonZero};
+    /// scalar.mark::<NonZero>().expect(reason);
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{s, Scalar};
+    /// let two = s!(1 + 1).expect_nonzero("one plus one is not zero");
+    /// ```
+    pub fn expect_nonzero(self, reason: &str) -> Scalar<S, NonZero> {
+        self.mark::<NonZero>().expect(reason)
+    }
+}
+
 impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
     fn eq(&self, rhs: &Scalar<S2, Z2>) -> bool {
         crate::op::ScalarBinary::eq((self, rhs))

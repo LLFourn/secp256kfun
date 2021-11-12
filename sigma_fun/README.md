@@ -124,13 +124,13 @@ type L = U16;
 let (C,r) = {
     // make a pedersen commitment
     let r = Scalar::random(&mut rand::thread_rng());
-    let C = g!(r * G + c * H).mark::<(Normal,NonZero)>().expect("zero is computationally unreachable");
+    let C = g!(r * G + c * H).normalize().expect_nonzero("zero is computationally unreachable");
     (C,r)
 };
 
 // Our strategy is to prove that we know r such that either C = r * G or C - H = r * G using 
 // an OR composition between two standard knowledge of discrete logarithm proofs.
-let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().expect("zero is computationally unreachable"));
+let statement = (C, g!(C - H).normalize().expect_nonzero("computationally unreachable"));
 // since we are commiting to 1 we know the witness for the right hand side statement.
 let witness =  Either::Right(r);
 
@@ -151,7 +151,7 @@ let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng(
     // The verifier's proof system doesn't need the rng
     let proof_system = FiatShamir::<Protocol, HashTranscript<Sha256>>::default();
     // They recreate the statement
-    let statement = (C, g!(C - H).mark::<(Normal,NonZero)>().unwrap());
+    let statement = (C, g!(C - H).normalize().expect_nonzero("bogus commitment"));
     // and verify it against the proof
     assert!(proof_system.verify(&statement, &proof));
     // The verifier is convinced of the statement and nothing else

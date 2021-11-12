@@ -107,7 +107,7 @@ impl<NG> ECDSA<NG> {
     /// let verification_key = ecdsa.verification_key_for(&secret_key);
     /// ```
     pub fn verification_key_for(&self, secret_key: &Scalar) -> Point {
-        g!(secret_key * G).mark::<Normal>()
+        g!(secret_key * G).normalize()
     }
     /// Verify an ECDSA signature.
     #[must_use]
@@ -166,7 +166,7 @@ impl<NG: NonceGen> ECDSA<NG> {
             secret => x,
             public => [&message_hash[..]]
         );
-        let R = g!(r * G).mark::<Normal>(); // Must be normal so we can get x-coordinate
+        let R = g!(r * G).normalize(); // Must be normal so we can get x-coordinate
 
         // This coverts R is its x-coordinate mod q. This acts as a kind of poor
         // man's version of the Fiat-Shamir challenge in a Schnorr
@@ -216,7 +216,7 @@ mod test {
             let mut message = [0u8; 32];
             rand::thread_rng().fill_bytes(&mut message);
             let secret_key = Scalar::random(&mut rand::thread_rng());
-            let public_key = g!(secret_key * G).mark::<Normal>();
+            let public_key = g!(secret_key * G).normalize();
             let sig = ecdsa.sign(&secret_key, &message);
             assert!(ecdsa.verify(&public_key, &message, &sig))
         }

@@ -76,7 +76,7 @@ let Y = g!(-x * G)
 let sum = g!(X + Y);
 dbg!(&sum); // Point<.., Zero>
 // Now let's say I naively decide to use this value as my public key...
-let public_key = sum.mark::<Normal>();
+let public_key = sum.normalize();
 // BOOM! This is a compile time Error! 🎉
 send_pubkey_to_bob(&public_key);
 
@@ -98,7 +98,7 @@ error[E0308]: mismatched types
 To fix this, the library forces you to manually mark the value as `NonZero` and then deal with the case that it is `Zero`.
 
 ```rust,compile_fail
-match sum.mark::<(Normal, NonZero)>() {
+match sum.normalize().mark::<NonZero>() {
     Some(public_key) => send_pubkey_to_bob(&public_key), // it was actually NonZero
     None => .. // deal with the case it is Zero
 }
@@ -133,11 +133,11 @@ fn pedersen_commit(
 ) -> Point {
     // Make the commitment
     g!(r * A +  x * B)
-        .mark::<(Normal,NonZero)>()
+        .normalize()
         // If the result is zero we could easily compute the discrete
         // logarithm of B with respect to A. Since this is meant to be unknown
         // this is computionally unreachable.
-        .expect("computationally unreachable")
+        .expect_nonzero("computationally unreachable")
 }
 
 // public setup

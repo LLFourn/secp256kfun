@@ -623,7 +623,7 @@ mod test {
         )
         .unwrap()
         .mark::<Zero>();
-        let R_implied = g!(s * G + minus_c * X).mark::<Normal>();
+        let R_implied = g!(s * G + minus_c * X).normalize();
         let R_expected = Point::<Normal, Public, NonZero>::from_str(
             "025cbdf0646e5db4eaa398f365f2ea7a0e3d419b7e0330e39ce92bddedcac4f9bc",
         )
