@@ -609,7 +609,7 @@ mod test {
 
     #[test]
     fn double_mul_spec_edgecase() {
-        // a random that took some time to track down.
+        // a random bug that took some time to track down.
         let s = Scalar::<Secret, NonZero>::from_str(
             "45941667583c8cfd65e01f696b1864c5c6a896a2722b6ebaddaf332a31ab42a9",
         )

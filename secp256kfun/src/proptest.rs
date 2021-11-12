@@ -1,34 +1,102 @@
-//! Functions used to generate test data for property-based testing with [`proptest`].
+//! Implementations of [`Arbitrary`] for core types.
 //!
-//! [`proptest`]: https://github.com/altsysrq/proptest
-use crate::{marker::*, Point, Scalar, G};
+//! [`Arbitrary`]: proptest::arbitrary::Arbitrary
+
+use crate::{marker::*, Point, Scalar, XOnly, G};
 use ::proptest::prelude::*;
 
-prop_compose! {
-    /// Generate a random `Scalar`.
-    pub fn scalar()(
-        bytes in any::<[u8; 32]>(),
-    ) -> Scalar<Secret, Zero> {
-        Scalar::from_bytes_mod_order(bytes)
+impl<S: Secrecy> Arbitrary for Scalar<S, NonZero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        prop_oneof![
+            // insert some pathological cases
+            1 => Just(Scalar::one().mark::<S>()),
+            1 => Just(Scalar::minus_one().mark::<S>()),
+            18 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes).mark::<(S, NonZero)>().unwrap()),
+        ].boxed()
     }
 }
 
-prop_compose! {
-    /// Generate a random, non-zero `Scalar`.
-    pub fn non_zero_scalar()(
-        bytes in any::<[u8; 32]>()
-            .prop_filter("Value cannot be zero",
-                         |bytes| bytes != &[0u8; 32]),
-    ) -> Scalar {
-        Scalar::from_bytes_mod_order(bytes).mark::<NonZero>().unwrap()
+impl<S: Secrecy> Arbitrary for Scalar<S, Zero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        prop_oneof![
+            1 => Just(Scalar::zero().mark::<S>()),
+            1 => Just(Scalar::one().mark::<(S, Zero)>()),
+            1 => Just(Scalar::minus_one().mark::<(S, Zero)>()),
+            27 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes).mark::<S>()),
+        ].boxed()
     }
 }
 
-prop_compose! {
-    /// Generate a random `Point`.
-    pub fn point()(
-        mut x in non_zero_scalar(),
-    ) -> Point {
-        Point::from_scalar_mul(G, &mut x).mark::<Normal>()
+impl<S: Secrecy> Arbitrary for Point<Jacobian, S, NonZero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        any::<Scalar>()
+            .prop_map(|scalar| g!(scalar * G).mark::<S>())
+            .boxed()
+    }
+}
+
+impl<S: Secrecy> Arbitrary for Point<Normal, S, NonZero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        any::<Point<Jacobian, S>>()
+            .prop_map(|point| point.mark::<Normal>())
+            .boxed()
+    }
+}
+
+impl<S: Secrecy> Arbitrary for Point<EvenY, S, NonZero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        any::<Point<Normal, S>>()
+            .prop_map(|point| point.into_point_with_even_y().0.mark::<S>())
+            .boxed()
+    }
+}
+
+impl<S: Secrecy> Arbitrary for Point<Jacobian, S, Zero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        prop_oneof![
+            1 => Just(Point::zero().mark::<(Jacobian, S)>()),
+            9 => any::<Point<Jacobian,S>>().prop_map(|p| p.mark::<Zero>()),
+        ]
+        .boxed()
+    }
+}
+
+impl<S: Secrecy> Arbitrary for Point<Normal, S, Zero> {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        prop_oneof![
+            1 => Just(Point::zero().mark::<S>()),
+            9 => any::<Point<Normal, S>>().prop_map(|p| p.mark::<Zero>())
+        ]
+        .boxed()
+    }
+}
+
+impl Arbitrary for XOnly {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        any::<Point>().prop_map(|p| p.to_xonly()).boxed()
     }
 }

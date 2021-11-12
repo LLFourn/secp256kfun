@@ -426,6 +426,7 @@ crate::impl_fromstr_deserialize! {
 mod test {
     use super::*;
     use crate::{g, G};
+    use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
@@ -441,29 +442,31 @@ mod test {
     }
 
     macro_rules! operations_test {
-        ($P:expr) => {{
+        (@binary $P:expr, $Q:expr) => {{
             let p = $P;
+            let q = $Q;
             let i = Point::zero();
+            expression_eq!([p] == [q]);
+            expression_eq!([q] == [p]);
+            expression_eq!([1 * p] == [q]);
+            expression_eq!([-1 * p] == [-q]);
+            expression_eq!([p - q] == [i]);
+            expression_eq!([i + p] == [q]);
 
-            expression_eq!([p] == [p]);
-            expression_eq!([p] != [i]);
-            expression_eq!([p] == [p]);
-            expression_eq!([1 * p] == [p]);
-            expression_eq!([-1 * p] == [-p]);
 
-            expression_eq!([p - p] == [i]);
-            expression_eq!([i + p] == [p]);
+            if !p.is_zero() {
+                expression_eq!([p] != [i]);
+                expression_eq!([p + p] != [p]);
+            }
 
-            expression_eq!([p + i] == [p]);
-            expression_eq!([i - p] == [-p]);
-            expression_eq!([p - i] == [p]);
-            expression_eq!([p + p] != [p]);
-            expression_eq!([0 * p] == [i]);
-            expression_eq!([-(p + p)] == [-p + -p]);
-            expression_eq!([p + p] == [2 * p]);
-            expression_eq!([p + p + p] == [3 * p]);
-            expression_eq!([-p - p - p] == [-3 * p]);
-
+            expression_eq!([-(p + p)] == [-q + -q]);
+            expression_eq!([p + p] == [2 * q]);
+            expression_eq!([p + q] == [2 * q]);
+            expression_eq!([q + p] == [2 * q]);
+            expression_eq!([p + p + p] == [3 * q]);
+            expression_eq!([-p - p - p] == [-3 * q]);
+            expression_eq!([42 * p + 1337 * p] == [1379 * q]);
+            expression_eq!([42 * p - 1337 * p] == [-1295 * q]);
             let add_100_times = {
                 let p = p.clone().mark::<(Zero, Jacobian)>();
                 let i = g!(p - p);
@@ -471,59 +474,77 @@ mod test {
                 (0..100).fold(i, |acc, _| g!(acc + p))
             };
 
-            expression_eq!([add_100_times] == [100 * p]);
-
+            expression_eq!([add_100_times] == [100 * q]);
             let undo = { (0..100).fold(add_100_times.clone(), |acc, _| g!(acc - p)) };
-
-            expression_eq!([undo] == [add_100_times - 100 * p]);
+            expression_eq!([undo] == [add_100_times - 100 * q]);
             expression_eq!([undo] == [i]);
         }};
-    }
-
-    #[test]
-    fn operations() {
-        operations_test!(G.clone());
-        operations_test!(G.clone().mark::<Secret>());
-        operations_test!(G.clone().mark::<(Public, Jacobian)>());
-        operations_test!(G.clone().mark::<(Secret, Jacobian)>());
-        operations_test!(Point::random(&mut rand::thread_rng()).mark::<Secret>());
-        operations_test!(Point::random(&mut rand::thread_rng()).mark::<Public>());
-        let p = crate::op::scalar_mul_point(
-            &Scalar::random(&mut rand::thread_rng()).mark::<Secret>(),
-            G,
-        );
-        operations_test!(&p);
-        operations_test!(p.mark::<Public>())
-    }
-
-    macro_rules! mixed_operations_test {
-        ($P:expr, $Q:expr) => {{
+        ($P:expr) => {{
             let p = $P;
-            let q = $Q;
             let i = Point::zero();
-            expression_eq!([p] == [q]);
-            expression_eq!([p + p + p] == [q + q + q]);
-            expression_eq!([p + q] == [q + p]);
-            expression_eq!([p - q] == [i]);
-            expression_eq!([p - q] == [q - p]);
-            expression_eq!([p - q - q] == [q - p - p]);
-        }};
+
+            expression_eq!([p] == [p]);
+            expression_eq!([p + i] == [p]);
+            expression_eq!([i - p] == [-p]);
+            expression_eq!([p - i] == [p]);
+            expression_eq!([0 * p] == [i]);
+
+            let q = p.clone().mark::<(Normal, Public)>();
+            operations_test!(@binary p,q);
+            let q = p.clone().mark::<(Jacobian, Public)>();
+            operations_test!(@binary p,q);
+            let q = p.clone().mark::<(Normal, Secret)>();
+            operations_test!(@binary p,q);
+            let q = p.clone().mark::<(Jacobian, Secret)>();
+            operations_test!(@binary p,q);
+        }}
     }
 
-    #[test]
-    fn mixed_operations() {
-        mixed_operations_test!(G.clone(), G.clone().mark::<Jacobian>());
-        mixed_operations_test!(
-            G.clone().mark::<Secret>(),
-            G.clone().mark::<(Secret, Jacobian)>()
-        );
-        let p = g!(42 * G);
-        mixed_operations_test!(p, p);
-        mixed_operations_test!(p, p.mark::<Normal>());
-        mixed_operations_test!(p.mark::<Normal>(), p);
-        mixed_operations_test!(p.mark::<Normal>(), p);
-        mixed_operations_test!(p.mark::<Secret>(), p);
-        mixed_operations_test!(p, p.mark::<Secret>());
+    proptest! {
+        #[test]
+        fn operations_even_y(P in any::<Point<EvenY>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_normal(P in any::<Point<Normal>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_jacobian(P in any::<Point<Jacobian>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_normal_secret(P in any::<Point<Normal, Secret>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_jacobian_secret(P in any::<Point<Jacobian, Secret>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_normal_public_zero(P in any::<Point<Normal, Public, Zero>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_normal_secret_zero(P in any::<Point<Normal, Secret, Zero>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_jacobian_public_zero(P in any::<Point<Jacobian, Public, Zero>>()) {
+            operations_test!(&P);
+        }
+
+        #[test]
+        fn operations_jacobian_secret_zero(P in any::<Point<Jacobian, Secret, Zero>>()) {
+            operations_test!(&P);
+        }
     }
 
     #[test]

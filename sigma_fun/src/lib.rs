@@ -11,6 +11,10 @@ use generic_array::{ArrayLength, GenericArray};
 pub use rand_core;
 use rand_core::{CryptoRng, RngCore};
 
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 #[cfg(feature = "alloc")]
 #[allow(unused_imports)]
 #[macro_use]

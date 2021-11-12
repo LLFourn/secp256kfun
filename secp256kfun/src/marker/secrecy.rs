@@ -42,7 +42,7 @@
 /// [`Point`s]: crate::Point
 /// [`mark`]: crate::marker::Mark::mark
 /// [_specialization_]: https://github.com/rust-lang/rust/issues/31844
-pub trait Secrecy: Default + Clone + PartialEq + Copy {}
+pub trait Secrecy: Default + Clone + PartialEq + Copy + 'static {}
 
 /// Indicates that the value is secret and therefore makes core operations
 /// executed on it to use  _constant time_ versions of the operations.

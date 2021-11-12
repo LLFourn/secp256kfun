@@ -287,7 +287,6 @@ mod test {
     use super::*;
     use crate::{
         ed25519::test::{ed25519_point, ed25519_scalar},
-        secp256k1::fun::proptest::point as secp256k1_point,
         HashTranscript,
     };
     use ::proptest::prelude::*;
@@ -311,7 +310,7 @@ mod test {
         #[test]
         fn dl_secp256k1_ed25519_eq(
             secret in ed25519_scalar(),
-            HP in secp256k1_point(),
+            HP in any::<PointP>(),
             HQ in ed25519_point(),
         ) {
             let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
@@ -326,7 +325,7 @@ mod test {
         #[test]
         fn serialization_roundtrip(
             secret in ed25519_scalar(),
-            HP in secp256k1_point(),
+            HP in any::<PointP>(),
             HQ in ed25519_point(),
         ) {
             let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);

@@ -12,3 +12,5 @@ Cargo.lock
 
 /bench_wasm/target/
 /bench_wasm/pkg/
+
+proptest-regressions

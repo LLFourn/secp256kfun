@@ -155,11 +155,13 @@ mod test {
 
             let mut bogus_statement = statement.clone();
             bogus_statement.1 .0 = $unrelated_point;
-            assert!(!proof_system.verify(&bogus_statement, &proof));
+            if &bogus_statement != statement {
+                assert!(!proof_system.verify(&bogus_statement, &proof));
 
-            let bogus_proof =
-                proof_system.prove(witness, &bogus_statement, Some(&mut rand::thread_rng()));
-            assert!(!proof_system.verify(&bogus_statement, &bogus_proof));
+                let bogus_proof =
+                    proof_system.prove(witness, &bogus_statement, Some(&mut rand::thread_rng()));
+                assert!(!proof_system.verify(&bogus_statement, &bogus_proof));
+            }
         }};
     }
 
@@ -168,9 +170,7 @@ mod test {
         use super::*;
         use crate::secp256k1::{
             self,
-            fun::proptest::{
-                non_zero_scalar as secp256k1_non_zero_scalar, point as secp256k1_point,
-            },
+            fun::{Point, Scalar},
         };
         #[test]
         #[cfg(feature = "alloc")]
@@ -185,9 +185,9 @@ mod test {
         proptest! {
             #[test]
             fn test_dleq_secp256k1(
-                x in secp256k1_non_zero_scalar(),
-                H in secp256k1_point(),
-                unrelated_point in secp256k1_point(),
+                x in any::<Scalar>(),
+                H in any::<Point>(),
+                unrelated_point in any::<Point>(),
             ) {
                 use crate::secp256k1::fun::{g, marker::*, G};
                 let xG = g!(x * G).mark::<Normal>();

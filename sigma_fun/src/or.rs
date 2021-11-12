@@ -192,7 +192,7 @@ mod test {
         use crate::{
             secp256k1::{
                 self,
-                fun::proptest::{non_zero_scalar, point},
+                fun::{Point, Scalar},
             },
             Either, HashTranscript, Or,
         };
@@ -205,8 +205,8 @@ mod test {
         proptest! {
             #[test]
             fn or_secp256k1(
-                x in non_zero_scalar(),
-                Y in point(),
+                x in any::<Scalar>(),
+                Y in any::<Point>(),
             ) {
                 let xG = g!(x * G).mark::<Normal>();
                 type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
@@ -225,7 +225,9 @@ mod test {
                     &statement,
                     Some(&mut rand::thread_rng()),
                 );
-                assert!(!proof_system.verify(&statement, &wrong_proof_lhs));
+
+                // have to account for proptest giving x * G == Y
+                assert!((xG == Y) || !proof_system.verify(&statement, &wrong_proof_lhs));
 
                 let statement = (statement.1, statement.0);
                 let proof_rhs = proof_system.prove(
