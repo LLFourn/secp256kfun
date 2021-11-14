@@ -26,6 +26,9 @@ pub use schnorr::*;
 mod message;
 pub use message::*;
 
+#[cfg(feature = "libsecp_compat")]
+mod libsecp_compat;
+
 #[macro_export]
 #[doc(hidden)]
 macro_rules! test_instance {

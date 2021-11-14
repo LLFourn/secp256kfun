@@ -24,7 +24,8 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 bincode = "1.0"
 sha2 = "0.9"
-secp256kfun = { path = "../secp256kfun", version = "0.7.0-pre.0", default-features = false, features = ["alloc"] }
+secp256kfun = { path = "../secp256kfun", version = "0.7.0-pre.0", default-features = false, features = ["alloc", "libsecp_compat", "proptest"] }
+secp256k1 = { version = "0.20", features = ["std", "global-context-less-secure"]}
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
@@ -40,7 +41,7 @@ harness = false
 
 [features]
 default = ["std"]
-all = ["std","serde", "libsecp_compat"]
+all = ["std","serde", "libsecp_compat", "proptest"]
 alloc = ["secp256kfun/alloc"]
 std = ["alloc", "secp256kfun/std"]
 serde = ["serde_crate", "secp256kfun/serde"]
