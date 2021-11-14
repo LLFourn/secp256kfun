@@ -45,7 +45,9 @@ pub extern crate serde_crate as serde;
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 #[cfg(any(feature = "proptest", test))]
-pub mod proptest;
+mod proptest_impls;
+#[cfg(feature = "proptest")]
+pub extern crate proptest;
 /// The main basepoint for secp256k1 as specified in [_SEC 2: Recommended Elliptic Curve Domain Parameters_] and used in Bitcoin.
 ///
 /// At the moment, [`G`] is the only [`BasePoint`] in the library.
