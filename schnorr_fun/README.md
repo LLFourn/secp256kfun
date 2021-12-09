@@ -51,6 +51,7 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 
 - BIP-340 compliant signing and verification
 - Adaptor signatures
+- compatibility with `rust-secp256k1`'s `schnorrsig` module with `libsecp_compat` feature.
 
 [1]: https://d-nb.info/1156214580/34
 [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
