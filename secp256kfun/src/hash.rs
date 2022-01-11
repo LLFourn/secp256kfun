@@ -56,42 +56,68 @@ where
 /// ```
 /// use digest::Digest;
 /// use secp256kfun::hash::{HashAdd, HashInto};
+/// #[derive(Clone, Copy)]
 /// struct CryptoData([u8; 42]);
 ///
 /// impl HashInto for CryptoData {
-///     fn hash_into(&self, hash: &mut impl digest::Digest) {
+///     fn hash_into(self, hash: &mut impl digest::Digest) {
 ///         hash.update(&self.0[..])
 ///     }
 /// }
 ///
 /// let cryptodata = CryptoData([42u8; 42]);
-/// let hash = sha2::Sha256::default().add(&cryptodata).finalize();
+/// let hash = sha2::Sha256::default().add(cryptodata).finalize();
 /// ```
 pub trait HashInto {
     /// Asks the item to convert itself to bytes and add itself to `hash`.
-    fn hash_into(&self, hash: &mut impl digest::Digest);
+    fn hash_into(self, hash: &mut impl digest::Digest);
 }
 
-impl HashInto for [u8] {
-    fn hash_into(&self, hash: &mut impl digest::Digest) {
-        hash.update(self)
+impl HashInto for u8 {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
+        hash.update(&[self])
     }
 }
 
-impl HashInto for str {
-    fn hash_into(&self, hash: &mut impl digest::Digest) {
+impl<'a, T: HashInto + Clone> HashInto for &'a T {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
+        self.clone().hash_into(hash)
+    }
+}
+
+impl<'a, T> HashInto for &'a [T]
+where
+    &'a T: HashInto,
+{
+    fn hash_into(self, hash: &mut impl digest::Digest) {
+        for item in self {
+            item.hash_into(hash)
+        }
+    }
+}
+
+impl HashInto for &str {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
         hash.update(self.as_bytes())
+    }
+}
+
+impl<T: HashInto, const N: usize> HashInto for [T; N] {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
+        for item in self {
+            item.hash_into(hash)
+        }
     }
 }
 
 /// Extension trait for [`digest::Digest`] to make adding things to the hash convenient.
 pub trait HashAdd {
     /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
-    fn add<HI: HashInto + ?Sized>(self, data: &HI) -> Self;
+    fn add<HI: HashInto>(self, data: HI) -> Self;
 }
 
 impl<D: Digest> HashAdd for D {
-    fn add<HI: HashInto + ?Sized>(mut self, data: &HI) -> Self {
+    fn add<HI: HashInto>(mut self, data: HI) -> Self {
         data.hash_into(&mut self);
         self
     }

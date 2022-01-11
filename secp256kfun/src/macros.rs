@@ -321,7 +321,7 @@ macro_rules! derive_nonce {
         use core::borrow::Borrow;
         use $crate::nonce::NonceGen;
         Scalar::from_hash(
-            $nonce_gen.begin_derivation($secret.borrow())$(.add($public.borrow()))+
+            $nonce_gen.begin_derivation($secret.borrow())$(.add($public))+
         )
     }}
 }

@@ -117,7 +117,7 @@ impl XOnly {
 }
 
 impl HashInto for XOnly {
-    fn hash_into(&self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
         hash.update(self.as_bytes())
     }
 }
