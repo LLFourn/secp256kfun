@@ -110,7 +110,7 @@ where
         // key before decrypting it
         r.conditional_negate(needs_negation);
 
-        let c = self.challenge(&R.to_xonly(), X, message);
+        let c = self.challenge(R.to_xonly(), X, message);
         let s_hat = s!(r + c * x).mark::<Public>();
 
         EncryptedSignature {
@@ -216,7 +216,7 @@ where
         // !needs_negation => R_hat = R - Y
         let R_hat = g!(R + { Y.conditional_negate(!needs_negation) });
 
-        let c = self.challenge(&R.to_xonly(), &X.to_xonly(), message);
+        let c = self.challenge(R.to_xonly(), X.to_xonly(), message);
 
         R_hat == g!(s_hat * { self.G() } - c * X)
     }
