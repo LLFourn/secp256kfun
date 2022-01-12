@@ -85,6 +85,20 @@ pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
     Point::from_inner(PointBinary::add(A, B), Jacobian)
 }
 
+/// Does a linear combination of points
+pub fn lincomb<'a, T1: 'a, S1: 'a, Z1: 'a, S2: 'a, Z2: 'a>(
+    scalars: impl IntoIterator<Item = &'a Scalar<S2, Z2>>,
+    points: impl IntoIterator<Item = &'a Point<T1, S1, Z1>>,
+) -> Point<Jacobian, Public, Zero> {
+    Point::from_inner(
+        ConstantTime::lincomb_iter(
+            points.into_iter().map(|p| &p.0),
+            scalars.into_iter().map(|s| &s.0),
+        ),
+        Jacobian,
+    )
+}
+
 pub(crate) trait PointBinary<T2, S2, Z2> {
     fn add(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point;
     fn sub(&self, rhs: &Point<T2, S2, Z2>) -> backend::Point;
@@ -629,5 +643,23 @@ mod test {
         )
         .unwrap();
         assert_eq!(R_implied, R_expected);
+    }
+
+    use proptest::prelude::*;
+
+    proptest! {
+
+        #[test]
+        fn lincomb_against_mul(a in any::<Scalar>(),
+                               b in any::<Scalar>(),
+                               c in any::<Scalar>(),
+                               A in any::<Point>(),
+                               B in any::<Point>(),
+                               C in any::<Point>()
+        ) {
+            use crate::op::*;
+            assert_eq!(lincomb([&a,&b,&c], [&A,&B,&C]),
+                       point_add(&scalar_mul_point(&a, &A), &point_add(&scalar_mul_point(&b, &B), &scalar_mul_point(&c, &C))))
+        }
     }
 }

@@ -310,6 +310,13 @@ impl TimeSensitive for ConstantTime {
     fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool {
         lhs.0.ct_eq(&rhs.0).into()
     }
+
+    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+        points: A,
+        scalars: B,
+    ) -> Point {
+        secp256kfun_k256_backend::lincomb_iter(points, scalars)
+    }
 }
 
 pub struct VariableTime;
@@ -438,6 +445,14 @@ impl TimeSensitive for VariableTime {
 
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
         ConstantTime::point_double_mul(x, A, y, B)
+    }
+
+    #[cfg(feature = "alloc")]
+    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+        points: A,
+        scalars: B,
+    ) -> Point {
+        ConstantTime::lincomb_iter(points, scalars)
     }
 }
 

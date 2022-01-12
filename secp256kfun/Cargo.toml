@@ -20,8 +20,8 @@ digest = "0.9"
 subtle = { package = "subtle-ng", version = "2" }
 rand_core = { version = "0.6" }
 serde_crate = { package = "serde", version = "1.0",  optional = true, default-features = false, features = ["derive"] }
-# secp256kfun_k256_backend = { path = "../../k256_backend/k256", features = ["expose-field"] }
-secp256kfun_k256_backend = {  version = "1.0.0", features = ["expose-field"] }
+# secp256kfun_k256_backend = { path = "../../k256_backend/k256" }
+secp256kfun_k256_backend = {  version = "2.0.0" }
 secp256kfun_parity_backend = { version = "0.1.5", optional = true }
 secp256k1 = { version = "0.20", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
@@ -48,7 +48,7 @@ wasm-bindgen-test = "0.3"
 [features]
 default = ["std"]
 all = ["std", "serde", "libsecp_compat", "nightly"]
-alloc = ["serde_crate/alloc"]
+alloc = ["serde_crate/alloc", "secp256kfun_k256_backend/alloc"]
 std = ["alloc"]
 libsecp_compat = ["secp256k1"]
 serde = [ "serde_crate" ]

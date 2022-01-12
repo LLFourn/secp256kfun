@@ -76,4 +76,12 @@ pub trait TimeSensitive {
     fn scalar_invert(scalar: &Scalar) -> Scalar;
     fn scalar_mul_basepoint(scalar: &Scalar, base: &BasePoint) -> Point;
     fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool;
+    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+        points: A,
+        scalars: B,
+    ) -> Point {
+        points.zip(scalars).fold(Point::zero(), |acc, (X, k)| {
+            Self::point_add_point(&acc, &Self::scalar_mul_point(k, X))
+        })
+    }
 }
