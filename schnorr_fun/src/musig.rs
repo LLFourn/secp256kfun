@@ -127,9 +127,9 @@ impl<H: Tagged> MuSig<H, ()> {
     }
 }
 
-impl<H: Tagged, NG, GT> MuSig<H, Schnorr<H, NG, GT>> {
+impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generate a new MuSig context from a Schnorr context.
-    pub fn new(schnorr: Schnorr<H, NG, GT>) -> Self {
+    pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self::_new(schnorr)
     }
 }
@@ -360,7 +360,7 @@ secp256kfun::impl_display_serialize! {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen, GT> MuSig<H, Schnorr<H, NG, GT>> {
+impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>> {
     /// Generate nonces for your local keys in keylist.
     ///
     /// It is very important to carefully consider the implications of your choice of underlying
@@ -457,7 +457,7 @@ pub struct SignSession<T = Ordinary> {
     signing_type: T,
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG, GT> MuSig<H, Schnorr<H, NG, GT>> {
+impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Start a signing session.
     ///
     /// You must provide you local secret nonces (the public portion must be shared with the other signer(s)).
@@ -727,7 +727,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG, GT> MuSig<H, Schnorr<H, NG, GT>> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, GT, HNG> MuSig<H, Schnorr<H, Deterministic<HNG>, GT>>
+impl<H: Digest<OutputSize = U32> + Clone, HNG> MuSig<H, Schnorr<H, Deterministic<HNG>>>
 where
     Deterministic<HNG>: NonceGen,
 {

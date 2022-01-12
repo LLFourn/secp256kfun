@@ -54,7 +54,7 @@ use crate::{
         g,
         marker::*,
         nonce::NonceGen,
-        s, Point, Scalar,
+        s, Point, Scalar, G,
     },
     KeyPair, Message, Schnorr, Signature,
 };
@@ -78,7 +78,7 @@ pub trait EncryptedSign {
     ) -> EncryptedSignature;
 }
 
-impl<NG, CH, GT> EncryptedSign for Schnorr<CH, NG, GT>
+impl<NG, CH> EncryptedSign for Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
     NG: NonceGen,
@@ -98,7 +98,7 @@ where
             public => [X, Y, message]
         );
 
-        let R = g!(r * { self.G() } + Y)
+        let R = g!(r * G + Y)
             // R_hat = r * G is sampled pseudorandomly for every Y which means R_hat + Y is also
             // be pseudoranodm and therefore will not be zero.
             // NOTE: Crucially we add Y to the nonce derivation to ensure this is true.
@@ -188,12 +188,12 @@ pub trait Adaptor {
     ) -> Option<Scalar>;
 }
 
-impl<CH, NG, GT> Adaptor for Schnorr<CH, NG, GT>
+impl<CH, NG> Adaptor for Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
 {
     fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
-        g!(decryption_key * { self.G() }).normalize()
+        g!(decryption_key * G).normalize()
     }
 
     #[must_use]
@@ -218,7 +218,7 @@ where
 
         let c = self.challenge(R.to_xonly(), X.to_xonly(), message);
 
-        R_hat == g!(s_hat * { self.G() } - c * X)
+        R_hat == g!(s_hat * G - c * X)
     }
 
     fn decrypt_signature(
@@ -257,7 +257,7 @@ where
 
         let mut y = s!(s - s_hat);
         y.conditional_negate(*needs_negation);
-        let implied_encryption_key = g!(y * { self.G() });
+        let implied_encryption_key = g!(y * G);
 
         if implied_encryption_key == *encryption_key {
             Some(y.expect_nonzero("unreachable - encryption_key is NonZero and y*G equals it"))
