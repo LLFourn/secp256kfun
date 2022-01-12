@@ -46,7 +46,7 @@
 //! # let _sigs = musig.sign_all(&_keylist, &_session);
 //! # let p1_sig = _sigs[0];
 //! # let p3_sig = _sigs[1];
-//! // recieve p1_sig and p3_sig from somewhere and check they're valid
+//! // receive p1_sig and p3_sig from somewhere and check they're valid
 //! assert!(musig.verify_partial_signature(&keylist, &session, 0, p1_sig));
 //! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
 //! // combine them with ours into the final signature
@@ -162,7 +162,7 @@ pub struct KeyList {
 }
 
 impl KeyList {
-    /// The `XOnly` aggeregated key for the keylist.
+    /// The `XOnly` aggregated key for the keylist.
     pub fn agg_public_key(&self) -> XOnly {
         self.agg_key.to_xonly()
     }
@@ -266,7 +266,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
         let points = keys.into_iter().map(|x| x.to_point()).collect::<Vec<_>>();
 
         let (agg_key, needs_negation) = crate::fun::op::lincomb(coefs.iter(), points.iter())
-            .expect_nonzero("computationally unreachable: linear combination of hash ranomized points cannot add to zero")
+            .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero")
             .into_point_with_even_y();
 
         KeyList {
@@ -315,7 +315,7 @@ secp256kfun::impl_display_serialize! {
 
 /// A pair of secret nonces along with the public portion.
 ///
-/// Depending on whether you are using determinisitc nonce derivation or not
+/// Depending on whether you are using deterministic nonce derivation or not
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce
@@ -374,7 +374,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
     /// Using a [`Deterministic`] nonce generator means you **must** never start two signing
     /// sessions with nonces generated from the same `sid`. If you do your secret key will be
     /// recoverable from the two partial signatures you created with the same nonce. The upside is
-    /// that you can call [`start_sign_session_deterministic`] with the `sid` you orignally passed
+    /// that you can call [`start_sign_session_deterministic`] with the `sid` you originally passed
     /// to `gen_nonces` without having to store the output of `gen_nonces`.
     ///
     /// Note that the API allows you to BYO nonces by creating `NonceKeyPair`s manually.
@@ -440,6 +440,12 @@ pub struct Adaptor {
 /// Created by [`start_sign_session`] or [`start_encrypted_sign_session`].
 /// The type parameter records whether you are trying to jointly generate a signature or an adaptor signature.
 ///
+/// ## Security
+///
+/// This struct has **secret nonces** in it. If a malicious party gains access to and you generate a
+/// partial signature with this session they will be able to recover your secret key.
+/// If this is a concern simply avoid serializing this struct and recreate it only when you need it.
+///
 /// [`start_sign_session`]: MuSig::start_sign_session
 /// [`start_encrypted_sign_session`]: MuSig::start_encrypted_sign_session
 #[derive(Debug, Clone, PartialEq)]
@@ -465,7 +471,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// ## Return Value
     ///
-    /// Returns `None` in the case that the `remote_noces` have been (maliciously) selected to
+    /// Returns `None` in the case that the `remote_nonces` have been (maliciously) selected to
     /// cancel out your local nonces.
     /// This is not a security issue -- we just can't continue the protocol if this happens.
     ///
@@ -494,7 +500,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         })
     }
 
-    /// Start an encrypted signing session
+    /// Start an encrypted signing session.
     ///
     /// i.e. a session to produce an adaptor signature under `encryption_key`.
     ///
@@ -504,7 +510,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// ## Return Value
     ///
-    /// Returns `None` in the case that the `remote_noces` have been (maliciously) selected to
+    /// Returns `None` in the case that the `remote_nonces` have been (maliciously) selected to
     /// cancel out your local nonces.
     /// This is not a security issue -- we just can't continue the protocol if this happens.
     ///
@@ -631,6 +637,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         session: &SignSession<T>,
     ) -> Vec<Scalar<Public, Zero>> {
         let c = session.c;
+        let b = session.b;
+
         keylist
             .parties
             .iter()
@@ -643,7 +651,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
             .map(|(j, (i, keypair))| {
                 let x = keypair.secret_key();
                 let [ref r1, ref r2] = session.local_secret_nonces[j];
-                let b = session.b;
                 let mut a = keylist.coefs[i].clone();
                 a.conditional_negate(keylist.needs_negation);
                 s!(c * a * x + r1 + b * r2).mark::<(Public, Zero)>()
@@ -779,7 +786,7 @@ mod test {
 
     proptest! {
         #[test]
-        fn test_end_to_end(sk1 in any::<Scalar>(), sk2 in any::<Scalar>(), sk3 in any::<Scalar>()) {
+        fn test_end_to_end(sk1 in any::<Scalar>(), sk2 in any::<Scalar>(), sk3 in any::<Scalar>(), tweak in any::<Scalar<Public, Zero>>(), use_tweak in any::<bool>()) {
             let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
             let musig = MuSig::new(schnorr);
             let keypair1 = musig
@@ -791,16 +798,21 @@ mod test {
             let keypair3 = musig
                 .schnorr
                 .new_keypair(sk3);
-            let keylist_p1 = musig.new_keylist(vec![
+            let mut keylist_p1 = musig.new_keylist(vec![
                 Party::Local(keypair1.clone()),
                 Party::Remote(keypair2.public_key()),
                 Party::Local(keypair3.clone()),
             ]);
-            let keylist_p2 = musig.new_keylist(vec![
+            let mut keylist_p2 = musig.new_keylist(vec![
                 Party::Remote(keypair1.public_key()),
                 Party::Local(keypair2),
                 Party::Remote(keypair3.public_key()),
             ]);
+
+            if use_tweak {
+                keylist_p1 = keylist_p1.tweak(tweak).unwrap();
+                keylist_p2 = keylist_p2.tweak(tweak).unwrap();
+            }
             assert_eq!(keylist_p1.agg_public_key(), keylist_p2.agg_public_key());
 
             let p1_nonces = musig.gen_nonces(&keylist_p1, b"test");

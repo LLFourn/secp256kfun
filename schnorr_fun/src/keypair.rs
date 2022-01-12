@@ -27,7 +27,7 @@ impl KeyPair {
         &self.sk
     }
 
-    /// Returns a reference to the public key.
+    /// The public key
     pub fn public_key(&self) -> XOnly {
         self.pk
     }
