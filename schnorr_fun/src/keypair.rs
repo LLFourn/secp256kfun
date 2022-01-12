@@ -15,7 +15,7 @@ use secp256kfun::{marker::*, Point, Scalar, XOnly};
 /// ```
 ///
 /// [`Schnorr`]: crate::Schnorr
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct KeyPair {
     pub(crate) sk: Scalar,
     pub(crate) pk: XOnly,
