@@ -78,6 +78,24 @@ where
     }
 }
 
+impl<CH: Default + Tagged + Digest<OutputSize = U32>, NG: Default + AddTag> Default
+    for Schnorr<CH, NG, BasePoint>
+{
+    /// Returns a Schnorr instance tagged in the default way according to BIP340.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use schnorr_fun::{nonce::Deterministic, Schnorr};
+    /// use sha2::Sha256;
+    ///
+    /// let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
+    /// ```
+    fn default() -> Self {
+        Self::new(NG::default())
+    }
+}
+
 impl<NG, CH, GT> Schnorr<CH, NG, GT>
 where
     CH: Digest<OutputSize = U32> + Clone,
