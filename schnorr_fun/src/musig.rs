@@ -35,15 +35,15 @@
 //! # let nonces = musig.gen_nonces(&_keylist, b"session-id-1337");
 //! # let p1_nonce = nonces[0].public;
 //! # let p3_nonce = nonces[1].public;
-//! # let _session = musig.start_sign_session_deterministic(&_keylist, my_nonces.iter().map(|n| n.public), b"session-id-1337", message).unwrap();
+//! # let mut _session = musig.start_sign_session_deterministic(&_keylist, my_nonces.iter().map(|n| n.public), b"session-id-1337", message).unwrap();
 //! // Once you've got the nonces from the other two (p1_nonce and p3_nonce) you can start the signing session.
-//! let session = musig.start_sign_session(&keylist, my_nonces, [p1_nonce, p3_nonce], message).unwrap();
+//! let mut session = musig.start_sign_session(&keylist, my_nonces, [p1_nonce, p3_nonce], message).unwrap();
 //! // but since we're using deterministic nonce generation we can just remember the session id.
 //! // You should guarantee that this is not called ever again with the same session id!!!!
-//! let session = musig.start_sign_session_deterministic(&keylist, [p1_nonce, p3_nonce], b"session-id-1337", message).unwrap();
+//! let mut session = musig.start_sign_session_deterministic(&keylist, [p1_nonce, p3_nonce], b"session-id-1337", message).unwrap();
 //! // sign with our (single) local keypair
-//! let my_sig = musig.sign_all(&keylist, &session)[0];
-//! # let _sigs = musig.sign_all(&_keylist, &_session);
+//! let my_sig = musig.sign_all(&keylist, &mut session)[0];
+//! # let _sigs = musig.sign_all(&_keylist, &mut _session);
 //! # let p1_sig = _sigs[0];
 //! # let p3_sig = _sigs[1];
 //! // receive p1_sig and p3_sig from somewhere and check they're valid
@@ -153,7 +153,7 @@ pub struct KeyList {
     /// The parties involved in the key aggregation.
     parties: Vec<Party>,
     /// The coefficients of each key
-    coefs: Vec<Scalar>,
+    coefs: Vec<Scalar<Public>>,
     /// The aggregate key
     agg_key: Point<EvenY>,
     /// The
@@ -176,6 +176,21 @@ impl KeyList {
             Party::Local(keypair) => keypair.public_key(),
             Party::Remote(xonly) => *xonly,
         })
+    }
+
+    /// Returns an iterator over the parties
+    pub fn parties(&self) -> impl Iterator<Item = &Party> {
+        self.parties.iter()
+    }
+
+    /// Clear all secret keys from the parties.
+    ///
+    /// i.e. convert all [`Party::Local`] into [`Party::Remote`]
+    pub fn clear_secrets(self) -> KeyList {
+        Self {
+            parties: self.keys().map(|key| Party::Remote(key)).collect(),
+            ..self
+        }
     }
 
     /// *Tweak* the aggregated key with a scalar so that the resulting key is equal to the existing
@@ -261,6 +276,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
                 } else {
                     Scalar::one()
                 }
+                .mark::<Public>()
             })
             .collect::<Vec<_>>();
         let points = keys.into_iter().map(|x| x.to_point()).collect::<Vec<_>>();
@@ -442,12 +458,15 @@ pub struct Adaptor {
 ///
 /// ## Security
 ///
-/// This struct has **secret nonces** in it. If a malicious party gains access to and you generate a
-/// partial signature with this session they will be able to recover your secret key.
-/// If this is a concern simply avoid serializing this struct and recreate it only when you need it.
+/// This struct has **secret nonces** in it up until you call [`clear_secrets`] or [`sign_all`]. If
+/// a malicious party gains access to it before and you generate a partial signature with this session they
+/// will be able to recover your secret key. If this is a concern simply avoid serializing this
+/// struct (until you've cleared it) and recreate it only when you need it.
 ///
 /// [`start_sign_session`]: MuSig::start_sign_session
 /// [`start_encrypted_sign_session`]: MuSig::start_encrypted_sign_session
+/// [`clear_secrets`]: SignSession::clear_secrets
+/// [`sign_all`]: MuSig::sign_all
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -463,6 +482,17 @@ pub struct SignSession<T = Ordinary> {
     signing_type: T,
 }
 
+impl<T> SignSession<T> {
+    /// Removes all secret nonce data from the session.
+    ///
+    /// The session works as normal except that it can no longer be used for signing ([`sign_all`] will return an empty vector).
+    ///
+    /// [`sign_all`]: MuSig::sign_all
+    pub fn clear_secrets(&mut self) {
+        self.local_secret_nonces.drain(..);
+    }
+}
+
 impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Start a signing session.
     ///
@@ -474,6 +504,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Returns `None` in the case that the `remote_nonces` have been (maliciously) selected to
     /// cancel out your local nonces.
     /// This is not a security issue -- we just can't continue the protocol if this happens.
+    ///
+    /// # Panics
+    ///
+    /// Panics if number of local or remote nonces passed in does not align with the parties in
+    /// `keylist`.
     ///
     /// [`start_sign_session_deterministic`]: Self::start_sign_session_deterministic
     pub fn start_sign_session(
@@ -514,6 +549,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// cancel out your local nonces.
     /// This is not a security issue -- we just can't continue the protocol if this happens.
     ///
+    /// # Panics
+    ///
+    /// Panics if number of local or remote nonces passed in does not align with the parties in
+    /// `keylist`.
+    ///
     /// [`start_encrypted_sign_session_deterministic`]: Self::start_sign_session_deterministic
     pub fn start_encrypted_sign_session(
         &self,
@@ -541,8 +581,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         })
     }
 
-    /// Starts a signing session with a message and all the nonces.
-    pub fn _start_sign_session(
+    fn _start_sign_session(
         &self,
         keylist: &KeyList,
         local_nonces: Vec<NonceKeyPair>,
@@ -631,10 +670,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generates partial signatures (or partial encrypted signatures depending on `T`) under each of the `Local` entries in `keylist`.
     ///
     /// The order of the partial signatures returned is the order of them in the keylist.
+    ///
+    /// This can only be called once per session as it clears the session (see also [`clear_secrets`]).
+    /// Calling `sign_all` again will return an empty vector.
+    ///
+    /// [`clear_secrets`]: SignSession::clear_secrets
     pub fn sign_all<T>(
         &self,
         keylist: &KeyList,
-        session: &SignSession<T>,
+        session: &mut SignSession<T>,
     ) -> Vec<Scalar<Public, Zero>> {
         let c = session.c;
         let b = session.b;
@@ -647,11 +691,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
                 Party::Local(keypair) => Some((i, keypair)),
                 Party::Remote(_) => None,
             })
-            .enumerate()
-            .map(|(j, (i, keypair))| {
+            .zip(session.local_secret_nonces.drain(..))
+            .map(|((i, keypair), secret_nonces)| {
                 let x = keypair.secret_key();
-                let [ref r1, ref r2] = session.local_secret_nonces[j];
-                let mut a = keylist.coefs[i].clone();
+                let [r1, r2] = secret_nonces;
+                let mut a = keylist.coefs[i];
                 a.conditional_negate(keylist.needs_negation);
                 s!(c * a * x + r1 + b * r2).mark::<(Public, Zero)>()
             })
@@ -662,6 +706,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Verifies a partial signature (or partial encrypted signature depending on `T`).
     ///
     /// You must provide the `index` of the party (the index of the key in `keylist`).
+    ///
+    /// # Panics
+    ///
+    /// Panics when `index` is equal to or greater than the number of parties in the keylist.
     pub fn verify_partial_signature<T>(
         &self,
         keylist: &KeyList,
@@ -820,7 +868,7 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_session = musig
+            let mut p1_session = musig
                 .start_sign_session(
                     &keylist_p1,
                     p1_nonces.clone(),
@@ -828,7 +876,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let p2_session = musig
+            let mut p2_session = musig
                 .start_sign_session_deterministic(
                     &keylist_p2,
                     p1_nonces.iter().map(|nonce| nonce.public),
@@ -836,7 +884,8 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let p1_sigs = musig.sign_all(&keylist_p1, &p1_session);
+            let p1_sigs = musig.sign_all(&keylist_p1, &mut p1_session);
+            assert_eq!(musig.sign_all(&keylist_p1, &mut p1_session).len(), 0, "sign_all should hose the session");
 
             assert_eq!(p1_sigs.len(), 2);
             for (j, i) in [0, 2].iter().enumerate() {
@@ -844,7 +893,7 @@ mod test {
                 assert!(musig.verify_partial_signature(&keylist_p1, &p1_session, *i, p1_sigs[j]));
             }
 
-            let p2_sigs = musig.sign_all(&keylist_p2, &p2_session);
+            let p2_sigs = musig.sign_all(&keylist_p2, &mut p2_session);
             assert_eq!(p2_sigs.len(), 1);
             assert!(musig.verify_partial_signature(&keylist_p2, &p2_session, 1, p2_sigs[0]));
             assert!(musig.verify_partial_signature(&keylist_p1, &p1_session, 1, p2_sigs[0]));
@@ -892,7 +941,7 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_session = musig
+            let mut p1_session = musig
                 .start_encrypted_sign_session(
                     &keylist_p1,
                     p1_nonces.clone(),
@@ -901,7 +950,7 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-            let p2_session = musig
+            let mut p2_session = musig
                 .start_encrypted_sign_session_deterministic(
                     &keylist_p2,
                     p1_nonces.iter().map(|nonce| nonce.public),
@@ -910,7 +959,7 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-            let p1_sigs = musig.sign_all(&keylist_p1, &p1_session);
+            let p1_sigs = musig.sign_all(&keylist_p1, &mut p1_session);
 
             assert_eq!(p1_sigs.len(), 2);
             for (j, i) in [0, 2].iter().enumerate() {
@@ -918,7 +967,7 @@ mod test {
                 assert!(musig.verify_partial_signature(&keylist_p1, &p1_session, *i, p1_sigs[j]));
             }
 
-            let p2_sigs = musig.sign_all(&keylist_p2, &p2_session);
+            let p2_sigs = musig.sign_all(&keylist_p2, &mut p2_session);
             assert_eq!(p2_sigs.len(), 1);
             assert!(musig.verify_partial_signature(&keylist_p2, &p2_session, 1, p2_sigs[0]));
             assert!(musig.verify_partial_signature(&keylist_p1, &p1_session, 1, p2_sigs[0]));
@@ -996,7 +1045,7 @@ mod test {
                 Party::Remote(X1),
                 Party::Remote(X2),
             ]);
-            let session = musig
+            let mut session = musig
                 .start_sign_session(
                     &keylist,
                     vec![secnonce.clone()],
@@ -1005,7 +1054,7 @@ mod test {
                 )
                 .unwrap();
 
-            let scalar = musig.sign_all(&keylist, &session)[0];
+            let scalar = musig.sign_all(&keylist, &mut session)[0];
             let expected = Scalar::from_bytes([
                 0x68, 0x53, 0x7C, 0xC5, 0x23, 0x4E, 0x50, 0x5B, 0xD1, 0x40, 0x61, 0xF8, 0xDA, 0x9E,
                 0x90, 0xC2, 0x20, 0xA1, 0x81, 0x85, 0x5F, 0xD8, 0xBD, 0xB7, 0xF1, 0x27, 0xBB, 0x12,
@@ -1021,7 +1070,7 @@ mod test {
                 Party::Local(keypair.clone()),
                 Party::Remote(X2),
             ]);
-            let session = musig
+            let mut session = musig
                 .start_sign_session(
                     &keylist,
                     vec![secnonce.clone()],
@@ -1030,7 +1079,7 @@ mod test {
                 )
                 .unwrap();
 
-            let scalar = musig.sign_all(&keylist, &session)[0];
+            let scalar = musig.sign_all(&keylist, &mut session)[0];
             let expected = Scalar::from_bytes([
                 0x2D, 0xF6, 0x7B, 0xFF, 0xF1, 0x8E, 0x3D, 0xE7, 0x97, 0xE1, 0x3C, 0x64, 0x75, 0xC9,
                 0x63, 0x04, 0x81, 0x38, 0xDA, 0xEC, 0x5C, 0xB2, 0x0A, 0x35, 0x7C, 0xEC, 0xA7, 0xC8,
@@ -1046,7 +1095,7 @@ mod test {
                 Party::Remote(X2),
                 Party::Local(keypair.clone()),
             ]);
-            let session = musig
+            let mut session = musig
                 .start_sign_session(
                     &keylist,
                     vec![secnonce.clone()],
@@ -1055,7 +1104,7 @@ mod test {
                 )
                 .unwrap();
 
-            let scalar = musig.sign_all(&keylist, &session)[0];
+            let scalar = musig.sign_all(&keylist, &mut session)[0];
             let expected = Scalar::from_bytes([
                 0x0D, 0x5B, 0x65, 0x1E, 0x6D, 0xE3, 0x4A, 0x29, 0xA1, 0x2D, 0xE7, 0xA8, 0xB4, 0x18,
                 0x3B, 0x4A, 0xE6, 0xA7, 0xF7, 0xFB, 0xE1, 0x5C, 0xDC, 0xAF, 0xA4, 0xA3, 0xD1, 0xBC,
@@ -1080,7 +1129,7 @@ mod test {
                 ])
                 .tweak(tweak)
                 .unwrap();
-            let session = musig
+            let mut session = musig
                 .start_sign_session(
                     &keylist,
                     vec![secnonce.clone()],
@@ -1089,7 +1138,7 @@ mod test {
                 )
                 .unwrap();
 
-            let scalar = musig.sign_all(&keylist, &session)[0];
+            let scalar = musig.sign_all(&keylist, &mut session)[0];
             let expected = Scalar::from_bytes([
                 0x5E, 0x24, 0xC7, 0x49, 0x6B, 0x56, 0x5D, 0xEB, 0xC3, 0xB9, 0x63, 0x9E, 0x6F, 0x13,
                 0x04, 0xA2, 0x15, 0x97, 0xF9, 0x60, 0x3D, 0x3A, 0xB0, 0x5B, 0x49, 0x13, 0x64, 0x17,
@@ -1097,7 +1146,7 @@ mod test {
             ])
             .unwrap();
 
-            assert!(musig.verify_partial_signature(&keylist, &session, 2, scalar));
+            assert!(musig.verify_partial_signature(&keylist, &mut session, 2, scalar));
             assert_eq!(scalar, expected)
         }
 
@@ -1117,7 +1166,7 @@ mod test {
                 Party::Local(keypair),
             ]);
 
-            let session = musig
+            let mut session = musig
                 .start_encrypted_sign_session(
                     &keylist,
                     vec![secnonce.clone()],
@@ -1127,7 +1176,7 @@ mod test {
                 )
                 .unwrap();
 
-            let scalar = musig.sign_all(&keylist, &session)[0];
+            let scalar = musig.sign_all(&keylist, &mut session)[0];
             let expected = Scalar::from_bytes([
                 0xD7, 0x67, 0xD0, 0x7D, 0x9A, 0xB8, 0x19, 0x8C, 0x9F, 0x64, 0xE3, 0xFD, 0x9F, 0x7B,
                 0x8B, 0xAA, 0xC6, 0x05, 0xF1, 0x8D, 0xFF, 0x18, 0x95, 0x24, 0x2D, 0x93, 0x95, 0xD9,
