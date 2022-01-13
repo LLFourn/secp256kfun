@@ -12,7 +12,7 @@ Uses [secp256kfun].
 
 ``` toml
 [dependencies]
-ecdsa_fun = "0.6"
+ecdsa_fun = "0.7"
 sha2 = "0.9" # You need a hash function for nonce derivation
 ```
 
