@@ -49,6 +49,8 @@ use rand_core::{CryptoRng, RngCore};
 #[derive(Clone, Eq)]
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
 
+impl<Z: Clone> Copy for Scalar<Public, Z> {}
+
 impl<Z> core::hash::Hash for Scalar<Public, Z> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.to_bytes().hash(state)
@@ -314,8 +316,8 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
     }
 }
 
-impl HashInto for Scalar {
-    fn hash_into(&self, hash: &mut impl digest::Digest) {
+impl<S, Z> HashInto for Scalar<S, Z> {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
         hash.update(&self.to_bytes())
     }
 }

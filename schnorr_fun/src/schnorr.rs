@@ -1,12 +1,12 @@
 use crate::{
     fun::{
-        self, derive_nonce,
+        derive_nonce,
         digest::{generic_array::typenum::U32, Digest},
         g,
         hash::{HashAdd, Tagged},
         marker::*,
         nonce::{AddTag, NonceGen},
-        s, Point, Scalar, XOnly,
+        s, Point, Scalar, XOnly, G,
     },
     KeyPair, Message, Signature,
 };
@@ -14,18 +14,14 @@ use crate::{
 /// An instance of a [BIP-340] style Schnorr signature scheme.
 ///
 /// Each instance is defined by its:
-/// - `G`: Public generator (usually [`G`])
 /// - `challenge_hash`: The hash function instance that is used to produce the [_Fiat-Shamir_] challenge.
 /// - `nonce_gen`: The [`NonceGen`] used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
 ///
 /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
-/// [`G`]: crate::fun::G
 /// [`NonceGen<H>`]: crate::fun::hash::NonceGen
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #[derive(Clone)]
-pub struct Schnorr<CH, NG = (), GT = BasePoint> {
-    /// The generator point the Schnorr signature scheme is defined with.
-    G: Point<GT>,
+pub struct Schnorr<CH, NG = ()> {
     /// The [`NonceGen`] used to generate nonces.
     ///
     /// [`NonceGen`]: crate::nonce::NonceGen
@@ -34,18 +30,23 @@ pub struct Schnorr<CH, NG = (), GT = BasePoint> {
     challenge_hash: CH,
 }
 
-impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, (), BasePoint> {
+impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, ()> {
     /// Create a new instance that can only verify signatures.
     ///
-    /// The instance will use the standard value of [`G`].
+    /// # Example
     ///
-    /// [`G`]: secp256kfun::G
+    /// ```
+    /// use schnorr_fun::Schnorr;
+    /// use sha2::Sha256;
+    ///
+    /// let schnorr = Schnorr::<Sha256>::verify_only();
+    /// ```
     pub fn verify_only() -> Self {
         Self::new(())
     }
 }
 
-impl<CH, NG> Schnorr<CH, NG, BasePoint>
+impl<CH, NG> Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Tagged,
     NG: AddTag,
@@ -71,14 +72,31 @@ where
     pub fn new(nonce_gen: NG) -> Self {
         let nonce_gen = nonce_gen.add_tag("BIP0340");
         Self {
-            G: fun::G.clone(),
             nonce_gen,
             challenge_hash: CH::default().tagged("BIP0340/challenge".as_bytes()),
         }
     }
 }
 
-impl<NG, CH, GT> Schnorr<CH, NG, GT>
+impl<CH: Default + Tagged + Digest<OutputSize = U32>, NG: Default + AddTag> Default
+    for Schnorr<CH, NG>
+{
+    /// Returns a Schnorr instance tagged in the default way according to BIP340.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use schnorr_fun::{nonce::Deterministic, Schnorr};
+    /// use sha2::Sha256;
+    ///
+    /// let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
+    /// ```
+    fn default() -> Self {
+        Self::new(NG::default())
+    }
+}
+
+impl<NG, CH> Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
     NG: NonceGen,
@@ -110,8 +128,8 @@ where
             public => [X, message]
         );
 
-        let R = XOnly::from_scalar_mul(&self.G, &mut r);
-        let c = self.challenge(&R, X, message);
+        let R = XOnly::from_scalar_mul(&G, &mut r);
+        let c = self.challenge(R, X, message);
         let s = s!(r + c * x).mark::<Public>();
 
         Signature { R, s }
@@ -125,12 +143,7 @@ where
     }
 }
 
-impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
-    /// Returns the generator point being used for the scheme.
-    pub fn G(&self) -> &Point<GT> {
-        &self.G
-    }
-
+impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     /// Returns the challenge hash being used to sign/verify signatures
     pub fn challenge_hash(&self) -> CH {
         self.challenge_hash.clone()
@@ -145,7 +158,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     /// [`Point`]: crate::fun::Point
     /// [`EvenY`]: crate::fun::marker::EvenY
     pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
-        let pk = XOnly::from_scalar_mul(&self.G, &mut sk);
+        let pk = XOnly::from_scalar_mul(&G, &mut sk);
         KeyPair { sk, pk }
     }
 
@@ -160,15 +173,15 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     ///
     /// ```
     /// use schnorr_fun::{
-    ///     fun::{marker::*, s, Scalar, XOnly},
+    ///     fun::{marker::*, s, Scalar, XOnly, G},
     ///     Message, Schnorr, Signature,
     /// };
     /// # let schnorr = schnorr_fun::test_instance!();
     /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
-    /// let R = XOnly::from_scalar_mul(schnorr.G(), &mut r);
-    /// let challenge = schnorr.challenge(&R, keypair.public_key(), message);
+    /// let R = XOnly::from_scalar_mul(G, &mut r);
+    /// let challenge = schnorr.challenge(R, keypair.public_key(), message);
     /// let s = s!(r + challenge * { keypair.secret_key() });
     /// let signature = Signature { R, s };
     /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
@@ -176,12 +189,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     ///
     /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
     /// [`Secrecy`]: secp256kfun::marker::Secrecy
-    pub fn challenge<S: Secrecy>(
-        &self,
-        R: &XOnly,
-        X: &XOnly,
-        m: Message<'_, S>,
-    ) -> Scalar<S, Zero> {
+    pub fn challenge<S: Secrecy>(&self, R: XOnly, X: XOnly, m: Message<'_, S>) -> Scalar<S, Zero> {
         let hash = self.challenge_hash.clone();
         let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
 
@@ -228,9 +236,9 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
     ) -> bool {
         let X = public_key;
         let (R, s) = signature.as_tuple();
-        let c = self.challenge(R, &X.to_xonly(), message);
-        let R_implied = g!(s * self.G - c * X).mark::<Normal>();
-        R_implied == *R
+        let c = self.challenge(R, X.to_xonly(), message);
+        let R_implied = g!(s * G - c * X).mark::<Normal>();
+        R_implied == R
     }
 
     /// _Anticipates_ a Schnorr signature given the nonce `R` that will be used ahead of time.
@@ -242,63 +250,19 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone, GT> Schnorr<CH, NG, GT> {
         R: &Point<EvenY, impl Secrecy>,
         m: Message<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
-        let c = self.challenge(&R.to_xonly(), &X.to_xonly(), m);
+        let c = self.challenge(R.to_xonly(), X.to_xonly(), m);
         g!(R + c * X)
     }
 }
 
 #[cfg(test)]
 pub mod test {
-    use fun::nonce::Deterministic;
+    use crate::fun::nonce::Deterministic;
 
     use super::*;
-    use crate::fun::TEST_SOUNDNESS;
+    use crate::fun::proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
-
-    #[test]
-    fn anticipated_signature_on_should_correspond_to_actual_signature() {
-        for _ in 0..TEST_SOUNDNESS {
-            let schnorr = crate::test_instance!();
-            let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-            let msg = Message::<Public>::plain(
-                "test",
-                b"Chancellor on brink of second bailout for banks",
-            );
-            let signature = schnorr.sign(&keypair, msg);
-            let anticipated_signature = schnorr.anticipate_signature(
-                &keypair.verification_key(),
-                &signature.R.to_point(),
-                msg,
-            );
-
-            assert_eq!(
-                anticipated_signature,
-                g!(signature.s * schnorr.G),
-                "should anticipate the same value as actual signature"
-            )
-        }
-    }
-
-    #[test]
-    fn sign_deterministic() {
-        let schnorr = crate::test_instance!();
-        for _ in 0..TEST_SOUNDNESS {
-            let keypair_1 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-            let keypair_2 = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-            let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
-            let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
-            let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
-            let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
-            let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
-            let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
-
-            assert!(schnorr.verify(&keypair_1.verification_key(), msg_atkdwn, &signature_1));
-            assert_eq!(signature_1, signature_2);
-            assert_ne!(signature_3.R, signature_1.R);
-            assert_ne!(signature_1.R, signature_4.R);
-        }
-    }
 
     #[test]
     fn deterministic_nonces_for_different_message_kinds() {
@@ -327,5 +291,50 @@ pub mod test {
         // make sure deterministic signatures don't change
         assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
         assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
+    }
+
+    proptest! {
+
+        #[test]
+        fn anticipated_signature_on_should_correspond_to_actual_signature(sk in any::<Scalar>()) {
+            let schnorr = crate::test_instance!();
+            let keypair = schnorr.new_keypair(sk);
+            let msg = Message::<Public>::plain(
+                "test",
+                b"Chancellor on brink of second bailout for banks",
+            );
+            let signature = schnorr.sign(&keypair, msg);
+            let anticipated_signature = schnorr.anticipate_signature(
+                &keypair.verification_key(),
+                &signature.R.to_point(),
+                msg,
+            );
+
+            assert_eq!(
+                anticipated_signature,
+                g!(signature.s * G),
+                "should anticipate the same value as actual signature"
+            )
+        }
+
+        #[test]
+        fn sign_deterministic(s1 in any::<Scalar>(), s2 in any::<Scalar>()) {
+            let schnorr = crate::test_instance!();
+            let keypair_1 = schnorr.new_keypair(s1);
+            let keypair_2 = schnorr.new_keypair(s2);
+            let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
+            let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
+            let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
+            let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
+            let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
+            let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
+
+            assert!(schnorr.verify(&keypair_1.verification_key(), msg_atkdwn, &signature_1));
+            assert_eq!(signature_1, signature_2);
+            if keypair_1 != keypair_2 {
+                assert_ne!(signature_3.R, signature_1.R);
+                assert_ne!(signature_1.R, signature_4.R);
+            }
+        }
     }
 }

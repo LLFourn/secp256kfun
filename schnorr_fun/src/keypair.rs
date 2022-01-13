@@ -15,7 +15,7 @@ use secp256kfun::{marker::*, Point, Scalar, XOnly};
 /// ```
 ///
 /// [`Schnorr`]: crate::Schnorr
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct KeyPair {
     pub(crate) sk: Scalar,
     pub(crate) pk: XOnly,
@@ -27,9 +27,9 @@ impl KeyPair {
         &self.sk
     }
 
-    /// Returns a reference to the public key.
-    pub fn public_key(&self) -> &XOnly {
-        &self.pk
+    /// The public key
+    pub fn public_key(&self) -> XOnly {
+        self.pk
     }
 
     /// Gets a reference to the key-pair as a tuple
@@ -39,8 +39,8 @@ impl KeyPair {
     /// # use schnorr_fun::{Schnorr, fun::Scalar};
     /// # let keypair = schnorr_fun::test_instance!().new_keypair(Scalar::one());
     /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, &XOnly) {
-        (&self.sk, &self.pk)
+    pub fn as_tuple(&self) -> (&Scalar, XOnly) {
+        (&self.sk, self.pk)
     }
 
     /// Returns the full `Point<EvenY>` for the public key which is used in [`verify`].

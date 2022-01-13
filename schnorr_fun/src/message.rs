@@ -29,7 +29,7 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
     ///
     /// [here]: https://github.com/sipa/bips/issues/207#issuecomment-673681901
     pub fn plain(app_tag: &'static str, bytes: &'a [u8]) -> Self {
-        assert!(app_tag.len() <= 64, "tag must not be 64 bytes or less");
+        assert!(app_tag.len() <= 64, "tag must be 64 bytes or less");
         assert!(!app_tag.is_empty(), "tag must not be empty");
         Message {
             bytes: bytes.mark::<S>(),
@@ -39,7 +39,7 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
 }
 
 impl<S> HashInto for Message<'_, S> {
-    fn hash_into(&self, hash: &mut impl Digest) {
+    fn hash_into(self, hash: &mut impl Digest) {
         if let Some(prefix) = self.app_tag {
             let mut padded_prefix = [0u8; 64];
             padded_prefix[..prefix.len()].copy_from_slice(prefix.as_bytes());

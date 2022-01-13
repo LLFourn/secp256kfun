@@ -47,8 +47,8 @@ impl<S> Signature<S> {
     /// # let signature = schnorr_fun::Signature::random(&mut rand::thread_rng());
     /// let (R, s) = signature.as_tuple();
     /// ```
-    pub fn as_tuple(&self) -> (&XOnly, &Scalar<S, Zero>) {
-        (&self.R, &self.s)
+    pub fn as_tuple(&self) -> (XOnly, &Scalar<S, Zero>) {
+        (self.R, &self.s)
     }
 
     /// Marks the signature with a [`Secrecy`]. If it is marked as `Secret` the

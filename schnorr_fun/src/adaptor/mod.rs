@@ -54,7 +54,7 @@ use crate::{
         g,
         marker::*,
         nonce::NonceGen,
-        s, Point, Scalar,
+        s, Point, Scalar, G,
     },
     KeyPair, Message, Schnorr, Signature,
 };
@@ -78,7 +78,7 @@ pub trait EncryptedSign {
     ) -> EncryptedSignature;
 }
 
-impl<NG, CH, GT> EncryptedSign for Schnorr<CH, NG, GT>
+impl<NG, CH> EncryptedSign for Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
     NG: NonceGen,
@@ -98,7 +98,7 @@ where
             public => [X, Y, message]
         );
 
-        let R = g!(r * { self.G() } + Y)
+        let R = g!(r * G + Y)
             // R_hat = r * G is sampled pseudorandomly for every Y which means R_hat + Y is also
             // be pseudoranodm and therefore will not be zero.
             // NOTE: Crucially we add Y to the nonce derivation to ensure this is true.
@@ -110,7 +110,7 @@ where
         // key before decrypting it
         r.conditional_negate(needs_negation);
 
-        let c = self.challenge(&R.to_xonly(), X, message);
+        let c = self.challenge(R.to_xonly(), X, message);
         let s_hat = s!(r + c * x).mark::<Public>();
 
         EncryptedSignature {
@@ -188,12 +188,12 @@ pub trait Adaptor {
     ) -> Option<Scalar>;
 }
 
-impl<CH, NG, GT> Adaptor for Schnorr<CH, NG, GT>
+impl<CH, NG> Adaptor for Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
 {
     fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
-        g!(decryption_key * { self.G() }).normalize()
+        g!(decryption_key * G).normalize()
     }
 
     #[must_use]
@@ -216,9 +216,9 @@ where
         // !needs_negation => R_hat = R - Y
         let R_hat = g!(R + { Y.conditional_negate(!needs_negation) });
 
-        let c = self.challenge(&R.to_xonly(), &X.to_xonly(), message);
+        let c = self.challenge(R.to_xonly(), X.to_xonly(), message);
 
-        R_hat == g!(s_hat * { self.G() } - c * X)
+        R_hat == g!(s_hat * G - c * X)
     }
 
     fn decrypt_signature(
@@ -257,7 +257,7 @@ where
 
         let mut y = s!(s - s_hat);
         y.conditional_negate(*needs_negation);
-        let implied_encryption_key = g!(y * { self.G() });
+        let implied_encryption_key = g!(y * G);
 
         if implied_encryption_key == *encryption_key {
             Some(y.expect_nonzero("unreachable - encryption_key is NonZero and y*G equals it"))
@@ -271,48 +271,55 @@ where
 mod test {
 
     use super::*;
-    use crate::nonce::{self, Deterministic};
-    use secp256kfun::TEST_SOUNDNESS;
+    use crate::nonce::{Deterministic, GlobalRng, Synthetic};
+    use rand::rngs::ThreadRng;
+    use secp256kfun::proptest::prelude::*;
+    use sha2::Sha256;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    fn test_schnorr<NG: NonceGen>(schnorr: Schnorr<sha2::Sha256, NG>) {
-        for _ in 0..TEST_SOUNDNESS {
-            let signing_keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-            let verification_key = signing_keypair.verification_key();
-            let decryption_key = Scalar::random(&mut rand::thread_rng());
-            let encryption_key = schnorr.encryption_key_for(&decryption_key);
-            let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
-
-            let encrypted_signature =
-                schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);
-
-            assert!(schnorr.verify_encrypted_signature(
-                &signing_keypair.verification_key(),
-                &encryption_key,
-                message,
-                &encrypted_signature,
-            ));
-
-            let decryption_key = decryption_key.mark::<Public>();
-            let signature =
-                schnorr.decrypt_signature(decryption_key.clone(), encrypted_signature.clone());
-            assert!(schnorr.verify(&verification_key, message, &signature));
-            let rec_decryption_key = schnorr
-                .recover_decryption_key(&encryption_key, &encrypted_signature, &signature)
-                .expect("recovery works");
-            assert_eq!(rec_decryption_key, decryption_key);
+    proptest! {
+        #[test]
+        fn signing_tests_deterministic(secret_key in any::<Scalar>(), decryption_key in any::<Scalar>()) {
+            let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
+            test_it(schnorr, secret_key, decryption_key);
         }
+
+        #[test]
+        fn signing_tests_synthetic(secret_key in any::<Scalar>(), decryption_key in any::<Scalar>()) {
+            let schnorr = Schnorr::<Sha256, Synthetic<Sha256, GlobalRng<ThreadRng>>>::default();
+            test_it(schnorr, secret_key, decryption_key);
+        }
+
     }
 
-    #[test]
-    fn sign_plain_message() {
-        use rand::rngs::ThreadRng;
-        use sha2::Sha256;
-        test_schnorr(Schnorr::new(Deterministic::<Sha256>::default()));
-        test_schnorr(Schnorr::new(nonce::Synthetic::<
-            Sha256,
-            nonce::GlobalRng<ThreadRng>,
-        >::default()));
+    fn test_it<NG: NonceGen>(
+        schnorr: Schnorr<Sha256, NG>,
+        secret_key: Scalar,
+        decryption_key: Scalar,
+    ) {
+        let signing_keypair = schnorr.new_keypair(secret_key);
+        let verification_key = signing_keypair.verification_key();
+        let encryption_key = schnorr.encryption_key_for(&decryption_key);
+        let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
+
+        let encrypted_signature =
+            schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);
+
+        assert!(schnorr.verify_encrypted_signature(
+            &signing_keypair.verification_key(),
+            &encryption_key,
+            message,
+            &encrypted_signature,
+        ));
+
+        let decryption_key = decryption_key.mark::<Public>();
+        let signature =
+            schnorr.decrypt_signature(decryption_key.clone(), encrypted_signature.clone());
+        assert!(schnorr.verify(&verification_key, message, &signature));
+        let rec_decryption_key = schnorr
+            .recover_decryption_key(&encryption_key, &encrypted_signature, &signature)
+            .expect("recovery works");
+        assert_eq!(rec_decryption_key, decryption_key);
     }
 }

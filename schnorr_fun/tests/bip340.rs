@@ -46,11 +46,11 @@ fn signing_test_vectors() {
         let line: Vec<&str> = line.split(',').collect();
         let aux_bytes = hex::decode(line[3]).unwrap();
         let fake_rng = AuxRng(&aux_bytes[..]);
-        let bip340 = Schnorr::<Sha256, _, _>::new(Synthetic::<Sha256, _>::new(fake_rng));
+        let bip340 = Schnorr::<Sha256, _>::new(Synthetic::<Sha256, _>::new(fake_rng));
         let secret_key = Scalar::<Secret, NonZero>::from_str(line[1]).unwrap();
         let expected_public_key = XOnly::from_str(line[2]).unwrap();
         let keypair = bip340.new_keypair(secret_key);
-        assert_eq!(keypair.public_key(), &expected_public_key);
+        assert_eq!(keypair.public_key(), expected_public_key);
         let message = hex::decode(line[4]).unwrap();
         let signature = bip340.sign(&keypair, Message::<Public>::raw(&message));
         let expected_signature = Signature::<Public>::from_str(line[5]).unwrap();
