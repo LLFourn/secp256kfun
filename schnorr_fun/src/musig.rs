@@ -31,11 +31,11 @@
 //! // Since we're using deterministic nonces it's important we only use the session id once
 //! let my_nonces = musig.gen_nonces(&keylist, b"session-id-1337");
 //! // send this to the other parties
-//! let my_public_nonce = my_nonces[0].public;
+//! let my_public_nonce = my_nonces[0].public();
 //! # let nonces = musig.gen_nonces(&_keylist, b"session-id-1337");
-//! # let p1_nonce = nonces[0].public;
-//! # let p3_nonce = nonces[1].public;
-//! # let mut _session = musig.start_sign_session_deterministic(&_keylist, my_nonces.iter().map(|n| n.public), b"session-id-1337", message).unwrap();
+//! # let p1_nonce = nonces[0].public();
+//! # let p3_nonce = nonces[1].public();
+//! # let mut _session = musig.start_sign_session_deterministic(&_keylist, my_nonces.iter().map(|n| n.public()), b"session-id-1337", message).unwrap();
 //! // Once you've got the nonces from the other two (p1_nonce and p3_nonce) you can start the signing session.
 //! let mut session = musig.start_sign_session(&keylist, my_nonces, [p1_nonce, p3_nonce], message).unwrap();
 //! // but since we're using deterministic nonce generation we can just remember the session id.
@@ -58,7 +58,7 @@
 //! ## Description
 //!
 //! The MuSig2 multisignature scheme lets you aggregate multiple public keys into a single public
-//! key that requires each corresponding secret key to authorize signatures under the aggregate key.
+//! key that requires all of the corresponding secret keys to authorize a signature under the aggregate key.
 //!
 //! This implementation is protocol compatible with the implementation merged into
 //! [secp256k1-zkp].
@@ -145,9 +145,13 @@ pub enum Party {
     Remote(XOnly),
 }
 
-/// A struct which represents a list of keys aggregated into a single key.
+/// A list of keys aggregated into a single key.
 ///
-/// This can't be serialized but it's very efficient to re-create it from the initial list of keys.
+/// Created using [`MuSig::new_keylist`].
+///
+/// The `KeyList` can't be serialized but it's very efficient to re-create it from the initial list of keys.
+///
+/// [`MuSig::new_keylist`]
 #[derive(Debug, Clone)]
 pub struct KeyList {
     /// The parties involved in the key aggregation.
@@ -203,7 +207,7 @@ impl KeyList {
     ///
     /// Returns a new keylist with the same parties but a different aggregated public key. In the
     /// unusual case that the tweak is exactly equal to the negation of the aggregated secret key
-    /// this returns `None`.
+    /// it returns `None`.
     pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let mut tweak = s!(self.tweak + tweak).mark::<Public>();
         let (agg_key, needs_negation) = g!(self.agg_key + tweak * G)
@@ -331,16 +335,42 @@ secp256kfun::impl_display_serialize! {
 
 /// A pair of secret nonces along with the public portion.
 ///
-/// Depending on whether you are using deterministic nonce derivation or not
+/// A nonce key pair can be created manually with [`from_secrets`] or with [`MuSig::gen_nonces`].
+///
+/// [`from_secrets`]: Self::from_secrets
+/// [`MuSig::gen_nonces`]: Self::gen_nonces
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce
-    pub public: Nonce,
+    public: Nonce,
     /// The secret nonce
-    pub secret: [Scalar; 2],
+    secret: [Scalar; 2],
 }
 
 impl NonceKeyPair {
+    /// Creates a keypair from two secret scalars.
+    ///
+    /// ## Security
+    ///
+    /// You must never use the same `NonceKeyPair` into two signing sessions.
+    ///
+    /// ## Example
+    /// ```
+    /// use schnorr_fun::{fun::Scalar, musig::NonceKeyPair};
+    /// let nkp = NonceKeyPair::from_secrets([
+    ///     Scalar::random(&mut rand::thread_rng()),
+    ///     Scalar::random(&mut rand::thread_rng()),
+    /// ]);
+    /// ```
+    pub fn from_secrets(secret: [Scalar; 2]) -> Self {
+        let [ref r1, ref r2] = secret;
+        let R1 = g!(r1 * G).normalize();
+        let R2 = g!(r2 * G).normalize();
+        NonceKeyPair {
+            public: Nonce([R1, R2]),
+            secret,
+        }
+    }
     /// Deserializes a nonce key pair from 64-bytes (two 32-byte serialized scalars).
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         let r1 = Scalar::from_slice(&bytes[..32])?.mark::<NonZero>()?;
@@ -360,6 +390,16 @@ impl NonceKeyPair {
         bytes[..32].copy_from_slice(self.secret[0].to_bytes().as_ref());
         bytes[32..].copy_from_slice(self.secret[1].to_bytes().as_ref());
         bytes
+    }
+
+    /// Get the secret portion of the nonce key pair (don't share this!)
+    pub fn secret(&self) -> &[Scalar; 2] {
+        &self.secret
+    }
+
+    /// Get the public portion of the nonce key pair (share this!)
+    pub fn public(&self) -> Nonce {
+        self.public
     }
 }
 
@@ -497,7 +537,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Start a signing session.
     ///
     /// You must provide you local secret nonces (the public portion must be shared with the other signer(s)).
-    /// If you are using deterministic signing it's possible to use [`start_sign_session_deterministic`] instead.
+    /// If you are using deterministic nonce generations it's possible to use [`start_sign_session_deterministic`] instead.
     ///
     /// ## Return Value
     ///
@@ -538,9 +578,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Start an encrypted signing session.
     ///
     /// i.e. a session to produce an adaptor signature under `encryption_key`.
+    /// See [`adaptor`] for a more general description of adaptor signatures.
     ///
     /// You must provide you local secret nonces (the public portion must be shared with the other
-    /// signer(s)). If you are using deterministic signing it's possible to use
+    /// signer(s)). If you are using deterministic nonce generation it's possible to use
     /// [`start_encrypted_sign_session_deterministic`] instead.
     ///
     /// ## Return Value
@@ -555,6 +596,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// `keylist`.
     ///
     /// [`start_encrypted_sign_session_deterministic`]: Self::start_sign_session_deterministic
+    /// [`adaptor`]: crate::adaptor
     pub fn start_encrypted_sign_session(
         &self,
         keylist: &KeyList,
@@ -789,6 +831,12 @@ where
     /// Same as [`start_sign_session`] but re-generate the local nonces deterministically from the
     /// `sid` instead of passing them in.
     ///
+    /// ## Security
+    ///
+    /// Each call to this function must have a unique `sid`. Never call it twice with the same
+    /// `sid`, otherwise you risk revealing your secret key with the two signatures generated from
+    /// it if `message` or `remote_nonces` changes.
+    ///
     /// [`start_sign_session`]: Self::start_sign_session
     pub fn start_sign_session_deterministic(
         &self,
@@ -803,6 +851,12 @@ where
 
     /// Same as [`start_encrypted_sign_session`] but re-generate the local nonces deterministically from the
     /// `sid` instead of passing them in.
+    ///
+    /// ## Security
+    ///
+    /// Each call to this function must have a unique `sid`. Never call it twice with the same
+    /// `sid`, otherwise you risk revealing your secret key with the two signatures generated from
+    /// it if `message` or `remote_nonces` changes.
     ///
     /// [`start_encrypted_sign_session`]: Self::start_encrypted_sign_session
     pub fn start_encrypted_sign_session_deterministic(
