@@ -2,7 +2,8 @@
 name = "sigma_fun"
 version = "0.4.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 license = "0BSD"
 description = "A framework for making Sigma protocols fun!"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/sigma_fun"

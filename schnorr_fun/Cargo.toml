@@ -3,7 +3,8 @@
 name = "schnorr_fun"
 version = "0.7.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/schnorr_fun"
 repository = "https://github.com/LLFourn/secp256kfun"

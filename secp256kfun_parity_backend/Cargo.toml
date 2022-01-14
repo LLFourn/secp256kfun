@@ -6,7 +6,7 @@ license = "Apache-2.0"
 repository = "https://github.com/LLFourn/secp256kfun"
 homepage = "https://github.com/LLFourn/secp256kfun"
 authors = ["LLFourn <lloyd.fourn@gmail.com>", "Wei Tang <hi@that.world>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 
 
