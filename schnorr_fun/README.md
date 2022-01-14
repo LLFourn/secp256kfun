@@ -5,7 +5,8 @@
 [crates_badge]: https://img.shields.io/crates/v/schnorr_fun.svg
 [crates_url]: https://crates.io/crates/schnorr_fun
 
-Generate and verify Schnorr signatures on secp256k1. Uses [secp256kfun].
+Generate and verify Schnorr signatures on secp256k1.
+Built on [secp256kfun].
 
 Schnorr signatures were introduced (and patented until 2008) by their namesake in [Efficient Signature Generation by Smart Cards][1].
 This implementation is based on the [BIP-340] specification, but is flexible enough to be used as a general purpose Schnorr signature scheme.
@@ -52,7 +53,14 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 - BIP-340 compliant signing and verification
 - Adaptor signatures
 - compatibility with `rust-secp256k1`'s `schnorrsig` module with `libsecp_compat` feature.
+- [MuSig2] implementation compatible with [secp256k1-zkp]
+- Feature flags
+  - `serde`: for serde implementations for signatures
+  - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s [`schnorrsig`] module.
+  - `proptest` to enable `secp256kfun/proptest`.
 
 [1]: https://d-nb.info/1156214580/34
 [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 [secp256kfun]: https://docs.rs/secp256kfun
+[secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
+[MuSig2]: https://eprint.iacr.org/2020/1261.pdf
