@@ -60,4 +60,5 @@ jobs:
            toolchain: nightly
            override: true
        - name: build-doc
-         run: cargo doc --no-deps --workspace --exclude secp256kfun_parity_backend
+         # convoluted way to make it fail on warnings
+         run: "cargo doc --no-deps --workspace --exclude secp256kfun_parity_backend 2>&1 | tee /dev/fd/2 | grep -iEq '^(warning|error)' && exit 1 || exit 0"

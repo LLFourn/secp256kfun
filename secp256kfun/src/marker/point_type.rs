@@ -32,6 +32,8 @@ pub struct Normal;
 /// `Jacobian` points.
 ///
 /// In general it's most efficient to normalize `Jacobian` points into [`Normal`] points, as late as possible.
+///
+/// Note that the underlying arithmetic backend may not actually use Jacobian coordinates - it may use Projective coordinates instead.
 pub struct Jacobian;
 /// A [`Normal`] point whose `y` coordinate is known to be even.
 #[derive(Default, Debug, Clone, Copy)]
@@ -40,6 +42,8 @@ pub struct EvenY;
 
 /// A [`Normal`] point which has pre-computed tables for accelerating scalar
 /// multiplications. The only example of this is [`G`].
+///
+/// Note that whether G does have pre-computed tables depends on the arithmetic backend being used.
 ///
 /// [`G`]: crate::G
 #[derive(Clone, Copy)]

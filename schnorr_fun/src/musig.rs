@@ -338,7 +338,7 @@ secp256kfun::impl_display_serialize! {
 /// A nonce key pair can be created manually with [`from_secrets`] or with [`MuSig::gen_nonces`].
 ///
 /// [`from_secrets`]: Self::from_secrets
-/// [`MuSig::gen_nonces`]: Self::gen_nonces
+/// [`MuSig::gen_nonces`]: MuSig::gen_nonces
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce

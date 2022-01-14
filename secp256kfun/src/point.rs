@@ -277,7 +277,7 @@ impl<Z, T> Point<T, Public, Z> {
 impl<S, Z> Point<Jacobian, S, Z> {
     /// Normalize a point.
     ///
-    /// Shorthand for calling [`.mark::<Normal>()`](crate::Mark::mark).
+    /// Shorthand for calling [`.mark::<Normal>()`](crate::marker::Mark::mark).
     pub fn normalize(self) -> Point<Normal, S, Z> {
         self.mark::<Normal>()
     }

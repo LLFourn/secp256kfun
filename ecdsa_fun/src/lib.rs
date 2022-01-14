@@ -84,10 +84,9 @@ impl<NG> ECDSA<NG> {
     /// *** DO NOT USE THIS IF VERIFYING BITCOIN TRANSACTIONS FROM THE CHAIN***:
     /// [BIP-146] is only enforced for transaction relay so you can still have
     /// valid high s signatures. This is especially true if you are using the
-    /// ECDSA [`adaptor`] scheme.
+    /// ECDSA adaptor signature scheme.
     ///
     /// [BIP-146]: https://github.com/bitcoin/bips/blob/master/bip-0146.mediawiki#low_s
-    /// [`adaptor`]: crate::adaptor
     pub fn enforce_low_s(self) -> Self {
         ECDSA {
             nonce_gen: self.nonce_gen,

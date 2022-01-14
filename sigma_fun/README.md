@@ -12,9 +12,9 @@ A rust library for making Sigma protocols fun!
 ``` toml
 [dependencies]
 # For just the traits and combinators
-sigma_fun = {version = "0.3", no-default-features = true, features = ["alloc"]}
+sigma_fun = {version = "0.4", no-default-features = true, features = ["alloc"]}
 # To create secp256k1 non-interactive proofs and serialize them
-sigma_fun = { version = "0.3", features = ["secp256k1", "serde"] }
+sigma_fun = { version = "0.4", features = ["secp256k1", "serde"] }
 # you need a hash function and an rng for non-interactive proofs
 rand_chacha = "0.3"
 sha2 = "0.9"
@@ -41,11 +41,11 @@ if you have two Sigma protocols for proving statements `A` and `B` you can compo
 protocol for proving `A or B`. The resulting protocol will also be a Sigma protocol! At the moment
 this library supports the following combinators:
 
-- `or(A,B)`  proves that one of the two statements is true. 
+- `or(A,B)`  proves that one of the two statements is true.
 - `and(A,B)` proves both statements are true.
 - `eq(A,B)`  proves two statements have the same witness (usually `A` is the same kind of proof as `B`).
 - `all(n,A)` proves that `n` statements of type `A` are true.
-- `eq-all(n,A)`  proves that `n` statements of type `A` all have the same witness. 
+- `eq-all(n,A)`  proves that `n` statements of type `A` all have the same witness.
 
 We are missing support for generically proving `t-of-m` statements are true (which is much more tricky).
 Unfortunately, at the moment `n` in `all` and `eq-all` must be known at compile time.
@@ -65,7 +65,7 @@ We define the [`Sigma`] trait with five main core functions:
 
 - **`implied_announcement(statement, challenge, response) -> announcement`**: Determines an `announcement` such that `(statement, announcement, challenge, response)` is a *valid* transcript for the sigma protocol.
 
-- **`sample_response(rng) -> response`**: samples a response uniformly from the response space. 
+- **`sample_response(rng) -> response`**: samples a response uniformly from the response space.
 
 - **`respond(witness, statement, announce_secret, announcement, challenge) -> response`**: Computes a valid response to the `challenge`
 
@@ -82,15 +82,15 @@ announcement = announce(statement, announce_secret)
                                                   +------------------->
                                                        challenge         *uniformly sample ChallengeLength bytes*
                                                   <-------------------+
-response = respond(witness, statement, 
-                   announce_secret, announcement, 
+response = respond(witness, statement,
+                   announce_secret, announcement,
                    challenge)
 
-                                                       response 
-                                                  +-------------------> 
+                                                       response
+                                                  +------------------->
                                                                                             check
-                                                                        implied_announcement(statement, challenge, response) 
-                                                                                              == 
+                                                                        implied_announcement(statement, challenge, response)
+                                                                                              ==
                                                                                          announcement
 ```
 
@@ -102,7 +102,7 @@ The verifier can just check that the hash was computed correctly and the respons
 
 ## Example
 
-A Pedersen commitment is in the form `C = r * G + c * H` where `c` is the value commited to a value for `h` such that `H = h * G` is unknown to the committer.
+A Pedersen commitment is in the form `C = r * G + c * H` where `c` is the value committed to a value for `h` such that `H = h * G` is unknown to the committer.
 For a background on Pedersen commitments see [Shoenmaker] section 3.2.2.
 Suppose we want to prove that `c` is either 0 or 1 in Zero knowledge to someone who only knows `C`.
 We can construct a non-interactive proof for this claim by showing that we know `r` such that `C = r * G` OR `C - H = r * G`.
@@ -128,7 +128,7 @@ let (C,r) = {
     (C,r)
 };
 
-// Our strategy is to prove that we know r such that either C = r * G or C - H = r * G using 
+// Our strategy is to prove that we know r such that either C = r * G or C - H = r * G using
 // an OR composition between two standard knowledge of discrete logarithm proofs.
 let statement = (C, g!(C - H).normalize().expect_nonzero("computationally unreachable"));
 // since we are commiting to 1 we know the witness for the right hand side statement.
@@ -159,6 +159,12 @@ let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng(
 
 ```
 
+
+## Feature flags
+
+- `ed25519`: enable ed25519 discrete log proofs
+- `secp256k1`: enable secp256k1 discrete log proofs (using [secp256kfun])
+
 ## See Also
 
 - [ZKP](https://crates.io/crates/zkp) -- Helped inspire this library and is much more developed. `zkp` is opinionated about hash function (sha3) and group (ristretto) and only supports `eq` and `and` type composition.
@@ -166,4 +172,5 @@ let proof = proof_system.prove(&witness, &statement, Some(&mut rand::thread_rng(
 [`serde`]: https://docs.rs/serde
 [`Sigma`]: https://docs.rs/sigma_fun/latest/sigma_fun/trait.Sigma.html
 [Shoenmaker]: https://www.win.tue.nl/~berry/CryptographicProtocols/LectureNotes.pdf
+[`secp256kfun`]: https://docs.rs/secp256kfun
 

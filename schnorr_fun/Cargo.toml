@@ -1,9 +1,10 @@
 
 [package]
 name = "schnorr_fun"
-version = "0.7.0-pre.0"
+version = "0.7.1-pre.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56"
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/schnorr_fun"
 repository = "https://github.com/LLFourn/secp256kfun"
@@ -16,7 +17,7 @@ keywords = ["bitcoin", "schnorr"]
 features = ["all"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun", version = "0.7.0-pre.0",  default-features = false }
+secp256kfun = { path = "../secp256kfun", version = "0.7.1-pre.0",  default-features = false }
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
 
 [dev-dependencies]
@@ -24,8 +25,8 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 bincode = "1.0"
 sha2 = "0.9"
-secp256kfun = { path = "../secp256kfun", version = "0.7.0-pre.0", default-features = false, features = ["alloc", "libsecp_compat", "proptest"] }
-secp256k1 = { version = "0.20", features = ["std", "global-context-less-secure"]}
+secp256kfun = { path = "../secp256kfun", version = "0.7.1-pre.0", default-features = false, features = ["alloc", "libsecp_compat", "proptest"] }
+secp256k1 = { version = "0.21", features = ["std", "global-context-less-secure"]}
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
