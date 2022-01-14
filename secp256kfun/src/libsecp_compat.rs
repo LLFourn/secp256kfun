@@ -1,6 +1,6 @@
 use crate::{
     marker::*,
-    secp256k1::{schnorrsig, PublicKey, SecretKey},
+    secp256k1::{PublicKey, SecretKey, XOnlyPublicKey},
     Point, Scalar, XOnly,
 };
 
@@ -31,26 +31,26 @@ impl<T: Normalized> From<Point<T>> for PublicKey {
     }
 }
 
-impl From<schnorrsig::PublicKey> for XOnly {
-    fn from(pk: schnorrsig::PublicKey) -> Self {
+impl From<XOnlyPublicKey> for XOnly {
+    fn from(pk: XOnlyPublicKey) -> Self {
         XOnly::from_bytes(pk.serialize()).unwrap()
     }
 }
 
-impl From<XOnly> for schnorrsig::PublicKey {
+impl From<XOnly> for XOnlyPublicKey {
     fn from(xonly: XOnly) -> Self {
-        schnorrsig::PublicKey::from_slice(xonly.as_bytes()).unwrap()
+        XOnlyPublicKey::from_slice(xonly.as_bytes()).unwrap()
     }
 }
 
-impl From<Point<EvenY>> for schnorrsig::PublicKey {
+impl From<Point<EvenY>> for XOnlyPublicKey {
     fn from(point: Point<EvenY>) -> Self {
         point.to_xonly().into()
     }
 }
 
-impl From<schnorrsig::PublicKey> for Point<EvenY> {
-    fn from(pk: schnorrsig::PublicKey) -> Self {
+impl From<XOnlyPublicKey> for Point<EvenY> {
+    fn from(pk: XOnlyPublicKey) -> Self {
         XOnly::from(pk).to_point()
     }
 }

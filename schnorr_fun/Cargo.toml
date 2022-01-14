@@ -25,7 +25,7 @@ lazy_static = "1.4"
 bincode = "1.0"
 sha2 = "0.9"
 secp256kfun = { path = "../secp256kfun", version = "0.7.0", default-features = false, features = ["alloc", "libsecp_compat", "proptest"] }
-secp256k1 = { version = "0.20", features = ["std", "global-context-less-secure"]}
+secp256k1 = { version = "0.21", features = ["std", "global-context-less-secure"]}
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

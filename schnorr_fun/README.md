@@ -56,7 +56,7 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 - [MuSig2] implementation compatible with [secp256k1-zkp]
 - Feature flags
   - `serde`: for serde implementations for signatures
-  - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s [`schnorrsig`] module.
+  - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s Schnorr signatures.
   - `proptest` to enable `secp256kfun/proptest`.
 
 [1]: https://d-nb.info/1156214580/34

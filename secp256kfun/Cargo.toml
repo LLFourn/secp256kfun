@@ -23,7 +23,7 @@ serde_crate = { package = "serde", version = "1.0",  optional = true, default-fe
 # secp256kfun_k256_backend = { path = "../../k256_backend/k256" }
 secp256kfun_k256_backend = {  version = "2.0.0" }
 secp256kfun_parity_backend = { version = "0.1.5", optional = true }
-secp256k1 = { version = "0.20", optional = true, default-features = false }
+secp256k1 = { version = "0.21", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
 
 [dev-dependencies]
@@ -32,9 +32,10 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 sha2 = "0.9"
 proptest = "1"
+secp256k1 = { version = "0.21", features = ["std", "global-context-less-secure"]}
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-secp256k1 = { default-features = false, version = "0.20", features = ["std"] }
+secp256k1 = { default-features = false, version = "0.21", features = ["std"] }
 bincode = "1.0"
 criterion = "0.3"
 
