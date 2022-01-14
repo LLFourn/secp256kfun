@@ -1,6 +1,6 @@
 [package]
 name = "ecdsa_fun"
-version = "0.7.0"
+version = "0.7.1-pre.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2021"
 rust-version = "1.56"
@@ -17,15 +17,15 @@ keywords = ["bitcoin", "ecdsa", "secp256k1"]
 features = ["all"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun", version = "0.7.0", default-features = false }
+secp256kfun = { path = "../secp256kfun", version = "0.7.1-pre.0", default-features = false }
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
-sigma_fun = { path = "../sigma_fun", version = "0.4.0", features = ["secp256k1"], default-features = false, optional = true }
+sigma_fun = { path = "../sigma_fun", version = "0.4.1-pre.0", features = ["secp256k1"], default-features = false, optional = true }
 rand_chacha = {  version = "0.3", optional = true }  # needed for adaptor signatures atm but would be nice to get rid of
 bincode = { version = "1.0", optional = true }
 
 [dev-dependencies]
 secp256k1 = { default-features = false, version = "0.21", features = ["std"] }
-secp256kfun = { path = "../secp256kfun", version = "0.7.0", default-features = false, features = ["libsecp_compat"] }
+secp256kfun = { path = "../secp256kfun", version = "0.7.1-pre.0", default-features = false, features = ["libsecp_compat"] }
 rand = "0.8"
 criterion = "0.3"
 lazy_static = "1.4"
