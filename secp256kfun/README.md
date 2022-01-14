@@ -170,5 +170,5 @@ However this situation may improve in future versions.
 [2]: https://github.com/rust-bitcoin/rust-secp256k1/
 [3]: https://github.com/dalek-cryptography/curve25519-dalek
 [4]: https://github.com/paritytech/libsecp256k1
-[5]: https://docs.rs/k256/0.10.1/k256/
+[k256]: https://docs.rs/k256/0.10.1/k256/
 [_specialization_]: https://github.com/rust-lang/rust/issues/31844
