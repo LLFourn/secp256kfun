@@ -26,6 +26,9 @@ pub use secp256kfun::nonce;
 #[cfg(feature = "alloc")]
 pub mod musig;
 
+#[cfg(feature = "alloc")]
+pub mod frost;
+
 mod signature;
 pub use signature::Signature;
 pub mod adaptor;
