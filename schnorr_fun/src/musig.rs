@@ -342,9 +342,9 @@ secp256kfun::impl_display_serialize! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce
-    public: Nonce,
+    pub(crate) public: Nonce,
     /// The secret nonce
-    secret: [Scalar; 2],
+    pub(crate) secret: [Scalar; 2],
 }
 
 impl NonceKeyPair {
