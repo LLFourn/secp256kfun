@@ -220,13 +220,10 @@ impl<SS, H> Frost<SS, H> {
             .ok_or(FirstRoundError::ZeroJointKey)?
             .into_point_with_even_y();
 
-        joint_poly.0[0].conditional_negate(needs_negation);
-
         for poly in &mut point_polys {
             poly.0[0] = poly.0[0].conditional_negate(needs_negation);
         }
-        // TODO ALSO NEGATE JOINT_POLY?
-        joint_poly = PointPoly::combine(point_polys.clone().into_iter());
+        joint_poly.0[0] = joint_poly.0[0].conditional_negate(needs_negation);
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
@@ -273,8 +270,8 @@ impl<SS, H> Frost<SS, H> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignSession {
     binding_coeff: Scalar,
-    agg_nonces: [Point; 2],
-    group_commitment: Point,
+    nonces_need_negation: bool,
+    agg_nonce: Point<EvenY>,
     challenge: Scalar,
     nonces: HashMap<u32, Nonce>,
 }
@@ -286,10 +283,10 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         // Change to handle multiple my_indexes
         // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
         // Change to one inverse
-        let k = Scalar::from(my_index as u32);
+        let k = Scalar::from(1 + my_index as u32);
         nonces
             .iter()
-            .map(|(j, _)| *j)
+            .map(|(j, _)| 1 + *j)
             .filter(|j| Scalar::from(*j) != k)
             .map(|j| Scalar::from(j as u32).expect_nonzero("index can not be zero"))
             .fold(Scalar::one(), |acc, j| {
@@ -335,26 +332,30 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         let binding_coeff = Scalar::from_hash(
             self.nonce_coeff_hash
                 .clone()
-                .add(agg_nonce_points)
+                .add(agg_nonce_points[0])
+                .add(agg_nonce_points[1])
                 .add(joint_key.joint_public_key)
                 .add(message),
         );
-        let group_commitment =
+
+        let (combined_agg_nonce, nonces_need_negation) =
             g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
                 .normalize()
-                .expect_nonzero("impossibly unlikely, input is a hash");
+                .expect_nonzero("impossibly unlikely, input is a hash")
+                .into_point_with_even_y();
+
         let challenge = Scalar::from_hash(
             self.schnorr
                 .challenge_hash()
-                .add(binding_coeff.clone())
+                .add(combined_agg_nonce)
                 .add(joint_key.joint_public_key)
                 .add(message),
         );
 
         SignSession {
             binding_coeff,
-            agg_nonces: agg_nonce_points,
-            group_commitment,
+            nonces_need_negation,
+            agg_nonce: combined_agg_nonce,
             challenge,
             nonces: nonce_map,
         }
@@ -369,12 +370,27 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         secret_nonces: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
         let lambda = self.lagrange_lambda(my_index, &session.nonces);
-        let d = &secret_nonces.secret[0];
-        let e = &secret_nonces.secret[1];
-        let rho = &session.binding_coeff;
-        let s = secret_share;
+        let [mut r1, mut r2] = secret_nonces.secret;
+        r1.conditional_negate(session.nonces_need_negation);
+        r2.conditional_negate(session.nonces_need_negation);
+
+        let b = &session.binding_coeff;
+        let x = secret_share;
         let c = &session.challenge;
-        s!(d + (e * rho) + lambda * s * c).mark::<Public>()
+        dbg!(
+            &my_index,
+            &lambda,
+            &c,
+            &b,
+            &x,
+            &r1,
+            &r2,
+            g!(x * G),
+            g!(r1 * G),
+            g!(r2 * G)
+        );
+        dbg!();
+        s!(r1 + (r2 * b) + lambda * x * c).mark::<Public>()
     }
 
     #[must_use]
@@ -385,13 +401,22 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         index: usize,
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
-        let z = signature_share;
+        let s = signature_share;
         let lambda = self.lagrange_lambda(index, &session.nonces);
         let c = &session.challenge;
         let b = &session.binding_coeff;
         let X = joint_key.verification_shares[index];
-        let [ref R1, ref R2] = session.agg_nonces;
-        g!(R1 + (b * R2) + (c + lambda) * X - (z * G)).is_zero()
+        let [ref R1, ref R2] = session
+            .nonces
+            .get(&(index as u32))
+            .expect("verifying index that is not part of signing coalition")
+            .0;
+
+        dbg!(&index, &s, &lambda, &c, &b, &X, &R1, &R2);
+        dbg!();
+        dbg!();
+
+        g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
     pub fn combine_signature_shares(
@@ -408,7 +433,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             .unwrap_or(Scalar::zero().mark::<Public>());
 
         Signature {
-            R: session.group_commitment.to_xonly(),
+            R: session.agg_nonce.to_xonly(),
             s: sum_s,
         }
     }
