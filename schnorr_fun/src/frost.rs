@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     musig::{Nonce, NonceKeyPair},
-    KeyPair, Message, Schnorr, Signature, Vec,
+    Message, Schnorr, Signature, Vec,
 };
 use rand_core::{CryptoRng, RngCore};
 use secp256kfun::{
@@ -19,8 +19,8 @@ use secp256kfun::{
 
 #[derive(Clone, Debug, Default)]
 pub struct Frost<SS, H> {
-    pub schnorr: SS,
-    pub nonce_coeff_hash: H,
+    schnorr: SS,
+    nonce_coeff_hash: H,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -202,7 +202,7 @@ impl<SS, H> Frost<SS, H> {
             if let Some((i, _)) = point_polys
                 .iter()
                 .enumerate()
-                .find(|(i, point_poly)| point_poly.poly_len() != len_first_poly)
+                .find(|(_, point_poly)| point_poly.poly_len() != len_first_poly)
             {
                 return Err(FirstRoundError::PolyDifferentLength(i));
             }
@@ -254,8 +254,6 @@ impl<SS, H> Frost<SS, H> {
             if g!(secret_share * G) != expected_public_share {
                 return Err(SecondRoundError::InvalidShare(i));
             }
-            let (verification_key, _) = poly.0[0].into_point_with_even_y();
-
             total_secret_share = s!(total_secret_share + secret_share);
         }
 
@@ -267,36 +265,33 @@ impl<SS, H> Frost<SS, H> {
     }
 }
 
+pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
+    // Change to handle multiple my_indexes
+    // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+    // Change to one inverse
+    let x_j = Scalar::from(x_j).expect_nonzero("target xcoord can not be zero");
+    x_ms.iter()
+        .map(|x_m| Scalar::from(*x_m).expect_nonzero("index can not be zero"))
+        .fold(Scalar::one(), |acc, x_m| {
+            let denominator = s!(x_m - x_j)
+                .expect_nonzero("removed duplicate indexes")
+                .invert();
+            s!(acc * x_m * denominator)
+        })
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignSession {
     binding_coeff: Scalar,
     nonces_need_negation: bool,
     agg_nonce: Point<EvenY>,
-    challenge: Scalar,
+    challenge: Scalar<Public, Zero>,
     nonces: HashMap<u32, Nonce>,
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, NG>
     Frost<Schnorr<CH, NG>, H>
 {
-    fn lagrange_lambda(&self, my_index: usize, nonces: &HashMap<u32, Nonce>) -> Scalar {
-        // Change to handle multiple my_indexes
-        // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
-        // Change to one inverse
-        let k = Scalar::from(1 + my_index as u32);
-        nonces
-            .iter()
-            .map(|(j, _)| 1 + *j)
-            .filter(|j| Scalar::from(*j) != k)
-            .map(|j| Scalar::from(j as u32).expect_nonzero("index can not be zero"))
-            .fold(Scalar::one(), |acc, j| {
-                let denominator = s!(j - k)
-                    .expect_nonzero("removed duplicate indexes")
-                    .invert();
-                s!(acc * j * denominator)
-            })
-    }
-
     pub fn start_sign_session(
         &self,
         joint_key: &JointKey,
@@ -310,8 +305,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         assert_eq!(nonces.len(), nonce_map.len());
         assert!(joint_key.threshold <= nonce_map.len());
 
-        // aggregate nonces for signers
-        let agg_nonces: Vec<Point> = nonce_map
+        let agg_nonces_R1_R2: Vec<Point> = nonce_map
             .iter()
             .fold([Point::zero().mark::<Jacobian>(); 2], |acc, (_, nonce)| {
                 [
@@ -328,7 +322,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             })
             .collect();
 
-        let agg_nonce_points: [Point; 2] = [agg_nonces[0], agg_nonces[1]];
+        let agg_nonce_points: [Point; 2] = [agg_nonces_R1_R2[0], agg_nonces_R1_R2[1]];
         let binding_coeff = Scalar::from_hash(
             self.nonce_coeff_hash
                 .clone()
@@ -337,25 +331,22 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
                 .add(joint_key.joint_public_key)
                 .add(message),
         );
-
-        let (combined_agg_nonce, nonces_need_negation) =
+        let (agg_nonce, nonces_need_negation) =
             g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
                 .normalize()
                 .expect_nonzero("impossibly unlikely, input is a hash")
                 .into_point_with_even_y();
 
-        let challenge = Scalar::from_hash(
-            self.schnorr
-                .challenge_hash()
-                .add(combined_agg_nonce)
-                .add(joint_key.joint_public_key)
-                .add(message),
+        let challenge = self.schnorr.challenge(
+            agg_nonce.to_xonly(),
+            joint_key.joint_public_key.to_xonly(),
+            message,
         );
 
         SignSession {
             binding_coeff,
             nonces_need_negation,
-            agg_nonce: combined_agg_nonce,
+            agg_nonce,
             challenge,
             nonces: nonce_map,
         }
@@ -369,7 +360,15 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         secret_share: &Scalar,
         secret_nonces: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let lambda = self.lagrange_lambda(my_index, &session.nonces);
+        let lambda = lagrange_lambda(
+            my_index as u32 + 1,
+            &session
+                .nonces
+                .iter()
+                .filter(|(j, _)| **j != (my_index as u32))
+                .map(|(j, _)| *j as u32 + 1)
+                .collect::<Vec<_>>(),
+        );
         let [mut r1, mut r2] = secret_nonces.secret;
         r1.conditional_negate(session.nonces_need_negation);
         r2.conditional_negate(session.nonces_need_negation);
@@ -377,19 +376,6 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         let b = &session.binding_coeff;
         let x = secret_share;
         let c = &session.challenge;
-        dbg!(
-            &my_index,
-            &lambda,
-            &c,
-            &b,
-            &x,
-            &r1,
-            &r2,
-            g!(x * G),
-            g!(r1 * G),
-            g!(r2 * G)
-        );
-        dbg!();
         s!(r1 + (r2 * b) + lambda * x * c).mark::<Public>()
     }
 
@@ -402,7 +388,15 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let lambda = self.lagrange_lambda(index, &session.nonces);
+        let lambda = lagrange_lambda(
+            index as u32 + 1,
+            &session
+                .nonces
+                .iter()
+                .filter(|(j, _)| **j != (index as u32))
+                .map(|(j, _)| *j as u32 + 1)
+                .collect::<Vec<_>>(),
+        );
         let c = &session.challenge;
         let b = &session.binding_coeff;
         let X = joint_key.verification_shares[index];
@@ -411,10 +405,6 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             .get(&(index as u32))
             .expect("verifying index that is not part of signing coalition")
             .0;
-
-        dbg!(&index, &s, &lambda, &c, &b, &X, &R1, &R2);
-        dbg!();
-        dbg!();
 
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
@@ -471,9 +461,15 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use secp256kfun::{nonce::Deterministic, proptest::prelude::*};
+    // proptest::prelude::*};
+    use secp256kfun::nonce::Deterministic;
     use sha2::Sha256;
+
+    #[test]
+    fn test_lagrange_lambda() {
+        let res = s!((1 * 4 * 5) * { s!((1 - 2) * (4 - 2) * (5 - 2)).expect_nonzero("").invert() });
+        assert_eq!(res, lagrange_lambda(2, &[1, 4, 5]));
+    }
 
     #[test]
     fn frost_test_end_to_end() {
@@ -501,7 +497,7 @@ mod test {
                 vec![shares1[0].clone(), shares2[0].clone(), shares3[0].clone()],
             )
             .unwrap();
-        let (secret_share2, jk2) = frost
+        let (_secret_share2, jk2) = frost
             .collect_shares(
                 dkg.clone(),
                 1,
@@ -532,7 +528,6 @@ mod test {
             assert_eq!(session2, session);
         }
 
-        // let sig1 = frost.sign(&joint_key, &session, 0, &secret_share1, nonce1);
         let sig1 = frost.sign(&session, 0, &secret_share1, nonce1);
         let sig3 = frost.sign(&session, 2, &secret_share3, nonce3);
 
