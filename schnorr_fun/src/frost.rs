@@ -180,6 +180,27 @@ pub struct JointKey {
     joint_public_key: Point<EvenY>,
     verification_shares: Vec<Point>,
     threshold: usize,
+    tweak: Scalar<Public, Zero>,
+    needs_negation: bool,
+}
+
+impl JointKey {
+    pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
+        let mut tweak = s!(self.tweak + tweak).mark::<Public>();
+        let (joint_public_key, needs_negation) = g!(self.joint_public_key + tweak * G)
+            .mark::<NonZero>()?
+            .into_point_with_even_y();
+        tweak.conditional_negate(needs_negation);
+
+        // Store new join_public_key and new tweak, as well as needs_negation
+        Some(JointKey {
+            joint_public_key,
+            verification_shares: self.verification_shares.clone(),
+            threshold: self.threshold.clone(),
+            tweak,
+            needs_negation,
+        })
+    }
 }
 
 impl<SS, H> Frost<SS, H> {
@@ -237,6 +258,9 @@ impl<SS, H> Frost<SS, H> {
                 verification_shares,
                 joint_public_key,
                 threshold: joint_poly.poly_len(),
+                tweak: Scalar::zero().mark::<Public>(),
+                // TODO WHAT SHOULD THIS NEEDS NEGATION BE?
+                needs_negation: false,
             },
         })
     }
@@ -269,6 +293,7 @@ pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
     // Change to handle multiple my_indexes
     // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
     // Change to one inverse
+    // dbg!(nonces);
     let x_j = Scalar::from(x_j).expect_nonzero("target xcoord can not be zero");
     x_ms.iter()
         .map(|x_m| Scalar::from(*x_m).expect_nonzero("index can not be zero"))
@@ -276,6 +301,7 @@ pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
             let denominator = s!(x_m - x_j)
                 .expect_nonzero("removed duplicate indexes")
                 .invert();
+            dbg!(&x_j, &x_m);
             s!(acc * x_m * denominator)
         })
 }
@@ -298,7 +324,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         nonces: &[(usize, Nonce)],
         message: Message,
     ) -> SignSession {
-        let nonce_map: HashMap<_, _> = nonces
+        let mut nonce_map: HashMap<_, _> = nonces
             .into_iter()
             .map(|(i, nonce)| (*i as u32, *nonce))
             .collect();
@@ -337,6 +363,10 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
                 .expect_nonzero("impossibly unlikely, input is a hash")
                 .into_point_with_even_y();
 
+        for (_, nonce) in &mut nonce_map {
+            nonce.conditional_negate(nonces_need_negation);
+        }
+
         let challenge = self.schnorr.challenge(
             agg_nonce.to_xonly(),
             joint_key.joint_public_key.to_xonly(),
@@ -354,13 +384,13 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
 
     pub fn sign(
         &self,
-        // joint_key: &JointKey,
+        joint_key: &JointKey,
         session: &SignSession,
         my_index: usize,
         secret_share: &Scalar,
         secret_nonces: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let lambda = lagrange_lambda(
+        let mut lambda = lagrange_lambda(
             my_index as u32 + 1,
             &session
                 .nonces
@@ -369,6 +399,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
                 .map(|(j, _)| *j as u32 + 1)
                 .collect::<Vec<_>>(),
         );
+        lambda.conditional_negate(joint_key.needs_negation);
         let [mut r1, mut r2] = secret_nonces.secret;
         r1.conditional_negate(session.nonces_need_negation);
         r2.conditional_negate(session.nonces_need_negation);
@@ -376,6 +407,16 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         let b = &session.binding_coeff;
         let x = secret_share;
         let c = &session.challenge;
+        dbg!(
+            &my_index,
+            &c,
+            &b,
+            &lambda,
+            g!(x * G),
+            g!(r1 * G),
+            g!(r2 * G)
+        );
+        dbg!();
         s!(r1 + (r2 * b) + lambda * x * c).mark::<Public>()
     }
 
@@ -388,7 +429,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let lambda = lagrange_lambda(
+        let mut lambda = lagrange_lambda(
             index as u32 + 1,
             &session
                 .nonces
@@ -397,6 +438,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
                 .map(|(j, _)| *j as u32 + 1)
                 .collect::<Vec<_>>(),
         );
+        lambda.conditional_negate(joint_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
         let X = joint_key.verification_shares[index];
@@ -406,14 +448,20 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             .expect("verifying index that is not part of signing coalition")
             .0;
 
+        dbg!(&index, &s, &c, &b, &lambda, &X, &R1, &R2);
+        dbg!();
+        dbg!();
+
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
     pub fn combine_signature_shares(
         &self,
+        joint_key: &JointKey,
         session: &SignSession,
         partial_sigs: Vec<Scalar<Public, Zero>>,
     ) -> Signature {
+        let ck = s!(session.challenge * joint_key.tweak);
         // TODO add tweak term
         // Work with iterators or [], return sig or scalar
 
@@ -424,7 +472,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
 
         Signature {
             R: session.agg_nonce.to_xonly(),
-            s: sum_s,
+            s: s!(sum_s + ck).mark::<Public>(),
         }
     }
 }
@@ -490,21 +538,21 @@ mod test {
         let shares2 = frost.create_shares(&dkg, sp2);
         let shares3 = frost.create_shares(&dkg, sp3);
 
-        let (secret_share1, joint_key) = frost
+        let (secret_share1, mut joint_key) = frost
             .collect_shares(
                 dkg.clone(),
                 0,
                 vec![shares1[0].clone(), shares2[0].clone(), shares3[0].clone()],
             )
             .unwrap();
-        let (_secret_share2, jk2) = frost
+        let (_secret_share2, mut jk2) = frost
             .collect_shares(
                 dkg.clone(),
                 1,
                 vec![shares1[1].clone(), shares2[1].clone(), shares3[1].clone()],
             )
             .unwrap();
-        let (secret_share3, jk3) = frost
+        let (secret_share3, mut jk3) = frost
             .collect_shares(
                 dkg.clone(),
                 2,
@@ -514,6 +562,20 @@ mod test {
 
         assert_eq!(joint_key, jk2);
         assert_eq!(joint_key, jk3);
+
+        let use_tweak = true;
+        if use_tweak {
+            let tweak = Scalar::from_bytes([
+                0xE8, 0xF7, 0x91, 0xFF, 0x92, 0x25, 0xA2, 0xAF, 0x01, 0x02, 0xAF, 0xFF, 0x4A, 0x9A,
+                0x72, 0x3D, 0x96, 0x12, 0xA6, 0x82, 0xA2, 0x5E, 0xBE, 0x79, 0x80, 0x2B, 0x26, 0x3C,
+                0xDF, 0xCD, 0x83, 0xBB,
+            ])
+            .unwrap();
+            // let tweak = Scalar::zero();
+            joint_key = joint_key.tweak(tweak.clone()).expect("tweak worked");
+            jk2 = jk2.tweak(tweak.clone()).expect("tweak worked");
+            jk3 = jk3.tweak(tweak).expect("tweak worked");
+        }
 
         let nonce1 = frost.gen_nonce(&joint_key, 0, &secret_share1, b"test");
         let nonce3 = frost.gen_nonce(&joint_key, 2, &secret_share3, b"test");
@@ -528,14 +590,14 @@ mod test {
             assert_eq!(session2, session);
         }
 
-        let sig1 = frost.sign(&session, 0, &secret_share1, nonce1);
-        let sig3 = frost.sign(&session, 2, &secret_share3, nonce3);
+        let sig1 = frost.sign(&joint_key, &session, 0, &secret_share1, nonce1);
+        let sig3 = frost.sign(&jk3, &session, 2, &secret_share3, nonce3);
 
         dbg!(sig1, sig3);
 
         assert!(frost.verify_signature_share(&joint_key, &session, 0, sig1));
         assert!(frost.verify_signature_share(&joint_key, &session, 2, sig3));
-        let combined_sig = frost.combine_signature_shares(&session, vec![sig1, sig3]);
+        let combined_sig = frost.combine_signature_shares(&joint_key, &session, vec![sig1, sig3]);
 
         assert!(frost.schnorr.verify(
             &joint_key.joint_public_key,
