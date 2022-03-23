@@ -16,11 +16,11 @@ use secp256kfun::{
 };
 
 #[derive(Clone, Debug, Default)]
-pub struct Frost<SS> {
+pub struct Frost<SS = ()> {
     pub schnorr: SS,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ScalarPoly(Vec<Scalar>);
 
 impl ScalarPoly {
@@ -38,7 +38,7 @@ impl ScalarPoly {
             })
     }
 
-    fn to_point_poly(&self) -> PointPoly {
+    pub fn to_point_poly(&self) -> PointPoly {
         PointPoly(self.0.iter().map(|a| g!(a * G).normalize()).collect())
     }
 
@@ -59,8 +59,22 @@ impl ScalarPoly {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct PointPoly<Z = NonZero>(Vec<Point<Normal, Public, Z>>);
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
+pub struct PointPoly<Z = NonZero>(
+    #[cfg_attr(
+        feature = "serde",
+        serde(bound(
+            deserialize = "Point<Normal, Public, Z>: serde::Deserialize<'de>",
+            serialize = "Point<Normal, Public, Z>: serde::Serialize"
+        ))
+    )]
+    Vec<Point<Normal, Public, Z>>,
+);
 
 impl<Z> PointPoly<Z> {
     pub fn eval(&self, x: u32) -> Point<Jacobian, Public, Zero> {
@@ -94,6 +108,10 @@ impl<Z> PointPoly<Z> {
     pub fn poly_len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn points(&self) -> &[Point<Normal, Public, Z>] {
+        &self.0
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -101,6 +119,12 @@ pub struct Dkg {
     point_polys: Vec<PointPoly>,
     needs_negation: bool,
     joint_key: JointKey,
+}
+
+impl Dkg {
+    pub fn n_parties(&self) -> usize {
+        self.point_polys.len()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -111,16 +135,54 @@ pub enum FirstRoundError {
     ZeroVerificationShare,
 }
 
+impl core::fmt::Display for FirstRoundError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        use FirstRoundError::*;
+        match self {
+            PolyDifferentLength(i) => write!(f, "polynomial commitment from party at index {} was a different length", i),
+            NotEnoughParties => write!(f, "the number of parties was less than the threshold"),
+            ZeroJointKey => write!(f, "The joint key was zero. This means one of the parties was possibly malicious and you are not protecting against this properly"),
+            ZeroVerificationShare => write!(f, "One of the verification shares was malicious so we must abort the protocol"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for FirstRoundError {}
+
 #[derive(Debug, Clone)]
 pub enum SecondRoundError {
     InvalidShare(usize),
 }
 
+impl core::fmt::Display for SecondRoundError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        use SecondRoundError::*;
+        match self {
+            InvalidShare(i) => write!(f, "the share provided by party at index {} was invalid", i),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for SecondRoundError {}
+
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
 pub struct JointKey {
     joint_public_key: Point<EvenY>,
     verification_shares: Vec<Point>,
     threshold: usize,
+}
+
+impl JointKey {
+    pub fn public_key(&self) -> Point<EvenY> {
+        self.joint_public_key
+    }
 }
 
 impl<SS> Frost<SS> {
