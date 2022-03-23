@@ -18,7 +18,7 @@ use secp256kfun::{
 };
 
 #[derive(Clone, Debug, Default)]
-pub struct Frost<SS, H> {
+pub struct Frost<SS, H = ()> {
     schnorr: SS,
     nonce_coeff_hash: H,
 }
