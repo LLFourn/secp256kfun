@@ -1,11 +1,21 @@
-#![allow(missing_docs)]
-use core::iter;
-use std::collections::HashMap;
-
+//! ## Description
+//!
+//! The FROST (Flexible Round-Optimize Schnorr Threshold) multisignature scheme lets you aggregate
+//! multiple public keys into a single public key that requires some threshold t-of-n secret keys to
+//! sign a signature under the aggregate key.
+//!
+//! This implementation has NOT yet been made compatible with other existing implementations
+//! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/138
+//!
+//! See MuSig in this repository, the [FROST paper] and [Security of Multi- and Threshold Signatures].
+//!
+//! [FROST paper]: https://eprint.iacr.org/2020/852.pdf
+//! [Security of Multi- and Threshold Signatures]: https://eprint.iacr.org/2021/1375.pdf
 use crate::{
     musig::{Nonce, NonceKeyPair},
     Message, Schnorr, Signature, Vec,
 };
+use core::iter;
 use rand_core::{CryptoRng, RngCore};
 use secp256kfun::{
     derive_nonce,
@@ -16,17 +26,21 @@ use secp256kfun::{
     nonce::NonceGen,
     rand_core, s, Point, Scalar, G,
 };
+use std::collections::HashMap;
 
+/// The FROST context.
 #[derive(Clone, Debug, Default)]
 pub struct Frost<SS, H = ()> {
     schnorr: SS,
     nonce_coeff_hash: H,
 }
 
+/// A participant's secret polynomial with `t` random coefficients.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScalarPoly(Vec<Scalar>);
 
 impl ScalarPoly {
+    /// Evaluate the scalar polynomial at position x.
     pub fn eval(&self, x: u32) -> Scalar<Secret, Zero> {
         let x = Scalar::from(x)
             .expect_nonzero("must be non-zero")
@@ -41,27 +55,33 @@ impl ScalarPoly {
             })
     }
 
+    /// Create a point polynomial through point multiplication of each coefficient.
     pub fn to_point_poly(&self) -> PointPoly {
         PointPoly(self.0.iter().map(|a| g!(a * G).normalize()).collect())
     }
 
+    /// Create a random scalar polynomial
     pub fn random(n_coefficients: usize, rng: &mut (impl RngCore + CryptoRng)) -> Self {
         ScalarPoly((0..n_coefficients).map(|_| Scalar::random(rng)).collect())
     }
 
+    /// The number of terms in the polynomial (t).
     pub fn poly_len(&self) -> usize {
         self.0.len()
     }
 
+    /// The secret coefficient for the polynomial.
     pub fn first_coef(&self) -> &Scalar {
         &self.0[0]
     }
 
+    /// Create a new scalar polynomial from a vector of scalars.
     pub fn new(x: Vec<Scalar>) -> Self {
         Self(x)
     }
 }
 
+/// A participant's public commitment polynomial.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -80,6 +100,7 @@ pub struct PointPoly<Z = NonZero>(
 );
 
 impl<Z> PointPoly<Z> {
+    /// Evaluate the polynomial at position x.
     pub fn eval(&self, x: u32) -> Point<Jacobian, Public, Zero> {
         let x = Scalar::from(x)
             .expect_nonzero("must be non-zero")
@@ -92,8 +113,10 @@ impl<Z> PointPoly<Z> {
         crate::fun::op::lincomb(&xpows, &self.0)
     }
 
+    /// Combine a vector of polynomials into a joint polynomial.
     fn combine(mut polys: impl Iterator<Item = Self>) -> PointPoly<Zero> {
         let mut combined_poly = polys
+            // TODO
             .next()
             .expect("cannot combine empty list of polys")
             .0
@@ -108,15 +131,22 @@ impl<Z> PointPoly<Z> {
         PointPoly(combined_poly.into_iter().map(|p| p.normalize()).collect())
     }
 
+    /// The number of terms in the polynomial (t)
     pub fn poly_len(&self) -> usize {
         self.0.len()
     }
 
+    /// Fetch the point for the polynomial
     pub fn points(&self) -> &[Point<Normal, Public, Z>] {
         &self.0
     }
 }
 
+/// A DKG (distributed key generation) session
+///
+/// Created using [`Frost::collect_polys`]
+///
+/// [`Frost::collect_polys`]
 #[derive(Clone, Debug)]
 pub struct Dkg {
     point_polys: Vec<PointPoly>,
@@ -125,16 +155,22 @@ pub struct Dkg {
 }
 
 impl Dkg {
+    /// Return the number of parties in the DKG
     pub fn n_parties(&self) -> usize {
         self.point_polys.len()
     }
 }
 
+/// First round errors
 #[derive(Debug, Clone)]
 pub enum FirstRoundError {
+    /// Received polynomial is of differing length.
     PolyDifferentLength(usize),
+    /// Number of parties is less than the length of polynomials specifying the threshold.
     NotEnoughParties,
+    /// Joint key is zero. Should be impossible, or maliciously chosen.
     ZeroJointKey,
+    /// Verification share is zero. Should be impossible, or maliciously chosen.
     ZeroVerificationShare,
 }
 
@@ -153,8 +189,10 @@ impl core::fmt::Display for FirstRoundError {
 #[cfg(feature = "std")]
 impl std::error::Error for FirstRoundError {}
 
+/// Second round DKG errors
 #[derive(Debug, Clone)]
 pub enum SecondRoundError {
+    /// Secret share does not match the expected. Incorrect ordering?
     InvalidShare(usize),
 }
 
@@ -170,6 +208,7 @@ impl core::fmt::Display for SecondRoundError {
 #[cfg(feature = "std")]
 impl std::error::Error for SecondRoundError {}
 
+/// A joint FROST key
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -185,6 +224,27 @@ pub struct JointKey {
 }
 
 impl JointKey {
+    /// The joint public key of the multisignature
+    ///
+    /// ## Return value
+    ///
+    /// A point (normalised to have an even Y coordinate).
+    pub fn public_key(&self) -> Point<EvenY> {
+        self.joint_public_key
+    }
+
+    /// *Tweak* the aggregated key with a scalar so that the resulting key is equal to the
+    /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
+    /// the original set of signers to sign under the new key.
+    ///
+    /// This is how you embed a taproot commitment into a key.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a new jointkey with the same parties but a different aggregated public key.
+    /// In the unusual case that the twak is exactly equal to the negation of the aggregate
+    /// secret key it returns `None`.
+    /// // TODO ^ CHECK THIS
     pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let mut tweak = s!(self.tweak + tweak).mark::<Public>();
         let (joint_public_key, needs_negation) = g!(self.joint_public_key + tweak * G)
@@ -192,7 +252,7 @@ impl JointKey {
             .into_point_with_even_y();
         tweak.conditional_negate(needs_negation);
 
-        // Store new join_public_key and new tweak, as well as needs_negation
+        // Store new join_public_key and new tweak, as well as needs_negation.
         Some(JointKey {
             joint_public_key,
             verification_shares: self.verification_shares.clone(),
@@ -201,9 +261,27 @@ impl JointKey {
             needs_negation,
         })
     }
+
+    /// The threshold number of participants required in a signing coalition to produce a valid signature.
+    pub fn threshold(&self) -> usize {
+        self.threshold
+    }
+
+    /// The total number of signers in this multisignature.
+    pub fn n_signers(&self) -> usize {
+        self.verification_shares.len()
+    }
 }
 
 impl<SS, H> Frost<SS, H> {
+    /// Create a secret share for every other participant by evaluating our secret polynomial.
+    /// at their participant index. f(i) for 1<=i<= n.
+    ///
+    /// Each secret share f(i) needs to be securely communicated to participant i.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a vector of secret shares, the share at index 0 is destined for participant 1.
     pub fn create_shares(
         &self,
         dkg: &Dkg,
@@ -217,6 +295,15 @@ impl<SS, H> Frost<SS, H> {
 }
 
 impl<SS, H> Frost<SS, H> {
+    /// Collect all the public polynomials into a DKG session with a joint key.
+    ///
+    /// Takes a vector of point polynomials with your polynomial at index 0.
+    ///
+    /// Also prepares a vector of verification shares for later.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a result of a Dkg
     pub fn collect_polys(&self, mut point_polys: Vec<PointPoly>) -> Result<Dkg, FirstRoundError> {
         {
             let len_first_poly = point_polys[0].poly_len();
@@ -228,6 +315,7 @@ impl<SS, H> Frost<SS, H> {
                 return Err(FirstRoundError::PolyDifferentLength(i));
             }
 
+            // Number of parties is less than the length of polynomials specifying the threshold
             if point_polys.len() < len_first_poly {
                 return Err(FirstRoundError::NotEnoughParties);
             }
@@ -259,12 +347,22 @@ impl<SS, H> Frost<SS, H> {
                 joint_public_key,
                 threshold: joint_poly.poly_len(),
                 tweak: Scalar::zero().mark::<Public>(),
-                // TODO WHAT SHOULD THIS NEEDS NEGATION BE?
                 needs_negation: false,
             },
         })
     }
 
+    /// Collect the vector of all the secret shares into your total long-lived secret share.
+    /// The secret_shares include your own and a share from each of the other participants.
+    ///
+    /// Confirms the secret_share sent to us matches the expected
+    /// by evaluating their polynomial at our index and comparing.
+    ///
+    ///
+    ///
+    /// # Returns
+    ///
+    /// Your total secret share Scalar and the joint key
     pub fn collect_shares(
         &self,
         dkg: Dkg,
@@ -289,11 +387,11 @@ impl<SS, H> Frost<SS, H> {
     }
 }
 
+/// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
 pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
-    // Change to handle multiple my_indexes
-    // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+    // TODO
     // Change to one inverse
-    // dbg!(nonces);
+    // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
     let x_j = Scalar::from(x_j).expect_nonzero("target xcoord can not be zero");
     x_ms.iter()
         .map(|x_m| Scalar::from(*x_m).expect_nonzero("index can not be zero"))
@@ -306,6 +404,11 @@ pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
         })
 }
 
+/// A FROST signing session
+///
+/// Created using [`Frost::start_sign_session`].
+///
+/// [`Frost::start_sign_session`]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignSession {
     binding_coeff: Scalar,
@@ -318,6 +421,7 @@ pub struct SignSession {
 impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, NG>
     Frost<Schnorr<CH, NG>, H>
 {
+    /// Start a FROST signing session
     pub fn start_sign_session(
         &self,
         joint_key: &JointKey,
@@ -382,6 +486,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         }
     }
 
+    /// Generates a partial signature share under the joint key using a secret share.
     pub fn sign(
         &self,
         joint_key: &JointKey,
@@ -407,20 +512,16 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         let b = &session.binding_coeff;
         let x = secret_share;
         let c = &session.challenge;
-        dbg!(
-            &my_index,
-            &c,
-            &b,
-            &lambda,
-            g!(x * G),
-            g!(r1 * G),
-            g!(r2 * G)
-        );
-        dbg!();
         s!(r1 + (r2 * b) + lambda * x * c).mark::<Public>()
     }
 
-    #[must_use]
+    /// Verify a partial signature at `index`.
+    ///
+    /// Checked using verification shares that are stored in the joint key.
+    ///
+    /// ## Return Value
+    ///
+    /// Returns `bool, true if partial signature is valid.
     pub fn verify_signature_share(
         &self,
         joint_key: &JointKey,
@@ -447,14 +548,17 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             .get(&(index as u32))
             .expect("verifying index that is not part of signing coalition")
             .0;
-
-        dbg!(&index, &s, &c, &b, &lambda, &X, &R1, &R2);
-        dbg!();
-        dbg!();
-
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
+    /// Combine a vector of partial signatures into an aggregate signature.
+    ///
+    /// Includes tweak in combined signature.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a combined schnorr [`schnorr_fun::signature::Signature`] for the message.
+    /// Valid against the joint public key.
     pub fn combine_signature_shares(
         &self,
         joint_key: &JointKey,
@@ -462,13 +566,10 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         partial_sigs: Vec<Scalar<Public, Zero>>,
     ) -> Signature {
         let ck = s!(session.challenge * joint_key.tweak);
-        // TODO add tweak term
-        // Work with iterators or [], return sig or scalar
         let sum_s = partial_sigs
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).mark::<Public>())
             .unwrap_or(Scalar::zero().mark::<Public>());
-
         Signature {
             R: session.agg_nonce.to_xonly(),
             s: s!(sum_s + ck).mark::<Public>(),
@@ -476,9 +577,17 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
     }
 }
 
-impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen>
-    Frost<Schnorr<CH, NG>, H>
-{
+impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<Schnorr<CH, NG>, H> {
+    /// Generate nonces for secret shares
+    ///
+    /// It is very important to carefully consider the implications of your choice of underlying
+    /// [`NonceGen`].
+    ///
+    /// TODO REUSE FROM MUSIG? Macro?
+    ///
+    /// ## Return Value
+    ///
+    /// A NonceKeyPair comprised of secret scalars [r1, r2] and public nonces [R1, R2]
     pub fn gen_nonce(
         &self,
         joint_key: &impl GetJointKey,
@@ -505,7 +614,6 @@ impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen>
         }
     }
 }
-
 
 /// Allows getting the joint key
 // TODO seal this trait
