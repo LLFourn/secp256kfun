@@ -318,6 +318,12 @@ impl Nonce {
         bytes[33..].copy_from_slice(self.0[1].to_bytes().as_ref());
         bytes
     }
+
+    // Negate the two nonces
+    pub fn conditional_negate(&mut self, needs_negation: bool) {
+        self.0[0] = self.0[0].conditional_negate(needs_negation);
+        self.0[1] = self.0[1].conditional_negate(needs_negation);
+    }
 }
 
 secp256kfun::impl_fromstr_deserialize! {
