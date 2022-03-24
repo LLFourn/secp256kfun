@@ -464,7 +464,6 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         let ck = s!(session.challenge * joint_key.tweak);
         // TODO add tweak term
         // Work with iterators or [], return sig or scalar
-
         let sum_s = partial_sigs
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).mark::<Public>())
@@ -477,16 +476,17 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen>
+impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen>
     Frost<Schnorr<CH, NG>, H>
 {
     pub fn gen_nonce(
         &self,
-        joint_key: &JointKey,
+        joint_key: &impl GetJointKey,
         my_index: usize,
         secret_share: &Scalar,
         sid: &[u8],
     ) -> NonceKeyPair {
+        let joint_key = joint_key.get_joint_key();
         let r1 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
             secret => secret_share,
@@ -503,6 +503,25 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
             public: Nonce([R1, R2]),
             secret: [r1, r2],
         }
+    }
+}
+
+
+/// Allows getting the joint key
+// TODO seal this trait
+pub trait GetJointKey {
+    fn get_joint_key(&self) -> &JointKey;
+}
+
+impl GetJointKey for Dkg {
+    fn get_joint_key(&self) -> &JointKey {
+        &self.joint_key
+    }
+}
+
+impl GetJointKey for JointKey {
+    fn get_joint_key(&self) -> &JointKey {
+        &self
     }
 }
 
