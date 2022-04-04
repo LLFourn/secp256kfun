@@ -23,16 +23,27 @@ use secp256kfun::{
     g,
     hash::HashAdd,
     marker::*,
-    nonce::NonceGen,
+    nonce::{AddTag, NonceGen},
     rand_core, s, Point, Scalar, G,
 };
 use std::collections::BTreeMap;
 
 /// The FROST context.
-#[derive(Clone, Debug, Default)]
-pub struct Frost<SS, H = ()> {
-    schnorr: SS,
-    nonce_coeff_hash: H,
+// replacing nonce_coeff_hash with dkg_id_hash H
+#[derive(Clone)]
+pub struct Frost<H, NG: AddTag> {
+    schnorr: Schnorr<H, NG>,
+    keygen_id_hash: H,
+}
+
+impl<H: Clone, NG: AddTag + Clone> Frost<H, NG> {
+    /// Generate a new Frost context from a Schnorr context.
+    pub fn new(schnorr: Schnorr<H, NG>) -> Self {
+        Self {
+            schnorr: schnorr.clone(),
+            keygen_id_hash: schnorr.challenge_hash,
+        }
+    }
 }
 
 /// A participant's secret polynomial with `t` random coefficients.
@@ -273,7 +284,7 @@ impl FrostKey {
     }
 }
 
-impl<SS, H> Frost<SS, H> {
+impl<H, NG: AddTag> Frost<H, NG> {
     /// Create a secret share for every other participant by evaluating our secret polynomial.
     /// at their participant index. f(i) for 1<=i<= n.
     ///
@@ -294,7 +305,7 @@ impl<SS, H> Frost<SS, H> {
     }
 }
 
-impl<SS, H> Frost<SS, H> {
+impl<H, NG: AddTag> Frost<H, NG> {
     /// Collect all the public polynomials into a KeyGen session with a joint key.
     ///
     /// Takes a vector of point polynomials with your polynomial at index 0.
@@ -421,9 +432,7 @@ pub struct SignSession {
     nonces: BTreeMap<u32, Nonce>,
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, NG>
-    Frost<Schnorr<CH, NG>, H>
-{
+impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Start a FROST signing session
     pub fn start_sign_session(
         &self,
@@ -455,7 +464,8 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
 
         let agg_nonce_points: [Point; 2] = [agg_nonces_R1_R2[0], agg_nonces_R1_R2[1]];
         let binding_coeff = Scalar::from_hash(
-            self.nonce_coeff_hash
+            self.schnorr
+                .challenge_hash()
                 .clone()
                 .add(agg_nonce_points[0])
                 .add(agg_nonce_points[1])
@@ -578,7 +588,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
     }
 }
 
-impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<Schnorr<CH, NG>, H> {
+impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Generate nonces for secret shares
     ///
     /// It is very important to carefully consider the implications of your choice of underlying
@@ -653,8 +663,10 @@ mod test {
         let sp1 = ScalarPoly::new(vec![s!(3), s!(7)]);
         let sp2 = ScalarPoly::new(vec![s!(11), s!(13)]);
         let sp3 = ScalarPoly::new(vec![s!(17), s!(19)]);
-        //
-        let frost = Frost::<Schnorr<Sha256, Deterministic<Sha256>>, Sha256>::default();
+
+        let frost = Frost::new(Schnorr::<Sha256, Deterministic<Sha256>>::new(
+            Deterministic::<Sha256>::default(),
+        ));
         let point_polys = vec![
             sp1.to_point_poly(),
             sp2.to_point_poly(),
