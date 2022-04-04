@@ -26,7 +26,7 @@ use secp256kfun::{
     nonce::NonceGen,
     rand_core, s, Point, Scalar, G,
 };
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// The FROST context.
 #[derive(Clone, Debug, Default)]
@@ -61,7 +61,7 @@ impl ScalarPoly {
     }
 
     /// Create a random scalar polynomial
-    pub fn random(n_coefficients: usize, rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    pub fn random(n_coefficients: u32, rng: &mut (impl RngCore + CryptoRng)) -> Self {
         ScalarPoly((0..n_coefficients).map(|_| Scalar::random(rng)).collect())
     }
 
@@ -218,7 +218,7 @@ impl std::error::Error for FinishKeyGenError {}
 pub struct FrostKey {
     joint_public_key: Point<EvenY>,
     verification_shares: Vec<Point>,
-    threshold: usize,
+    threshold: u32,
     tweak: Scalar<Public, Zero>,
     needs_negation: bool,
 }
@@ -263,13 +263,13 @@ impl FrostKey {
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
-    pub fn threshold(&self) -> usize {
+    pub fn threshold(&self) -> u32 {
         self.threshold
     }
 
     /// The total number of signers in this multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
+    pub fn n_signers(&self) -> u32 {
+        self.verification_shares.len() as u32
     }
 }
 
@@ -345,7 +345,7 @@ impl<SS, H> Frost<SS, H> {
             frost_key: FrostKey {
                 verification_shares,
                 joint_public_key,
-                threshold: joint_poly.poly_len(),
+                threshold: joint_poly.poly_len() as u32,
                 tweak: Scalar::zero().mark::<Public>(),
                 needs_negation: false,
             },
@@ -366,7 +366,7 @@ impl<SS, H> Frost<SS, H> {
     pub fn finish_keygen(
         &self,
         KeyGen: KeyGen,
-        my_index: usize,
+        my_index: u32,
         secret_shares: Vec<Scalar<Secret, Zero>>,
     ) -> Result<(Scalar, FrostKey), FinishKeyGenError> {
         assert_eq!(
@@ -418,7 +418,7 @@ pub struct SignSession {
     nonces_need_negation: bool,
     agg_nonce: Point<EvenY>,
     challenge: Scalar<Public, Zero>,
-    nonces: HashMap<u32, Nonce>,
+    nonces: BTreeMap<u32, Nonce>,
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, NG>
@@ -428,15 +428,13 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
     pub fn start_sign_session(
         &self,
         frost_key: &FrostKey,
-        nonces: &[(usize, Nonce)],
+        nonces: Vec<(u32, Nonce)>,
         message: Message,
     ) -> SignSession {
-        let mut nonce_map: HashMap<_, _> = nonces
-            .into_iter()
-            .map(|(i, nonce)| (*i as u32, *nonce))
-            .collect();
-        assert_eq!(nonces.len(), nonce_map.len());
-        assert!(frost_key.threshold <= nonce_map.len());
+        let mut nonce_map: BTreeMap<_, _> =
+            nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
+        // assert_eq!(nonces.len(), nonce_map.len());
+        assert!(frost_key.threshold <= nonce_map.len() as u32);
 
         let agg_nonces_R1_R2: Vec<Point> = nonce_map
             .iter()
@@ -494,7 +492,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         &self,
         frost_key: &FrostKey,
         session: &SignSession,
-        my_index: usize,
+        my_index: u32,
         secret_share: &Scalar,
         secret_nonces: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
@@ -529,7 +527,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         &self,
         frost_key: &FrostKey,
         session: &SignSession,
-        index: usize,
+        index: u32,
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
@@ -545,7 +543,7 @@ impl<H: Digest<OutputSize = U32> + Clone, CH: Digest<OutputSize = U32> + Clone, 
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = frost_key.verification_shares[index];
+        let X = frost_key.verification_shares[index as usize];
         let [ref R1, ref R2] = session
             .nonces
             .get(&(index as u32))
@@ -594,7 +592,7 @@ impl<H, CH: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<Schnorr<CH, NG
     pub fn gen_nonce(
         &self,
         frost_key: &impl GetFrostKey,
-        my_index: usize,
+        my_index: u32,
         secret_share: &Scalar,
         sid: &[u8],
     ) -> NonceKeyPair {
@@ -709,14 +707,14 @@ mod test {
 
         let nonce1 = frost.gen_nonce(&frost_key, 0, &secret_share1, b"test");
         let nonce3 = frost.gen_nonce(&frost_key, 2, &secret_share3, b"test");
-        let nonces = [(0, nonce1.public()), (2, nonce3.public())];
+        let nonces = vec![(0, nonce1.public()), (2, nonce3.public())];
+        let nonces2 = vec![(0, nonce1.public()), (2, nonce3.public())];
 
-        let session =
-            frost.start_sign_session(&frost_key, &nonces, Message::plain("test", b"test"));
+        let session = frost.start_sign_session(&frost_key, nonces, Message::plain("test", b"test"));
 
         dbg!(&session);
         {
-            let session2 = frost.start_sign_session(&jk2, &nonces, Message::plain("test", b"test"));
+            let session2 = frost.start_sign_session(&jk2, nonces2, Message::plain("test", b"test"));
             assert_eq!(session2, session);
         }
 
