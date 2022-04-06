@@ -314,7 +314,7 @@ impl<H, NG: AddTag> Frost<H, NG> {
     ///
     /// ## Return value
     ///
-    /// Returns a result of a KeyGen
+    /// Returns a KeyGen
     pub fn new_keygen(&self, mut point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
         {
             let len_first_poly = point_polys[0].poly_len();
@@ -594,28 +594,25 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// It is very important to carefully consider the implications of your choice of underlying
     /// [`NonceGen`].
     ///
-    /// TODO REUSE FROM MUSIG? Macro?
+    /// If you are generating nonces prior to KeyGen completion, use the static first coefficient
+    /// for your `secret`. Otherwise you can use your secret share of the joint key.
+    ///
+    /// The application must decide upon a unique `sid` (session id) for this frost multisignature.
+    /// For example, the concatenation of: my_signing_index, joint_key, verfication_shares
     ///
     /// ## Return Value
     ///
     /// A NonceKeyPair comprised of secret scalars [r1, r2] and public nonces [R1, R2]
-    pub fn gen_nonce(
-        &self,
-        frost_key: &impl GetFrostKey,
-        my_index: u32,
-        secret_share: &Scalar,
-        sid: &[u8],
-    ) -> NonceKeyPair {
-        let frost_key = frost_key.get_frost_key();
+    pub fn gen_nonce(&self, secret: &Scalar, sid: &[u8]) -> NonceKeyPair {
         let r1 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret_share,
-            public => [ b"r1-frost", my_index.to_be_bytes(), frost_key.joint_public_key, &frost_key.verification_shares[..], sid]
+            secret => secret,
+            public => [ b"r1-frost", sid]
         );
         let r2 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret_share,
-            public => [ b"r2-frost", my_index.to_be_bytes(), frost_key.joint_public_key, &frost_key.verification_shares[..], sid]
+            secret => secret,
+            public => [ b"r2-frost", sid]
         );
         let R1 = g!(r1 * G).normalize();
         let R2 = g!(r2 * G).normalize();
@@ -717,8 +714,16 @@ mod test {
             jk3 = jk3.tweak(tweak).expect("tweak worked");
         }
 
-        let nonce1 = frost.gen_nonce(&frost_key, 0, &secret_share1, b"test");
-        let nonce3 = frost.gen_nonce(&frost_key, 2, &secret_share3, b"test");
+        // TODO USE PROPER SID
+        // public => [ b"r2-frost", my_index.to_be_bytes(), frost_key.joint_public_key, &frost_key.verification_shares[..], sid]
+
+        let sid = frost_key.joint_public_key.to_bytes();
+        // for share in frost_key.verification_shares {
+        //     // [sid, share].concat(share.to_bytes());
+        // }
+
+        let nonce1 = frost.gen_nonce(&secret_share1, &sid);
+        let nonce3 = frost.gen_nonce(&secret_share3, &sid);
         let nonces = vec![(0, nonce1.public()), (2, nonce3.public())];
         let nonces2 = vec![(0, nonce1.public()), (2, nonce3.public())];
 
