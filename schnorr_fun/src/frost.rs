@@ -161,7 +161,6 @@ impl<Z> PointPoly<Z> {
 #[derive(Clone, Debug)]
 pub struct KeyGen {
     point_polys: Vec<PointPoly>,
-    needs_negation: bool,
     frost_key: FrostKey,
 }
 
@@ -250,18 +249,24 @@ impl FrostKey {
     ///
     /// This is how you embed a taproot commitment into a key.
     ///
+    /// Also updates whether the secret first coefficient needs negation.
+    /// XOR of existing key needs_negation and new tweaked key needs_negation.
+    /// If both need negation, they will cancel out.
+    ///
     /// ## Return value
     ///
     /// Returns a new frostkey with the same parties but a different aggregated public key.
     /// In the unusual case that the twak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     /// // TODO ^ CHECK THIS
-    pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
+    pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let mut tweak = s!(self.tweak + tweak).mark::<Public>();
-        let (joint_public_key, needs_negation) = g!(self.joint_public_key + tweak * G)
+        let (joint_public_key, tweak_needs_negation) = g!(self.joint_public_key + tweak * G)
             .mark::<NonZero>()?
             .into_point_with_even_y();
-        tweak.conditional_negate(needs_negation);
+        tweak.conditional_negate(tweak_needs_negation);
+
+        let joint_needs_negation = self.needs_negation ^ tweak_needs_negation;
 
         // Store new join_public_key and new tweak, as well as needs_negation.
         Some(FrostKey {
@@ -269,7 +274,7 @@ impl FrostKey {
             verification_shares: self.verification_shares.clone(),
             threshold: self.threshold.clone(),
             tweak,
-            needs_negation,
+            needs_negation: joint_needs_negation,
         })
     }
 
@@ -296,9 +301,8 @@ impl<H, NG: AddTag> Frost<H, NG> {
     pub fn create_shares(
         &self,
         KeyGen: &KeyGen,
-        mut scalar_poly: ScalarPoly,
+        scalar_poly: ScalarPoly,
     ) -> Vec<Scalar<Secret, Zero>> {
-        scalar_poly.0[0].conditional_negate(KeyGen.needs_negation);
         (1..=KeyGen.point_polys.len())
             .map(|i| scalar_poly.eval(i as u32))
             .collect()
@@ -332,7 +336,7 @@ impl<H, NG: AddTag> Frost<H, NG> {
             }
         }
 
-        let mut joint_poly = PointPoly::combine(point_polys.clone().into_iter());
+        let joint_poly = PointPoly::combine(point_polys.clone().into_iter());
         let frost_key = joint_poly.0[0];
 
         let (joint_public_key, needs_negation) = frost_key
@@ -340,10 +344,10 @@ impl<H, NG: AddTag> Frost<H, NG> {
             .ok_or(NewKeyGenError::ZeroFrostKey)?
             .into_point_with_even_y();
 
-        for poly in &mut point_polys {
-            poly.0[0] = poly.0[0].conditional_negate(needs_negation);
-        }
-        joint_poly.0[0] = joint_poly.0[0].conditional_negate(needs_negation);
+        // for poly in &mut point_polys {
+        //     poly.0[0] = poly.0[0].conditional_negate(needs_negation);
+        // }
+        // joint_poly.0[0] = joint_poly.0[0].conditional_negate(needs_negation);
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
@@ -352,13 +356,12 @@ impl<H, NG: AddTag> Frost<H, NG> {
 
         Ok(KeyGen {
             point_polys,
-            needs_negation,
             frost_key: FrostKey {
                 verification_shares,
                 joint_public_key,
                 threshold: joint_poly.poly_len() as u32,
                 tweak: Scalar::zero().mark::<Public>(),
-                needs_negation: false,
+                needs_negation,
             },
         })
     }
