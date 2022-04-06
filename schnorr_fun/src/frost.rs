@@ -161,6 +161,7 @@ impl<Z> PointPoly<Z> {
 #[derive(Clone, Debug)]
 pub struct KeyGen {
     point_polys: Vec<PointPoly>,
+    proof_of_possession: (Point<Normal>, Scalar<Secret, Zero>),
     frost_key: FrostKey,
 }
 
@@ -309,7 +310,29 @@ impl<H, NG: AddTag> Frost<H, NG> {
     }
 }
 
-impl<H, NG: AddTag> Frost<H, NG> {
+impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
+    /// TODO
+    pub fn create_pop(
+        &self,
+        keygen_id: Point<secp256kfun::marker::EvenY>,
+        secret: &Scalar,
+        rng: &mut (impl RngCore + CryptoRng),
+    ) -> (Point, Scalar<Secret, Zero>) {
+        let pop_r = Scalar::random(rng);
+        let pop_R = g!(pop_r * G).normalize();
+        let pop_c = Scalar::from_hash(
+            self.keygen_id_hash
+                .clone()
+                .add(g!(*secret * G).normalize())
+                .add(keygen_id)
+                .add(pop_R),
+        );
+        let pop_z = s!(pop_c + pop_r);
+        (pop_R, pop_z)
+    }
+}
+
+impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
     /// Collect all the public polynomials into a KeyGen session with a joint key.
     ///
     /// Takes a vector of point polynomials with your polynomial at index 0.
@@ -319,7 +342,12 @@ impl<H, NG: AddTag> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a KeyGen
-    pub fn new_keygen(&self, mut point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
+    pub fn new_keygen(
+        &self,
+        mut point_polys: Vec<PointPoly>,
+        secret: &Scalar,
+        rng: &mut (impl RngCore + CryptoRng),
+    ) -> Result<KeyGen, NewKeyGenError> {
         {
             let len_first_poly = point_polys[0].poly_len();
             if let Some((i, _)) = point_polys
@@ -349,6 +377,10 @@ impl<H, NG: AddTag> Frost<H, NG> {
         // }
         // joint_poly.0[0] = joint_poly.0[0].conditional_negate(needs_negation);
 
+        // TODO set keygen
+        let keygen_id = joint_public_key;
+        let proof_of_possession = self.create_pop(keygen_id, secret, rng);
+
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
             .collect::<Option<Vec<Point>>>()
@@ -356,6 +388,7 @@ impl<H, NG: AddTag> Frost<H, NG> {
 
         Ok(KeyGen {
             point_polys,
+            proof_of_possession,
             frost_key: FrostKey {
                 verification_shares,
                 joint_public_key,
@@ -673,7 +706,9 @@ mod test {
             sp3.to_point_poly(),
         ];
 
-        let KeyGen = frost.new_keygen(point_polys).unwrap();
+        let KeyGen = frost
+            .new_keygen(point_polys, &sp1.0[0], &mut rand::thread_rng())
+            .unwrap();
         let shares1 = frost.create_shares(&KeyGen, sp1);
         let shares2 = frost.create_shares(&KeyGen, sp2);
         let shares3 = frost.create_shares(&KeyGen, sp3);
