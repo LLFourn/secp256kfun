@@ -76,6 +76,20 @@ impl ScalarPoly {
         ScalarPoly((0..n_coefficients).map(|_| Scalar::random(rng)).collect())
     }
 
+    /// Create a scalar polynomial where the first coefficient is a specified secret and
+    /// the remaining coefficients are random.
+    pub fn random_using_secret(
+        n_coefficients: u32,
+        secret: Scalar,
+        rng: &mut (impl RngCore + CryptoRng),
+    ) -> Self {
+        let mut coeffs = vec![secret];
+        for _ in 1..n_coefficients {
+            coeffs.push(Scalar::random(rng))
+        }
+        ScalarPoly(coeffs)
+    }
+
     /// The number of terms in the polynomial (t).
     pub fn poly_len(&self) -> usize {
         self.0.len()
@@ -787,7 +801,6 @@ mod test {
 
         // TODO USE PROPER SID
         // public => [ b"r2-frost", my_index.to_be_bytes(), frost_key.joint_public_key, &frost_key.verification_shares[..], sid]
-
         let sid = frost_key.joint_public_key.to_bytes();
         // for share in frost_key.verification_shares {
         //     // [sid, share].concat(share.to_bytes());
