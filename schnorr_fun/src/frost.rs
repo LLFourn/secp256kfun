@@ -161,7 +161,7 @@ impl<Z> PointPoly<Z> {
 #[derive(Clone, Debug)]
 pub struct KeyGen {
     point_polys: Vec<PointPoly>,
-    proof_of_possession: (Point<Normal>, Scalar<Secret, Zero>),
+    keygen_id: Point<EvenY>,
     frost_key: FrostKey,
 }
 
@@ -205,6 +205,8 @@ impl std::error::Error for NewKeyGenError {}
 pub enum FinishKeyGenError {
     /// Secret share does not match the expected. Incorrect ordering?
     InvalidShare(usize),
+    /// Proof of possession does not match the expected. Incorrect ordering?
+    InvalidProofOfPossession(usize),
 }
 
 impl core::fmt::Display for FinishKeyGenError {
@@ -212,6 +214,11 @@ impl core::fmt::Display for FinishKeyGenError {
         use FinishKeyGenError::*;
         match self {
             InvalidShare(i) => write!(f, "the share provided by party at index {} was invalid", i),
+            &InvalidProofOfPossession(i) => write!(
+                f,
+                "the proof of possession provided by party at index {} was invalid",
+                i
+            ),
         }
     }
 }
@@ -290,7 +297,8 @@ impl FrostKey {
     }
 }
 
-impl<H, NG: AddTag> Frost<H, NG> {
+impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
+    /// TODO POP
     /// Create a secret share for every other participant by evaluating our secret polynomial.
     /// at their participant index. f(i) for 1<=i<= n.
     ///
@@ -303,32 +311,47 @@ impl<H, NG: AddTag> Frost<H, NG> {
         &self,
         KeyGen: &KeyGen,
         scalar_poly: ScalarPoly,
-    ) -> Vec<Scalar<Secret, Zero>> {
-        (1..=KeyGen.point_polys.len())
-            .map(|i| scalar_poly.eval(i as u32))
-            .collect()
-    }
-}
-
-impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
-    /// TODO
-    pub fn create_pop(
-        &self,
-        keygen_id: Point<secp256kfun::marker::EvenY>,
-        secret: &Scalar,
         rng: &mut (impl RngCore + CryptoRng),
-    ) -> (Point, Scalar<Secret, Zero>) {
+    ) -> (Vec<Scalar<Secret, Zero>>, (Point, Scalar<Secret, Zero>)) {
+        // Create proof of possession
         let pop_r = Scalar::random(rng);
         let pop_R = g!(pop_r * G).normalize();
         let pop_c = Scalar::from_hash(
             self.keygen_id_hash
                 .clone()
-                .add(g!(*secret * G).normalize())
-                .add(keygen_id)
+                // TODO CHECK SECRET REFERENCE
+                .add(g!({ scalar_poly.0[0].clone() } * G).normalize())
+                .add(KeyGen.keygen_id)
                 .add(pop_R),
         );
         let pop_z = s!(pop_c + pop_r);
-        (pop_R, pop_z)
+
+        let shares = (1..=KeyGen.point_polys.len())
+            .map(|i| scalar_poly.eval(i as u32))
+            .collect();
+
+        (shares, (pop_R, pop_z))
+    }
+}
+
+impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
+    /// TODO
+    fn verify_pop(
+        &self,
+        keygen_id: Point<secp256kfun::marker::EvenY>,
+        point_poly: &PointPoly,
+        pop: (Point, Scalar<Secret, Zero>),
+    ) -> bool {
+        let first_point = point_poly.0[0];
+        let (pop_R, pop_z) = pop;
+        let pop_c = Scalar::from_hash(
+            self.keygen_id_hash
+                .clone()
+                .add(first_point)
+                .add(keygen_id)
+                .add(pop_R),
+        );
+        !g!(pop_R + pop_c * first_point - pop_z * G).is_zero()
     }
 }
 
@@ -342,12 +365,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a KeyGen
-    pub fn new_keygen(
-        &self,
-        mut point_polys: Vec<PointPoly>,
-        secret: &Scalar,
-        rng: &mut (impl RngCore + CryptoRng),
-    ) -> Result<KeyGen, NewKeyGenError> {
+    pub fn new_keygen(&self, mut point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
         {
             let len_first_poly = point_polys[0].poly_len();
             if let Some((i, _)) = point_polys
@@ -379,7 +397,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 
         // TODO set keygen
         let keygen_id = joint_public_key;
-        let proof_of_possession = self.create_pop(keygen_id, secret, rng);
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
@@ -388,7 +405,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 
         Ok(KeyGen {
             point_polys,
-            proof_of_possession,
+            keygen_id,
             frost_key: FrostKey {
                 verification_shares,
                 joint_public_key,
@@ -415,11 +432,24 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
         KeyGen: KeyGen,
         my_index: u32,
         secret_shares: Vec<Scalar<Secret, Zero>>,
+        proofs_of_possession: Vec<(Point, Scalar<Secret, Zero>)>,
     ) -> Result<(Scalar, FrostKey), FinishKeyGenError> {
         assert_eq!(
             secret_shares.len(),
             KeyGen.frost_key.verification_shares.len()
         );
+
+        for (i, (poly, pop)) in KeyGen
+            .point_polys
+            .iter()
+            .zip(proofs_of_possession)
+            .enumerate()
+        {
+            if !self.verify_pop(KeyGen.keygen_id, poly, pop) {
+                return Err(FinishKeyGenError::InvalidProofOfPossession(i));
+            }
+        }
+
         let mut total_secret_share = s!(0);
         for (i, (secret_share, poly)) in secret_shares.iter().zip(&KeyGen.point_polys).enumerate() {
             let expected_public_share = poly.eval((my_index + 1) as u32);
@@ -692,6 +722,7 @@ mod test {
 
     #[test]
     fn frost_test_end_to_end() {
+        let mut rng = rand::thread_rng();
         // Create a secret polynomial for each participant
         let sp1 = ScalarPoly::new(vec![s!(3), s!(7)]);
         let sp2 = ScalarPoly::new(vec![s!(11), s!(13)]);
@@ -706,18 +737,18 @@ mod test {
             sp3.to_point_poly(),
         ];
 
-        let KeyGen = frost
-            .new_keygen(point_polys, &sp1.0[0], &mut rand::thread_rng())
-            .unwrap();
-        let shares1 = frost.create_shares(&KeyGen, sp1);
-        let shares2 = frost.create_shares(&KeyGen, sp2);
-        let shares3 = frost.create_shares(&KeyGen, sp3);
+        let KeyGen = frost.new_keygen(point_polys).unwrap();
+        let (shares1, pop1) = frost.create_shares(&KeyGen, sp1, &mut rng);
+        let (shares2, pop2) = frost.create_shares(&KeyGen, sp2, &mut rng);
+        let (shares3, pop3) = frost.create_shares(&KeyGen, sp3, &mut rng);
+        let proofs_of_possession = vec![pop1, pop2, pop3];
 
         let (secret_share1, mut frost_key) = frost
             .finish_keygen(
                 KeyGen.clone(),
                 0,
                 vec![shares1[0].clone(), shares2[0].clone(), shares3[0].clone()],
+                proofs_of_possession.clone(),
             )
             .unwrap();
         let (_secret_share2, mut jk2) = frost
@@ -725,6 +756,7 @@ mod test {
                 KeyGen.clone(),
                 1,
                 vec![shares1[1].clone(), shares2[1].clone(), shares3[1].clone()],
+                proofs_of_possession.clone(),
             )
             .unwrap();
         let (secret_share3, mut jk3) = frost
@@ -732,6 +764,7 @@ mod test {
                 KeyGen.clone(),
                 2,
                 vec![shares1[2].clone(), shares2[2].clone(), shares3[2].clone()],
+                proofs_of_possession,
             )
             .unwrap();
 
