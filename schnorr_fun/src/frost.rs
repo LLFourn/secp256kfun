@@ -29,7 +29,6 @@ use secp256kfun::{
 use std::collections::BTreeMap;
 
 /// The FROST context.
-// replacing nonce_coeff_hash with dkg_id_hash H
 #[derive(Clone)]
 pub struct Frost<H, NG: AddTag> {
     schnorr: Schnorr<H, NG>,
@@ -138,7 +137,7 @@ impl<Z> PointPoly<Z> {
         crate::fun::op::lincomb(&xpows, &self.0)
     }
 
-    /// Combine a vector of polynomials into a joint polynomial.
+    /// Combine a vector of point polynomials into a joint polynomial.
     fn combine(mut polys: impl Iterator<Item = Self>) -> PointPoly<Zero> {
         let mut combined_poly = polys
             // TODO
@@ -193,7 +192,7 @@ pub enum NewKeyGenError {
     PolyDifferentLength(usize),
     /// Number of parties is less than the length of polynomials specifying the threshold.
     NotEnoughParties,
-    /// Joint key is zero. Should be impossible, or maliciously chosen.
+    /// Frost key is zero. Should be impossible, or maliciously chosen.
     ZeroFrostKey,
     /// Verification share is zero. Should be impossible, or maliciously chosen.
     ZeroVerificationShare,
@@ -205,7 +204,7 @@ impl core::fmt::Display for NewKeyGenError {
         match self {
             PolyDifferentLength(i) => write!(f, "polynomial commitment from party at index {} was a different length", i),
             NotEnoughParties => write!(f, "the number of parties was less than the threshold"),
-            ZeroFrostKey => write!(f, "The joint key was zero. This means one of the parties was possibly malicious and you are not protecting against this properly"),
+            ZeroFrostKey => write!(f, "The joint FROST key was zero. This means one of the parties was possibly malicious and you are not protecting against this properly"),
             ZeroVerificationShare => write!(f, "One of the verification shares was malicious so we must abort the protocol"),
         }
     }
@@ -256,7 +255,7 @@ pub struct FrostKey {
 }
 
 impl FrostKey {
-    /// The joint public key of the multisignature
+    /// The joint public key of the FROST multisignature
     ///
     /// ## Return value
     ///
@@ -265,38 +264,38 @@ impl FrostKey {
         self.joint_public_key
     }
 
-    /// *Tweak* the aggregated key with a scalar so that the resulting key is equal to the
+    /// Tweak the aggregated key with a scalar so that the resulting key is equal to the
     /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
     /// the original set of signers to sign under the new key.
     ///
     /// This is how you embed a taproot commitment into a key.
     ///
-    /// Also updates whether the secret first coefficient needs negation.
-    /// XOR of existing key needs_negation and new tweaked key needs_negation.
+    /// Also updates whether the FROST key needs negation.
+    /// XOR of existing FROST key needs_negation and new tweaked key needs_negation.
     /// If both need negation, they will cancel out.
     ///
     /// ## Return value
     ///
-    /// Returns a new frostkey with the same parties but a different aggregated public key.
-    /// In the unusual case that the twak is exactly equal to the negation of the aggregate
+    /// Returns a new FrostKey with the same parties but a different aggregated public key.
+    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     /// // TODO ^ CHECK THIS
     pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let mut tweak = s!(self.tweak + tweak).mark::<Public>();
-        let (joint_public_key, tweak_needs_negation) = g!(self.joint_public_key + tweak * G)
+        let (joint_public_key, tweaked_needs_negation) = g!(self.joint_public_key + tweak * G)
             .mark::<NonZero>()?
             .into_point_with_even_y();
-        tweak.conditional_negate(tweak_needs_negation);
+        tweak.conditional_negate(tweaked_needs_negation);
 
-        let joint_needs_negation = self.needs_negation ^ tweak_needs_negation;
+        let combined_needs_negation = self.needs_negation ^ tweaked_needs_negation;
 
-        // Store new join_public_key and new tweak, as well as needs_negation.
+        // Return the new FrostKey including the tweak and updated needs_negation
         Some(FrostKey {
             joint_public_key,
             verification_shares: self.verification_shares.clone(),
             threshold: self.threshold.clone(),
             tweak,
-            needs_negation: joint_needs_negation,
+            needs_negation: combined_needs_negation,
         })
     }
 
@@ -305,22 +304,26 @@ impl FrostKey {
         self.threshold
     }
 
-    /// The total number of signers in this multisignature.
+    /// The total number of signers in this FROST multisignature.
     pub fn n_signers(&self) -> u32 {
         self.verification_shares.len() as u32
     }
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
-    /// TODO POP
-    /// Create a secret share for every other participant by evaluating our secret polynomial.
-    /// at their participant index. f(i) for 1<=i<= n.
+    /// Create secret shares and our proof-of-possession to be shared with other participants.
+    ///
+    /// Secret shares are created for every other participant by evaluating our secret polynomial
+    /// at their participant index. f(i) for 1<=i<=n.
     ///
     /// Each secret share f(i) needs to be securely communicated to participant i.
     ///
+    /// Also creates a proof of possession for the first coefficient of our secret scalar polynomial.
+    ///
     /// ## Return value
     ///
-    /// Returns a vector of secret shares, the share at index 0 is destined for participant 1.
+    /// Returns a vector of secret shares and a proof of possession, as a tupple.
+    /// The secret shares at index 0 is destined for participant 1.
     pub fn create_shares(
         &self,
         KeyGen: &KeyGen,
@@ -333,7 +336,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
         let pop_c = Scalar::from_hash(
             self.keygen_id_hash
                 .clone()
-                // TODO CHECK SECRET REFERENCE
                 .add(g!({ scalar_poly.0[0].clone() } * G).normalize())
                 .add(KeyGen.keygen_id)
                 .add(pop_R),
@@ -349,7 +351,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
-    /// TODO
+    /// Verify a proof of possession against a participant's point polynomial
+    ///
+    /// ## Return value
+    ///
+    /// Returns `bool` true if the proof of possession matches this point poly,
     fn verify_pop(
         &self,
         keygen_id: Point<secp256kfun::marker::EvenY>,
@@ -370,7 +376,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
-    /// Collect all the public polynomials into a KeyGen session with a joint key.
+    /// Collect all the public polynomials into a KeyGen session with a FrostKey.
     ///
     /// Takes a vector of point polynomials with your polynomial at index 0.
     ///
@@ -379,7 +385,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a KeyGen
-    pub fn new_keygen(&self, mut point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
+    pub fn new_keygen(&self, point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
         {
             let len_first_poly = point_polys[0].poly_len();
             if let Some((i, _)) = point_polys
@@ -404,12 +410,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
             .ok_or(NewKeyGenError::ZeroFrostKey)?
             .into_point_with_even_y();
 
-        // for poly in &mut point_polys {
-        //     poly.0[0] = poly.0[0].conditional_negate(needs_negation);
-        // }
-        // joint_poly.0[0] = joint_poly.0[0].conditional_negate(needs_negation);
-
-        // TODO set keygen
+        // TODO set keygen id
         let keygen_id = joint_public_key;
 
         let verification_shares = (1..=point_polys.len())
@@ -430,17 +431,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
         })
     }
 
-    /// Collect the vector of all the secret shares into your total long-lived secret share.
-    /// The secret_shares include your own and a share from each of the other participants.
+    /// Collect the vector of all recieved secret shares into your total long-lived secret share.
+    /// The secret_shares includes your own as well as share from each of the other participants.
     ///
-    /// Confirms the secret_share sent to us matches the expected
-    /// by evaluating their polynomial at our index and comparing.
+    /// The secret_shares are validated to match the expected result
+    /// by evaluating their polynomial at our participant index.
     ///
+    /// Each participant's proof of possession is verified against their polynomial.
     ///
+    /// # Return value
     ///
-    /// # Returns
-    ///
-    /// Your total secret share Scalar and the joint key
+    /// Your total secret share Scalar and the FrostKey
     pub fn finish_keygen(
         &self,
         KeyGen: KeyGen,
@@ -513,6 +514,10 @@ pub struct SignSession {
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Start a FROST signing session
+    ///
+    /// ## Return value
+    ///
+    /// A FROST signing session
     pub fn start_sign_session(
         &self,
         frost_key: &FrostKey,
@@ -576,7 +581,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
         }
     }
 
-    /// Generates a partial signature share under the joint key using a secret share.
+    /// Generates a partial signature share under the FROST key using a secret share.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a signature Scalar.
     pub fn sign(
         &self,
         frost_key: &FrostKey,
@@ -607,11 +616,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
 
     /// Verify a partial signature at `index`.
     ///
-    /// Checked using verification shares that are stored in the joint key.
+    /// Check partial signature against the verification shares created during keygen.
     ///
     /// ## Return Value
     ///
-    /// Returns `bool, true if partial signature is valid.
+    /// Returns `bool`, true if partial signature is valid.
     pub fn verify_signature_share(
         &self,
         frost_key: &FrostKey,
@@ -674,9 +683,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// [`NonceGen`].
     ///
     /// If you are generating nonces prior to KeyGen completion, use the static first coefficient
-    /// for your `secret`. Otherwise you can use your secret share of the joint key.
+    /// for your `secret`. Otherwise you can use your secret share of the joint FROST key.
     ///
-    /// The application must decide upon a unique `sid` (session id) for this frost multisignature.
+    /// The application must decide upon a unique `sid` (session id) for this FROST multisignature.
     /// For example, the concatenation of: my_signing_index, joint_key, verfication_shares
     ///
     /// ## Return Value
@@ -702,9 +711,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     }
 }
 
-/// Allows getting the joint key
+/// Allows getting the FrostKey
 // TODO seal this trait
 pub trait GetFrostKey {
+    /// Get Frost key
     fn get_frost_key(&self) -> &FrostKey;
 }
 
@@ -775,15 +785,12 @@ mod test {
              }).unzip();
 
 
-
-
-            // Signing coalition with a threshold of parties
-            // let n_signers = if threshold == n_parties {
-            //     threshold
-            // } else {
-            //     rng.gen_range(threshold..=n_parties)
-            // };
-            let n_signers = threshold;
+            // Signing coalition of t to n parties
+            let n_signers = if threshold == n_parties {
+                threshold
+            } else {
+                rng.gen_range(threshold..=n_parties)
+            };
             let signer_indexes = (0..n_parties).choose_multiple(&mut rng, n_signers as usize);
 
             let sid = frost_keys[0].joint_public_key.to_bytes();
@@ -808,7 +815,6 @@ mod test {
                 signatures.push(sig);
             }
 
-            dbg!(signatures.clone());
             // TODO get this session from loop above
             let session = frost.start_sign_session(&frost_keys[signer_indexes[0] as usize], recieved_nonces.clone(), Message::plain("test", b"test"));
             let combined_sig = frost.combine_signature_shares(&frost_keys[signer_indexes[0] as usize], &session, signatures);
