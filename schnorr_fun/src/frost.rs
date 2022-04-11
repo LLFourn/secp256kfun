@@ -140,7 +140,6 @@ impl<Z> PointPoly<Z> {
     /// Combine a vector of point polynomials into a joint polynomial.
     fn combine(mut polys: impl Iterator<Item = Self>) -> PointPoly<Zero> {
         let mut combined_poly = polys
-            // TODO
             .next()
             .expect("cannot combine empty list of polys")
             .0
@@ -279,7 +278,6 @@ impl FrostKey {
     /// Returns a new FrostKey with the same parties but a different aggregated public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
-    /// // TODO ^ CHECK THIS
     pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let mut tweak = s!(self.tweak + tweak).mark::<Public>();
         let (joint_public_key, tweaked_needs_negation) = g!(self.joint_public_key + tweak * G)
@@ -469,9 +467,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 
 /// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
 pub fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
-    // TODO
-    // Change to one inverse
-    // https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+    // TODO change to a single inverse https://people.maths.ox.ac.uk/trefethen/barycentric.pdf (?)
     let x_j = Scalar::from(x_j).expect_nonzero("target xcoord can not be zero");
     x_ms.iter()
         .map(|x_m| Scalar::from(*x_m).expect_nonzero("index can not be zero"))
@@ -799,20 +795,17 @@ mod test {
                     }
 
                     // Create Frost signing session
+                    let signing_session = frost.start_sign_session(&frost_keys[signer_indexes[0]], recieved_nonces.clone(), Message::plain("test", b"test"));
+
                     let mut signatures = vec![];
                     for i in 0..signer_indexes.len() {
                         let signer_index = signer_indexes[i] as usize;
                         let session = frost.start_sign_session(&frost_keys[signer_index], recieved_nonces.clone(), Message::plain("test", b"test"));
-                        dbg!(nonces[i].clone());
                         let sig = frost.sign(&frost_keys[signer_index], &session, signer_index as u32, &secret_shares[signer_index], nonces[i].clone());
                         assert!(frost.verify_signature_share(&frost_keys[signer_index], &session, signer_index as u32, sig));
                         signatures.push(sig);
                     }
-
-                    // TODO get this session from loop above
-                    // assert same and use one
-                    let session = frost.start_sign_session(&frost_keys[signer_indexes[0] as usize], recieved_nonces.clone(), Message::plain("test", b"test"));
-                    let combined_sig = frost.combine_signature_shares(&frost_keys[signer_indexes[0] as usize], &session, signatures);
+                    let combined_sig = frost.combine_signature_shares(&frost_keys[signer_indexes[0] as usize], &signing_session, signatures);
 
                     assert!(frost.schnorr.verify(
                         &frost_keys[signer_indexes[0] as usize].joint_public_key,
