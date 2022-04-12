@@ -263,7 +263,7 @@ impl FrostKey {
         self.joint_public_key
     }
 
-    /// Tweak the aggregated key with a scalar so that the resulting key is equal to the
+    /// Tweak the joint FROST public key with a scalar so that the resulting key is equal to the
     /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
     /// the original set of signers to sign under the new key.
     ///
@@ -273,27 +273,39 @@ impl FrostKey {
     /// XOR of existing FROST key needs_negation and new tweaked key needs_negation.
     /// If both need negation, they will cancel out.
     ///
+    /// Public key
+    ///     X = (b*x) * G
+    /// where b = 1 or -1
+    /// For a tweak t: X' = X + t * G.
+    /// If X' needs negation then we need secret
+    ///     -(b*x + t) = -b*x - t
+    /// So new b = -b and t = -t.
+    /// If X' doesn't need negation, leave b as is.
+    /// i.e. previous needs_negation XOR new needs_negation.
+    ///
     /// ## Return value
     ///
     /// Returns a new FrostKey with the same parties but a different aggregated public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let mut tweak = s!(self.tweak + tweak).mark::<Public>();
-        let (joint_public_key, tweaked_needs_negation) = g!(self.joint_public_key + tweak * G)
+        let new_tweak = s!(0 + tweak).mark::<Public>();
+        let (joint_public_key, tweaked_needs_negation) = g!(self.joint_public_key + new_tweak * G)
             .mark::<NonZero>()?
             .into_point_with_even_y();
+
+        let mut tweak = s!(self.tweak + tweak).mark::<Public>();
         tweak.conditional_negate(tweaked_needs_negation);
 
-        let combined_needs_negation = self.needs_negation ^ tweaked_needs_negation;
+        let updated_needs_negation = self.needs_negation ^ tweaked_needs_negation;
 
-        // Return the new FrostKey including the tweak and updated needs_negation
+        // Return the new FrostKey including the new tweak and updated needs_negation
         Some(FrostKey {
             joint_public_key,
             verification_shares: self.verification_shares.clone(),
             threshold: self.threshold.clone(),
             tweak,
-            needs_negation: combined_needs_negation,
+            needs_negation: updated_needs_negation,
         })
     }
 
@@ -872,6 +884,23 @@ mod test {
         let tweak = if use_tweak {
             Scalar::from_bytes([
                 0xE8, 0xF7, 0x91, 0xFF, 0x92, 0x25, 0xA2, 0xAF, 0x01, 0x02, 0xAF, 0xFF, 0x4A, 0x9A,
+                0x72, 0x3D, 0x96, 0x12, 0xA6, 0x82, 0xA2, 0x5E, 0xBE, 0x79, 0x80, 0x2B, 0x26, 0x3C,
+                0xDF, 0xCD, 0x83, 0xBB,
+            ])
+            .unwrap()
+        } else {
+            Scalar::zero()
+        };
+
+        frost_key = frost_key.tweak(tweak.clone()).expect("tweak worked");
+        jk2 = jk2.tweak(tweak.clone()).expect("tweak worked");
+        jk3 = jk3.tweak(tweak).expect("tweak worked");
+
+        dbg!();
+
+        let tweak = if use_tweak {
+            Scalar::from_bytes([
+                0xE8, 0xF7, 0x92, 0xFF, 0x92, 0x25, 0xA2, 0xAF, 0x01, 0x02, 0xAF, 0xFF, 0x4A, 0x9A,
                 0x72, 0x3D, 0x96, 0x12, 0xA6, 0x82, 0xA2, 0x5E, 0xBE, 0x79, 0x80, 0x2B, 0x26, 0x3C,
                 0xDF, 0xCD, 0x83, 0xBB,
             ])
