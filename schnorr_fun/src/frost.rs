@@ -404,8 +404,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
             .ok_or(NewKeyGenError::ZeroFrostKey)?
             .into_point_with_even_y();
 
-        // TODO set keygen id
-        let keygen_id = Scalar::from_hash(self.keygen_id_hash.clone().add(joint_public_key));
+        let mut keygen_hash = self.keygen_id_hash.clone();
+        for poly in point_polys.clone() {
+            for point in poly.0.iter() {
+                keygen_hash = keygen_hash.add(point);
+            }
+        }
+        let keygen_id = Scalar::from_hash(keygen_hash);
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
@@ -672,13 +677,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Generate nonces for secret shares
     ///
-    /// It is very important to carefully consider the implications of your choice of underlying
-    /// [`NonceGen`].
+    /// It is very important that you use a unique `sid` for this signing session and to also carefully
+    /// consider the implications of your choice of underlying [`NonceGen`].
     ///
-    /// If you are generating nonces prior to KeyGen completion, use the static first coefficient
-    /// for your `secret`. Otherwise you can use your secret share of the joint FROST key.
+    /// When choosing a `secret` to use, if you are generating nonces prior to KeyGen completion,
+    /// use the static first coefficient of your polynomial.
+    /// Otherwise you can use your secret share of the joint FROST key.
     ///
-    /// The application must decide upon a unique `sid` (session id) for this FROST multisignature.
+    /// The application must decide upon a unique `sid` for this FROST multisignature.
     /// For example, the concatenation of: my_signing_index, joint_key, verfication_shares
     ///
     /// ## Return Value
@@ -799,8 +805,19 @@ mod test {
             if signer_indexes.len() < threshold as usize {
                 dbg!("pseudorandomly chose less signers than threshold.. skipping");
             } else {
-                let sid = frost_keys[0].joint_public_key.to_bytes();
-                let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i| frost.gen_nonce(&secret_shares[*i as usize], &sid)).collect();
+                let verification_shares_bytes: Vec<_> = frost_keys[signer_indexes[0]]
+                    .verification_shares
+                    .iter()
+                    .map(|share| share.to_bytes())
+                    .collect();
+
+                let sid = [
+                    frost_keys[signer_indexes[0]].joint_public_key.to_bytes().as_slice(),
+                    verification_shares_bytes.concat().as_slice(),
+                    b"frost-prop-test".as_slice(),
+                ]
+                .concat();
+                let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i| frost.gen_nonce(&secret_shares[*i as usize], &[sid.as_slice(), [*i as u8].as_slice()].concat())).collect();
                 // dbg!(&nonces);
 
                 let mut recieved_nonces: Vec<_> = vec![];
@@ -913,15 +930,31 @@ mod test {
         jk2 = jk2.tweak(tweak.clone()).expect("tweak worked");
         jk3 = jk3.tweak(tweak).expect("tweak worked");
 
-        // TODO USE PROPER SID
-        // public => [ b"r2-frost", my_index.to_be_bytes(), frost_key.joint_public_key, &frost_key.verification_shares[..], sid]
-        let sid = frost_key.joint_public_key.to_bytes();
-        // for share in frost_key.verification_shares {
-        //     // [sid, share].concat(share.to_bytes());
-        // }
+        let verification_shares_bytes: Vec<_> = frost_key
+            .verification_shares
+            .iter()
+            .map(|share| share.to_bytes())
+            .collect();
 
-        let nonce1 = frost.gen_nonce(&secret_share1, &sid);
-        let nonce3 = frost.gen_nonce(&secret_share3, &sid);
+        // Create unique session IDs for these signing sessions
+        let sid1 = [
+            frost_key.joint_public_key.to_bytes().as_slice(),
+            verification_shares_bytes.concat().as_slice(),
+            b"frost-end-to-end-test-1".as_slice(),
+            b"0".as_slice(),
+        ]
+        .concat();
+
+        let sid2 = [
+            frost_key.joint_public_key.to_bytes().as_slice(),
+            verification_shares_bytes.concat().as_slice(),
+            b"frost-end-to-end-test-2".as_slice(),
+            b"2".as_slice(),
+        ]
+        .concat();
+
+        let nonce1 = frost.gen_nonce(&secret_share1, &sid1);
+        let nonce3 = frost.gen_nonce(&secret_share3, &sid2);
         let nonces = vec![(0, nonce1.public()), (2, nonce3.public())];
         let nonces2 = vec![(0, nonce1.public()), (2, nonce3.public())];
 
