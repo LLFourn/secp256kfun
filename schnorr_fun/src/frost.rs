@@ -340,9 +340,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag + NonceGen> Frost<H, NG> {
         scalar_poly: ScalarPoly,
     ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
         let key_pair = self.schnorr.new_keypair(scalar_poly.0[0].clone());
-        let pop = self
-            .schnorr
-            .sign(&key_pair, Message::<Public>::plain("frost-pop", b""));
+        let pop = self.schnorr.sign(
+            &key_pair,
+            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id.to_bytes()),
+        );
 
         let shares = (1..=KeyGen.point_polys.len())
             .map(|i| scalar_poly.eval(i as u32))
@@ -358,12 +359,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns `bool` true if the proof of possession matches this point poly,
-    fn verify_pop(&self, point_poly: &PointPoly, pop: Signature) -> bool {
+    fn verify_pop(&self, KeyGen: &KeyGen, point_poly: &PointPoly, pop: Signature) -> bool {
         let (even_poly_point, _) = point_poly.0[0].into_point_with_even_y();
 
         self.schnorr.verify(
             &even_poly_point,
-            Message::<Public>::plain("frost-pop", b""),
+            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id.to_bytes()),
             &pop,
         )
     }
@@ -460,7 +461,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
             .zip(proofs_of_possession)
             .enumerate()
         {
-            if !self.verify_pop(poly, pop) {
+            if !self.verify_pop(&KeyGen, poly, pop) {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(i));
             }
         }
