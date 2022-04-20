@@ -21,7 +21,7 @@ use secp256kfun::{
     derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
-    hash::HashAdd,
+    hash::{HashAdd, Tagged},
     marker::*,
     nonce::{AddTag, NonceGen},
     rand_core, s, Point, Scalar, G,
@@ -35,12 +35,12 @@ pub struct Frost<H, NG: AddTag> {
     keygen_id_hash: H,
 }
 
-impl<H: Clone, NG: AddTag + Clone> Frost<H, NG> {
+impl<H: Tagged, NG: AddTag + Clone> Frost<H, NG> {
     /// Generate a new Frost context from a Schnorr context.
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self {
             schnorr: schnorr.clone(),
-            keygen_id_hash: schnorr.challenge_hash,
+            keygen_id_hash: H::default().tagged(b"frost/keygenid"),
         }
     }
 }
@@ -173,7 +173,7 @@ impl<Z> PointPoly<Z> {
 #[derive(Clone, Debug)]
 pub struct KeyGen {
     point_polys: Vec<PointPoly>,
-    keygen_id: Scalar,
+    keygen_id: [u8; 32],
     frost_key: FrostKey,
 }
 
@@ -342,7 +342,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag + NonceGen> Frost<H, NG> {
         let key_pair = self.schnorr.new_keypair(scalar_poly.0[0].clone());
         let pop = self.schnorr.sign(
             &key_pair,
-            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id.to_bytes()),
+            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id),
         );
 
         let shares = (1..=KeyGen.point_polys.len())
@@ -364,7 +364,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 
         self.schnorr.verify(
             &even_poly_point,
-            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id.to_bytes()),
+            Message::<Public>::plain("frost-pop", &KeyGen.keygen_id),
             &pop,
         )
     }
@@ -381,8 +381,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
     ///
     /// Returns a KeyGen
     pub fn new_keygen(&self, point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
+        let len_first_poly = point_polys[0].poly_len();
         {
-            let len_first_poly = point_polys[0].poly_len();
             if let Some((i, _)) = point_polys
                 .iter()
                 .enumerate()
@@ -406,12 +406,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
             .into_point_with_even_y();
 
         let mut keygen_hash = self.keygen_id_hash.clone();
-        for poly in point_polys.clone() {
+        keygen_hash.update((len_first_poly as u32).to_be_bytes());
+        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
+        for poly in &point_polys {
             for point in poly.0.iter() {
-                keygen_hash = keygen_hash.add(point);
+                keygen_hash.update(point.to_bytes());
             }
         }
-        let keygen_id = Scalar::from_hash(keygen_hash);
+        let keygen_id = keygen_hash.finalize().into();
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
