@@ -8,51 +8,41 @@
 //! // use sha256 with deterministic nonce generation
 //! let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
 //! // create a keylist
-//! # use schnorr_fun::fun::Scalar;
-//! # let kp1 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+//! use schnorr_fun::fun::Scalar;
+//! let kp1 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+//! let public_key1 = kp1.public_key();
+//! # let kp2 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+//! # let public_key2 = kp2.public_key();
 //! # let kp3 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-//! # let p1_pubkey = kp1.public_key();
-//! # let p3_pubkey = kp3.public_key();
-//! # let my_keypair = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-//! # let _keylist = musig.new_keylist(vec![
-//! #     Party::Local(kp1),
-//! #     Party::Remote(my_keypair.public_key()),
-//! #     Party::Local(kp3),
-//! # ]);
+//! # let public_key3 = kp3.public_key();
+//! // recieve the public keys of all other participants to form the aggregate key.
 //! let keylist = musig.new_keylist(vec![
-//!     Party::Remote(p1_pubkey),
-//!     Party::Local(my_keypair),
-//!     Party::Remote(p3_pubkey),
+//!     p1_public_key,
+//!     p2_public_key,
+//!     p3_public_key,
 //! ]);
-//! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
-//! // generate our aggregate key
 //! let agg_key = keylist.agg_public_key();
-//! // start a MuSig2 session by first exchanging nonces.
-//! // Since we're using deterministic nonces it's important we only use the session id once
-//! let my_nonces = musig.gen_nonces(&keylist, b"session-id-1337");
-//! // send this to the other parties
-//! let my_public_nonce = my_nonces[0].public();
-//! # let nonces = musig.gen_nonces(&_keylist, b"session-id-1337");
-//! # let p1_nonce = nonces[0].public();
-//! # let p3_nonce = nonces[1].public();
-//! # let mut _session = musig.start_sign_session_deterministic(&_keylist, my_nonces.iter().map(|n| n.public()), b"session-id-1337", message).unwrap();
-//! // Once you've got the nonces from the other two (p1_nonce and p3_nonce) you can start the signing session.
-//! let mut session = musig.start_sign_session(&keylist, my_nonces, [p1_nonce, p3_nonce], message).unwrap();
-//! // but since we're using deterministic nonce generation we can just remember the session id.
-//! // You should guarantee that this is not called ever again with the same session id!!!!
-//! let mut session = musig.start_sign_session_deterministic(&keylist, [p1_nonce, p3_nonce], b"session-id-1337", message).unwrap();
+//!
+//! // create unique nonce, and send public nonce to other parties
+//! let p1_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
+//! let p1_public_nonce = p1_nonce.public;
+//! # let p2_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
+//! # let p3_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
+//! let nonces = vec![p1_public_nonce, p2_public_nonce, p3_public_nonce];
+//! // Once you've got the nonces from the other two (p2_nonce and p3_nonce) you can start the signing session.
+//! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
+//! let mut session = musig.start_sign_session(&keylist, nonces, message).unwrap();
 //! // sign with our (single) local keypair
-//! let my_sig = musig.sign_all(&keylist, &mut session)[0];
-//! # let _sigs = musig.sign_all(&_keylist, &mut _session);
-//! # let p1_sig = _sigs[0];
-//! # let p3_sig = _sigs[1];
+//! let p1_sig = musig.sign(&keylist, 0, kp1.sk, p1_nonce, &session);
+//! # let p2_sig = musig.sign(&keylist, 1, kp2.sk, p2_nonce, &session);
+//! # let p3_sig = musig.sign(&keylist, 2, kp3.sk, p3_nonce, &session);
 //! // receive p1_sig and p3_sig from somewhere and check they're valid
-//! assert!(musig.verify_partial_signature(&keylist, &session, 0, p1_sig));
+//! assert!(musig.verify_partial_signature(&keylist, &session, 1, p2_sig));
 //! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
 //! // combine them with ours into the final signature
-//! let sig = musig.combine_partial_signatures(&keylist, &session, [my_sig, p1_sig, p3_sig]);
+//! let sig = musig.combine_partial_signatures(&keylist, &session, [p1_sig, p2_sig, p3_sig]);
 //! // check it's a valid normal Schnorr signature
-//! musig.schnorr.verify(&keylist.agg_verification_key(), message, &sig);
+//! musig.schnorr.verify(&agg_key, message, &sig);
 //! ```
 //!
 //! ## Description
@@ -108,26 +98,6 @@ impl<H: Tagged, S: Default> Default for MuSig<H, S> {
     }
 }
 
-impl<H: Tagged> MuSig<H, ()> {
-    /// Creates a MuSig context that can only do key aggregation.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use schnorr_fun::fun::{ XOnly };
-    /// # let key1 = XOnly::random(&mut rand::thread_rng());
-    /// # let key2 = XOnly::random(&mut rand::thread_rng());
-    /// use schnorr_fun::musig::{MuSig, Party};
-    /// use sha2::Sha256;
-    /// let musig = MuSig::<Sha256>::keyagg_only();
-    /// let keylist = musig.new_keylist(vec![Party::Remote(key1), Party::Remote(key2)]);
-    /// println!("{:?}", keylist.agg_public_key())
-    /// ```
-    pub fn keyagg_only() -> Self {
-        Self::_new(())
-    }
-}
-
 impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generate a new MuSig context from a Schnorr context.
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
@@ -150,8 +120,9 @@ pub struct KeyList {
     coefs: Vec<Scalar<Public>>,
     /// The aggregate key
     agg_key: Point<EvenY>,
-    /// The
+    /// The tweak on the aggregate key
     tweak: Scalar<Public, Zero>,
+    /// Whether this aggregate key needs negation.
     needs_negation: bool,
 }
 
@@ -169,17 +140,31 @@ impl KeyList {
         self.parties.iter().map(|xonly| *xonly)
     }
 
-    /// *Tweak* the aggregated key with a scalar so that the resulting key is equal to the existing
-    /// key plus `tweak * G`. The tweak mutates the public key while still allowing the original set
-    /// of signers to sign under the new key.
+    /// Tweak the aggregate MuSig public key with a scalar so that the resulting key is equal to the
+    /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
+    /// the original set of signers to sign under the new key.
     ///
     /// This is how you embed a taproot commitment into a key.
     ///
+    /// Also updates whether the MuSig KeyList needs negation.
+    /// XOR of existing MuSig KeyList needs_negation and new tweaked key needs_negation.
+    /// If both need negation, they will cancel out.
+    ///
+    /// Public key
+    ///     X = (b*x) * G
+    /// where b = 1 or -1
+    /// For a tweak t: X' = X + t * G.
+    /// If X' needs negation then we need secret
+    ///     -(b*x + t) = -b*x - t
+    /// So new b = -b and t = -t.
+    /// If X' doesn't need negation, leave b as is.
+    /// i.e. previous needs_negation XOR new needs_negation.
+    ///
     /// ## Return value
     ///
-    /// Returns a new keylist with the same parties but a different aggregated public key. In the
-    /// unusual case that the tweak is exactly equal to the negation of the aggregated secret key
-    /// it returns `None`.
+    /// Returns a new MuSig KeyList with the same parties but a different aggregated public key.
+    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
+    /// secret key it returns `None`.
     pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let (agg_key, needs_negation) = g!(self.agg_key + tweak * G)
             .mark::<NonZero>()?
@@ -220,15 +205,15 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// use sha2::Sha256;
     /// let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
     /// let my_keypair = musig.schnorr.new_keypair(my_secret_key);
+    /// let my_public_key = my_keypair.public_key();
     /// // Note the keys have to come in the same order on the other side!
     /// let keylist = musig.new_keylist(vec![
-    ///     Party::Local(my_keypair),
-    ///     Party::Remote(their_public_key),
+    ///     their_public_key,
+    ///     my_public_key,
     /// ]);
     /// ```
     pub fn new_keylist(&self, parties: Vec<XOnly>) -> KeyList {
         let keys = parties.clone();
-
         let coeff_hash = {
             let L = self.pk_hash.clone().add(&keys[..]).finalize();
             self.coeff_hash.clone().add(L.as_slice())
@@ -267,6 +252,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>> {
+    /// TODO
     /// Generate nonces for your local keys in keylist.
     ///
     /// It is very important to carefully consider the implications of your choice of underlying
@@ -340,7 +326,7 @@ pub struct Adaptor {
 ///
 /// ## Security
 ///
-/// This struct has **secret nonces** in it up until you call [`clear_secrets`] or [`sign_all`]. If
+/// This struct has **secret nonces** in it up until you call [`clear_secrets`] or [`sign`]. If
 /// a malicious party gains access to it before and you generate a partial signature with this session they
 /// will be able to recover your secret key. If this is a concern simply avoid serializing this
 /// struct (until you've cleared it) and recreate it only when you need it.
@@ -358,7 +344,6 @@ pub struct Adaptor {
 pub struct SignSession<T = Ordinary> {
     b: Scalar<Public, Zero>,
     c: Scalar<Public, Zero>,
-    // local_secret_nonce: NonceKeyPair,
     public_nonces: Vec<Nonce>,
     R: Point<EvenY>,
     nonce_needs_negation: bool,
@@ -368,8 +353,7 @@ pub struct SignSession<T = Ordinary> {
 impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Start a signing session.
     ///
-    /// You must provide you local secret nonces (the public portion must be shared with the other signer(s)).
-    /// If you are using deterministic nonce generations it's possible to use [`start_sign_session_deterministic`] instead.
+    /// You must provide the public nonces for this signing session in the correct order.
     ///
     /// ## Return Value
     ///
@@ -379,14 +363,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// # Panics
     ///
-    /// Panics if number of local or remote nonces passed in does not align with the parties in
-    /// `keylist`.
-    ///
-    /// [`start_sign_session_deterministic`]: Self::start_sign_session_deterministic
+    /// Panics if number of nonces does not align with the parties in `keylist`.
     pub fn start_sign_session(
         &self,
         keylist: &KeyList,
-        // local_secret_nonce: NonceKeyPair,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
     ) -> Option<SignSession> {
@@ -395,7 +375,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         Some(SignSession {
             b,
             c,
-            // local_secret_nonce,
             public_nonces,
             R,
             nonce_needs_negation,
@@ -492,11 +471,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
             R.0[1] = R.0[1].conditional_negate(r_needs_negation);
         }
 
-        // // let local_secret_nonce = local_nonce
-
-        // secret[0].conditional_negate(r_needs_negation);
-        // secret[1].conditional_negate(r_needs_negation);
-
         let c = self
             .schnorr
             .challenge(R.to_xonly(), keylist.agg_public_key(), message);
@@ -504,12 +478,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         Some((b, c, Rs, R, r_needs_negation))
     }
 
-    /// Generates partial signatures (or partial encrypted signatures depending on `T`) under each of the `Local` entries in `keylist`.
+    /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
     ///
-    /// The order of the partial signatures returned is the order of them in the keylist.
-    ///
+    /// TODO
     /// This can only be called once per session as it clears the session (see also [`clear_secrets`]).
-    /// Calling `sign_all` again will return an empty vector.
+    /// Calling `sign` again will return an empty vector.
     ///
     /// [`clear_secrets`]: SignSession::clear_secrets
     pub fn sign<T>(
@@ -659,7 +632,6 @@ mod test {
                 keypair3.public_key(),
             ]);
 
-
             for tweak in [tweak1, tweak2] {
                 if let Some(tweak) = tweak {
                     keylist = keylist.tweak(tweak).unwrap();
@@ -732,7 +704,6 @@ mod test {
             assert!(musig
                         .schnorr
                         .verify(&keylist.agg_verification_key(), message, &sig_p3));
-
         }
     }
 }
