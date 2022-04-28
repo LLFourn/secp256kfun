@@ -3,7 +3,7 @@
 //! ## Synopsis
 //!
 //! ```
-//! use schnorr_fun::{musig::{MuSig, Party}, Schnorr, Message, nonce::Deterministic};
+//! use schnorr_fun::{musig::MuSig, Schnorr, Message, nonce::Deterministic};
 //! use sha2::Sha256;
 //! // use sha256 with deterministic nonce generation
 //! let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
@@ -17,32 +17,35 @@
 //! # let public_key3 = kp3.public_key();
 //! // recieve the public keys of all other participants to form the aggregate key.
 //! let keylist = musig.new_keylist(vec![
-//!     p1_public_key,
-//!     p2_public_key,
-//!     p3_public_key,
+//!     public_key1,
+//!     public_key2,
+//!     public_key3,
 //! ]);
 //! let agg_key = keylist.agg_public_key();
 //!
-//! // create unique nonce, and send public nonce to other parties
-//! let p1_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
-//! let p1_public_nonce = p1_nonce.public;
-//! # let p2_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
-//! # let p3_nonce = musig.gen_nonces(&keypair.sk, &keylist, b"session-id-1337");
+//! // create unique nonce, and send public nonce to other parties.
+//! let p1_nonce = musig.gen_nonces(kp1.secret_key(), &keylist, b"session-id-1337");
+//! let p1_public_nonce = p1_nonce.public();
+//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), &keylist, b"session-id-1337");
+//! # let p2_public_nonce = p2_nonce.public();
+//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), &keylist, b"session-id-1337");
+//! # let p3_public_nonce = p3_nonce.public();
+//! // collect the public nonces from the other two parties
 //! let nonces = vec![p1_public_nonce, p2_public_nonce, p3_public_nonce];
-//! // Once you've got the nonces from the other two (p2_nonce and p3_nonce) you can start the signing session.
 //! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
+//! // start the signing session
 //! let mut session = musig.start_sign_session(&keylist, nonces, message).unwrap();
 //! // sign with our (single) local keypair
-//! let p1_sig = musig.sign(&keylist, 0, kp1.sk, p1_nonce, &session);
-//! # let p2_sig = musig.sign(&keylist, 1, kp2.sk, p2_nonce, &session);
-//! # let p3_sig = musig.sign(&keylist, 2, kp3.sk, p3_nonce, &session);
+//! let p1_sig = musig.sign(&keylist, 0, kp1.secret_key(), p1_nonce, &session);
+//! # let p2_sig = musig.sign(&keylist, 1, kp2.secret_key(), p2_nonce, &session);
+//! # let p3_sig = musig.sign(&keylist, 2, kp3.secret_key(), p3_nonce, &session);
 //! // receive p1_sig and p3_sig from somewhere and check they're valid
 //! assert!(musig.verify_partial_signature(&keylist, &session, 1, p2_sig));
 //! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
 //! // combine them with ours into the final signature
 //! let sig = musig.combine_partial_signatures(&keylist, &session, [p1_sig, p2_sig, p3_sig]);
 //! // check it's a valid normal Schnorr signature
-//! musig.schnorr.verify(&agg_key, message, &sig);
+//! musig.schnorr.verify(&keylist.agg_verification_key(), message, &sig);
 //! ```
 //!
 //! ## Description
@@ -196,7 +199,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// ```
     /// use schnorr_fun::{
     ///     fun::{Point, Scalar, XOnly},
-    ///     musig::{MuSig, Party},
+    ///     musig::MuSig,
     ///     nonce::Deterministic,
     ///     Schnorr,
     /// };
