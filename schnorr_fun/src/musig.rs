@@ -121,11 +121,11 @@ pub struct KeyList {
     /// The coefficients of each key
     coefs: Vec<Scalar<Public>>,
     /// The aggregate key
-    agg_key: Point<EvenY>,
+    agg_key: Point<Normal>,
     /// The tweak on the aggregate key
     tweak: Scalar<Public, Zero>,
     /// Whether this aggregate key needs negation.
-    needs_negation: bool,
+    accum_needs_negation: bool,
 }
 
 impl KeyList {
@@ -135,7 +135,8 @@ impl KeyList {
     }
     /// The aggregated key for the keylist as a `Point`.
     pub fn agg_verification_key(&self) -> Point<EvenY> {
-        self.agg_key
+        let (k, _) = self.agg_key.into_point_with_even_y();
+        k
     }
     /// An iterator over the **public keys** of each party in the keylist.
     pub fn keys(&self) -> impl Iterator<Item = XOnly> + '_ {
@@ -147,23 +148,48 @@ impl KeyList {
     /// the original set of signers to sign under the new key.
     ///
     /// This is how you embed a taproot commitment into a key.
-    pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let (agg_key, needs_negation) = g!(self.agg_key + tweak * G)
-            .mark::<NonZero>()?
-            .into_point_with_even_y();
+    ///
+    /// ## Return value
+    ///
+    /// Returns a new MuSig KeyList with the same parties but a different aggregated public key.
+    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
+    /// secret key it returns `None`.
+    pub fn tweak(
+        self,
+        tweak: Scalar<impl Secrecy, impl ZeroChoice>,
+        is_xonly: bool,
+    ) -> Option<Self> {
+        // An accum_needs_negation is calculated for the keylist to track negation of secrets
+        // Keys may be negated if the tweak is x-only, which then may update accum_needs_negation
+        // The overall negation for signing is the combination
+        //      my_key_needs_negation ^ agg_key_needs_negation ^ keylist.accum_needs_negation;
+        // See [`MuSig::sign`]
 
-        // Store accumulated tweak
-        let mut tweak = s!(self.tweak + tweak).mark::<Public>();
-        tweak.conditional_negate(needs_negation);
+        // Do not negate unless tweak is_xonly and current agg key needs negation
+        // If the tweak is not x-only then do not negate
+        let (_, prev_agg_needs_negation) = self.agg_key.mark::<NonZero>()?.into_point_with_even_y();
+        let g_negation = is_xonly & prev_agg_needs_negation;
+        let maybe_negated_agg_key = self.agg_key.conditional_negate(g_negation);
 
-        let needs_negation = self.needs_negation ^ needs_negation;
+        // new aggregate key with tweak
+        let agg_key = g!(maybe_negated_agg_key + tweak * G)
+            .normalize()
+            .mark::<NonZero>()?;
+
+        // store accumulated tweak
+        let mut existing_tweak = self.tweak.clone();
+        existing_tweak.conditional_negate(g_negation);
+        let tweak = s!(existing_tweak + tweak).mark::<Public>();
+
+        // update accum_needs_negation
+        let accum_needs_negation = self.accum_needs_negation ^ g_negation;
 
         Some(KeyList {
             parties: self.parties.clone(),
             coefs: self.coefs.clone(),
             agg_key,
             tweak,
-            needs_negation,
+            accum_needs_negation,
         })
     }
 }
@@ -216,16 +242,15 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
             .collect::<Vec<_>>();
         let points = keys.into_iter().map(|x| x.to_point()).collect::<Vec<_>>();
 
-        let (agg_key, needs_negation) = crate::fun::op::lincomb(coefs.iter(), points.iter())
-            .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero")
-            .into_point_with_even_y();
+        let agg_key = crate::fun::op::lincomb(coefs.iter(), points.iter())
+            .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero");
 
         KeyList {
             parties,
             coefs,
-            agg_key,
+            agg_key: agg_key.mark::<Normal>(),
             tweak: Scalar::zero().mark::<Public>(),
-            needs_negation,
+            accum_needs_negation: false,
         }
     }
 }
@@ -462,8 +487,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         let b = session.b;
 
         let x = secret;
+        let X = g!(secret * G).normalize();
         let mut a = keylist.coefs[my_index as usize];
-        a.conditional_negate(keylist.needs_negation);
+        let (_, my_key_needs_negation) = X.into_point_with_even_y();
+        let (_, agg_key_needs_negation) = keylist.agg_key.into_point_with_even_y();
+
+        let total_negation =
+            my_key_needs_negation ^ agg_key_needs_negation ^ keylist.accum_needs_negation;
+
+        a.conditional_negate(total_negation);
         let [mut r1, mut r2] = local_secret_nonce.secret.clone();
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
@@ -488,9 +520,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         let c = session.c;
         let b = session.b;
         let s = &partial_sig;
-        let mut a = keylist.coefs[index].clone();
-        a.conditional_negate(keylist.needs_negation);
-        let X = keylist.keys().nth(index).unwrap().to_point();
+        let a = keylist.coefs[index].clone();
+
+        let (_, agg_needs_negation) = keylist.agg_key.into_point_with_even_y();
+
+        let X = keylist
+            .keys()
+            .nth(index)
+            .unwrap()
+            .to_point()
+            .conditional_negate(keylist.accum_needs_negation ^ agg_needs_negation);
         let [R1, R2] = &session.public_nonces[index].0;
         g!((c * a) * X + R1 + b * R2 - s * G).is_zero()
     }
@@ -540,7 +579,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         session: &SignSession<T>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> (Point<EvenY>, Scalar<Public, Zero>) {
-        let ck = s!(session.c * keylist.tweak);
+        let (_, tweaked_key_needs_negation) = keylist.agg_key.into_point_with_even_y();
+        let mut negated_tweak = keylist.tweak.clone();
+
+        let total_negation = tweaked_key_needs_negation;
+        negated_tweak.conditional_negate(total_negation);
+
+        let ck = s!(session.c * negated_tweak);
         let sum_s = partial_sigs
             .into_iter()
             .reduce(|acc, s| s!(acc + s).mark::<Public>())
@@ -599,9 +644,9 @@ mod test {
 
             for tweak in [tweak1, tweak2] {
                 if let Some(tweak) = tweak {
-                    keylist1 = keylist1.tweak(tweak).unwrap();
-                    keylist2 = keylist2.tweak(tweak).unwrap();
-                    keylist3 = keylist3.tweak(tweak).unwrap();
+                    keylist1 = keylist1.tweak(tweak, true).unwrap();
+                    keylist2 = keylist2.tweak(tweak, true).unwrap();
+                    keylist3 = keylist3.tweak(tweak, true).unwrap();
                 }
             }
 
@@ -965,6 +1010,210 @@ mod test {
                 .unwrap();
             let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[2]);
+        }
+    }
+
+    #[test]
+    fn test_tweak_vectors() {
+        let X1 = XOnly::from_bytes([
+            0xF9, 0x30, 0x8A, 0x01, 0x92, 0x58, 0xC3, 0x10, 0x49, 0x34, 0x4F, 0x85, 0xF8, 0x9D,
+            0x52, 0x29, 0xB5, 0x31, 0xC8, 0x45, 0x83, 0x6F, 0x99, 0xB0, 0x86, 0x01, 0xF1, 0x13,
+            0xBC, 0xE0, 0x36, 0xF9,
+        ])
+        .unwrap();
+        let X2 = XOnly::from_bytes([
+            0xDF, 0xF1, 0xD7, 0x7F, 0x2A, 0x67, 0x1C, 0x5F, 0x36, 0x18, 0x37, 0x26, 0xDB, 0x23,
+            0x41, 0xBE, 0x58, 0xFE, 0xAE, 0x1D, 0xA2, 0xDE, 0xCE, 0xD8, 0x43, 0x24, 0x0F, 0x7B,
+            0x50, 0x2B, 0xA6, 0x59,
+        ])
+        .unwrap();
+
+        let sec_nonce = NonceKeyPair::from_bytes([
+            0x50, 0x8B, 0x81, 0xA6, 0x11, 0xF1, 0x00, 0xA6, 0xB2, 0xB6, 0xB2, 0x96, 0x56, 0x59,
+            0x08, 0x98, 0xAF, 0x48, 0x8B, 0xCF, 0x2E, 0x1F, 0x55, 0xCF, 0x22, 0xE5, 0xCF, 0xB8,
+            0x44, 0x21, 0xFE, 0x61, 0xFA, 0x27, 0xFD, 0x49, 0xB1, 0xD5, 0x00, 0x85, 0xB4, 0x81,
+            0x28, 0x5E, 0x1C, 0xA2, 0x05, 0xD5, 0x5C, 0x82, 0xCC, 0x1B, 0x31, 0xFF, 0x5C, 0xD5,
+            0x4A, 0x48, 0x98, 0x29, 0x35, 0x59, 0x01, 0xF7,
+        ])
+        .unwrap();
+
+        let agg_pubnonce = Nonce::from_bytes([
+            0x02, 0x84, 0x65, 0xFC, 0xF0, 0xBB, 0xDB, 0xCF, 0x44, 0x3A, 0xAB, 0xCC, 0xE5, 0x33,
+            0xD4, 0x2B, 0x4B, 0x5A, 0x10, 0x96, 0x6A, 0xC0, 0x9A, 0x49, 0x65, 0x5E, 0x8C, 0x42,
+            0xDA, 0xAB, 0x8F, 0xCD, 0x61, 0x03, 0x74, 0x96, 0xA3, 0xCC, 0x86, 0x92, 0x6D, 0x45,
+            0x2C, 0xAF, 0xCF, 0xD5, 0x5D, 0x25, 0x97, 0x2C, 0xA1, 0x67, 0x5D, 0x54, 0x93, 0x10,
+            0xDE, 0x29, 0x6B, 0xFF, 0x42, 0xF7, 0x2E, 0xEE, 0xA8, 0xC9,
+        ])
+        .unwrap();
+
+        let sk = Scalar::from_bytes([
+            0x7F, 0xB9, 0xE0, 0xE6, 0x87, 0xAD, 0xA1, 0xEE, 0xBF, 0x7E, 0xCF, 0xE2, 0xF2, 0x1E,
+            0x73, 0xEB, 0xDB, 0x51, 0xA7, 0xD4, 0x50, 0x94, 0x8D, 0xFE, 0x8D, 0x76, 0xD7, 0xF2,
+            0xD1, 0x00, 0x76, 0x71,
+        ])
+        .unwrap()
+        .mark::<NonZero>()
+        .unwrap();
+
+        let tweaks: Vec<Scalar> = vec![
+            Scalar::from_bytes([
+                0xE8, 0xF7, 0x91, 0xFF, 0x92, 0x25, 0xA2, 0xAF, 0x01, 0x02, 0xAF, 0xFF, 0x4A, 0x9A,
+                0x72, 0x3D, 0x96, 0x12, 0xA6, 0x82, 0xA2, 0x5E, 0xBE, 0x79, 0x80, 0x2B, 0x26, 0x3C,
+                0xDF, 0xCD, 0x83, 0xBB,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0xAE, 0x2E, 0xA7, 0x97, 0xCC, 0x0F, 0xE7, 0x2A, 0xC5, 0xB9, 0x7B, 0x97, 0xF3, 0xC6,
+                0x95, 0x7D, 0x7E, 0x41, 0x99, 0xA1, 0x67, 0xA5, 0x8E, 0xB0, 0x8B, 0xCA, 0xFF, 0xDA,
+                0x70, 0xAC, 0x04, 0x55,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0xF5, 0x2E, 0xCB, 0xC5, 0x65, 0xB3, 0xD8, 0xBE, 0xA2, 0xDF, 0xD5, 0xB7, 0x5A, 0x4F,
+                0x45, 0x7E, 0x54, 0x36, 0x98, 0x09, 0x32, 0x2E, 0x41, 0x20, 0x83, 0x16, 0x26, 0xF2,
+                0x90, 0xFA, 0x87, 0xE0,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0x19, 0x69, 0xAD, 0x73, 0xCC, 0x17, 0x7F, 0xA0, 0xB4, 0xFC, 0xED, 0x6D, 0xF1, 0xF7,
+                0xBF, 0x99, 0x07, 0xE6, 0x65, 0xFD, 0xE9, 0xBA, 0x19, 0x6A, 0x74, 0xFE, 0xD0, 0xA3,
+                0xCF, 0x5A, 0xEF, 0x9D,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+        ];
+        let msg = [
+            0xF9, 0x54, 0x66, 0xD0, 0x86, 0x77, 0x0E, 0x68, 0x99, 0x64, 0x66, 0x42, 0x19, 0x26,
+            0x6F, 0xE5, 0xED, 0x21, 0x5C, 0x92, 0xAE, 0x20, 0xBA, 0xB5, 0xC9, 0xD7, 0x9A, 0xDD,
+            0xDD, 0xF3, 0xC0, 0xCF,
+        ];
+
+        let expected: Vec<Scalar> = vec![
+            Scalar::from_bytes([
+                0x5E, 0x24, 0xC7, 0x49, 0x6B, 0x56, 0x5D, 0xEB, 0xC3, 0xB9, 0x63, 0x9E, 0x6F, 0x13,
+                0x04, 0xA2, 0x15, 0x97, 0xF9, 0x60, 0x3D, 0x3A, 0xB0, 0x5B, 0x49, 0x13, 0x64, 0x17,
+                0x75, 0xE1, 0x37, 0x5B,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0x78, 0x40, 0x8D, 0xDC, 0xAB, 0x48, 0x13, 0xD1, 0x39, 0x4C, 0x97, 0xD4, 0x93, 0xEF,
+                0x10, 0x84, 0x19, 0x5C, 0x1D, 0x4B, 0x52, 0xE6, 0x3E, 0xCD, 0x7B, 0xC5, 0x99, 0x16,
+                0x44, 0xE4, 0x4D, 0xDD,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0xC3, 0xA8, 0x29, 0xA8, 0x14, 0x80, 0xE3, 0x6E, 0xC3, 0xAB, 0x05, 0x29, 0x64, 0x50,
+                0x9A, 0x94, 0xEB, 0xF3, 0x42, 0x10, 0x40, 0x3D, 0x16, 0xB2, 0x26, 0xA6, 0xF1, 0x6E,
+                0xC8, 0x5B, 0x73, 0x57,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+            Scalar::from_bytes([
+                0x8C, 0x44, 0x73, 0xC6, 0xA3, 0x82, 0xBD, 0x3C, 0x4A, 0xD7, 0xBE, 0x59, 0x81, 0x8D,
+                0xA5, 0xED, 0x7C, 0xF8, 0xCE, 0xC4, 0xBC, 0x21, 0x99, 0x6C, 0xFD, 0xA0, 0x8B, 0xB4,
+                0x31, 0x6B, 0x8B, 0xC7,
+            ])
+            .unwrap()
+            .mark::<NonZero>()
+            .unwrap(),
+        ];
+
+        let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
+        let keypair = musig.schnorr.new_keypair(sk);
+
+        let (remote_nonce1, remote_nonce2) = (
+            agg_pubnonce,
+            Nonce([-sec_nonce.public.0[0], -sec_nonce.public.0[1]]),
+        );
+        let message = Message::<Public>::raw(&msg);
+
+        {
+            let mut keylist = musig.new_keylist(vec![X1, X2, keypair.pk]);
+            keylist = keylist.tweak(tweaks[0].clone(), true).unwrap();
+            let sign_session = musig
+                .start_sign_session(
+                    &keylist,
+                    vec![
+                        remote_nonce1.clone(),
+                        remote_nonce2.clone(),
+                        sec_nonce.public(),
+                    ],
+                    message,
+                )
+                .unwrap();
+            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            assert_eq!(sig, expected[0]);
+        }
+
+        {
+            let mut keylist = musig.new_keylist(vec![X1, X2, keypair.pk]);
+            keylist = keylist.tweak(tweaks[0].clone(), true).unwrap();
+            let sign_session = musig
+                .start_sign_session(
+                    &keylist,
+                    vec![
+                        remote_nonce1.clone(),
+                        remote_nonce2.clone(),
+                        sec_nonce.public(),
+                    ],
+                    message,
+                )
+                .unwrap();
+            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            assert_eq!(sig, expected[0]);
+        }
+
+        {
+            let mut keylist = musig.new_keylist(vec![X1, X2, keypair.pk]);
+            keylist = keylist.tweak(tweaks[0].clone(), false).unwrap();
+            keylist = keylist.tweak(tweaks[1].clone(), true).unwrap();
+            let sign_session = musig
+                .start_sign_session(
+                    &keylist,
+                    vec![
+                        remote_nonce1.clone(),
+                        remote_nonce2.clone(),
+                        sec_nonce.public(),
+                    ],
+                    message,
+                )
+                .unwrap();
+            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            assert_eq!(sig, expected[2]);
+        }
+
+        {
+            let mut keylist = musig.new_keylist(vec![X1, X2, keypair.pk]);
+            keylist = keylist.tweak(tweaks[0].clone(), true).unwrap();
+            keylist = keylist.tweak(tweaks[1].clone(), false).unwrap();
+            keylist = keylist.tweak(tweaks[2].clone(), true).unwrap();
+            keylist = keylist.tweak(tweaks[3].clone(), false).unwrap();
+
+            let sign_session = musig
+                .start_sign_session(
+                    &keylist,
+                    vec![
+                        remote_nonce1.clone(),
+                        remote_nonce2.clone(),
+                        sec_nonce.public(),
+                    ],
+                    message,
+                )
+                .unwrap();
+            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            assert_eq!(sig, expected[3]);
         }
     }
 }
