@@ -2,7 +2,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 mod against_c_lib {
     use proptest::prelude::*;
-    use secp256k1::{global::SECP256K1 as SECP, PublicKey, SecretKey};
+    use secp256k1::{PublicKey, SecretKey, SECP256K1 as SECP};
     use secp256kfun::{g, marker::*, op::double_mul, s, Scalar, G};
 
     proptest! {
