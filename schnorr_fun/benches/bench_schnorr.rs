@@ -23,13 +23,13 @@ fn sign_schnorr(c: &mut Criterion) {
     }
 
     {
-        use secp256k1::{schnorrsig::KeyPair, Message, Secp256k1};
+        use secp256k1::{KeyPair, Message, Secp256k1};
         let secp = Secp256k1::new();
         let kp = KeyPair::from_secret_key(&secp, SK.clone().into());
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
         group.bench_function("secp::schnorrsig_sign_no_aux_rand", |b| {
             b.iter(|| {
-                secp.schnorrsig_sign_no_aux_rand(&msg, &kp);
+                secp.sign_schnorr_no_aux_rand(&msg, &kp);
             });
         });
     }
@@ -55,14 +55,14 @@ fn verify_schnorr(c: &mut Criterion) {
     }
 
     {
-        use secp256k1::{schnorrsig::*, Message, Secp256k1};
+        use secp256k1::{KeyPair, Message, Secp256k1, XOnlyPublicKey};
         let secp = Secp256k1::new();
         let kp = KeyPair::from_secret_key(&secp, SK.clone().into());
-        let pk = PublicKey::from_keypair(&secp, &kp);
+        let pk = XOnlyPublicKey::from_keypair(&kp);
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
-        let sig = secp.schnorrsig_sign_no_aux_rand(&msg, &kp);
+        let sig = secp.sign_schnorr_no_aux_rand(&msg, &kp);
         group.bench_function("secp::schnorrsig_verify", |b| {
-            b.iter(|| secp.schnorrsig_verify(&sig, &msg, &pk));
+            b.iter(|| secp.verify_schnorr(&sig, &msg, &pk));
         });
     }
 }
