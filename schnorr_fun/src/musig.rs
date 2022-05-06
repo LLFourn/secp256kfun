@@ -884,12 +884,20 @@ mod test {
     use crate::adaptor::Adaptor;
 
     use super::*;
-    use secp256kfun::{nonce::Deterministic, proptest::prelude::*};
+    use secp256kfun::{
+        nonce::Deterministic,
+        proptest::{option, prelude::*},
+    };
     use sha2::Sha256;
 
     proptest! {
         #[test]
-        fn test_end_to_end(sk1 in any::<Scalar>(), sk2 in any::<Scalar>(), sk3 in any::<Scalar>(), tweak in any::<Scalar<Public, Zero>>(), use_tweak in any::<bool>()) {
+        fn test_end_to_end(sk1 in any::<Scalar>(),
+                           sk2 in any::<Scalar>(),
+                           sk3 in any::<Scalar>(),
+                           tweak1 in option::of(any::<Scalar<Public, Zero>>()),
+                           tweak2 in option::of(any::<Scalar<Public, Zero>>()),
+        ) {
             let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
             let musig = MuSig::new(schnorr);
             let keypair1 = musig
@@ -912,10 +920,14 @@ mod test {
                 Party::Remote(keypair3.public_key()),
             ]);
 
-            if use_tweak {
-                keylist_p1 = keylist_p1.tweak(tweak).unwrap();
-                keylist_p2 = keylist_p2.tweak(tweak).unwrap();
+
+            for tweak in [tweak1, tweak2] {
+                if let Some(tweak) = tweak {
+                    keylist_p1 = keylist_p1.tweak(tweak).unwrap();
+                    keylist_p2 = keylist_p2.tweak(tweak).unwrap();
+                }
             }
+
             assert_eq!(keylist_p1.agg_public_key(), keylist_p2.agg_public_key());
 
             let p1_nonces = musig.gen_nonces(&keylist_p1, b"test");
