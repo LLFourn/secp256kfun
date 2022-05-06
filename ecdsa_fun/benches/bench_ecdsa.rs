@@ -20,7 +20,7 @@ fn sign_ecdsa(c: &mut Criterion) {
         let secret_key = SecretKey::from_slice(&SK.to_bytes()[..]).unwrap();
         {
             group.bench_function("secp256k1::ecdsa_sign", |b| {
-                b.iter(|| secp.sign(&Message::from_slice(&MESSAGE[..]).unwrap(), &secret_key))
+                b.iter(|| secp.sign_ecdsa(&Message::from_slice(&MESSAGE[..]).unwrap(), &secret_key))
             });
         }
     }
@@ -44,7 +44,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     }
 
     {
-        use secp256k1::{Message, PublicKey, Secp256k1, SecretKey, Signature};
+        use secp256k1::{ecdsa::Signature, Message, PublicKey, Secp256k1, SecretKey};
         let secp = Secp256k1::new();
         let sig = Signature::from_compact(signature.to_bytes().as_ref()).unwrap();
         let secret_key = SecretKey::from_slice(&SK.to_bytes()[..]).unwrap();
@@ -52,7 +52,7 @@ fn verify_ecdsa(c: &mut Criterion) {
         {
             group.bench_function("secp256k1::ecdsa_verify", |b| {
                 b.iter(|| {
-                    secp.verify(
+                    secp.verify_ecdsa(
                         &Message::from_slice(&MESSAGE[..]).unwrap(),
                         &sig,
                         &public_key,
