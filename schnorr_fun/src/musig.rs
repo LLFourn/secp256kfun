@@ -208,9 +208,8 @@ impl KeyList {
     /// Returns a new keylist with the same parties but a different aggregated public key. In the
     /// unusual case that the tweak is exactly equal to the negation of the aggregated secret key
     /// it returns `None`.
-    pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let new_tweak = s!(0 + tweak).mark::<Public>();
-        let (agg_key, needs_negation) = g!(self.agg_key + new_tweak * G)
+    pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl DecideZero<NonZero>>) -> Option<Self> {
+        let (agg_key, needs_negation) = g!(self.agg_key + tweak * G)
             .mark::<NonZero>()?
             .into_point_with_even_y();
 
