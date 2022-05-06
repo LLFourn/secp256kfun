@@ -33,7 +33,7 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 sha2 = "0.9"
 proptest = "1"
-secp256k1 = { version = "0.21", features = ["std", "global-context-less-secure"]}
+secp256k1 = { version = "0.21.3", features = ["std", "global-context"]}
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 secp256k1 = { default-features = false, version = "0.21", features = ["std"] }

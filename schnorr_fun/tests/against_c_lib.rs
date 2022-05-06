@@ -5,7 +5,7 @@ use schnorr_fun::{
     nonce::Deterministic,
     Message, Schnorr,
 };
-use secp256k1::global::SECP256K1;
+use secp256k1::SECP256K1;
 use sha2::Sha256;
 
 proptest! {
