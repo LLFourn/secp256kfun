@@ -3,7 +3,7 @@ use ecdsa_fun::{
     self,
     fun::{
         hex,
-        secp256k1::{self, Message, PublicKey, SecretKey},
+        secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
         Point, Scalar, TEST_SOUNDNESS,
     },
 };
@@ -27,8 +27,10 @@ fn ecdsa_sign() {
         let message = rand_32_bytes();
         let signature = ecdsa.sign(&secret_key, &message);
         let c_message = Message::from_slice(&message[..]).unwrap();
-        let c_siganture = secp256k1::Signature::from_compact(&signature.to_bytes()).unwrap();
-        assert!(secp.verify(&c_message, &c_siganture, &c_public_key).is_ok());
+        let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
+        assert!(secp
+            .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
+            .is_ok());
     }
 }
 
@@ -45,7 +47,7 @@ fn ecdsa_verify() {
         let public_key = Point::from(c_public_key);
         let message = rand_32_bytes();
         let c_message = Message::from_slice(&message[..]).unwrap();
-        let c_signature = secp.sign(&c_message, &c_secret_key);
+        let c_signature = secp.sign_ecdsa(&c_message, &c_secret_key);
         let signature = ecdsa_fun::Signature::from(c_signature);
         assert!(ecdsa.verify(&public_key, &message, &signature));
     }
@@ -63,7 +65,7 @@ fn ecdsa_verify_high_message() {
         hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
             .unwrap();
     let c_message = Message::from_slice(&message[..]).unwrap();
-    let c_signature = secp.sign(&c_message, &c_secret_key);
+    let c_signature = secp.sign_ecdsa(&c_message, &c_secret_key);
     let signature = ecdsa_fun::Signature::from_bytes(c_signature.serialize_compact()).unwrap();
 
     assert!(ecdsa.verify(&verification_key, &message, &signature));
@@ -83,6 +85,8 @@ fn ecdsa_sign_high_message() {
             .unwrap();
     let signature = ecdsa.sign(&secret_key, &message);
     let c_message = Message::from_slice(&message[..]).unwrap();
-    let c_siganture = secp256k1::Signature::from_compact(&signature.to_bytes()).unwrap();
-    assert!(secp.verify(&c_message, &c_siganture, &c_public_key).is_ok());
+    let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
+    assert!(secp
+        .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
+        .is_ok());
 }
