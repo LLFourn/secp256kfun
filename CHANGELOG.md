@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.7.1
+
+- Fix critical bug in MuSig2 implementation where multiple tweaks would break it
+- update to rust-secp256k1 v0.21.3
+
 ## 0.7.0
 
 - Change default arithmetic backend to [`secp256kfun_k256_backend`](https://docs.rs/secp256kfun_k256_backend/2.0.0/secp256kfun_k256_backend/)
