@@ -1,16 +1,110 @@
-//! ## Description
+//! ## FROST multisignature scheme
 //!
-//! The FROST (Flexible Round-Optimize Schnorr Threshold) multisignature scheme lets you aggregate
-//! multiple public keys into a single public key that requires some threshold t-of-n secret keys to
-//! sign a signature under the aggregate key.
+//! The FROST (Flexible Round-Optimize Schnorr Threshold) multisignature scheme allows you aggregate
+//! multiple public keys into a single public key. To sign a message under this public key, a threshold t-of-n secret keys
+//! must use a common set of nonces to each produce a signature share. These signature shares are then combined
+//! to form a signature that is valid under the aggregate key.
 //!
-//! This implementation has NOT yet been made compatible with other existing implementations
-//! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/138
+//! This implementation has **not yet** been made compatible with other existing FROST implementations
+//! (notably [secp256k1-zkp]).
 //!
-//! See MuSig in this repository, the [FROST paper] and [Security of Multi- and Threshold Signatures].
+//! For reference see the [FROST paper], the MuSig implementation in this repository, and also [Security of Multi- and Threshold Signatures].
 //!
-//! [FROST paper]: https://eprint.iacr.org/2020/852.pdf
-//! [Security of Multi- and Threshold Signatures]: https://eprint.iacr.org/2021/1375.pdf
+//! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
+//! [FROST paper]: <https://eprint.iacr.org/2020/852.pdf>
+//! [Security of Multi- and Threshold Signatures]: <https://eprint.iacr.org/2021/1375.pdf>
+//!
+//! ## Synopsis
+//!
+//! ```
+//! use schnorr_fun::{frost::{Frost, ScalarPoly}, Schnorr, Message, nonce::Deterministic, fun::marker::Public};
+//! use sha2::Sha256;
+//! // use SHA256 with deterministic nonce generation
+//! let frost = Frost::new(Schnorr::<Sha256, Deterministic<Sha256>>::new(
+//!     Deterministic::<Sha256>::default(),
+//! ));
+//! // create a random secret scalar poly with two coefficients,
+//! // corresponding to FROST multisig with a threshold of two
+//! let scalar_poly = ScalarPoly::random(2, &mut rand::thread_rng());
+//! # let scalar_poly2 = ScalarPoly::random(2, &mut rand::thread_rng());
+//! # let scalar_poly3 = ScalarPoly::random(2, &mut rand::thread_rng());
+//! // share our public point poly, and recieve the point polys from other participants
+//! # let point_poly2 = scalar_poly2.to_point_poly();
+//! # let point_poly3 = scalar_poly3.to_point_poly();
+//! let point_polys = vec![scalar_poly.to_point_poly(), point_poly2, point_poly3];
+//! // create secret shares and proof of possession using our secret scalar poly
+//! let keygen = frost.new_keygen(point_polys).unwrap();
+//! let (shares, pop) = frost.create_shares(&keygen, scalar_poly);
+//! # let (shares2, pop2) = frost.create_shares(&keygen, scalar_poly2);
+//! # let (shares3, pop3) = frost.create_shares(&keygen, scalar_poly3);
+//! // send shares at index i and all proofs-of-possession to each other participant i,
+//! // and recieve our shares from each other participant as well as their proofs-of-possession.
+//! let recieved_shares = vec![shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
+//! # let recieved_shares3 = vec![shares[2].clone(), shares2[2].clone(), shares3[2].clone()];
+//! let proofs_of_possession = vec![pop, pop2, pop3];
+//! // finish keygen by calculating our secret share of the joint FROST key
+//! let (secret_share, frost_key) = frost
+//!     .finish_keygen(
+//!         keygen.clone(),
+//!         0,
+//!         recieved_shares,
+//!         proofs_of_possession.clone(),
+//!     )
+//!     .unwrap();
+//! # let (secret_share3, _frost_key3) = frost
+//! #    .finish_keygen(
+//! #        keygen.clone(),
+//! #        2,
+//! #        recieved_shares3,
+//! #        proofs_of_possession.clone(),
+//! #    )
+//! #    .unwrap();
+//! // for signing we must have a unique session ID to derive nonces.
+//! // we should include all the information that is publicly available.
+//! let verification_shares_bytes: Vec<_> = frost_key
+//!     .verification_shares
+//!     .iter()
+//!     .map(|share| share.to_bytes())
+//!     .collect();
+//! // create a unique session ID for this signing session
+//! let sid = [
+//!     frost_key.joint_public_key.to_bytes().as_slice(),
+//!     verification_shares_bytes.concat().as_slice(),
+//!     b"frost-very-unique-id".as_slice(),
+//!     b"0".as_slice(),
+//! ]
+//! .concat();
+//! # let sid3 = [
+//! #    frost_key.joint_public_key.to_bytes().as_slice(),
+//! #    verification_shares_bytes.concat().as_slice(),
+//! #    b"frost-very-unique-id".as_slice(),
+//! #    b"2".as_slice(),
+//! # ]
+//! # .concat();
+//! // generate nonces for this signing session
+//! let nonce = frost.gen_nonce(&secret_share, &sid);
+//! # let nonce3 = frost.gen_nonce(&secret_share3, &sid3);
+//! // share your public nonce with the other signing participant(s)
+//! # let recieved_nonce3 = nonce3.public();
+//! // recieve public nonces from other participants with their index
+//! let nonces = vec![(0, nonce.public()), (2, recieved_nonce3)];
+//! # let nonces3 = vec![(0, nonce.public()), (2, recieved_nonce3)];
+//! // start a sign session with these nonces for this message
+//! let session = frost.start_sign_session(&frost_key, nonces, Message::plain("test", b"test"));
+//! # let session3 = frost.start_sign_session(&frost_key, nonces3, Message::plain("test", b"test"));
+//! // create a partial signature
+//! let sig = frost.sign(&frost_key, &session, 0, &secret_share, nonce);
+//! # let sig3 = frost.sign(&frost_key, &session3, 2, &secret_share3, nonce3);
+//! // recieve partial signature(s) from other participant(s) and verify
+//! assert!(frost.verify_signature_share(&frost_key, &session, 2, sig3));
+//! // combine signature
+//! let combined_sig = frost.combine_signature_shares(&frost_key, &session, vec![sig, sig3]);
+//! assert!(frost.schnorr.verify(
+//!     &frost_key.joint_public_key,
+//!     Message::<Public>::plain("test", b"test"),
+//!     &combined_sig
+//! ));
+//! ```
 use crate::{
     musig::{Nonce, NonceKeyPair},
     Message, Schnorr, Signature, Vec,
@@ -31,7 +125,8 @@ use std::collections::BTreeMap;
 /// The FROST context.
 #[derive(Clone)]
 pub struct Frost<H, NG: AddTag> {
-    schnorr: Schnorr<H, NG>,
+    /// The instance of the Schnorr signature scheme
+    pub schnorr: Schnorr<H, NG>,
     keygen_id_hash: H,
 }
 
@@ -246,10 +341,15 @@ impl std::error::Error for FinishKeyGenError {}
     serde(crate = "serde_crate")
 )]
 pub struct FrostKey {
-    joint_public_key: Point<EvenY>,
-    verification_shares: Vec<Point>,
-    threshold: u32,
+    /// The joint public key of the FROST multisignature
+    pub joint_public_key: Point<EvenY>,
+    /// Everyone else's point poly evaluated at your index, used in partial signature validation.
+    pub verification_shares: Vec<Point>,
+    /// Number of partial signatures required to create a combined signature under this key.
+    pub threshold: u32,
+    /// Taproot tweak applied to this FROST key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
+    /// Whether the secrets need negation in order to sign for the X-Only key
     needs_negation: bool,
 }
 
@@ -657,7 +757,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     ///
     /// ## Return value
     ///
-    /// Returns a combined schnorr [`schnorr_fun::signature::Signature`] for the message.
+    /// Returns a combined schnorr [`Signature`] for the message.
     /// Valid against the joint public key.
     pub fn combine_signature_shares(
         &self,
