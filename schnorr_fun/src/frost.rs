@@ -722,7 +722,7 @@ mod test {
         nonce::Deterministic,
         proptest::{
             arbitrary::any,
-            proptest,
+            option, proptest,
             strategy::{Just, Strategy},
         },
     };
@@ -730,7 +730,7 @@ mod test {
 
     proptest! {
         #[test]
-        fn frost_prop_test((n_parties, threshold) in (3u32..8).prop_flat_map(|n| (Just(n), 3u32..=n)), signers_mask_seed in any::<u32>(), tweak1 in any::<Scalar<Public, Zero>>(), tweak2 in any::<Scalar<Public, Zero>>(), use_tweak2 in any::<bool>()) {
+        fn frost_prop_test((n_parties, threshold) in (3u32..8).prop_flat_map(|n| (Just(n), 3u32..=n)), signers_mask_seed in any::<u32>(), tweak1 in option::of(any::<Scalar<Public, Zero>>()), tweak2 in option::of(any::<Scalar<Public, Zero>>())) {
             let frost = Frost::new(Schnorr::<Sha256, Deterministic<Sha256>>::new(
                 Deterministic::<Sha256>::default(),
             ));
@@ -773,12 +773,12 @@ mod test {
                     proofs_of_possession.clone(),
                 )
                 .unwrap();
-                frost_key = frost_key.tweak(tweak1.clone()).expect("applying tweak1");
-                frost_key = if use_tweak2 {
-                    frost_key.tweak(tweak2.clone()).expect("applying tweak2")
-                } else {
-                    frost_key
-                };
+
+                for tweak in [tweak1, tweak2] {
+                    if let Some(tweak) = tweak {
+                        frost_key = frost_key.tweak(tweak).unwrap();
+                    }
+                }
                 (secret_share, frost_key)
             }).unzip();
 
