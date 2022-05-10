@@ -22,6 +22,8 @@ extern crate serde_crate as serde;
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
 
+/// binonces for Musig and FROST
+mod binonce;
 // musig needs vecs
 #[cfg(feature = "alloc")]
 pub mod musig;
