@@ -573,6 +573,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
 #[cfg(test)]
 mod test {
+    use crate::adaptor::Adaptor;
+
     use super::*;
     use secp256kfun::{
         nonce::Deterministic,
@@ -583,10 +585,10 @@ mod test {
     proptest! {
         #[test]
         fn test_end_to_end(sk1 in any::<Scalar>(),
-                           sk2 in any::<Scalar>(),
-                           sk3 in any::<Scalar>(),
-                           tweak1 in option::of(any::<Scalar<Public, Zero>>()),
-                           tweak2 in option::of(any::<Scalar<Public, Zero>>()),
+                        sk2 in any::<Scalar>(),
+                        sk3 in any::<Scalar>(),
+                        tweak1 in option::of(any::<Scalar<Public, Zero>>()),
+                        tweak2 in option::of(any::<Scalar<Public, Zero>>()),
         ) {
             let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
             let musig = MuSig::new(schnorr);
@@ -600,7 +602,7 @@ mod test {
                 .schnorr
                 .new_keypair(sk3);
 
-            let mut keylist = musig.new_keylist(vec![
+            let mut keylist1 = musig.new_keylist(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
@@ -618,18 +620,18 @@ mod test {
 
             for tweak in [tweak1, tweak2] {
                 if let Some(tweak) = tweak {
-                    keylist = keylist.tweak(tweak).unwrap();
+                    keylist1 = keylist1.tweak(tweak).unwrap();
                     keylist2 = keylist2.tweak(tweak).unwrap();
                     keylist3 = keylist3.tweak(tweak).unwrap();
                 }
             }
 
-            assert_eq!(keylist.agg_public_key(), keylist2.agg_public_key());
-            assert_eq!(keylist.agg_public_key(), keylist3.agg_public_key());
+            assert_eq!(keylist1.agg_public_key(), keylist2.agg_public_key());
+            assert_eq!(keylist1.agg_public_key(), keylist3.agg_public_key());
 
-            let p1_nonce = musig.gen_nonces(&keypair1.sk, &keylist, b"test");
-            let p2_nonce = musig.gen_nonces(&keypair2.sk, &keylist, b"test");
-            let p3_nonce = musig.gen_nonces(&keypair3.sk, &keylist, b"test");
+            let p1_nonce = musig.gen_nonces(&keypair1.sk, &keylist1, b"test");
+            let p2_nonce = musig.gen_nonces(&keypair2.sk, &keylist1, b"test");
+            let p3_nonce = musig.gen_nonces(&keypair3.sk, &keylist1, b"test");
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
             let message =
@@ -637,57 +639,149 @@ mod test {
 
             let p1_session = musig
                 .start_sign_session(
-                    &keylist,
+                    &keylist1,
                     nonces.clone(),
                     message,
                 )
                 .unwrap();
             let p2_session = musig
                 .start_sign_session(
-                    &keylist,
+                    &keylist2,
                     nonces.clone(),
                     message,
                 )
                 .unwrap();
             let p3_session = musig
                 .start_sign_session(
-                    &keylist,
+                    &keylist3,
                     nonces.clone(),
                     message,
                 )
                 .unwrap();
 
-            let p1_sig = musig.sign(&keylist, 0, &keypair1.sk, p1_nonce, &p1_session);
+            let p1_sig = musig.sign(&keylist1, 0, &keypair1.sk, p1_nonce, &p1_session);
 
-            assert!(musig.verify_partial_signature(&keylist, &p1_session, 0, p1_sig));
+            assert!(musig.verify_partial_signature(&keylist1, &p1_session, 0, p1_sig));
             dbg!(&p1_session, &p2_session);
             dbg!(&p1_sig);
             assert_eq!(p1_session, p2_session);
 
-            assert!(musig.verify_partial_signature(&keylist, &p2_session, 0, p1_sig));
-            assert!(musig.verify_partial_signature(&keylist, &p3_session, 0, p1_sig));
+            assert!(musig.verify_partial_signature(&keylist1, &p2_session, 0, p1_sig));
+            assert!(musig.verify_partial_signature(&keylist1, &p3_session, 0, p1_sig));
 
-            let p2_sig = musig.sign(&keylist, 1, &keypair2.sk, p2_nonce, &p2_session);
-            assert!(musig.verify_partial_signature(&keylist, &p1_session, 1, p2_sig));
-            let p3_sig = musig.sign(&keylist, 2, &keypair3.sk, p3_nonce, &p3_session);
-            assert!(musig.verify_partial_signature(&keylist, &p1_session, 2, p3_sig));
+            let p2_sig = musig.sign(&keylist1, 1, &keypair2.sk, p2_nonce, &p2_session);
+            assert!(musig.verify_partial_signature(&keylist1, &p1_session, 1, p2_sig));
+            let p3_sig = musig.sign(&keylist1, 2, &keypair3.sk, p3_nonce, &p3_session);
+            assert!(musig.verify_partial_signature(&keylist1, &p1_session, 2, p3_sig));
 
             let partial_sigs = [p1_sig, p2_sig, p3_sig];
-            let sig_p1 = musig.combine_partial_signatures(&keylist, &p1_session, partial_sigs);
-            let sig_p2 = musig.combine_partial_signatures(&keylist, &p2_session, partial_sigs);
-            let sig_p3 = musig.combine_partial_signatures(&keylist, &p3_session, partial_sigs);
+            let sig_p1 = musig.combine_partial_signatures(&keylist1, &p1_session, partial_sigs);
+            let sig_p2 = musig.combine_partial_signatures(&keylist1, &p2_session, partial_sigs);
+            let sig_p3 = musig.combine_partial_signatures(&keylist1, &p3_session, partial_sigs);
             assert_eq!(sig_p1, sig_p2);
             assert_eq!(sig_p1, sig_p3);
 
             assert!(musig
                     .schnorr
-                    .verify(&keylist.agg_verification_key(), message, &sig_p1));
+                    .verify(&keylist1.agg_verification_key(), message, &sig_p1));
             assert!(musig
                     .schnorr
-                    .verify(&keylist.agg_verification_key(), message, &sig_p2));
+                    .verify(&keylist1.agg_verification_key(), message, &sig_p2));
             assert!(musig
                         .schnorr
-                        .verify(&keylist.agg_verification_key(), message, &sig_p3));
+                        .verify(&keylist1.agg_verification_key(), message, &sig_p3));
+        }
+
+        #[test]
+        fn test_musig_adaptor(
+            sk1 in any::<Scalar>(),
+            sk2 in any::<Scalar>(),
+            sk3 in any::<Scalar>(),
+            y in any::<Scalar>()
+        ) {
+            let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
+            let musig = MuSig::new(schnorr);
+            let keypair1 = musig
+            .schnorr
+            .new_keypair(sk1);
+            let keypair2 = musig
+            .schnorr
+            .new_keypair(sk2);
+            let keypair3 = musig
+            .schnorr
+            .new_keypair(sk3);
+            let encryption_key = musig.schnorr.encryption_key_for(&y);
+
+            let keylist = musig.new_keylist(vec![
+            keypair1.public_key(),
+            keypair2.public_key(),
+            keypair3.public_key(),
+            ]);
+            let keylist2 = musig.new_keylist(vec![
+            keypair1.public_key(),
+            keypair2.public_key(),
+            keypair3.public_key(),
+            ]);
+            let keylist3 = musig.new_keylist(vec![
+            keypair1.public_key(),
+            keypair2.public_key(),
+            keypair3.public_key(),
+            ]);
+            assert_eq!(keylist.agg_public_key(), keylist2.agg_public_key());
+
+            let p1_nonce = musig.gen_nonces(&keypair1.sk, &keylist, b"test");
+            let p2_nonce = musig.gen_nonces(&keypair2.sk, &keylist2, b"test");
+            let p3_nonce = musig.gen_nonces(&keypair3.sk, &keylist3, b"test");
+            let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
+            let message =
+                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+
+            let mut p1_session = musig
+                .start_encrypted_sign_session(
+                    &keylist,
+                    nonces.clone(),
+                    message,
+                    &encryption_key
+                )
+                .unwrap();
+            let mut p2_session = musig
+                .start_encrypted_sign_session(
+                    &keylist2,
+                    nonces.clone(),
+                    message,
+                    &encryption_key
+                )
+                .unwrap();
+            let mut p3_session = musig
+                .start_encrypted_sign_session(
+                    &keylist3,
+                    nonces,
+                    message,
+                    &encryption_key
+                )
+                .unwrap();
+                let p1_sig = musig.sign(&keylist, 0, &keypair1.sk, p1_nonce, &mut p1_session);
+                let p2_sig = musig.sign(&keylist, 1, &keypair2.sk, p2_nonce, &mut p2_session);
+                let p3_sig = musig.sign(&keylist, 2, &keypair3.sk, p3_nonce, &mut p3_session);
+
+            assert!(musig.verify_partial_signature(&keylist2, &p2_session, 0, p1_sig));
+            assert!(musig.verify_partial_signature(&keylist, &p1_session, 0, p1_sig));
+
+            let partial_sigs = vec![p1_sig, p2_sig, p3_sig];
+            let combined_sig_p1 = musig.combine_partial_encrypted_signatures(&keylist, &p1_session, partial_sigs.clone());
+            let combined_sig_p2 = musig.combine_partial_encrypted_signatures(&keylist2, &p2_session, partial_sigs.clone());
+            let combined_sig_p3 = musig.combine_partial_encrypted_signatures(&keylist3, &p3_session, partial_sigs);
+            assert_eq!(combined_sig_p1, combined_sig_p2);
+            assert_eq!(combined_sig_p1, combined_sig_p3);
+            assert!(musig
+                    .schnorr
+                    .verify_encrypted_signature(&keylist.agg_verification_key(), &encryption_key, message, &combined_sig_p1));
+            assert!(musig
+                    .schnorr
+                    .verify_encrypted_signature(&keylist2.agg_verification_key(), &encryption_key, message, &combined_sig_p2));
+            assert!(musig
+                .schnorr
+                .verify_encrypted_signature(&keylist2.agg_verification_key(), &encryption_key, message, &combined_sig_p3));
         }
     }
 
