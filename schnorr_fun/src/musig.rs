@@ -9,10 +9,10 @@
 //! let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
 //! // create a keylist
 //! use schnorr_fun::fun::Scalar;
-//! let kp1 = musig
+//! let my_keypair = musig
 //!     .schnorr
 //!     .new_keypair(Scalar::random(&mut rand::thread_rng()));
-//! let public_key1 = kp1.public_key();
+//! let public_key1 = my_keypair.public_key();
 //! # let kp2 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 //! # let public_key2 = kp2.public_key();
 //! # let kp3 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
@@ -22,26 +22,26 @@
 //! let agg_key = keylist.agg_public_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
-//! let p1_nonce = musig.gen_nonces(kp1.secret_key(), &keylist, b"session-id-1337");
-//! let p1_public_nonce = p1_nonce.public();
+//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), &keylist, b"session-id-1337");
+//! let my_public_nonce = my_nonce.public();
 //! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), &keylist, b"session-id-1337");
 //! # let p2_public_nonce = p2_nonce.public();
 //! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), &keylist, b"session-id-1337");
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
-//! let nonces = vec![p1_public_nonce, p2_public_nonce, p3_public_nonce];
+//! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
 //! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // start the signing session
 //! let session = musig.start_sign_session(&keylist, nonces, message).unwrap();
 //! // sign with our single local keypair
-//! let p1_sig = musig.sign(&keylist, 0, kp1.secret_key(), p1_nonce, &session);
+//! let my_sig = musig.sign(&keylist, 0, my_keypair.secret_key(), my_nonce, &session);
 //! # let p2_sig = musig.sign(&keylist, 1, kp2.secret_key(), p2_nonce, &session);
 //! # let p3_sig = musig.sign(&keylist, 2, kp3.secret_key(), p3_nonce, &session);
-//! // receive p1_sig and p3_sig from somewhere and check they're valid
+//! // receive p2_sig and p3_sig from somewhere and check they're valid
 //! assert!(musig.verify_partial_signature(&keylist, &session, 1, p2_sig));
 //! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
 //! // combine them with ours into the final signature
-//! let sig = musig.combine_partial_signatures(&keylist, &session, [p1_sig, p2_sig, p3_sig]);
+//! let sig = musig.combine_partial_signatures(&keylist, &session, [my_sig, p2_sig, p3_sig]);
 //! // check it's a valid normal Schnorr signature
 //! musig
 //!     .schnorr
@@ -53,10 +53,9 @@
 //! The MuSig2 multisignature scheme lets you aggregate multiple public keys into a single public
 //! key that requires all of the corresponding secret keys to authorize a signature under the aggregate key.
 //!
-//! This implementation is protocol compatible with the implementation merged into
-//! [secp256k1-zkp].
+//! See [the excellent paper] for the abstract details of the protocol and security proofs.
+//! **⚠ THIS IS EXPERIMENTAL AND NOT COMPATIBLE WITH THE [DRAFT SPECIFICATION](https://github.com/jonasnick/bips/blob/musig2/bip-musig2.mediawiki) ⚠**
 //!
-//! See [the excellent paper] for the abstract details of the protocol.
 //!
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
@@ -148,26 +147,6 @@ impl KeyList {
     /// the original set of signers to sign under the new key.
     ///
     /// This is how you embed a taproot commitment into a key.
-    ///
-    /// Also updates whether the MuSig KeyList needs negation.
-    /// XOR of existing MuSig KeyList needs_negation and new tweaked key needs_negation.
-    /// If both need negation, they will cancel out.
-    ///
-    /// Public key
-    ///     X = (b*x) * G
-    /// where b = 1 or -1
-    /// For a tweak t: X' = X + t * G.
-    /// If X' needs negation then we need secret
-    ///     -(b*x + t) = -b*x - t
-    /// So new b = -b and t = -t.
-    /// If X' doesn't need negation, leave b as is.
-    /// i.e. previous needs_negation XOR new needs_negation.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a new MuSig KeyList with the same parties but a different aggregated public key.
-    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
-    /// secret key it returns `None`.
     pub fn tweak(&self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let (agg_key, needs_negation) = g!(self.agg_key + tweak * G)
             .mark::<NonZero>()?
