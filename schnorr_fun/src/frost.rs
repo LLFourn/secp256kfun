@@ -825,19 +825,21 @@ mod test {
     use core::num::NonZeroU32;
 
     use super::*;
+    use rand::seq::SliceRandom;
     use secp256kfun::{
         nonce::Deterministic,
         proptest::{
             arbitrary::any,
             option, proptest,
             strategy::{Just, Strategy},
+            test_runner::{RngAlgorithm, TestRng},
         },
     };
     use sha2::Sha256;
 
     proptest! {
         #[test]
-        fn frost_prop_test((n_parties, threshold) in (3u32..8).prop_flat_map(|n| (Just(n), 3u32..=n)), signers_mask_seed in any::<u32>(), tweak1 in option::of(any::<Scalar<Public, Zero>>()), tweak2 in option::of(any::<Scalar<Public, Zero>>())) {
+        fn frost_prop_test((n_parties, threshold) in (3u32..8).prop_flat_map(|n| (Just(n), 3u32..=n)), tweak1 in option::of(any::<Scalar<Public, Zero>>()), tweak2 in option::of(any::<Scalar<Public, Zero>>())) {
             let frost = Frost::new(Schnorr::<Sha256, Deterministic<Sha256>>::new(
                 Deterministic::<Sha256>::default(),
             ));
@@ -889,71 +891,51 @@ mod test {
                 (secret_share, frost_key)
             }).unzip();
 
-            // create a mask of signers
-            // use bytes from random u32 to determine whether a party is a signer or not
-            let mut signers_mask = vec![true];
-            while signers_mask.len() < n_parties as usize {
-                for v in signers_mask_seed.to_be_bytes() {
-                    if v > 128 {
-                        signers_mask.push(true);
-                    } else {
-                        signers_mask.push(false);
-                    }
-                    if signers_mask.len() >= n_parties as usize {
-                        break
-                    }
-                }
+            // use a boolean mask for which t participants are signers
+            let mut signer_mask = vec![true; threshold as usize];
+            signer_mask.append(&mut vec![false; (n_parties - threshold) as usize]);
+            // shuffle the mask for random signers (roughly shuffled and deterministic based on signers_mask_seed)
+            signer_mask.shuffle(&mut TestRng::deterministic_rng(RngAlgorithm::ChaCha));
+
+            let signer_indexes: Vec<_> = signer_mask.iter().enumerate().filter(|(_, is_signer)| **is_signer).map(|(i,_)| i).collect();
+
+            let verification_shares_bytes: Vec<_> = frost_keys[signer_indexes[0]]
+                .verification_shares
+                .iter()
+                .map(|share| share.to_bytes())
+                .collect();
+
+            let sid = [
+                frost_keys[signer_indexes[0]].joint_public_key.to_bytes().as_slice(),
+                verification_shares_bytes.concat().as_slice(),
+                b"frost-prop-test".as_slice(),
+            ]
+            .concat();
+            let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i| frost.gen_nonce(&secret_shares[*i as usize], &[sid.as_slice(), [*i as u8].as_slice()].concat())).collect();
+
+            let mut recieved_nonces: Vec<_> = vec![];
+            for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
+                recieved_nonces.push((*i as u32, nonce.public()));
             }
-            let mut signer_indexes = vec![];
-            for (index, included) in signers_mask.iter().enumerate() {
-                if *included {
-                    signer_indexes.push(index);
-                }
+
+            // Create Frost signing session
+            let signing_session = frost.start_sign_session(&frost_keys[signer_indexes[0]], recieved_nonces.clone(), Message::plain("test", b"test"));
+
+            let mut signatures = vec![];
+            for i in 0..signer_indexes.len() {
+                let signer_index = signer_indexes[i] as usize;
+                let session = frost.start_sign_session(&frost_keys[signer_index], recieved_nonces.clone(), Message::plain("test", b"test"));
+                let sig = frost.sign(&frost_keys[signer_index], &session, signer_index as u32, &secret_shares[signer_index], nonces[i].clone());
+                assert!(frost.verify_signature_share(&frost_keys[signer_index], &session, signer_index as u32, sig));
+                signatures.push(sig);
             }
-            dbg!(&signer_indexes);
+            let combined_sig = frost.combine_signature_shares(&frost_keys[signer_indexes[0] as usize], &signing_session, signatures);
 
-            if signer_indexes.len() < threshold as usize {
-                dbg!("pseudorandomly chose less signers than threshold.. skipping");
-            } else {
-                let verification_shares_bytes: Vec<_> = frost_keys[signer_indexes[0]]
-                    .verification_shares
-                    .iter()
-                    .map(|share| share.to_bytes())
-                    .collect();
-
-                let sid = [
-                    frost_keys[signer_indexes[0]].joint_public_key.to_bytes().as_slice(),
-                    verification_shares_bytes.concat().as_slice(),
-                    b"frost-prop-test".as_slice(),
-                ]
-                .concat();
-                let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i| frost.gen_nonce(&secret_shares[*i as usize], &[sid.as_slice(), [*i as u8].as_slice()].concat())).collect();
-                // dbg!(&nonces);
-
-                let mut recieved_nonces: Vec<_> = vec![];
-                for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
-                    recieved_nonces.push((*i as u32, nonce.public()));
-                }
-
-                // Create Frost signing session
-                let signing_session = frost.start_sign_session(&frost_keys[signer_indexes[0]], recieved_nonces.clone(), Message::plain("test", b"test"));
-
-                let mut signatures = vec![];
-                for i in 0..signer_indexes.len() {
-                    let signer_index = signer_indexes[i] as usize;
-                    let session = frost.start_sign_session(&frost_keys[signer_index], recieved_nonces.clone(), Message::plain("test", b"test"));
-                    let sig = frost.sign(&frost_keys[signer_index], &session, signer_index as u32, &secret_shares[signer_index], nonces[i].clone());
-                    assert!(frost.verify_signature_share(&frost_keys[signer_index], &session, signer_index as u32, sig));
-                    signatures.push(sig);
-                }
-                let combined_sig = frost.combine_signature_shares(&frost_keys[signer_indexes[0] as usize], &signing_session, signatures);
-
-                assert!(frost.schnorr.verify(
-                    &frost_keys[signer_indexes[0] as usize].joint_public_key,
-                    Message::<Public>::plain("test", b"test"),
-                    &combined_sig
-                ));
-            }
+            assert!(frost.schnorr.verify(
+                &frost_keys[signer_indexes[0] as usize].joint_public_key,
+                Message::<Public>::plain("test", b"test"),
+                &combined_sig
+            ));
         }
     }
 
