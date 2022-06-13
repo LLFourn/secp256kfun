@@ -34,9 +34,9 @@
 //! // start the signing session
 //! let session = musig.start_sign_session(&keylist, nonces, message).unwrap();
 //! // sign with our single local keypair
-//! let my_sig = musig.sign(&keylist, 0, my_keypair.secret_key(), my_nonce, &session);
-//! # let p2_sig = musig.sign(&keylist, 1, kp2.secret_key(), p2_nonce, &session);
-//! # let p3_sig = musig.sign(&keylist, 2, kp3.secret_key(), p3_nonce, &session);
+//! let my_sig = musig.sign(&keylist, 0, &my_keypair, my_nonce, &session);
+//! # let p2_sig = musig.sign(&keylist, 1, &kp2, p2_nonce, &session);
+//! # let p3_sig = musig.sign(&keylist, 2, &kp3, p3_nonce, &session);
 //! // receive p2_sig and p3_sig from somewhere and check they're valid
 //! assert!(musig.verify_partial_signature(&keylist, &session, 1, p2_sig));
 //! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
@@ -60,7 +60,7 @@
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature, Vec};
+use crate::{adaptor::EncryptedSignature, KeyPair, Message, Schnorr, Signature, Vec};
 use secp256kfun::{
     derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
@@ -479,21 +479,23 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         &self,
         keylist: &KeyList,
         my_index: u32,
-        secret: &Scalar,
+        keypair: &KeyPair,
         local_secret_nonce: NonceKeyPair,
         session: &SignSession<T>,
     ) -> Scalar<Public, Zero> {
         let c = session.c;
         let b = session.b;
-
-        let x = secret;
-        let X = g!(secret * G).normalize();
+        let x = keypair.secret_key();
+        assert_eq!(
+            keypair.public_key(),
+            keylist.keys().nth(my_index as usize).unwrap(),
+            "key at index {} didn't match",
+            my_index
+        );
         let mut a = keylist.coefs[my_index as usize];
-        let (_, my_key_needs_negation) = X.into_point_with_even_y();
-        let (_, agg_key_needs_negation) = keylist.agg_key.into_point_with_even_y();
+        let agg_key_needs_negation = !keylist.agg_key.is_y_even();
 
-        let total_negation =
-            my_key_needs_negation ^ agg_key_needs_negation ^ keylist.accum_needs_negation;
+        let total_negation = agg_key_needs_negation ^ keylist.accum_needs_negation;
 
         a.conditional_negate(total_negation);
         let [mut r1, mut r2] = local_secret_nonce.secret.clone();
@@ -683,7 +685,7 @@ mod test {
                 )
                 .unwrap();
 
-            let p1_sig = musig.sign(&keylist1, 0, &keypair1.sk, p1_nonce, &p1_session);
+            let p1_sig = musig.sign(&keylist1, 0, &keypair1, p1_nonce, &p1_session);
 
             assert!(musig.verify_partial_signature(&keylist1, &p1_session, 0, p1_sig));
             dbg!(&p1_session, &p2_session);
@@ -693,9 +695,9 @@ mod test {
             assert!(musig.verify_partial_signature(&keylist1, &p2_session, 0, p1_sig));
             assert!(musig.verify_partial_signature(&keylist1, &p3_session, 0, p1_sig));
 
-            let p2_sig = musig.sign(&keylist1, 1, &keypair2.sk, p2_nonce, &p2_session);
+            let p2_sig = musig.sign(&keylist1, 1, &keypair2, p2_nonce, &p2_session);
             assert!(musig.verify_partial_signature(&keylist1, &p1_session, 1, p2_sig));
-            let p3_sig = musig.sign(&keylist1, 2, &keypair3.sk, p3_nonce, &p3_session);
+            let p3_sig = musig.sign(&keylist1, 2, &keypair3, p3_nonce, &p3_session);
             assert!(musig.verify_partial_signature(&keylist1, &p1_session, 2, p3_sig));
 
             let partial_sigs = [p1_sig, p2_sig, p3_sig];
@@ -784,9 +786,9 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-                let p1_sig = musig.sign(&keylist, 0, &keypair1.sk, p1_nonce, &mut p1_session);
-                let p2_sig = musig.sign(&keylist, 1, &keypair2.sk, p2_nonce, &mut p2_session);
-                let p3_sig = musig.sign(&keylist, 2, &keypair3.sk, p3_nonce, &mut p3_session);
+                let p1_sig = musig.sign(&keylist, 0, &keypair1, p1_nonce, &mut p1_session);
+                let p2_sig = musig.sign(&keylist, 1, &keypair2, p2_nonce, &mut p2_session);
+                let p3_sig = musig.sign(&keylist, 2, &keypair3, p3_nonce, &mut p3_session);
 
             assert!(musig.verify_partial_signature(&keylist2, &p2_session, 0, p1_sig));
             assert!(musig.verify_partial_signature(&keylist, &p1_session, 0, p1_sig));
@@ -975,7 +977,7 @@ mod test {
                 message,
             )
             .unwrap();
-        let sig = musig.sign(&keylist, 0, &keypair.sk, sec_nonce.clone(), &sign_session);
+        let sig = musig.sign(&keylist, 0, &keypair, sec_nonce.clone(), &sign_session);
         assert_eq!(sig, expected[0]);
 
         {
@@ -991,7 +993,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 1, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 1, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[1]);
         }
 
@@ -1008,7 +1010,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[2]);
         }
     }
@@ -1153,7 +1155,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[0]);
         }
 
@@ -1171,7 +1173,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[0]);
         }
 
@@ -1190,7 +1192,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[2]);
         }
 
@@ -1212,7 +1214,7 @@ mod test {
                     message,
                 )
                 .unwrap();
-            let sig = musig.sign(&keylist, 2, &keypair.sk, sec_nonce.clone(), &sign_session);
+            let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
             assert_eq!(sig, expected[3]);
         }
     }
