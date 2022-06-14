@@ -7,7 +7,7 @@
 //! use sha2::Sha256;
 //! // use sha256 with deterministic nonce generation
 //! let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
-//! // create a keylist
+//! // create a keypair
 //! use schnorr_fun::fun::Scalar;
 //! let my_keypair = musig
 //!     .schnorr
@@ -18,34 +18,35 @@
 //! # let kp3 = musig.schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 //! # let public_key3 = kp3.public_key();
 //! // recieve the public keys of all other participants to form the aggregate key.
-//! let keylist = musig.new_keylist(vec![public_key1, public_key2, public_key3]);
-//! let agg_key = keylist.agg_public_key();
+//! let agg_key = musig
+//!     .new_agg_key(vec![public_key1, public_key2, public_key3])
+//!     .into_bip340_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
-//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), &keylist, b"session-id-1337");
+//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), &agg_key, b"session-id-1337");
 //! let my_public_nonce = my_nonce.public();
-//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), &keylist, b"session-id-1337");
+//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), &agg_key, b"session-id-1337");
 //! # let p2_public_nonce = p2_nonce.public();
-//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), &keylist, b"session-id-1337");
+//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), &agg_key, b"session-id-1337");
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
 //! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // start the signing session
-//! let session = musig.start_sign_session(&keylist, nonces, message).unwrap();
+//! let session = musig.start_sign_session(&agg_key, nonces, message).unwrap();
 //! // sign with our single local keypair
-//! let my_sig = musig.sign(&keylist, 0, &my_keypair, my_nonce, &session);
-//! # let p2_sig = musig.sign(&keylist, 1, &kp2, p2_nonce, &session);
-//! # let p3_sig = musig.sign(&keylist, 2, &kp3, p3_nonce, &session);
+//! let my_sig = musig.sign(&agg_key, 0, &my_keypair, my_nonce, &session);
+//! # let p2_sig = musig.sign(&agg_key, 1, &kp2, p2_nonce, &session);
+//! # let p3_sig = musig.sign(&agg_key, 2, &kp3, p3_nonce, &session);
 //! // receive p2_sig and p3_sig from somewhere and check they're valid
-//! assert!(musig.verify_partial_signature(&keylist, &session, 1, p2_sig));
-//! assert!(musig.verify_partial_signature(&keylist, &session, 2, p3_sig));
+//! assert!(musig.verify_partial_signature(&agg_key, &session, 1, p2_sig));
+//! assert!(musig.verify_partial_signature(&agg_key, &session, 2, p3_sig));
 //! // combine them with ours into the final signature
-//! let sig = musig.combine_partial_signatures(&keylist, &session, [my_sig, p2_sig, p3_sig]);
+//! let sig = musig.combine_partial_signatures(&agg_key, &session, [my_sig, p2_sig, p3_sig]);
 //! // check it's a valid normal Schnorr signature
 //! musig
 //!     .schnorr
-//!     .verify(&keylist.agg_verification_key(), message, &sig);
+//!     .verify(&agg_key.agg_public_key(), message, &sig);
 //! ```
 //!
 //! ## Description
@@ -109,13 +110,13 @@ impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
 
 /// A list of keys aggregated into a single key.
 ///
-/// Created using [`MuSig::new_keylist`].
+/// Created using [`MuSig::new_agg_key`].
 ///
-/// The `KeyList` can't be serialized but it's very efficient to re-create it from the initial list of keys.
+/// The `AggKey` can't be serialized but it's very efficient to re-create it from the initial list of keys.
 ///
-/// [`MuSig::new_keylist`]
+/// [`MuSig::new_agg_key`]
 #[derive(Debug, Clone)]
-pub struct KeyList {
+pub struct AggKey {
     /// The parties involved in the key aggregation.
     parties: Vec<XOnly>,
     /// The coefficients of each key
@@ -126,33 +127,36 @@ pub struct KeyList {
     tweak: Scalar<Public, Zero>,
 }
 
-impl KeyList {
-    /// The pre-finalized aggregate key
-    pub fn agg_public_key(&self) -> Point {
+impl AggKey {
+    /// The aggregate key prior to converting to a BIP340 `XOnly` key.
+    pub fn agg_key(&self) -> Point {
         self.agg_key
     }
 
-    /// An iterator over the **public keys** of each party in the keylist.
+    /// An iterator over the **public keys** of each party in the aggregate key.
     pub fn keys(&self) -> impl Iterator<Item = XOnly> + '_ {
         self.parties.iter().map(|xonly| *xonly)
     }
 
-    /// Tweak the aggregate MuSig public key with a scalar so that the resulting key is equal to the
-    /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
-    /// the original set of signers to sign under the new key.
+    /// Add a scalar `tweak` to aggregate MuSig public key.
     ///
-    /// This is how you embed a taproot commitment into a key.
+    /// The resulting key is equal to the existing key plus `tweak * G`. The tweak mutates the
+    /// public key while still allowing the original set of signers to sign under the new key.
+    /// This function is appropriate for doing [BIP32] tweaks before calling `into_bip340_key`.
+    /// It **is not** appropriate for doing taproot tweaking which must be done on a [`Bip340AggKey`].
     ///
     /// ## Return value
     ///
-    /// Returns a new MuSig KeyList with the same parties but a different aggregated public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
+    ///
+    /// [BIP32]: https://bips.xyz/32
+    /// [`Bip340AggKey`]: crate::musig::Bip340AggKey
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let agg_key = g!(self.agg_key + tweak * G).normalize().mark::<NonZero>()?;
         let tweak = s!(self.tweak + tweak).mark::<Public>();
 
-        Some(KeyList {
+        Some(AggKey {
             parties: self.parties.clone(),
             coefs: self.coefs.clone(),
             agg_key,
@@ -160,11 +164,14 @@ impl KeyList {
         })
     }
 
-    pub fn into_agg_key(self) -> AggKey {
+    /// Convert the key into an `Bip340AggKey`.
+    ///
+    /// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
+    pub fn into_bip340_key(self) -> Bip340AggKey {
         let (agg_key, needs_negation) = self.agg_key.into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
-        AggKey {
+        Bip340AggKey {
             parties: self.parties,
             coefs: self.coefs,
             needs_negation,
@@ -174,9 +181,11 @@ impl KeyList {
     }
 }
 
-/// A [`KeyList`] that has been converted into a final aggregate `XOnly` key.
+/// A [`AggKey`] that has been converted into a [BIP340] `XOnly` key.
+///
+/// [BIP340]: https://bips.xyz/340
 #[derive(Debug, Clone)]
-pub struct AggKey {
+pub struct Bip340AggKey {
     /// The parties involved in the key aggregation.
     parties: Vec<XOnly>,
     /// The coefficients of each key
@@ -189,13 +198,13 @@ pub struct AggKey {
     agg_key: Point<EvenY>,
 }
 
-impl AggKey {
-    /// The pre-finalized aggregate key
+impl Bip340AggKey {
+    /// The aggregate key as a `Point`
     pub fn agg_public_key(&self) -> Point<EvenY> {
         self.agg_key
     }
 
-    /// An iterator over the **public keys** of each party in the keylist.
+    /// An iterator over the **public keys** of each party in the agg_key.
     pub fn keys(&self) -> impl Iterator<Item = XOnly> + '_ {
         self.parties.iter().map(|xonly| *xonly)
     }
@@ -221,7 +230,7 @@ impl AggKey {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
-    /// Generates a new key list from a list of parties.
+    /// Generates a new aggregated key from a list of individual keys.
     ///
     /// Each party can be local (you know the secret key) or remote (you only know the public key).
     ///
@@ -241,9 +250,9 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// let my_keypair = musig.schnorr.new_keypair(my_secret_key);
     /// let my_public_key = my_keypair.public_key();
     /// // Note the keys have to come in the same order on the other side!
-    /// let keylist = musig.new_keylist(vec![their_public_key, my_public_key]);
+    /// let agg_key = musig.new_agg_key(vec![their_public_key, my_public_key]);
     /// ```
-    pub fn new_keylist(&self, parties: Vec<XOnly>) -> KeyList {
+    pub fn new_agg_key(&self, parties: Vec<XOnly>) -> AggKey {
         let keys = parties.clone();
         let coeff_hash = {
             let L = self.pk_hash.clone().add(&keys[..]).finalize();
@@ -271,7 +280,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
         let agg_key = crate::fun::op::lincomb(coefs.iter(), points.iter())
             .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero");
 
-        KeyList {
+        AggKey {
             parties,
             coefs,
             agg_key: agg_key.mark::<Normal>(),
@@ -281,7 +290,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>> {
-    /// Generate nonces for your local keys in keylist.
+    /// Generate nonces for signing under your aggregate key.
     ///
     /// It is very important to carefully consider the implications of your choice of underlying
     /// [`NonceGen`].
@@ -302,16 +311,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
     /// [`Deterministic`]: secp256kfun::nonce::Deterministic
     /// [`start_sign_session`]: Self::start_sign_session
     /// [`NonceKeyPair`]: schnorr_fun::binonce::NonceKeyPair
-    pub fn gen_nonces(&self, secret: &Scalar, keylist: &AggKey, sid: &[u8]) -> NonceKeyPair {
+    pub fn gen_nonces(&self, secret: &Scalar, agg_key: &Bip340AggKey, sid: &[u8]) -> NonceKeyPair {
         let r1 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
             secret => secret,
-            public => [ b"r1", keylist.agg_public_key(), sid]
+            public => [ b"r1", agg_key.agg_public_key(), sid]
         );
         let r2 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
             secret => secret,
-            public => [ b"r2", keylist.agg_public_key(), sid]
+            public => [ b"r2", agg_key.agg_public_key(), sid]
         );
         let R1 = g!(r1 * G).normalize();
         let R2 = g!(r2 * G).normalize();
@@ -390,7 +399,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Panics if number of nonces does not align with the parties in `agg_key`.
     pub fn start_sign_session(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
     ) -> Option<SignSession> {
@@ -428,7 +437,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`adaptor`]: crate::adaptor
     pub fn start_encrypted_sign_session(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy>,
@@ -449,7 +458,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _start_sign_session(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
@@ -506,7 +515,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
     pub fn sign<T>(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         my_index: u32,
         keypair: &KeyPair,
         local_secret_nonce: NonceKeyPair,
@@ -533,14 +542,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     #[must_use]
     /// Verifies a partial signature (or partial encrypted signature depending on `T`).
     ///
-    /// You must provide the `index` of the party (the index of the key in `keylist`).
+    /// You must provide the `index` of the party (the index of the key in `agg_key`).
     ///
     /// # Panics
     ///
-    /// Panics when `index` is equal to or greater than the number of parties in the keylist.
+    /// Panics when `index` is equal to or greater than the number of parties in the agg_key.
     pub fn verify_partial_signature<T>(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         session: &SignSession<T>,
         index: usize,
         partial_sig: Scalar<Public, Zero>,
@@ -570,7 +579,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_signatures(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         session: &SignSession<Ordinary>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> Signature {
@@ -587,7 +596,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_encrypted_signatures(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         session: &SignSession<Adaptor>,
         partial_encrypted_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> EncryptedSignature {
@@ -602,7 +611,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _combine_partial_signatures<T>(
         &self,
-        agg_key: &AggKey,
+        agg_key: &Bip340AggKey,
         session: &SignSession<T>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> (Point<EvenY>, Scalar<Public, Zero>) {
@@ -650,17 +659,17 @@ mod test {
                 .schnorr
                 .new_keypair(sk3);
 
-            let mut keylist1 = musig.new_keylist(vec![
+            let mut agg_key1 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
             ]);
-            let mut keylist2 = musig.new_keylist(vec![
+            let mut agg_key2 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
             ]);
-            let mut keylist3 = musig.new_keylist(vec![
+            let mut agg_key3 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
@@ -668,16 +677,16 @@ mod test {
 
             for tweak in [pre_tweak1, pre_tweak2] {
                 if let Some(tweak) = tweak {
-                    keylist1 = keylist1.tweak(tweak).unwrap();
-                    keylist2 = keylist2.tweak(tweak).unwrap();
-                    keylist3 = keylist3.tweak(tweak).unwrap();
+                    agg_key1 = agg_key1.tweak(tweak).unwrap();
+                    agg_key2 = agg_key2.tweak(tweak).unwrap();
+                    agg_key3 = agg_key3.tweak(tweak).unwrap();
                 }
             }
 
 
-            let mut agg_key1 = keylist1.into_agg_key();
-            let mut agg_key2 = keylist2.into_agg_key();
-            let mut agg_key3 = keylist3.into_agg_key();
+            let mut agg_key1 = agg_key1.into_bip340_key();
+            let mut agg_key2 = agg_key2.into_bip340_key();
+            let mut agg_key3 = agg_key3.into_bip340_key();
 
             for tweak in [tweak1, tweak2] {
                 if let Some(tweak) = tweak {
@@ -772,21 +781,21 @@ mod test {
             .new_keypair(sk3);
             let encryption_key = musig.schnorr.encryption_key_for(&y);
 
-            let agg_key = musig.new_keylist(vec![
+            let agg_key = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_agg_key();
-            let agg_key2 = musig.new_keylist(vec![
+            ]).into_bip340_key();
+            let agg_key2 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_agg_key();
-            let agg_key3 = musig.new_keylist(vec![
+            ]).into_bip340_key();
+            let agg_key3 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_agg_key();
+            ]).into_bip340_key();
 
             let p1_nonce = musig.gen_nonces(&keypair1.sk, &agg_key, b"test");
             let p2_nonce = musig.gen_nonces(&keypair2.sk, &agg_key2, b"test");
@@ -896,29 +905,29 @@ mod test {
         let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
         assert_eq!(
             musig
-                .new_keylist(vec![X[0], X[1], X[2]])
-                .into_agg_key()
+                .new_agg_key(vec![X[0], X[1], X[2]])
+                .into_bip340_key()
                 .agg_public_key(),
             expected[0]
         );
         assert_eq!(
             musig
-                .new_keylist(vec![X[2], X[1], X[0]])
-                .into_agg_key()
+                .new_agg_key(vec![X[2], X[1], X[0]])
+                .into_bip340_key()
                 .agg_public_key(),
             expected[1]
         );
         assert_eq!(
             musig
-                .new_keylist(vec![X[0], X[0], X[0]])
-                .into_agg_key()
+                .new_agg_key(vec![X[0], X[0], X[0]])
+                .into_bip340_key()
                 .agg_public_key(),
             expected[2]
         );
         assert_eq!(
             musig
-                .new_keylist(vec![X[0], X[0], X[1], X[1]])
-                .into_agg_key()
+                .new_agg_key(vec![X[0], X[0], X[1], X[1]])
+                .into_bip340_key()
                 .agg_public_key(),
             expected[3]
         );
@@ -1008,7 +1017,9 @@ mod test {
         );
         let message = Message::<Public>::raw(&msg);
         {
-            let agg_key = musig.new_keylist(vec![keypair.pk, X1, X2]).into_agg_key();
+            let agg_key = musig
+                .new_agg_key(vec![keypair.pk, X1, X2])
+                .into_bip340_key();
 
             let sign_session = musig
                 .start_sign_session(
@@ -1026,7 +1037,9 @@ mod test {
         }
 
         {
-            let agg_key = musig.new_keylist(vec![X1, keypair.pk, X2]).into_agg_key();
+            let agg_key = musig
+                .new_agg_key(vec![X1, keypair.pk, X2])
+                .into_bip340_key();
             let sign_session = musig
                 .start_sign_session(
                     &agg_key,
@@ -1043,7 +1056,9 @@ mod test {
         }
 
         {
-            let agg_key = musig.new_keylist(vec![X1, X2, keypair.pk]).into_agg_key();
+            let agg_key = musig
+                .new_agg_key(vec![X1, X2, keypair.pk])
+                .into_bip340_key();
             let sign_session = musig
                 .start_sign_session(
                     &agg_key,
@@ -1188,8 +1203,8 @@ mod test {
 
         {
             let agg_key = musig
-                .new_keylist(vec![X1, X2, keypair.pk])
-                .into_agg_key()
+                .new_agg_key(vec![X1, X2, keypair.pk])
+                .into_bip340_key()
                 .tweak(tweaks[0].clone())
                 .unwrap();
             let sign_session = musig
@@ -1209,8 +1224,8 @@ mod test {
 
         {
             let agg_key = musig
-                .new_keylist(vec![X1, X2, keypair.pk])
-                .into_agg_key()
+                .new_agg_key(vec![X1, X2, keypair.pk])
+                .into_bip340_key()
                 .tweak(tweaks[0].clone())
                 .unwrap();
             let sign_session = musig
@@ -1230,10 +1245,10 @@ mod test {
 
         {
             let agg_key = musig
-                .new_keylist(vec![X1, X2, keypair.pk])
+                .new_agg_key(vec![X1, X2, keypair.pk])
                 .tweak(tweaks[0].clone())
                 .unwrap()
-                .into_agg_key()
+                .into_bip340_key()
                 .tweak(tweaks[1].clone())
                 .unwrap();
 
@@ -1253,15 +1268,15 @@ mod test {
         }
 
         // {
-        //     let mut keylist = musig.new_keylist(vec![X1, X2, keypair.pk]);
-        //     keylist = keylist.tweak(tweaks[0].clone(), true).unwrap();
-        //     keylist = keylist.tweak(tweaks[1].clone(), false).unwrap();
-        //     keylist = keylist.tweak(tweaks[2].clone(), true).unwrap();
-        //     keylist = keylist.tweak(tweaks[3].clone(), false).unwrap();
+        //     let mut agg_key = musig.new_agg_key(vec![X1, X2, keypair.pk]);
+        //     agg_key = agg_key.tweak(tweaks[0].clone(), true).unwrap();
+        //     agg_key = agg_key.tweak(tweaks[1].clone(), false).unwrap();
+        //     agg_key = agg_key.tweak(tweaks[2].clone(), true).unwrap();
+        //     agg_key = agg_key.tweak(tweaks[3].clone(), false).unwrap();
 
         //     let sign_session = musig
         //         .start_sign_session(
-        //             &keylist,
+        //             &agg_key,
         //             vec![
         //                 remote_nonce1.clone(),
         //                 remote_nonce2.clone(),
@@ -1270,7 +1285,7 @@ mod test {
         //             message,
         //         )
         //         .unwrap();
-        //     let sig = musig.sign(&keylist, 2, &keypair, sec_nonce.clone(), &sign_session);
+        //     let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
         //     assert_eq!(sig, expected[3]);
         // }
     }
