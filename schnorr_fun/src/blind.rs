@@ -263,7 +263,11 @@ pub fn blind_sign(
 mod test {
     use super::*;
     use crate::{Message, Schnorr};
-    use secp256kfun::{g, Scalar, G};
+    use secp256kfun::{
+        g,
+        proptest::{arbitrary::any, proptest},
+        Scalar, G,
+    };
     use sha2::Sha256;
 
     #[test]
@@ -314,5 +318,42 @@ mod test {
         // Validate the unblinded signature against the tweaked public key
         let (verification_pubkey, _) = blind_session.tweaked_pubkey.into_point_with_even_y();
         assert!(schnorr.verify(&verification_pubkey, message, &unblinded_signature));
+    }
+
+    proptest! {
+        #[test]
+        fn prop_test(secret in any::<Scalar>(), mut nonce in any::<Scalar>()) {
+            let schnorr = Schnorr::<Sha256, _>::new(());
+            let public_key = g!(secret * G).normalize();
+
+            let (pub_nonce, nonce_negated) = g!(nonce * G).normalize().into_point_with_even_y();
+            nonce.conditional_negate(nonce_negated);
+
+            let message = Message::<Public>::plain("test", b"sign me up");
+
+            let blind_session = Blinder::blind(
+                pub_nonce,
+                public_key,
+                message,
+                schnorr.clone(),
+                &mut rand::thread_rng(),
+            );
+
+            dbg!(&secret, &public_key, &nonce, &pub_nonce);
+            dbg!(&blind_session);
+
+            let blind_signature = blind_sign(
+                &secret,
+                &mut nonce.clone(),
+                blind_session.challenge.clone(),
+                blind_session.pubkey_needs_negation,
+                blind_session.nonce_needs_negation,
+            );
+
+            let unblinded_signature = blind_session.unblind(blind_signature);
+
+            let (verification_pubkey, _) = blind_session.tweaked_pubkey.into_point_with_even_y();
+            assert!(schnorr.verify(&verification_pubkey, message, &unblinded_signature));
+        }
     }
 }
