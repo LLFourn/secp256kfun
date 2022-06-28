@@ -17,6 +17,7 @@ keywords = ["bitcoin", "schnorr"]
 features = ["all"]
 
 [dependencies]
+rand = "0.8"
 secp256kfun = { path = "../secp256kfun", version = "0.7.1",  default-features = false }
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
 
