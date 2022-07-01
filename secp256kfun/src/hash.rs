@@ -122,3 +122,24 @@ impl<D: Digest> HashAdd for D {
         self
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use sha2::Sha256;
+
+    #[test]
+    fn bip340_zero_mask_tagged_hash_is_correct() {
+        let hash = Sha256::default().tagged(b"BIP0340/aux").add(&[0u8; 32]);
+        let mut zero_mask = [0u8; 32];
+        zero_mask.copy_from_slice(hash.finalize().as_ref());
+        assert_eq!(
+            zero_mask,
+            /* Precomputed TaggedHash("BIP0340/aux", 0x0000...00); */
+            [
+                84u8, 241, 105, 207, 201, 226, 229, 114, 116, 128, 68, 31, 144, 186, 37, 196, 136,
+                244, 97, 199, 11, 94, 165, 220, 170, 247, 175, 105, 39, 10, 165, 20
+            ]
+        );
+    }
+}
