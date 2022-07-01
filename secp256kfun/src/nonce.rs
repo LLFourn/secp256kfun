@@ -147,6 +147,8 @@ pub struct Deterministic<H> {
 ///
 /// In general it's better to use the [`derive_nonce`] macro than to call
 /// `begin_derivation` directly.
+///
+/// [`derive_nonce`]: crate::derive_nonce
 pub trait NonceGen {
     /// The type of hash that `begin_derivation` will return.
     type Hash: Digest<OutputSize = U32>;
