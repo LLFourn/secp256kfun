@@ -289,8 +289,8 @@ pub mod test {
         );
 
         // make sure deterministic signatures don't change
-        assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
-        assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
+        assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("10a64055526a861cc78d491540e482c438b1124643fbd3619c01d2396c2869119b6254586f32bf4e0398f62367b0ce0697bb2a817c5c8eb5a440025ad6490ed1").unwrap());
+        assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("c89bfd53789ca6620ff945c05a63e81b47bfd0da527d84628098adf5011e31f8be4fda39a1cf1cab57233235b43c95d4edf0e0cce5064c0270bd01a03fd448d0").unwrap());
     }
 
     proptest! {

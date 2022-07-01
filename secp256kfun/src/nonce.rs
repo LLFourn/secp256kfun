@@ -133,6 +133,7 @@ pub struct GlobalRng<R> {
 #[derive(Clone, Debug, Default)]
 pub struct Deterministic<H> {
     nonce_hash: H,
+    aux_hash: H,
 }
 
 /// A trait for hash based nonce gneration.
@@ -162,7 +163,17 @@ pub trait NonceGen {
 impl<H: Tagged + Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H> {
     type Hash = H;
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
-        self.nonce_hash.clone().add(secret)
+        let sec_bytes = secret.to_bytes();
+        let mut bytes = [0u8; 32];
+        let zero_mask = self.aux_hash.clone().add(&[0u8; 32]);
+        bytes.copy_from_slice(zero_mask.finalize().as_ref());
+
+        // bitwise xor the zero mask with secret
+        for (i, byte) in bytes.iter_mut().enumerate() {
+            *byte ^= sec_bytes[i]
+        }
+
+        self.nonce_hash.clone().add(&bytes[..])
     }
 }
 
@@ -172,6 +183,7 @@ impl<H: Tagged> AddTag for Deterministic<H> {
             nonce_hash: self
                 .nonce_hash
                 .tagged(&[tag.as_bytes(), b"/nonce"].concat()),
+            aux_hash: self.aux_hash.tagged(&[tag.as_bytes(), b"/aux"].concat()),
         }
     }
 }
@@ -280,7 +292,7 @@ mod test {
         assert_eq!(
             get_nonce!(nonce_gen_1, one),
             Scalar::<Secret>::from_str(
-                "34f7ce653cfa8454b3463726a599ef2925736442d2d06455974d6feae9450d90"
+                "c38e17b8487b0a274cd193863f56b687fcc51293f20108eb931513d3ad1d31ea"
             )
             .unwrap()
         )
