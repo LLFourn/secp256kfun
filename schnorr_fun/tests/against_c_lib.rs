@@ -81,3 +81,19 @@ proptest! {
         prop_assert!(schnorr.verify(&fun_pk, fun_msg, &sig.into()));
     }
 }
+
+#[test]
+fn bip340_zero_mask_tagged_hash_is_correct() {
+    let no_aux = Bip340NoAux::default().add_tag("BIP0340");
+    let no_aux_hash = no_aux.aux_hash.clone().add(&[0u8; 32]);
+    let mut zero_mask = [0u8; 32];
+    zero_mask.copy_from_slice(no_aux_hash.finalize().as_ref());
+    assert_eq!(
+        zero_mask,
+        /* Precomputed TaggedHash("BIP0340/aux", 0x0000...00); */
+        [
+            84u8, 241, 105, 207, 201, 226, 229, 114, 116, 128, 68, 31, 144, 186, 37, 196, 136, 244,
+            97, 199, 11, 94, 165, 220, 170, 247, 175, 105, 39, 10, 165, 20
+        ]
+    );
+}
