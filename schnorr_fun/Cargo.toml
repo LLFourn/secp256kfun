@@ -22,7 +22,6 @@ secp256kfun = { path = "../secp256kfun", version = "0.7.1",  default-features = 
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
 
 [dev-dependencies]
-rand = { version = "0.8" }
 lazy_static = "1.4"
 bincode = "1.0"
 sha2 = "0.9"
