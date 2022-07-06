@@ -28,8 +28,9 @@
 //!
 //! let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::new(Deterministic::<Sha256>::default());
 //! // Generate a secret & public key for the party that will blindly sign a message
-//! let secret = Scalar::random(&mut rand::thread_rng());
-//! let public_key = g!(secret * G).normalize();
+//! let mut secret = Scalar::random(&mut rand::thread_rng());
+//! let (public_key, secret_needs_negation) = g!(secret * G).normalize().into_point_with_even_y();
+//! secret.conditional_negate(secret_needs_negation);
 //!
 //! // The user wants a single blind signature but must initiate two signing sessions where one will fail.
 //! // This is to prevent Wagner attacks where many parallel signing sessions can allow forgery.
@@ -119,11 +120,11 @@ use std::vec::Vec;
 /// The [`BlindingTweaks`] values (alpha, beta, t) may be negated to ensure even y values.
 pub fn create_blinded_values<'a, H: Digest<OutputSize = U32> + Clone, NG>(
     nonce: Point<EvenY>,
-    public_key: Point,
+    public_key: Point<EvenY>,
     message: Message,
     schnorr: Schnorr<H, NG>,
     blinding_tweaks: &mut BlindingTweaks,
-) -> (Point, Point, Scalar, bool, bool) {
+) -> (Point, Point, Scalar, bool) {
     let tweaked_pubkey = g!(public_key + blinding_tweaks.t * G)
         .normalize()
         .mark::<NonZero>()
@@ -155,7 +156,6 @@ pub fn create_blinded_values<'a, H: Digest<OutputSize = U32> + Clone, NG>(
         tweaked_pubkey,
         blinded_nonce,
         blinded_challenge,
-        tweaked_pubkey_needs_negation,
         blinded_nonce_needs_negation,
     )
 }
@@ -223,26 +223,21 @@ impl Blinder {
         R: RngCore + CryptoRng,
     >(
         pubnonce: Point<EvenY>,
-        public_key: Point,
+        public_key: Point<EvenY>,
         message: Message,
         schnorr: Schnorr<H, NG>,
         rng: &mut R,
     ) -> Self {
         loop {
             let mut blinding_tweaks = BlindingTweaks::new(rng);
-            let (
-                tweaked_pubkey,
-                blinded_nonce,
-                blinded_challenge,
-                _pubkey_needs_negation,
-                nonce_needs_negation,
-            ) = create_blinded_values(
-                pubnonce,
-                public_key,
-                message,
-                schnorr.clone(),
-                &mut blinding_tweaks,
-            );
+            let (tweaked_pubkey, blinded_nonce, blinded_challenge, nonce_needs_negation) =
+                create_blinded_values(
+                    pubnonce,
+                    public_key,
+                    message,
+                    schnorr.clone(),
+                    &mut blinding_tweaks,
+                );
 
             if !nonce_needs_negation {
                 break Blinder {
@@ -351,8 +346,10 @@ mod test {
         let schnorr =
             Schnorr::<Sha256, Deterministic<Sha256>>::new(Deterministic::<Sha256>::default());
         // Generate a secret & public key for the server that will blindly sign a message
-        let secret = Scalar::random(&mut rand::thread_rng());
-        let public_key = g!(secret * G).normalize();
+        let mut secret = Scalar::random(&mut rand::thread_rng());
+        let (public_key, secret_needs_negation) =
+            g!(secret * G).normalize().into_point_with_even_y();
+        secret.conditional_negate(secret_needs_negation);
 
         // The user wants a single blind signature but must initiate two signing sessions where one will fail.
         // This is to prevent Wagner attacks where many parallel signing sessions can allow forgery.
@@ -431,10 +428,12 @@ mod test {
 
     proptest! {
         #[test]
-        fn blind_sig_prop_test(secret in any::<Scalar>(), mut nonce in any::<Scalar>()) {
+        fn blind_sig_prop_test(mut secret in any::<Scalar>(), mut nonce in any::<Scalar>()) {
             let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::new(Deterministic::<Sha256>::default());
 
-            let public_key = g!(secret * G).normalize();
+            let (public_key, secret_needs_negation) =
+                g!(secret * G).normalize().into_point_with_even_y();
+            secret.conditional_negate(secret_needs_negation);
 
             let (pub_nonce, nonce_negated) = g!(nonce * G).normalize().into_point_with_even_y();
             nonce.conditional_negate(nonce_negated);
