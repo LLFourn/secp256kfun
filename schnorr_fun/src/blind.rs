@@ -22,12 +22,14 @@
 //!
 //! # Synopsis
 //! ```
-//! use schnorr_fun::{blind, Blinder, Message, Schnorr};
-//! use secp256kfun::{g, marker::Public, Scalar, G, nonce::Deterministic,};
+//! use schnorr_fun::{blind, Blinder, Message, Schnorr, nonce};
+//! use secp256kfun::{g, marker::Public, Scalar, G, derive_nonce, nonce::Deterministic};
+//! use rand::rngs::ThreadRng;
 //! use sha2::Sha256;
 //!
-//! let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::new(Deterministic::<Sha256>::default());
-//! // Generate a secret & public key for the party that will blindly sign a message
+//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+//! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen);
+//! // Generate a secret & public key for the blind signing server
 //! let mut secret = Scalar::random(&mut rand::thread_rng());
 //! let (public_key, secret_needs_negation) = g!(secret * G).normalize().into_point_with_even_y();
 //! secret.conditional_negate(secret_needs_negation);
@@ -37,12 +39,15 @@
 //! // Here we request two nonces corresponding to two sessions, such that we will retrieve one signature.
 //! let n_sessions = 2;
 //!
-//! // The blind signing server replies with N public nonces to the user and remembers this number of sessions.
+//! // The blind signing server sends out N public nonces to the user and remembers this number of sessions.
 //! let mut nonces = vec![];
 //! let mut pub_nonces = vec![];
 //! for _ in 0..n_sessions {
-//!     let mut nonce = Scalar::random(&mut rand::thread_rng());
-//!     // TODO: Probably want to reintroduce a singular nonce struct? And move musig/frost to "binonce"
+//!     let mut nonce = derive_nonce!(
+//!         nonce_gen => schnorr.nonce_gen(),
+//!         secret => secret,
+//!         public => [public_key]
+//!     );
 //!     let (pub_nonce, nonce_negated) = g!(nonce * G).normalize().into_point_with_even_y();
 //!     nonce.conditional_negate(nonce_negated);
 //!     nonces.push(nonce);
@@ -99,17 +104,18 @@
 //! }
 //! ```
 
-use crate::fun::rand_core::{CryptoRng, RngCore};
-use crate::{Message, Schnorr, Signature};
+use crate::{
+    fun::rand_core::{CryptoRng, RngCore},
+    Message, Schnorr, Signature, Vec,
+};
 use rand::Rng;
-use secp256kfun::nonce::{AddTag, NonceGen};
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
     marker::*,
+    nonce::{AddTag, NonceGen},
     s, Point, Scalar, G,
 };
-use std::vec::Vec;
 
 /// Use [`BlindingTweaks`] to create the blinded public key, challenge, and nonce needed for a blinded signature
 ///

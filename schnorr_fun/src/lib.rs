@@ -30,6 +30,7 @@ pub mod musig;
 
 #[cfg(feature = "alloc")]
 pub mod blind;
+#[cfg(feature = "alloc")]
 pub use blind::*;
 
 mod signature;
