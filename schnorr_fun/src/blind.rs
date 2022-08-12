@@ -289,7 +289,8 @@ impl Blinder {
 #[derive(Clone)]
 /// A signature request which will be sent to the signing server
 pub struct SignatureRequest {
-    blind_challenge: Scalar,
+    /// Blinded challenge request to the signing server
+    pub blind_challenge: Scalar,
 }
 
 /// Blindly sign a challenge using a secret and a nonce
