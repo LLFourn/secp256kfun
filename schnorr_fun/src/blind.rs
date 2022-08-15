@@ -108,6 +108,7 @@ use crate::{
     fun::rand_core::{CryptoRng, RngCore},
     Message, Schnorr, Signature, Vec,
 };
+use alloc::collections::BTreeMap;
 use rand::Rng;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
@@ -116,6 +117,54 @@ use secp256kfun::{
     nonce::{AddTag, NonceGen},
     s, Point, Scalar, G,
 };
+
+
+pub struct BlindSigner<Rng> {
+    max_parallel_sessions: usize,
+    n_dummies: usize,
+    rng: Rng,
+    session_counter: usize,
+}
+
+
+impl<Rng: RngCore + CryptoRng> BlindSigner<Rng> {
+
+    pub fn new(max_parallel_sessions: usize, n_dummies: usize) -> Self {
+        Self {
+            max_parallel_sessions,
+            n_dummies,
+        }
+    }
+
+    pub fn new_signing_session(&mut self) -> Option<SecretSession> {
+        if self.session_counter >= self.max_parallel_sessions {
+            return None;
+        }
+
+        self.session_counter += 1;
+
+        let nonces = (0..self.n_dummies).map(|_| KeyPair::random(&mut self.rng));
+
+        return Some(SecretSession { nonces })
+    }
+
+    pub fn blind_sign(&mut self, secret_key: &Scalar, session: SecretSession, blinded_challange: Scalar<Public, Zero>) ->  Scalar {
+
+        todo!();
+        self.session_counter -= 1;
+    }
+}
+
+
+pub struct SecretSession {
+    nonces: Vec<KeyPair>
+}
+
+pub struct PublicSession {
+    nonces: Vec<Point>
+}
+
+
 
 /// Use [`BlindingTweaks`] to create the blinded public key, challenge, and nonce needed for a blinded signature
 ///
