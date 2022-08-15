@@ -65,12 +65,10 @@ macro_rules! _s {
     };
 
     (@next [$scalar:block]) => {
-        #[allow(unused_braces)]
         $scalar
     };
 
     (@next [$scalar:block stringify]) => {
-        #[allow(unused_braces)]
         stringify!($scalar)
     };
 }
@@ -204,7 +202,6 @@ macro_rules! _g {
         $crate::op::scalar_mul_point($scalar0.borrow(), $point0.borrow())
     };
     (@next [$point0:block]) => {
-        #[allow(unused_braces)]
         $point0
     }
 }
