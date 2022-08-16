@@ -45,7 +45,7 @@
 //! // finish keygen by verifying the shares we recieved as well as proofs-of-possession
 //! // and calulate our secret share of the joint FROST key
 //! let (secret_share, frost_key) = frost
-//!     .finish_keygen(
+//!     .finish_keygen_to_xonly(
 //!         keygen.clone(),
 //!         0,
 //!         recieved_shares,
@@ -53,7 +53,7 @@
 //!     )
 //!     .unwrap();
 //! # let (secret_share3, _frost_key3) = frost
-//! #    .finish_keygen(
+//! #    .finish_keygen_to_xonly(
 //! #        keygen.clone(),
 //! #        2,
 //! #        recieved_shares3,
@@ -353,15 +353,13 @@ impl std::error::Error for FinishKeyGenError {}
 )]
 pub struct FrostKey {
     /// The joint public key of the FROST multisignature.
-    pub joint_public_key: Point<EvenY>,
+    pub joint_public_key: Point<Normal>,
     /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
     pub verification_shares: Vec<Point>,
     /// Number of partial signatures required to create a combined signature under this key.
     pub threshold: u32,
     /// Taproot tweak applied to this FROST key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
-    /// Whether the secrets need negation in order to sign for the X-Only key.
-    needs_negation: bool,
 }
 
 impl FrostKey {
@@ -370,53 +368,50 @@ impl FrostKey {
     /// ## Return value
     ///
     /// A point (normalised to have an even Y coordinate).
-    pub fn public_key(&self) -> Point<EvenY> {
+    pub fn public_key(&self) -> Point<Normal> {
         self.joint_public_key
     }
 
+    /// Apply a plain tweak to the joint public key.
+    /// This is how you derive child public keys from a joint public key using BIP32.
+    ///
     /// Tweak the joint FROST public key with a scalar so that the resulting key is equal to the
     /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
     /// the original set of signers to sign under the new key.
     ///
-    /// This is how you embed a taproot commitment into a key.
-    ///
     /// ## Return value
     ///
-    /// Returns a new FrostKey with the same parties but a different aggregated public key.
+    /// Returns a new FrostKey with the same parties but a different joint public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        // Also updates whether the FROST key needs negation.
-        // XOR of existing FROST key needs_negation and new tweaked key needs_negation.
-        // If both need negation, they will cancel out.
-        //
-        // Public key
-        //     X = (b*x) * G
-        // where b = 1 or -1
-        // For a tweak t: X' = X + t * G.
-        // If X' needs negation then we need secret
-        //     -(b*x + t) = -b*x - t
-        // So new b = -b and t = -t.
-        // If X' doesn't need negation, leave b as is.
-        // i.e. previous needs_negation XOR new needs_negation.
-        let new_tweak = s!(0 + tweak).mark::<Public>();
-        let (joint_public_key, tweaked_needs_negation) = g!(self.joint_public_key + new_tweak * G)
-            .mark::<NonZero>()?
-            .into_point_with_even_y();
+        let joint_public_key = g!(self.joint_public_key + tweak * G)
+            .normalize()
+            .mark::<NonZero>()?;
+        let tweak = s!(self.tweak + tweak).mark::<Public>();
 
-        let mut tweak = s!(self.tweak + tweak).mark::<Public>();
-        tweak.conditional_negate(tweaked_needs_negation);
-
-        let updated_needs_negation = self.needs_negation ^ tweaked_needs_negation;
-
-        // Return the new FrostKey including the new tweak and updated needs_negation
         Some(FrostKey {
             joint_public_key,
             verification_shares: self.verification_shares.clone(),
             threshold: self.threshold.clone(),
             tweak,
-            needs_negation: updated_needs_negation,
         })
+    }
+
+    /// Convert the key into a `Bip340AggKey`.
+    ///
+    /// This is the BIP340 compatiple version of the key which you can put in a segwitv1
+    pub fn into_xonly_key(self) -> XOnlyFrostKey {
+        let (joint_public_key, needs_negation) = self.joint_public_key.into_point_with_even_y();
+        let mut tweak = self.tweak;
+        tweak.conditional_negate(needs_negation);
+        XOnlyFrostKey {
+            joint_public_key,
+            verification_shares: self.verification_shares,
+            threshold: self.threshold,
+            tweak,
+            needs_negation,
+        }
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
@@ -427,6 +422,62 @@ impl FrostKey {
     /// The total number of signers in this FROST multisignature.
     pub fn n_signers(&self) -> u32 {
         self.verification_shares.len() as u32
+    }
+}
+
+/// A [`FrostKey`] that has been converted into a [`XOnlyFrostKey`] key.
+///
+/// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
+/// Tweaks applied to a `XOnlyFrostKey` are XOnly tweaks to the joint public key.
+/// BIP340: <https://bips.xyz/340>
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct XOnlyFrostKey {
+    /// The BIP340 public key of the FROST multisignature.
+    pub joint_public_key: Point<EvenY>,
+    /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
+    pub verification_shares: Vec<Point>,
+    /// Number of partial signatures required to create a combined signature under this key.
+    pub threshold: u32,
+    /// Taproot tweak applied to this FROST key, tracks the aggregate tweak.
+    tweak: Scalar<Public, Zero>,
+    /// Whether the secret keys need to be negated during
+    needs_negation: bool,
+}
+
+impl XOnlyFrostKey {
+    /// Applies an "XOnly" tweak to the joint public key.
+    /// This is how you embed a taproot commitment into a joint public key
+    ///
+    /// Tweak the joint FROST public key with a scalar so that the resulting key is equal to the
+    /// existing key plus `tweak * G` as an [`EvenY`] point. The tweak mutates the public key while still allowing
+    /// the original set of signers to sign under the new key.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a new FrostKey with the same parties but a different joint public key.
+    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
+    /// secret key it returns `None`.
+    pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
+        let (new_joint_public_key, needs_negation) = g!(self.joint_public_key + tweak * G)
+            .normalize()
+            .mark::<NonZero>()?
+            .into_point_with_even_y();
+        let mut new_tweak = s!(self.tweak + tweak).mark::<Public>();
+        new_tweak.conditional_negate(needs_negation);
+        let needs_negation = self.needs_negation ^ needs_negation;
+
+        Some(Self {
+            needs_negation,
+            tweak: new_tweak,
+            joint_public_key: new_joint_public_key,
+            verification_shares: self.verification_shares,
+            threshold: self.threshold,
+        })
     }
 }
 
@@ -507,12 +558,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
         }
 
         let joint_poly = PointPoly::combine(point_polys.clone().into_iter());
-        let frost_key = joint_poly.0[0];
-
-        let (joint_public_key, needs_negation) = frost_key
+        let joint_public_key = joint_poly.0[0]
             .mark::<NonZero>()
-            .ok_or(NewKeyGenError::ZeroFrostKey)?
-            .into_point_with_even_y();
+            .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         let mut keygen_hash = self.keygen_id_hash.clone();
         keygen_hash.update((len_first_poly as u32).to_be_bytes());
@@ -537,7 +585,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
                 joint_public_key,
                 threshold: joint_poly.poly_len() as u32,
                 tweak: Scalar::zero().mark::<Public>(),
-                needs_negation,
             },
         })
     }
@@ -592,6 +639,23 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: AddTag> Frost<H, NG> {
 
         Ok((total_secret_share, KeyGen.frost_key))
     }
+
+    /// Calls [`Frost::finish_keygen`] but immediately provides the the key as an [`XOnlyFrostKey`].
+    ///
+    /// # Return value
+    ///
+    /// Your total secret share Scalar and the XOnlyFrostKey
+    pub fn finish_keygen_to_xonly(
+        &self,
+        KeyGen: KeyGen,
+        my_index: u32,
+        secret_shares: Vec<Scalar<Secret, Zero>>,
+        proofs_of_possession: Vec<Signature>,
+    ) -> Result<(Scalar, XOnlyFrostKey), FinishKeyGenError> {
+        let (secret_share, frost_key) =
+            self.finish_keygen(KeyGen, my_index, secret_shares, proofs_of_possession)?;
+        Ok((secret_share, frost_key.into_xonly_key()))
+    }
 }
 
 /// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
@@ -629,7 +693,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// A FROST signing session
     pub fn start_sign_session(
         &self,
-        frost_key: &FrostKey,
+        frost_key: &XOnlyFrostKey,
         nonces: Vec<(u32, Nonce)>,
         message: Message,
     ) -> SignSession {
@@ -696,7 +760,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Returns a signature Scalar.
     pub fn sign(
         &self,
-        frost_key: &FrostKey,
+        frost_key: &XOnlyFrostKey,
         session: &SignSession,
         my_index: u32,
         secret_share: &Scalar,
@@ -731,7 +795,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Returns `bool`, true if partial signature is valid.
     pub fn verify_signature_share(
         &self,
-        frost_key: &FrostKey,
+        frost_key: &XOnlyFrostKey,
         session: &SignSession,
         index: u32,
         signature_share: Scalar<Public, Zero>,
@@ -768,7 +832,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Valid against the joint public key.
     pub fn combine_signature_shares(
         &self,
-        frost_key: &FrostKey,
+        frost_key: &XOnlyFrostKey,
         session: &SignSession,
         partial_sigs: Vec<Scalar<Public, Zero>>,
     ) -> Signature {
@@ -874,21 +938,23 @@ mod test {
             }
 
             // finish keygen for each party
-            let (secret_shares, frost_keys): (Vec<Scalar>, Vec<FrostKey>) = (0..n_parties).map(|i| {
-                let (secret_share, mut frost_key) = frost.finish_keygen(
+            let (secret_shares, frost_keys): (Vec<Scalar>, Vec<XOnlyFrostKey>) = (0..n_parties).map(|i| {
+                let (secret_share, frost_key) = frost.finish_keygen(
                     KeyGen.clone(),
                     i,
                     recieved_shares[i as usize].clone(),
                     proofs_of_possession.clone(),
                 )
                 .unwrap();
+                let mut xonly_frost_key = frost_key.into_xonly_key();
 
+                // apply some xonly tweaks
                 for tweak in [tweak1, tweak2] {
                     if let Some(tweak) = tweak {
-                        frost_key = frost_key.tweak(tweak).unwrap();
+                        xonly_frost_key = xonly_frost_key.tweak(tweak).unwrap();
                     }
                 }
-                (secret_share, frost_key)
+                (secret_share, xonly_frost_key)
             }).unzip();
 
             // use a boolean mask for which t participants are signers
@@ -961,7 +1027,7 @@ mod test {
         let (shares3, pop3) = frost.create_shares(&KeyGen, sp3);
         let proofs_of_possession = vec![pop1, pop2, pop3];
 
-        let (secret_share1, mut frost_key) = frost
+        let (secret_share1, frost_key) = frost
             .finish_keygen(
                 KeyGen.clone(),
                 0,
@@ -969,7 +1035,7 @@ mod test {
                 proofs_of_possession.clone(),
             )
             .unwrap();
-        let (_secret_share2, mut jk2) = frost
+        let (_secret_share2, frost_key2) = frost
             .finish_keygen(
                 KeyGen.clone(),
                 1,
@@ -977,7 +1043,7 @@ mod test {
                 proofs_of_possession.clone(),
             )
             .unwrap();
-        let (secret_share3, mut jk3) = frost
+        let (secret_share3, frost_key3) = frost
             .finish_keygen(
                 KeyGen.clone(),
                 2,
@@ -986,8 +1052,16 @@ mod test {
             )
             .unwrap();
 
-        assert_eq!(frost_key, jk2);
-        assert_eq!(frost_key, jk3);
+        assert_eq!(frost_key, frost_key2);
+        assert_eq!(frost_key, frost_key3);
+
+        // Currently we are not doing any non-xonly tweak tests
+        let mut xonly_frost_key = frost_key.into_xonly_key();
+        let mut xonly_frost_key2 = frost_key2.into_xonly_key();
+        let mut xonly_frost_key3 = frost_key3.into_xonly_key();
+
+        assert_eq!(xonly_frost_key, xonly_frost_key2);
+        assert_eq!(xonly_frost_key, xonly_frost_key3);
 
         let use_tweak = true;
         let tweak = if use_tweak {
@@ -1001,11 +1075,9 @@ mod test {
             Scalar::zero()
         };
 
-        frost_key = frost_key.tweak(tweak.clone()).expect("tweak worked");
-        jk2 = jk2.tweak(tweak.clone()).expect("tweak worked");
-        jk3 = jk3.tweak(tweak).expect("tweak worked");
-
-        dbg!();
+        xonly_frost_key = xonly_frost_key.tweak(tweak.clone()).expect("tweak worked");
+        xonly_frost_key2 = xonly_frost_key2.tweak(tweak.clone()).expect("tweak worked");
+        xonly_frost_key3 = xonly_frost_key3.tweak(tweak).expect("tweak worked");
 
         let tweak = if use_tweak {
             Scalar::from_bytes([
@@ -1018,11 +1090,11 @@ mod test {
             Scalar::zero()
         };
 
-        frost_key = frost_key.tweak(tweak.clone()).expect("tweak worked");
-        jk2 = jk2.tweak(tweak.clone()).expect("tweak worked");
-        jk3 = jk3.tweak(tweak).expect("tweak worked");
+        xonly_frost_key = xonly_frost_key.tweak(tweak.clone()).expect("tweak worked");
+        xonly_frost_key2 = xonly_frost_key2.tweak(tweak.clone()).expect("tweak worked");
+        xonly_frost_key3 = xonly_frost_key3.tweak(tweak).expect("tweak worked");
 
-        let verification_shares_bytes: Vec<_> = frost_key
+        let verification_shares_bytes: Vec<_> = xonly_frost_key
             .verification_shares
             .iter()
             .map(|share| share.to_bytes())
@@ -1030,7 +1102,7 @@ mod test {
 
         // Create unique session IDs for these signing sessions
         let sid1 = [
-            frost_key.joint_public_key.to_bytes().as_slice(),
+            xonly_frost_key.joint_public_key.to_bytes().as_slice(),
             verification_shares_bytes.concat().as_slice(),
             b"frost-end-to-end-test-1".as_slice(),
             b"0".as_slice(),
@@ -1038,7 +1110,7 @@ mod test {
         .concat();
 
         let sid2 = [
-            frost_key.joint_public_key.to_bytes().as_slice(),
+            xonly_frost_key.joint_public_key.to_bytes().as_slice(),
             verification_shares_bytes.concat().as_slice(),
             b"frost-end-to-end-test-2".as_slice(),
             b"2".as_slice(),
@@ -1050,25 +1122,31 @@ mod test {
         let nonces = vec![(0, nonce1.public()), (2, nonce3.public())];
         let nonces2 = vec![(0, nonce1.public()), (2, nonce3.public())];
 
-        let session = frost.start_sign_session(&frost_key, nonces, Message::plain("test", b"test"));
+        let session =
+            frost.start_sign_session(&xonly_frost_key, nonces, Message::plain("test", b"test"));
 
         dbg!(&session);
         {
-            let session2 = frost.start_sign_session(&jk2, nonces2, Message::plain("test", b"test"));
+            let session2 = frost.start_sign_session(
+                &xonly_frost_key2,
+                nonces2,
+                Message::plain("test", b"test"),
+            );
             assert_eq!(session2, session);
         }
 
-        let sig1 = frost.sign(&frost_key, &session, 0, &secret_share1, nonce1);
-        let sig3 = frost.sign(&jk3, &session, 2, &secret_share3, nonce3);
+        let sig1 = frost.sign(&xonly_frost_key, &session, 0, &secret_share1, nonce1);
+        let sig3 = frost.sign(&xonly_frost_key3, &session, 2, &secret_share3, nonce3);
 
         dbg!(sig1, sig3);
 
-        assert!(frost.verify_signature_share(&frost_key, &session, 0, sig1));
-        assert!(frost.verify_signature_share(&frost_key, &session, 2, sig3));
-        let combined_sig = frost.combine_signature_shares(&frost_key, &session, vec![sig1, sig3]);
+        assert!(frost.verify_signature_share(&xonly_frost_key, &session, 0, sig1));
+        assert!(frost.verify_signature_share(&xonly_frost_key, &session, 2, sig3));
+        let combined_sig =
+            frost.combine_signature_shares(&xonly_frost_key, &session, vec![sig1, sig3]);
 
         assert!(frost.schnorr.verify(
-            &frost_key.joint_public_key,
+            &xonly_frost_key.joint_public_key,
             Message::<Public>::plain("test", b"test"),
             &combined_sig
         ));
