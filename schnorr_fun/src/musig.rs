@@ -151,7 +151,7 @@ impl AggKey {
     /// The resulting key is equal to the existing key plus `tweak * G`. The tweak mutates the
     /// public key while still allowing the original set of signers to sign under the new key.
     /// This function is appropriate for doing [BIP32] tweaks before calling `into_xonly_key`.
-    /// It **is not** appropriate for doing taproot tweaking which must be done on a [`Bip340AggKey`].
+    /// It **is not** appropriate for doing taproot tweaking which must be done on a [`XOnlyAggKey`].
     ///
     /// ## Return value
     ///
@@ -159,7 +159,7 @@ impl AggKey {
     /// secret key it returns `None`.
     ///
     /// [BIP32]: https://bips.xyz/32
-    /// [`Bip340AggKey`]: crate::musig::Bip340AggKey
+    /// [`XOnlyAggKey`]: crate::musig::XOnlyAggKey
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let agg_key = g!(self.agg_key + tweak * G).normalize().mark::<NonZero>()?;
         let tweak = s!(self.tweak + tweak).mark::<Public>();
@@ -172,14 +172,14 @@ impl AggKey {
         })
     }
 
-    /// Convert the key into an `Bip340AggKey`.
+    /// Convert the key into an `XOnlyAggKey`.
     ///
     /// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
-    pub fn into_xonly_key(self) -> Bip340AggKey {
+    pub fn into_xonly_key(self) -> XOnlyAggKey {
         let (agg_key, needs_negation) = self.agg_key.into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
-        Bip340AggKey {
+        XOnlyAggKey {
             keys: self.keys,
             coefs: self.coefs,
             needs_negation,
@@ -193,7 +193,7 @@ impl AggKey {
 ///
 /// [BIP340]: https://bips.xyz/340
 #[derive(Debug, Clone)]
-pub struct Bip340AggKey {
+pub struct XOnlyAggKey {
     /// The keys involved in the key aggregation.
     keys: Vec<Point>,
     /// The coefficients of each key
@@ -206,7 +206,7 @@ pub struct Bip340AggKey {
     agg_key: Point<EvenY>,
 }
 
-impl Bip340AggKey {
+impl XOnlyAggKey {
     /// The aggregate key as a `Point`
     pub fn agg_public_key(&self) -> Point<EvenY> {
         self.agg_key
@@ -318,7 +318,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
     /// [`Deterministic`]: secp256kfun::nonce::Deterministic
     /// [`start_sign_session`]: Self::start_sign_session
     /// [`NonceKeyPair`]: crate::binonce::NonceKeyPair
-    pub fn gen_nonces(&self, secret: &Scalar, agg_key: &Bip340AggKey, sid: &[u8]) -> NonceKeyPair {
+    pub fn gen_nonces(&self, secret: &Scalar, agg_key: &XOnlyAggKey, sid: &[u8]) -> NonceKeyPair {
         let r1 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
             secret => secret,
@@ -399,7 +399,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Panics if number of nonces does not align with the keys in `agg_key`.
     pub fn start_sign_session(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
     ) -> SignSession {
@@ -437,7 +437,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`adaptor`]: crate::adaptor
     pub fn start_encrypted_sign_session(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
@@ -458,7 +458,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _start_sign_session(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
@@ -518,7 +518,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
     pub fn sign<T>(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         session: &SignSession<T>,
         my_index: usize,
         keypair: &KeyPair,
@@ -552,7 +552,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Panics when `index` is equal to or greater than the number of keys in the agg_key.
     pub fn verify_partial_signature<T>(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         session: &SignSession<T>,
         index: usize,
         partial_sig: Scalar<Public, Zero>,
@@ -581,7 +581,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_signatures(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         session: &SignSession<Ordinary>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> Signature {
@@ -598,7 +598,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_encrypted_signatures(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         session: &SignSession<Adaptor>,
         partial_encrypted_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> EncryptedSignature {
@@ -613,7 +613,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _combine_partial_signatures<T>(
         &self,
-        agg_key: &Bip340AggKey,
+        agg_key: &XOnlyAggKey,
         session: &SignSession<T>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> (Point<EvenY>, Scalar<Public, Zero>) {
