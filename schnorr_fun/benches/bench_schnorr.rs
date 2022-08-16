@@ -41,7 +41,7 @@ fn verify_schnorr(c: &mut Criterion) {
     {
         let message = Message::<Public>::raw(MESSAGE);
         let sig = schnorr.sign(&keypair, message);
-        let verification_key = &keypair.verification_key();
+        let verification_key = &keypair.public_key().to_point();
         group.bench_function("fun::schnorr_verify", |b| {
             b.iter(|| schnorr.verify(&verification_key, message, &sig))
         });

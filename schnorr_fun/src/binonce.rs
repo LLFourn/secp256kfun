@@ -7,10 +7,58 @@
 use secp256kfun::{g, marker::*, Point, Scalar, G};
 
 /// A nonce (pair of points) that each party must share with the others in the first stage of signing.
+///
+/// The type argument determines whether the nonces can be `Zero` or not. The [musig
+/// spec](https://github.com/jonasnick/bips/pull/21) specifies that the aggregate nonce is allowed
+/// to be zero to avoid having to abort the protocol in this case.
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub struct Nonce(pub [Point; 2]);
+pub struct Nonce<Z = NonZero>(pub [Point<Normal, Public, Z>; 2]);
 
-impl Nonce {
+impl Nonce<Zero> {
+    /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
+    ///
+    /// If either pair of 33 bytes is `[0u8;32]` that point is interpreted as `Zero`.
+    pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
+        fn deser(bytes: &[u8]) -> Option<Point<Normal, Public, Zero>> {
+            Point::from_slice(&bytes)
+                .map(|p| p.mark::<Zero>())
+                .or_else(|| {
+                    if bytes == [0u8; 33].as_slice() {
+                        Some(Point::zero())
+                    } else {
+                        None
+                    }
+                })
+        }
+
+        let R1 = deser(&bytes[33..])?;
+        let R2 = deser(&bytes[..33])?;
+
+        Some(Nonce([R1, R2]))
+    }
+
+    /// Serializes a public nonce as  as 66 bytes (two 33-byte serialized points).
+    ///
+    /// If either point is `Zero` it will be serialized as `[0u8;32]`.
+    pub fn to_bytes(self) -> [u8; 66] {
+        let mut bytes = [0u8; 66];
+        bytes[..33].copy_from_slice(
+            &self.0[0]
+                .mark::<NonZero>()
+                .map(|p| p.to_bytes())
+                .unwrap_or([0u8; 33]),
+        );
+        bytes[33..].copy_from_slice(
+            &self.0[1]
+                .mark::<NonZero>()
+                .map(|p| p.to_bytes())
+                .unwrap_or([0u8; 33]),
+        );
+        bytes
+    }
+}
+
+impl Nonce<NonZero> {
     /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
     pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
         let R1 = Point::from_slice(&bytes[..33])?;
@@ -25,7 +73,9 @@ impl Nonce {
         bytes[33..].copy_from_slice(self.0[1].to_bytes().as_ref());
         bytes
     }
+}
 
+impl<Z> Nonce<Z> {
     /// Negate the two nonces
     pub fn conditional_negate(&mut self, needs_negation: bool) {
         self.0[0] = self.0[0].conditional_negate(needs_negation);
@@ -35,13 +85,26 @@ impl Nonce {
 
 secp256kfun::impl_fromstr_deserialize! {
     name => "public nonce pair",
-    fn from_bytes(bytes: [u8;66]) -> Option<Nonce> {
-        Nonce::from_bytes(bytes)
+    fn from_bytes(bytes: [u8;66]) -> Option<Nonce<Zero>> {
+        Nonce::<Zero>::from_bytes(bytes)
     }
 }
 
 secp256kfun::impl_display_serialize! {
-    fn to_bytes(nonce: &Nonce) -> [u8;66] {
+    fn to_bytes(nonce: &Nonce<Zero>) -> [u8;66] {
+        nonce.to_bytes()
+    }
+}
+
+secp256kfun::impl_fromstr_deserialize! {
+    name => "public nonce pair",
+    fn from_bytes(bytes: [u8;66]) -> Option<Nonce<NonZero>> {
+        Nonce::<NonZero>::from_bytes(bytes)
+    }
+}
+
+secp256kfun::impl_display_serialize! {
+    fn to_bytes(nonce: &Nonce<NonZero>) -> [u8;66] {
         nonce.to_bytes()
     }
 }
@@ -54,7 +117,7 @@ secp256kfun::impl_display_serialize! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce
-    pub public: Nonce,
+    pub public: Nonce<NonZero>,
     /// The secret nonce
     pub secret: [Scalar; 2],
 }
@@ -97,7 +160,7 @@ impl NonceKeyPair {
     }
 
     /// Get the public portion of the nonce key pair (share this!)
-    pub fn public(&self) -> Nonce {
+    pub fn public(&self) -> Nonce<NonZero> {
         self.public
     }
 }

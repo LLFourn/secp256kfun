@@ -3,10 +3,12 @@
 //! ## Synopsis
 //!
 //! ```
-//! use schnorr_fun::{musig::MuSig, nonce::Deterministic, Message, Schnorr};
+//! use schnorr_fun::{musig, nonce::Deterministic, Message, Schnorr};
 //! use sha2::Sha256;
-//! // use sha256 with deterministic nonce generation
-//! let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
+//! // use sha256 with deterministic nonce generation -- be careful!
+//! let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
+//! // use synthetic nonces with randomness from ThredRng -- harder to make a mistake.
+//! let musig = musig::new_with_synthetic_nonces::<sha2::Sha256, rand::rngs::ThreadRng>();
 //! // create a keypair
 //! use schnorr_fun::fun::Scalar;
 //! let my_keypair = musig.new_keypair(Scalar::random(&mut rand::thread_rng()));
@@ -18,7 +20,7 @@
 //! // recieve the public keys of all other participants to form the aggregate key.
 //! let agg_key = musig
 //!     .new_agg_key(vec![public_key1, public_key2, public_key3])
-//!     .into_bip340_key();
+//!     .into_xonly_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
 //! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), &agg_key, b"session-id-1337");
@@ -31,11 +33,11 @@
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
 //! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // start the signing session
-//! let session = musig.start_sign_session(&agg_key, nonces, message).unwrap();
+//! let session = musig.start_sign_session(&agg_key, nonces, message);
 //! // sign with our single local keypair
-//! let my_sig = musig.sign(&agg_key, 0, &my_keypair, my_nonce, &session);
-//! # let p2_sig = musig.sign(&agg_key, 1, &kp2, p2_nonce, &session);
-//! # let p3_sig = musig.sign(&agg_key, 2, &kp3, p3_nonce, &session);
+//! let my_sig = musig.sign(&agg_key, &session, 0, &my_keypair, my_nonce);
+//! # let p2_sig = musig.sign(&agg_key, &session, 1, &kp2, p2_nonce);
+//! # let p3_sig = musig.sign(&agg_key, &session, 2, &kp3, p3_nonce);
 //! // receive p2_sig and p3_sig from somewhere and check they're valid
 //! assert!(musig.verify_partial_signature(&agg_key, &session, 1, p2_sig));
 //! assert!(musig.verify_partial_signature(&agg_key, &session, 2, p3_sig));
@@ -53,7 +55,7 @@
 //! key that requires all of the corresponding secret keys to authorize a signature under the aggregate key.
 //!
 //! See [the excellent paper] for the abstract details of the protocol and security proofs.
-//! **⚠ THIS IS EXPERIMENTAL AND NOT COMPATIBLE WITH THE [DRAFT SPECIFICATION](https://github.com/jonasnick/bips/blob/musig2/bip-musig2.mediawiki) ⚠**
+//! **⚠ THIS IS EXPERIMENTAL⚠** it is currently compatible with [this PR](https://github.com/jonasnick/bips/pull/37) to the specification.
 //!
 //!
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
@@ -66,8 +68,9 @@ use secp256kfun::{
     g,
     hash::{HashAdd, Tagged},
     marker::*,
-    nonce::NonceGen,
-    s, Point, Scalar, G,
+    nonce::{self, NonceGen},
+    rand_core::{CryptoRng, RngCore},
+    s, KeyPair, Point, Scalar, G,
 };
 
 /// The MuSig context.
@@ -83,15 +86,9 @@ pub struct MuSig<H, S = ()> {
 }
 
 impl<H: Tagged, S> MuSig<H, S> {
-    /// Create a new [`KeyPair`]
+    /// Create a new keypair.
     ///
-    /// This is a convenient way of just doing:
-    ///
-    /// ```
-    /// # let secret_key = schnorr_fun::fun::Scalar::random(&mut rand::thread_rng());
-    /// use schnorr_fun::musig::KeyPair;
-    /// let keypair = KeyPair::new(secret_key);
-    /// ```
+    /// A shorthand for [`KeyPair::new`].
     pub fn new_keypair(&self, secret_key: Scalar) -> KeyPair {
         KeyPair::new(secret_key)
     }
@@ -128,8 +125,8 @@ impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
 /// [`MuSig::new_agg_key`]
 #[derive(Debug, Clone)]
 pub struct AggKey {
-    /// The parties involved in the key aggregation.
-    parties: Vec<Point>,
+    /// The keys involved in the key aggregation.
+    keys: Vec<Point>,
     /// The coefficients of each key
     coefs: Vec<Scalar<Public>>,
     /// The aggregate key
@@ -146,14 +143,14 @@ impl AggKey {
 
     /// An iterator over the **public keys** of each party in the aggregate key.
     pub fn keys(&self) -> impl Iterator<Item = Point> + '_ {
-        self.parties.iter().map(|point| *point)
+        self.keys.iter().map(|point| *point)
     }
 
     /// Add a scalar `tweak` to aggregate MuSig public key.
     ///
     /// The resulting key is equal to the existing key plus `tweak * G`. The tweak mutates the
     /// public key while still allowing the original set of signers to sign under the new key.
-    /// This function is appropriate for doing [BIP32] tweaks before calling `into_bip340_key`.
+    /// This function is appropriate for doing [BIP32] tweaks before calling `into_xonly_key`.
     /// It **is not** appropriate for doing taproot tweaking which must be done on a [`Bip340AggKey`].
     ///
     /// ## Return value
@@ -168,7 +165,7 @@ impl AggKey {
         let tweak = s!(self.tweak + tweak).mark::<Public>();
 
         Some(AggKey {
-            parties: self.parties.clone(),
+            keys: self.keys.clone(),
             coefs: self.coefs.clone(),
             agg_key,
             tweak,
@@ -178,12 +175,12 @@ impl AggKey {
     /// Convert the key into an `Bip340AggKey`.
     ///
     /// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
-    pub fn into_bip340_key(self) -> Bip340AggKey {
+    pub fn into_xonly_key(self) -> Bip340AggKey {
         let (agg_key, needs_negation) = self.agg_key.into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
         Bip340AggKey {
-            parties: self.parties,
+            keys: self.keys,
             coefs: self.coefs,
             needs_negation,
             tweak,
@@ -197,8 +194,8 @@ impl AggKey {
 /// [BIP340]: https://bips.xyz/340
 #[derive(Debug, Clone)]
 pub struct Bip340AggKey {
-    /// The parties involved in the key aggregation.
-    parties: Vec<Point>,
+    /// The keys involved in the key aggregation.
+    keys: Vec<Point>,
     /// The coefficients of each key
     coefs: Vec<Scalar<Public>>,
     /// Whether the secret keys needs to be negated when signing
@@ -217,7 +214,7 @@ impl Bip340AggKey {
 
     /// An iterator over the **public keys** of each party in the agg_key.
     pub fn keys(&self) -> impl Iterator<Item = Point> + '_ {
-        self.parties.iter().map(|point| *point)
+        self.keys.iter().map(|point| *point)
     }
 
     /// Applies an "XOnly" tweak to the aggregate key
@@ -231,7 +228,7 @@ impl Bip340AggKey {
         let needs_negation = self.needs_negation ^ needs_negation;
 
         Some(Self {
-            parties: self.parties,
+            keys: self.keys,
             coefs: self.coefs,
             needs_negation,
             tweak: new_tweak,
@@ -263,8 +260,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// // Note the keys have to come in the same order on the other side!
     /// let agg_key = musig.new_agg_key(vec![their_public_key, my_public_key]);
     /// ```
-    pub fn new_agg_key(&self, parties: Vec<Point>) -> AggKey {
-        let keys = parties.clone();
+    pub fn new_agg_key(&self, keys: Vec<Point>) -> AggKey {
         let coeff_hash = {
             let L = self.pk_hash.clone().add(&keys[..]).finalize();
             self.coeff_hash.clone().add(L.as_slice())
@@ -287,11 +283,11 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
             })
             .collect::<Vec<_>>();
 
-        let agg_key = crate::fun::op::lincomb(coefs.iter(), parties.iter())
+        let agg_key = crate::fun::op::lincomb(coefs.iter(), keys.iter())
             .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero");
 
         AggKey {
-            parties,
+            keys,
             coefs,
             agg_key: agg_key.mark::<Normal>(),
             tweak: Scalar::zero().mark::<Public>(),
@@ -314,13 +310,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
     /// sessions with nonces generated from the same `sid`. If you do your secret key will be
     /// recoverable from the two partial signatures you created with the same nonce.
     ///
-    /// Note that the API allows you to BYO nonces by creating `NonceKeyPair`s manually.
+    /// Note that you daon't have to use this API. You can create [`NonceKeyPair`]s manually in your
+    /// own application specific way (but be careful!).
     ///
     /// [`NonceGen`]: secp256kfun::nonce::NonceGen
     /// [`Synthetic`]: secp256kfun::nonce::Synthetic
     /// [`Deterministic`]: secp256kfun::nonce::Deterministic
     /// [`start_sign_session`]: Self::start_sign_session
-    /// [`NonceKeyPair`]: schnorr_fun::binonce::NonceKeyPair
+    /// [`NonceKeyPair`]: crate::binonce::NonceKeyPair
     pub fn gen_nonces(&self, secret: &Scalar, agg_key: &Bip340AggKey, sid: &[u8]) -> NonceKeyPair {
         let r1 = derive_nonce!(
             nonce_gen => self.schnorr.nonce_gen(),
@@ -368,13 +365,6 @@ pub struct Adaptor {
 /// Created by [`start_sign_session`] or [`start_encrypted_sign_session`].
 /// The type parameter records whether you are trying to jointly generate a signature or an adaptor signature.
 ///
-/// ## Security
-///
-/// This struct has **secret nonces** in it up until you call [`sign`]. If a malicious party
-/// gains access to it before and you generate a partial signature with this session they
-/// will be able to recover your secret key. If this is a concern simply avoid serializing this
-/// struct (until you've cleared it) and recreate it only when you need it.
-///
 /// [`start_sign_session`]: MuSig::start_sign_session
 /// [`start_encrypted_sign_session`]: MuSig::start_encrypted_sign_session
 /// [`sign`]: MuSig::sign
@@ -406,23 +396,23 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// # Panics
     ///
-    /// Panics if number of nonces does not align with the parties in `agg_key`.
+    /// Panics if number of nonces does not align with the keys in `agg_key`.
     pub fn start_sign_session(
         &self,
         agg_key: &Bip340AggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
-    ) -> Option<SignSession> {
+    ) -> SignSession {
         let (b, c, public_nonces, R, nonce_needs_negation) =
-            self._start_sign_session(agg_key, nonces, message, &Point::zero())?;
-        Some(SignSession {
+            self._start_sign_session(agg_key, nonces, message, &Point::zero());
+        SignSession {
             b,
             c,
             public_nonces,
             R,
             nonce_needs_negation,
             signing_type: Ordinary,
-        })
+        }
     }
 
     /// Start an encrypted signing session.
@@ -441,7 +431,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// # Panics
     ///
-    /// Panics if number of local or remote nonces passed in does not align with the parties in
+    /// Panics if number of local or remote nonces passed in does not align with the keys in
     /// `agg_key`.
     ///
     /// [`adaptor`]: crate::adaptor
@@ -450,10 +440,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         agg_key: &Bip340AggKey,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
-        encryption_key: &Point<impl PointType, impl Secrecy>,
+        encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> Option<SignSession<Adaptor>> {
         let (b, c, public_nonces, R, nonce_needs_negation) =
-            self._start_sign_session(agg_key, nonces, message, encryption_key)?;
+            self._start_sign_session(agg_key, nonces, message, encryption_key);
         Some(SignSession {
             b,
             c,
@@ -472,13 +462,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
-    ) -> Option<(
+    ) -> (
         Scalar<Public, Zero>,
         Scalar<Public, Zero>,
         Vec<Nonce>,
         Point<EvenY>,
         bool,
-    )> {
+    ) {
         let mut Rs = nonces;
         let agg_Rs = Rs
             .iter()
@@ -488,65 +478,68 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
                     g!({ acc[1] } + { nonce.0[1] }),
                 ]
             });
-        let agg_Rs = [
-            g!({ agg_Rs[0] } + encryption_key)
-                .normalize()
-                .mark::<NonZero>()?,
-            agg_Rs[1].normalize().mark::<NonZero>()?,
-        ];
+        let agg_Rs = Nonce::<Zero>([
+            g!({ agg_Rs[0] } + encryption_key).normalize(),
+            agg_Rs[1].normalize(),
+        ]);
 
         let b = {
             let H = self.nonce_coeff_hash.clone();
             Scalar::from_hash(
-                H.add(agg_Rs)
+                H.add(agg_Rs.to_bytes())
                     .add(agg_key.agg_public_key().to_xonly())
                     .add(message),
             )
         }
         .mark::<(Public, Zero)>();
 
-        let (R, r_needs_negation) = g!({ agg_Rs[0] } + b * { agg_Rs[1] } )
+        let (R, r_needs_negation) = g!({ agg_Rs.0[0] } + b * { agg_Rs.0[1] })
             .normalize()
-            .expect_nonzero("computationally unreachable: one of the coefficients is a hash output that commits to both point")
+            .mark::<NonZero>()
+            .unwrap_or_else(|| {
+                // if final nonce is zero we set it to generator as in MuSig spec
+                debug_assert!(G.is_y_even());
+                G.clone().mark::<Normal>()
+            })
             .into_point_with_even_y();
 
-        for R in &mut Rs {
-            R.0[0] = R.0[0].conditional_negate(r_needs_negation);
-            R.0[1] = R.0[1].conditional_negate(r_needs_negation);
+        for R_i in &mut Rs {
+            R_i.0[0] = R_i.0[0].conditional_negate(r_needs_negation);
+            R_i.0[1] = R_i.0[1].conditional_negate(r_needs_negation);
         }
 
         let c = self
             .schnorr
             .challenge(R.to_xonly(), agg_key.agg_public_key().to_xonly(), message);
 
-        Some((b, c, Rs, R, r_needs_negation))
+        (b, c, Rs, R, r_needs_negation)
     }
 
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
     pub fn sign<T>(
         &self,
         agg_key: &Bip340AggKey,
-        my_index: u32,
+        session: &SignSession<T>,
+        my_index: usize,
         keypair: &KeyPair,
         local_secret_nonce: NonceKeyPair,
-        session: &SignSession<T>,
     ) -> Scalar<Public, Zero> {
-        let c = session.c;
-        let b = session.b;
-        let x = keypair.secret_key();
         assert_eq!(
             keypair.public_key(),
-            agg_key.keys().nth(my_index as usize).unwrap(),
+            agg_key.keys().nth(my_index).unwrap(),
             "key at index {} didn't match",
             my_index
         );
-        let mut a = agg_key.coefs[my_index as usize];
+        let c = session.c;
+        let b = session.b;
+        let x_i = keypair.secret_key();
+        let mut a = agg_key.coefs[my_index];
 
         a.conditional_negate(agg_key.needs_negation);
         let [mut r1, mut r2] = local_secret_nonce.secret.clone();
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
-        s!(c * a * x + r1 + b * r2).mark::<(Public, Zero)>()
+        s!(c * a * x_i + r1 + b * r2).mark::<(Public, Zero)>()
     }
 
     #[must_use]
@@ -556,7 +549,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ///
     /// # Panics
     ///
-    /// Panics when `index` is equal to or greater than the number of parties in the agg_key.
+    /// Panics when `index` is equal to or greater than the number of keys in the agg_key.
     pub fn verify_partial_signature<T>(
         &self,
         agg_key: &Bip340AggKey,
@@ -566,17 +559,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ) -> bool {
         let c = session.c;
         let b = session.b;
-        let s = &partial_sig;
+        let s_i = &partial_sig;
         let a = agg_key.coefs[index].clone();
 
-        let X = agg_key
+        let X_i = agg_key
             .keys()
             .nth(index)
             .unwrap()
             .conditional_negate(agg_key.needs_negation);
 
         let [R1, R2] = &session.public_nonces[index].0;
-        g!((c * a) * X + R1 + b * R2 - s * G).is_zero()
+        g!((c * a) * X_i + R1 + b * R2 - s_i * G).is_zero()
     }
 
     /// Combines all the partial signatures into a single `Signature`.
@@ -635,33 +628,48 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-/// A MuSig key pair.
+/// Constructor for a MuSig instance using deterministic nonce generation.
 ///
-/// Note that the public key is a ordinary point rather than an `XOnly` key like in Schnorr.
-pub struct KeyPair {
-    secret_key: Scalar,
-    public_key: Point,
+/// If you use deterministic nonce generation you will have to provide a unique session id to every signing session.
+/// The advantage is that you will be able to regenerate the same nonces at a later point from [`MuSig::gen_nonces`].
+///
+/// ```
+/// use schnorr_fun::musig;
+/// let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
+/// ```
+pub fn new_with_deterministic_nonces<H: Tagged + Digest<OutputSize = U32>>(
+) -> MuSig<H, Schnorr<H, nonce::Deterministic<H>>> {
+    MuSig::default()
 }
 
-impl KeyPair {
-    /// Create a new MuSig key
-    pub fn new(secret_key: Scalar) -> Self {
-        Self {
-            public_key: g!(secret_key * G).normalize(),
-            secret_key,
-        }
-    }
+/// Constructor for a MuSig instance using synthetic nonce generation.
+///
+/// Sythetic nonce generation mixes in external randomness into nonce generation which means you
+/// don't need a unique session id for each signing session to guarantee security. The disadvantage
+/// is that you may have to store and recall somehow the nonces generated from
+/// [`MuSig::gen_nonces`].
+///
+/// ```
+/// use schnorr_fun::musig;
+/// let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
+/// ```
+pub fn new_with_synthetic_nonces<H, R>(
+) -> MuSig<H, Schnorr<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>>
+where
+    H: Tagged + Digest<OutputSize = U32>,
+    R: CryptoRng + RngCore + Default,
+{
+    MuSig::default()
+}
 
-    /// Get the secret key
-    pub fn secret_key(&self) -> &Scalar {
-        &self.secret_key
-    }
-
-    /// Get the public key
-    pub fn public_key(&self) -> Point {
-        self.public_key
-    }
+/// Create a MuSig instance which does not handle nonce generation.
+///
+/// You can still sign with this instance but you you will have to generate nonces in your own way.
+pub fn new_without_nonce_generation<H>() -> MuSig<H, Schnorr<H, ()>>
+where
+    H: Tagged + Digest<OutputSize = U32>,
+{
+    MuSig::default()
 }
 
 #[cfg(test)]
@@ -677,7 +685,7 @@ mod test {
 
     proptest! {
         #[test]
-        fn test_end_to_end(sk1 in any::<Scalar>(),
+        fn proptest_sign_verify(sk1 in any::<Scalar>(),
                         sk2 in any::<Scalar>(),
                         sk3 in any::<Scalar>(),
                         pre_tweak1 in option::of(any::<Scalar<Public, Zero>>()),
@@ -719,9 +727,9 @@ mod test {
             }
 
 
-            let mut agg_key1 = agg_key1.into_bip340_key();
-            let mut agg_key2 = agg_key2.into_bip340_key();
-            let mut agg_key3 = agg_key3.into_bip340_key();
+            let mut agg_key1 = agg_key1.into_xonly_key();
+            let mut agg_key2 = agg_key2.into_xonly_key();
+            let mut agg_key3 = agg_key3.into_xonly_key();
 
             for tweak in [tweak1, tweak2] {
                 if let Some(tweak) = tweak {
@@ -748,24 +756,21 @@ mod test {
                     &agg_key1,
                     nonces.clone(),
                     message,
-                )
-                .unwrap();
+                );
             let p2_session = musig
                 .start_sign_session(
                     &agg_key2,
                     nonces.clone(),
                     message,
-                )
-                .unwrap();
+                );
             let p3_session = musig
                 .start_sign_session(
                     &agg_key3,
                     nonces.clone(),
                     message,
-                )
-                .unwrap();
+                );
 
-            let p1_sig = musig.sign(&agg_key1, 0, &keypair1, p1_nonce, &p1_session);
+            let p1_sig = musig.sign(&agg_key1, &p1_session, 0, &keypair1, p1_nonce);
 
             assert!(musig.verify_partial_signature(&agg_key1, &p1_session, 0, p1_sig));
             assert_eq!(p1_session, p2_session);
@@ -773,9 +778,9 @@ mod test {
             assert!(musig.verify_partial_signature(&agg_key1, &p2_session, 0, p1_sig));
             assert!(musig.verify_partial_signature(&agg_key1, &p3_session, 0, p1_sig));
 
-            let p2_sig = musig.sign(&agg_key1, 1, &keypair2, p2_nonce, &p2_session);
+            let p2_sig = musig.sign(&agg_key1, &p2_session, 1, &keypair2, p2_nonce);
             assert!(musig.verify_partial_signature(&agg_key1, &p1_session, 1, p2_sig));
-            let p3_sig = musig.sign(&agg_key1, 2, &keypair3, p3_nonce, &p3_session);
+            let p3_sig = musig.sign(&agg_key1, &p3_session, 2, &keypair3, p3_nonce);
             assert!(musig.verify_partial_signature(&agg_key1, &p1_session, 2, p3_sig));
 
             let partial_sigs = [p1_sig, p2_sig, p3_sig];
@@ -817,17 +822,17 @@ mod test {
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_bip340_key();
+            ]).into_xonly_key();
             let agg_key2 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_bip340_key();
+            ]).into_xonly_key();
             let agg_key3 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
-            ]).into_bip340_key();
+            ]).into_xonly_key();
 
             let p1_nonce = musig.gen_nonces(keypair1.secret_key(), &agg_key, b"test");
             let p2_nonce = musig.gen_nonces(keypair2.secret_key(), &agg_key2, b"test");
@@ -860,9 +865,9 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-                let p1_sig = musig.sign(&agg_key, 0, &keypair1, p1_nonce, &mut p1_session);
-                let p2_sig = musig.sign(&agg_key, 1, &keypair2, p2_nonce, &mut p2_session);
-                let p3_sig = musig.sign(&agg_key, 2, &keypair3, p3_nonce, &mut p3_session);
+                let p1_sig = musig.sign(&agg_key, &mut p1_session, 0, &keypair1, p1_nonce);
+                let p2_sig = musig.sign(&agg_key, &mut p2_session, 1, &keypair2, p2_nonce);
+                let p3_sig = musig.sign(&agg_key, &mut p3_session, 2, &keypair3, p3_nonce);
 
             assert!(musig.verify_partial_signature(&agg_key2, &p2_session, 0, p1_sig));
             assert!(musig.verify_partial_signature(&agg_key, &p1_session, 0, p1_sig));
@@ -884,441 +889,4 @@ mod test {
                 .verify_encrypted_signature(&agg_key2.agg_public_key(), &encryption_key, message, &combined_sig_p3));
         }
     }
-
-    //     #[test]
-    //     fn test_key_agg() {
-    //         let X1 = XOnly::from_bytes([
-    //             0xF9, 0x30, 0x8A, 0x01, 0x92, 0x58, 0xC3, 0x10, 0x49, 0x34, 0x4F, 0x85, 0xF8, 0x9D,
-    //             0x52, 0x29, 0xB5, 0x31, 0xC8, 0x45, 0x83, 0x6F, 0x99, 0xB0, 0x86, 0x01, 0xF1, 0x13,
-    //             0xBC, 0xE0, 0x36, 0xF9,
-    //         ])
-    //         .unwrap();
-    //         let X2 = XOnly::from_bytes([
-    //             0xDF, 0xF1, 0xD7, 0x7F, 0x2A, 0x67, 0x1C, 0x5F, 0x36, 0x18, 0x37, 0x26, 0xDB, 0x23,
-    //             0x41, 0xBE, 0x58, 0xFE, 0xAE, 0x1D, 0xA2, 0xDE, 0xCE, 0xD8, 0x43, 0x24, 0x0F, 0x7B,
-    //             0x50, 0x2B, 0xA6, 0x59,
-    //         ])
-    //         .unwrap();
-    //         let X3 = XOnly::from_bytes([
-    //             0x35, 0x90, 0xA9, 0x4E, 0x76, 0x8F, 0x8E, 0x18, 0x15, 0xC2, 0xF2, 0x4B, 0x4D, 0x80,
-    //             0xA8, 0xE3, 0x14, 0x93, 0x16, 0xC3, 0x51, 0x8C, 0xE7, 0xB7, 0xAD, 0x33, 0x83, 0x68,
-    //             0xD0, 0x38, 0xCA, 0x66,
-    //         ])
-    //         .unwrap();
-    //         let X = vec![X1, X2, X3];
-
-    //         let expected: Vec<XOnly> = vec![
-    //             XOnly::from_bytes([
-    //                 0xE5, 0x83, 0x01, 0x40, 0x51, 0x21, 0x95, 0xD7, 0x4C, 0x83, 0x07, 0xE3, 0x96, 0x37,
-    //                 0xCB, 0xE5, 0xFB, 0x73, 0x0E, 0xBE, 0xAB, 0x80, 0xEC, 0x51, 0x4C, 0xF8, 0x8A, 0x87,
-    //                 0x7C, 0xEE, 0xEE, 0x0B,
-    //             ])
-    //             .unwrap(),
-    //             XOnly::from_bytes([
-    //                 0xD7, 0x0C, 0xD6, 0x9A, 0x26, 0x47, 0xF7, 0x39, 0x09, 0x73, 0xDF, 0x48, 0xCB, 0xFA,
-    //                 0x2C, 0xCC, 0x40, 0x7B, 0x8B, 0x2D, 0x60, 0xB0, 0x8C, 0x5F, 0x16, 0x41, 0x18, 0x5C,
-    //                 0x79, 0x98, 0xA2, 0x90,
-    //             ])
-    //             .unwrap(),
-    //             XOnly::from_bytes([
-    //                 0x81, 0xA8, 0xB0, 0x93, 0x91, 0x2C, 0x9E, 0x48, 0x14, 0x08, 0xD0, 0x97, 0x76, 0xCE,
-    //                 0xFB, 0x48, 0xAE, 0xB8, 0xB6, 0x54, 0x81, 0xB6, 0xBA, 0xAF, 0xB3, 0xC5, 0x81, 0x01,
-    //                 0x06, 0x71, 0x7B, 0xEB,
-    //             ])
-    //             .unwrap(),
-    //             XOnly::from_bytes([
-    //                 0x2E, 0xB1, 0x88, 0x51, 0x88, 0x7E, 0x7B, 0xDC, 0x5E, 0x83, 0x0E, 0x89, 0xB1, 0x9D,
-    //                 0xDB, 0xC2, 0x80, 0x78, 0xF1, 0xFA, 0x88, 0xAA, 0xD0, 0xAD, 0x01, 0xCA, 0x06, 0xFE,
-    //                 0x4F, 0x80, 0x21, 0x0B,
-    //             ])
-    //             .unwrap(),
-    //         ];
-
-    //         let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
-    //         assert_eq!(
-    //             musig
-    //                 .new_agg_key(vec![X[0], X[1], X[2]])
-    //                 .into_bip340_key()
-    //                 .agg_public_key(),
-    //             expected[0]
-    //         );
-    //         assert_eq!(
-    //             musig
-    //                 .new_agg_key(vec![X[2], X[1], X[0]])
-    //                 .into_bip340_key()
-    //                 .agg_public_key(),
-    //             expected[1]
-    //         );
-    //         assert_eq!(
-    //             musig
-    //                 .new_agg_key(vec![X[0], X[0], X[0]])
-    //                 .into_bip340_key()
-    //                 .agg_public_key(),
-    //             expected[2]
-    //         );
-    //         assert_eq!(
-    //             musig
-    //                 .new_agg_key(vec![X[0], X[0], X[1], X[1]])
-    //                 .into_bip340_key()
-    //                 .agg_public_key(),
-    //             expected[3]
-    //         );
-    //     }
-
-    //     #[test]
-    //     fn test_sign_vectors() {
-    //         let X1 = XOnly::from_bytes([
-    //             0xF9, 0x30, 0x8A, 0x01, 0x92, 0x58, 0xC3, 0x10, 0x49, 0x34, 0x4F, 0x85, 0xF8, 0x9D,
-    //             0x52, 0x29, 0xB5, 0x31, 0xC8, 0x45, 0x83, 0x6F, 0x99, 0xB0, 0x86, 0x01, 0xF1, 0x13,
-    //             0xBC, 0xE0, 0x36, 0xF9,
-    //         ])
-    //         .unwrap();
-    //         let X2 = XOnly::from_bytes([
-    //             0xDF, 0xF1, 0xD7, 0x7F, 0x2A, 0x67, 0x1C, 0x5F, 0x36, 0x18, 0x37, 0x26, 0xDB, 0x23,
-    //             0x41, 0xBE, 0x58, 0xFE, 0xAE, 0x1D, 0xA2, 0xDE, 0xCE, 0xD8, 0x43, 0x24, 0x0F, 0x7B,
-    //             0x50, 0x2B, 0xA6, 0x59,
-    //         ])
-    //         .unwrap();
-
-    //         let sec_nonce = NonceKeyPair::from_bytes([
-    //             0x50, 0x8B, 0x81, 0xA6, 0x11, 0xF1, 0x00, 0xA6, 0xB2, 0xB6, 0xB2, 0x96, 0x56, 0x59,
-    //             0x08, 0x98, 0xAF, 0x48, 0x8B, 0xCF, 0x2E, 0x1F, 0x55, 0xCF, 0x22, 0xE5, 0xCF, 0xB8,
-    //             0x44, 0x21, 0xFE, 0x61, 0xFA, 0x27, 0xFD, 0x49, 0xB1, 0xD5, 0x00, 0x85, 0xB4, 0x81,
-    //             0x28, 0x5E, 0x1C, 0xA2, 0x05, 0xD5, 0x5C, 0x82, 0xCC, 0x1B, 0x31, 0xFF, 0x5C, 0xD5,
-    //             0x4A, 0x48, 0x98, 0x29, 0x35, 0x59, 0x01, 0xF7,
-    //         ])
-    //         .unwrap();
-
-    //         let agg_pubnonce = Nonce::from_bytes([
-    //             0x02, 0x84, 0x65, 0xFC, 0xF0, 0xBB, 0xDB, 0xCF, 0x44, 0x3A, 0xAB, 0xCC, 0xE5, 0x33,
-    //             0xD4, 0x2B, 0x4B, 0x5A, 0x10, 0x96, 0x6A, 0xC0, 0x9A, 0x49, 0x65, 0x5E, 0x8C, 0x42,
-    //             0xDA, 0xAB, 0x8F, 0xCD, 0x61, 0x03, 0x74, 0x96, 0xA3, 0xCC, 0x86, 0x92, 0x6D, 0x45,
-    //             0x2C, 0xAF, 0xCF, 0xD5, 0x5D, 0x25, 0x97, 0x2C, 0xA1, 0x67, 0x5D, 0x54, 0x93, 0x10,
-    //             0xDE, 0x29, 0x6B, 0xFF, 0x42, 0xF7, 0x2E, 0xEE, 0xA8, 0xC9,
-    //         ])
-    //         .unwrap();
-
-    //         let sk = Scalar::from_bytes([
-    //             0x7F, 0xB9, 0xE0, 0xE6, 0x87, 0xAD, 0xA1, 0xEE, 0xBF, 0x7E, 0xCF, 0xE2, 0xF2, 0x1E,
-    //             0x73, 0xEB, 0xDB, 0x51, 0xA7, 0xD4, 0x50, 0x94, 0x8D, 0xFE, 0x8D, 0x76, 0xD7, 0xF2,
-    //             0xD1, 0x00, 0x76, 0x71,
-    //         ])
-    //         .unwrap()
-    //         .mark::<NonZero>()
-    //         .unwrap();
-
-    //         let msg = [
-    //             0xF9, 0x54, 0x66, 0xD0, 0x86, 0x77, 0x0E, 0x68, 0x99, 0x64, 0x66, 0x42, 0x19, 0x26,
-    //             0x6F, 0xE5, 0xED, 0x21, 0x5C, 0x92, 0xAE, 0x20, 0xBA, 0xB5, 0xC9, 0xD7, 0x9A, 0xDD,
-    //             0xDD, 0xF3, 0xC0, 0xCF,
-    //         ];
-
-    //         let expected: Vec<Scalar> = vec![
-    //             Scalar::from_bytes([
-    //                 0x68, 0x53, 0x7C, 0xC5, 0x23, 0x4E, 0x50, 0x5B, 0xD1, 0x40, 0x61, 0xF8, 0xDA, 0x9E,
-    //                 0x90, 0xC2, 0x20, 0xA1, 0x81, 0x85, 0x5F, 0xD8, 0xBD, 0xB7, 0xF1, 0x27, 0xBB, 0x12,
-    //                 0x40, 0x3B, 0x4D, 0x3B,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0x2D, 0xF6, 0x7B, 0xFF, 0xF1, 0x8E, 0x3D, 0xE7, 0x97, 0xE1, 0x3C, 0x64, 0x75, 0xC9,
-    //                 0x63, 0x04, 0x81, 0x38, 0xDA, 0xEC, 0x5C, 0xB2, 0x0A, 0x35, 0x7C, 0xEC, 0xA7, 0xC8,
-    //                 0x42, 0x42, 0x95, 0xEA,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0x0D, 0x5B, 0x65, 0x1E, 0x6D, 0xE3, 0x4A, 0x29, 0xA1, 0x2D, 0xE7, 0xA8, 0xB4, 0x18,
-    //                 0x3B, 0x4A, 0xE6, 0xA7, 0xF7, 0xFB, 0xE1, 0x5C, 0xDC, 0xAF, 0xA4, 0xA3, 0xD1, 0xBC,
-    //                 0xAA, 0xBC, 0x75, 0x17,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //         ];
-
-    //         let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
-    //         let keypair = musig.schnorr.new_keypair(sk);
-
-    //         let (remote_nonce1, remote_nonce2) = (
-    //             agg_pubnonce,
-    //             Nonce([-sec_nonce.public.0[0], -sec_nonce.public.0[1]]),
-    //         );
-    //         let message = Message::<Public>::raw(&msg);
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![keypair.pk, X1, X2])
-    //                 .into_bip340_key();
-
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         sec_nonce.public(),
-    //                         remote_nonce1.clone(),
-    //                         remote_nonce2.clone(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 0, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[0]);
-    //         }
-
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![X1, keypair.pk, X2])
-    //                 .into_bip340_key();
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         remote_nonce1.clone(),
-    //                         sec_nonce.public(),
-    //                         remote_nonce2.clone(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 1, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[1]);
-    //         }
-
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![X1, X2, keypair.pk])
-    //                 .into_bip340_key();
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         remote_nonce1.clone(),
-    //                         remote_nonce2.clone(),
-    //                         sec_nonce.public(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[2]);
-    //         }
-    //     }
-
-    //     #[test]
-    //     fn test_tweak_vectors() {
-    //         let X1 = XOnly::from_bytes([
-    //             0xF9, 0x30, 0x8A, 0x01, 0x92, 0x58, 0xC3, 0x10, 0x49, 0x34, 0x4F, 0x85, 0xF8, 0x9D,
-    //             0x52, 0x29, 0xB5, 0x31, 0xC8, 0x45, 0x83, 0x6F, 0x99, 0xB0, 0x86, 0x01, 0xF1, 0x13,
-    //             0xBC, 0xE0, 0x36, 0xF9,
-    //         ])
-    //         .unwrap();
-    //         let X2 = XOnly::from_bytes([
-    //             0xDF, 0xF1, 0xD7, 0x7F, 0x2A, 0x67, 0x1C, 0x5F, 0x36, 0x18, 0x37, 0x26, 0xDB, 0x23,
-    //             0x41, 0xBE, 0x58, 0xFE, 0xAE, 0x1D, 0xA2, 0xDE, 0xCE, 0xD8, 0x43, 0x24, 0x0F, 0x7B,
-    //             0x50, 0x2B, 0xA6, 0x59,
-    //         ])
-    //         .unwrap();
-
-    //         let sec_nonce = NonceKeyPair::from_bytes([
-    //             0x50, 0x8B, 0x81, 0xA6, 0x11, 0xF1, 0x00, 0xA6, 0xB2, 0xB6, 0xB2, 0x96, 0x56, 0x59,
-    //             0x08, 0x98, 0xAF, 0x48, 0x8B, 0xCF, 0x2E, 0x1F, 0x55, 0xCF, 0x22, 0xE5, 0xCF, 0xB8,
-    //             0x44, 0x21, 0xFE, 0x61, 0xFA, 0x27, 0xFD, 0x49, 0xB1, 0xD5, 0x00, 0x85, 0xB4, 0x81,
-    //             0x28, 0x5E, 0x1C, 0xA2, 0x05, 0xD5, 0x5C, 0x82, 0xCC, 0x1B, 0x31, 0xFF, 0x5C, 0xD5,
-    //             0x4A, 0x48, 0x98, 0x29, 0x35, 0x59, 0x01, 0xF7,
-    //         ])
-    //         .unwrap();
-
-    //         let agg_pubnonce = Nonce::from_bytes([
-    //             0x02, 0x84, 0x65, 0xFC, 0xF0, 0xBB, 0xDB, 0xCF, 0x44, 0x3A, 0xAB, 0xCC, 0xE5, 0x33,
-    //             0xD4, 0x2B, 0x4B, 0x5A, 0x10, 0x96, 0x6A, 0xC0, 0x9A, 0x49, 0x65, 0x5E, 0x8C, 0x42,
-    //             0xDA, 0xAB, 0x8F, 0xCD, 0x61, 0x03, 0x74, 0x96, 0xA3, 0xCC, 0x86, 0x92, 0x6D, 0x45,
-    //             0x2C, 0xAF, 0xCF, 0xD5, 0x5D, 0x25, 0x97, 0x2C, 0xA1, 0x67, 0x5D, 0x54, 0x93, 0x10,
-    //             0xDE, 0x29, 0x6B, 0xFF, 0x42, 0xF7, 0x2E, 0xEE, 0xA8, 0xC9,
-    //         ])
-    //         .unwrap();
-
-    //         let sk = Scalar::from_bytes([
-    //             0x7F, 0xB9, 0xE0, 0xE6, 0x87, 0xAD, 0xA1, 0xEE, 0xBF, 0x7E, 0xCF, 0xE2, 0xF2, 0x1E,
-    //             0x73, 0xEB, 0xDB, 0x51, 0xA7, 0xD4, 0x50, 0x94, 0x8D, 0xFE, 0x8D, 0x76, 0xD7, 0xF2,
-    //             0xD1, 0x00, 0x76, 0x71,
-    //         ])
-    //         .unwrap()
-    //         .mark::<NonZero>()
-    //         .unwrap();
-
-    //         let tweaks: Vec<Scalar> = vec![
-    //             Scalar::from_bytes([
-    //                 0xE8, 0xF7, 0x91, 0xFF, 0x92, 0x25, 0xA2, 0xAF, 0x01, 0x02, 0xAF, 0xFF, 0x4A, 0x9A,
-    //                 0x72, 0x3D, 0x96, 0x12, 0xA6, 0x82, 0xA2, 0x5E, 0xBE, 0x79, 0x80, 0x2B, 0x26, 0x3C,
-    //                 0xDF, 0xCD, 0x83, 0xBB,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0xAE, 0x2E, 0xA7, 0x97, 0xCC, 0x0F, 0xE7, 0x2A, 0xC5, 0xB9, 0x7B, 0x97, 0xF3, 0xC6,
-    //                 0x95, 0x7D, 0x7E, 0x41, 0x99, 0xA1, 0x67, 0xA5, 0x8E, 0xB0, 0x8B, 0xCA, 0xFF, 0xDA,
-    //                 0x70, 0xAC, 0x04, 0x55,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0xF5, 0x2E, 0xCB, 0xC5, 0x65, 0xB3, 0xD8, 0xBE, 0xA2, 0xDF, 0xD5, 0xB7, 0x5A, 0x4F,
-    //                 0x45, 0x7E, 0x54, 0x36, 0x98, 0x09, 0x32, 0x2E, 0x41, 0x20, 0x83, 0x16, 0x26, 0xF2,
-    //                 0x90, 0xFA, 0x87, 0xE0,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0x19, 0x69, 0xAD, 0x73, 0xCC, 0x17, 0x7F, 0xA0, 0xB4, 0xFC, 0xED, 0x6D, 0xF1, 0xF7,
-    //                 0xBF, 0x99, 0x07, 0xE6, 0x65, 0xFD, 0xE9, 0xBA, 0x19, 0x6A, 0x74, 0xFE, 0xD0, 0xA3,
-    //                 0xCF, 0x5A, 0xEF, 0x9D,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //         ];
-    //         let msg = [
-    //             0xF9, 0x54, 0x66, 0xD0, 0x86, 0x77, 0x0E, 0x68, 0x99, 0x64, 0x66, 0x42, 0x19, 0x26,
-    //             0x6F, 0xE5, 0xED, 0x21, 0x5C, 0x92, 0xAE, 0x20, 0xBA, 0xB5, 0xC9, 0xD7, 0x9A, 0xDD,
-    //             0xDD, 0xF3, 0xC0, 0xCF,
-    //         ];
-
-    //         let expected: Vec<Scalar> = vec![
-    //             Scalar::from_bytes([
-    //                 0x5E, 0x24, 0xC7, 0x49, 0x6B, 0x56, 0x5D, 0xEB, 0xC3, 0xB9, 0x63, 0x9E, 0x6F, 0x13,
-    //                 0x04, 0xA2, 0x15, 0x97, 0xF9, 0x60, 0x3D, 0x3A, 0xB0, 0x5B, 0x49, 0x13, 0x64, 0x17,
-    //                 0x75, 0xE1, 0x37, 0x5B,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0x78, 0x40, 0x8D, 0xDC, 0xAB, 0x48, 0x13, 0xD1, 0x39, 0x4C, 0x97, 0xD4, 0x93, 0xEF,
-    //                 0x10, 0x84, 0x19, 0x5C, 0x1D, 0x4B, 0x52, 0xE6, 0x3E, 0xCD, 0x7B, 0xC5, 0x99, 0x16,
-    //                 0x44, 0xE4, 0x4D, 0xDD,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0xC3, 0xA8, 0x29, 0xA8, 0x14, 0x80, 0xE3, 0x6E, 0xC3, 0xAB, 0x05, 0x29, 0x64, 0x50,
-    //                 0x9A, 0x94, 0xEB, 0xF3, 0x42, 0x10, 0x40, 0x3D, 0x16, 0xB2, 0x26, 0xA6, 0xF1, 0x6E,
-    //                 0xC8, 0x5B, 0x73, 0x57,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //             Scalar::from_bytes([
-    //                 0x8C, 0x44, 0x73, 0xC6, 0xA3, 0x82, 0xBD, 0x3C, 0x4A, 0xD7, 0xBE, 0x59, 0x81, 0x8D,
-    //                 0xA5, 0xED, 0x7C, 0xF8, 0xCE, 0xC4, 0xBC, 0x21, 0x99, 0x6C, 0xFD, 0xA0, 0x8B, 0xB4,
-    //                 0x31, 0x6B, 0x8B, 0xC7,
-    //             ])
-    //             .unwrap()
-    //             .mark::<NonZero>()
-    //             .unwrap(),
-    //         ];
-
-    //         let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
-    //         let keypair = musig.schnorr.new_keypair(sk);
-
-    //         let (remote_nonce1, remote_nonce2) = (
-    //             agg_pubnonce,
-    //             Nonce([-sec_nonce.public.0[0], -sec_nonce.public.0[1]]),
-    //         );
-    //         let message = Message::<Public>::raw(&msg);
-
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![X1, X2, keypair.pk])
-    //                 .into_bip340_key()
-    //                 .tweak(tweaks[0].clone())
-    //                 .unwrap();
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         remote_nonce1.clone(),
-    //                         remote_nonce2.clone(),
-    //                         sec_nonce.public(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[0]);
-    //         }
-
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![X1, X2, keypair.pk])
-    //                 .into_bip340_key()
-    //                 .tweak(tweaks[0].clone())
-    //                 .unwrap();
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         remote_nonce1.clone(),
-    //                         remote_nonce2.clone(),
-    //                         sec_nonce.public(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[0]);
-    //         }
-
-    //         {
-    //             let agg_key = musig
-    //                 .new_agg_key(vec![X1, X2, keypair.pk])
-    //                 .tweak(tweaks[0].clone())
-    //                 .unwrap()
-    //                 .into_bip340_key()
-    //                 .tweak(tweaks[1].clone())
-    //                 .unwrap();
-
-    //             let sign_session = musig
-    //                 .start_sign_session(
-    //                     &agg_key,
-    //                     vec![
-    //                         remote_nonce1.clone(),
-    //                         remote_nonce2.clone(),
-    //                         sec_nonce.public(),
-    //                     ],
-    //                     message,
-    //                 )
-    //                 .unwrap();
-    //             let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
-    //             assert_eq!(sig, expected[2]);
-    //         }
-
-    //         // {
-    //         //     let mut agg_key = musig.new_agg_key(vec![X1, X2, keypair.pk]);
-    //         //     agg_key = agg_key.tweak(tweaks[0].clone(), true).unwrap();
-    //         //     agg_key = agg_key.tweak(tweaks[1].clone(), false).unwrap();
-    //         //     agg_key = agg_key.tweak(tweaks[2].clone(), true).unwrap();
-    //         //     agg_key = agg_key.tweak(tweaks[3].clone(), false).unwrap();
-
-    //         //     let sign_session = musig
-    //         //         .start_sign_session(
-    //         //             &agg_key,
-    //         //             vec![
-    //         //                 remote_nonce1.clone(),
-    //         //                 remote_nonce2.clone(),
-    //         //                 sec_nonce.public(),
-    //         //             ],
-    //         //             message,
-    //         //         )
-    //         //         .unwrap();
-    //         //     let sig = musig.sign(&agg_key, 2, &keypair, sec_nonce.clone(), &sign_session);
-    //         //     assert_eq!(sig, expected[3]);
-    //         // }
-    //     }
 }
