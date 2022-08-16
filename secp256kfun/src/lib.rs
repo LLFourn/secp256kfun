@@ -22,6 +22,7 @@ pub use digest;
 pub use rand_core;
 pub use subtle;
 
+mod keypair;
 mod point;
 mod scalar;
 mod slice;
@@ -33,6 +34,7 @@ mod backend;
 pub mod marker;
 pub mod op;
 
+pub use keypair::*;
 pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;
