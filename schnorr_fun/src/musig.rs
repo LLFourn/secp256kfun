@@ -23,11 +23,11 @@
 //!     .into_xonly_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
-//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), &agg_key, b"session-id-1337");
+//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
 //! let my_public_nonce = my_nonce.public();
-//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), &agg_key, b"session-id-1337");
+//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
 //! # let p2_public_nonce = p2_nonce.public();
-//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), &agg_key, b"session-id-1337");
+//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
@@ -63,7 +63,6 @@
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature, Vec};
 use secp256kfun::{
-    derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::{HashAdd, Tagged},
@@ -296,45 +295,26 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>> {
-    /// Generate nonces for signing under your aggregate key.
+    /// Generate nonces for signing.
     ///
-    /// It is very important to carefully consider the implications of your choice of underlying
-    /// [`NonceGen`].
+    /// This method should be used carefully.
+    /// This calls [`NonceKeyPair::generate`] internally with the `MuSig` instance's `NonceGen`.
+    /// See documentation for that for more usage info.
     ///
-    /// Using a [`Synthetic`] nonce generator will mean you don't have to worry about passing a
-    /// unique `sid` (session id) to this function for each signing session. The downside is that
-    /// you must recall the result of `gen_nonces` somewhere and store it for use when you want to
-    /// start the signing session with [`start_sign_session`].
-    ///
-    /// Using a [`Deterministic`] nonce generator means you **must** never start two signing
-    /// sessions with nonces generated from the same `sid`. If you do your secret key will be
-    /// recoverable from the two partial signatures you created with the same nonce.
-    ///
-    /// Note that you daon't have to use this API. You can create [`NonceKeyPair`]s manually in your
-    /// own application specific way (but be careful!).
-    ///
-    /// [`NonceGen`]: secp256kfun::nonce::NonceGen
-    /// [`Synthetic`]: secp256kfun::nonce::Synthetic
-    /// [`Deterministic`]: secp256kfun::nonce::Deterministic
-    /// [`start_sign_session`]: Self::start_sign_session
-    /// [`NonceKeyPair`]: crate::binonce::NonceKeyPair
-    pub fn gen_nonces(&self, secret: &Scalar, agg_key: &XOnlyAggKey, sid: &[u8]) -> NonceKeyPair {
-        let r1 = derive_nonce!(
-            nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret,
-            public => [ b"r1", agg_key.agg_public_key(), sid]
-        );
-        let r2 = derive_nonce!(
-            nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret,
-            public => [ b"r2", agg_key.agg_public_key(), sid]
-        );
-        let R1 = g!(r1 * G).normalize();
-        let R2 = g!(r2 * G).normalize();
-        NonceKeyPair {
-            public: Nonce([R1, R2]),
-            secret: [r1, r2],
-        }
+    /// [`NonceKeyPair::generate`]: crate::binonce::NonceKeyPair::generate
+    pub fn gen_nonces(
+        &self,
+        secret: &Scalar,
+        session_id: &[u8],
+        public_key: Option<Point<impl Normalized>>,
+        message: Option<Message<'_>>,
+    ) -> NonceKeyPair {
+        NonceKeyPair::generate(self.nonce_gen(), secret, session_id, public_key, message)
+    }
+
+    /// Gets the nonce generator from the underlying Schnorr instance.
+    pub fn nonce_gen(&self) -> &NG {
+        self.schnorr.nonce_gen()
     }
 }
 
@@ -504,8 +484,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
             .into_point_with_even_y();
 
         for R_i in &mut Rs {
-            R_i.0[0] = R_i.0[0].conditional_negate(r_needs_negation);
-            R_i.0[1] = R_i.0[1].conditional_negate(r_needs_negation);
+            R_i.conditional_negate(r_needs_negation);
         }
 
         let c = self
@@ -742,14 +721,14 @@ mod test {
             assert_eq!(agg_key1.agg_public_key(), agg_key2.agg_public_key());
             assert_eq!(agg_key1.agg_public_key(), agg_key3.agg_public_key());
 
-
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), &agg_key1, b"test");
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), &agg_key2, b"test");
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), &agg_key3, b"test");
-            let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
-
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+
+            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test", Some(agg_key1.agg_public_key()), Some(message));
+            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
+            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
+
 
             let p1_session = musig
                 .start_sign_session(
@@ -834,12 +813,13 @@ mod test {
                 keypair3.public_key(),
             ]).into_xonly_key();
 
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), &agg_key, b"test");
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), &agg_key2, b"test");
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), &agg_key3, b"test");
-            let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+
+            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test" ,Some(agg_key.agg_public_key()), Some(message));
+            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
+            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
             let mut p1_session = musig
                 .start_encrypted_sign_session(
