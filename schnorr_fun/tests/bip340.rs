@@ -9,7 +9,7 @@ use schnorr_fun::{
 };
 use sha2::Sha256;
 
-static BIP340_CSV: &'static str = include_str!("./test-vectors.csv");
+static BIP340_CSV: &'static str = include_str!("./bip340-test-vectors.csv");
 
 struct AuxRng<'a>(&'a [u8]);
 

@@ -68,6 +68,11 @@ impl<'a, S> Slice<'a, S> {
             secrecy: PhantomData::<S>,
         }
     }
+
+    /// Gets the inner slice
+    pub fn as_inner(self) -> &'a [u8] {
+        &self.inner
+    }
 }
 
 impl<'a, S> From<Slice<'a, S>> for &'a [u8] {

@@ -20,7 +20,7 @@
 //! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
 //! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen);
 //! let signing_keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-//! let verification_key = signing_keypair.verification_key();
+//! let verification_key = signing_keypair.public_key().to_point();
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
 //! let encryption_key = schnorr.encryption_key_for(&decryption_key);
 //! let message = Message::<Public>::plain("text-bitcoin", b"send 1 BTC to Bob");
@@ -54,9 +54,9 @@ use crate::{
         g,
         marker::*,
         nonce::NonceGen,
-        s, Point, Scalar, G,
+        s, Point, Scalar, XOnlyKeyPair, G,
     },
-    KeyPair, Message, Schnorr, Signature,
+    Message, Schnorr, Signature,
 };
 mod encrypted_signature;
 pub use encrypted_signature::EncryptedSignature;
@@ -72,7 +72,7 @@ pub trait EncryptedSign {
     /// [synopsis]: crate::adaptor#synopsis
     fn encrypted_sign(
         &self,
-        signing_keypair: &KeyPair,
+        signing_keypair: &XOnlyKeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature;
@@ -85,7 +85,7 @@ where
 {
     fn encrypted_sign(
         &self,
-        signing_key: &KeyPair,
+        signing_key: &XOnlyKeyPair,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature {
@@ -299,7 +299,7 @@ mod test {
         decryption_key: Scalar,
     ) {
         let signing_keypair = schnorr.new_keypair(secret_key);
-        let verification_key = signing_keypair.verification_key();
+        let verification_key = signing_keypair.public_key().to_point();
         let encryption_key = schnorr.encryption_key_for(&decryption_key);
         let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
 
@@ -307,7 +307,7 @@ mod test {
             schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);
 
         assert!(schnorr.verify_encrypted_signature(
-            &signing_keypair.verification_key(),
+            &verification_key,
             &encryption_key,
             message,
             &encrypted_signature,

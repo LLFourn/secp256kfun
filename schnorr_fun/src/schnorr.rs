@@ -6,9 +6,9 @@ use crate::{
         hash::{HashAdd, Tagged},
         marker::*,
         nonce::{AddTag, NonceGen},
-        s, Point, Scalar, XOnly, G,
+        s, Point, Scalar, XOnly, XOnlyKeyPair, G,
     },
-    KeyPair, Message, Signature,
+    Message, Signature,
 };
 
 /// An instance of a [BIP-340] style Schnorr signature scheme.
@@ -117,9 +117,9 @@ where
     ///     b"Chancellor on brink of second bailout for banks",
     /// );
     /// let signature = schnorr.sign(&keypair, message);
-    /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
+    /// assert!(schnorr.verify(&keypair.public_key().to_point(), message, &signature));
     /// ```
-    pub fn sign(&self, keypair: &KeyPair, message: Message<'_, impl Secrecy>) -> Signature {
+    pub fn sign(&self, keypair: &XOnlyKeyPair, message: Message<'_, impl Secrecy>) -> Signature {
         let (x, X) = keypair.as_tuple();
 
         let mut r = derive_nonce!(
@@ -148,18 +148,12 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     pub fn challenge_hash(&self) -> CH {
         self.challenge_hash.clone()
     }
-    /// Converts a non-zero scalar to a key-pair by interpreting it as a secret key.
+
+    /// Create a new signing keypair.
     ///
-    /// **The secret key in the resulting key is not guaranteed to be the same
-    /// as the input**. For half the input values the result will be the
-    /// negation of it. This happens because the corresponding [`Point`] may not
-    /// have an y-coordinate that is even (see [`EvenY`])
-    ///
-    /// [`Point`]: crate::fun::Point
-    /// [`EvenY`]: crate::fun::marker::EvenY
-    pub fn new_keypair(&self, mut sk: Scalar) -> KeyPair {
-        let pk = XOnly::from_scalar_mul(&G, &mut sk);
-        KeyPair { sk, pk }
+    /// Short form of [`XOnlyKeyPair::new`].
+    pub fn new_keypair(&self, sk: Scalar) -> XOnlyKeyPair {
+        XOnlyKeyPair::new(sk)
     }
 
     /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by [BIP-340].
@@ -184,7 +178,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     /// let challenge = schnorr.challenge(R, keypair.public_key(), message);
     /// let s = s!(r + challenge * { keypair.secret_key() });
     /// let signature = Signature { R, s };
-    /// assert!(schnorr.verify(&keypair.verification_key(), message, &signature));
+    /// assert!(schnorr.verify(&keypair.public_key().to_point(), message, &signature));
     /// ```
     ///
     /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
@@ -305,7 +299,7 @@ pub mod test {
             );
             let signature = schnorr.sign(&keypair, msg);
             let anticipated_signature = schnorr.anticipate_signature(
-                &keypair.verification_key(),
+                &keypair.public_key().to_point(),
                 &signature.R.to_point(),
                 msg,
             );
@@ -329,7 +323,7 @@ pub mod test {
             let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
             let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
 
-            assert!(schnorr.verify(&keypair_1.verification_key(), msg_atkdwn, &signature_1));
+            assert!(schnorr.verify(&keypair_1.public_key().to_point(), msg_atkdwn, &signature_1));
             assert_eq!(signature_1, signature_2);
             if keypair_1 != keypair_2 {
                 assert_ne!(signature_3.R, signature_1.R);

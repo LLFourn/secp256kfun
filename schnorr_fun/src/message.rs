@@ -36,6 +36,14 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
             app_tag: Some(app_tag),
         }
     }
+
+    /// Length of the message as it is hashed
+    pub fn len(&self) -> usize {
+        match self.app_tag {
+            Some(_) => 64 + self.bytes.as_inner().len(),
+            None => self.bytes.as_inner().len(),
+        }
+    }
 }
 
 impl<S> HashInto for Message<'_, S> {
