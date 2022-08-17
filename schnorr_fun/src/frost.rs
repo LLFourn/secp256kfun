@@ -69,7 +69,6 @@
 //!     .collect();
 //! // create a unique session ID for this signing session
 //! let sid = [
-//!     frost_key.joint_public_key.to_bytes().as_slice(),
 //!     verification_shares_bytes.concat().as_slice(),
 //!     b"frost-very-unique-id".as_slice(),
 //!     b"0".as_slice(),
@@ -83,8 +82,8 @@
 //! # ]
 //! # .concat();
 //! // generate nonces for this signing session
-//! let nonce = frost.gen_nonce(&secret_share, &sid);
-//! # let nonce3 = frost.gen_nonce(&secret_share3, &sid3);
+//! let nonce = frost.gen_nonce(&secret_share, &sid, Some(frost_key.joint_public_key), None);
+//! # let nonce3 = frost.gen_nonce(&secret_share3, &sid3, Some(frost_key.joint_public_key), None);
 //! // share your public nonce with the other signing participant(s)
 //! # let recieved_nonce3 = nonce3.public();
 //! // recieve public nonces from other participants with their index
@@ -111,7 +110,6 @@ use crate::{Message, Schnorr, Signature, Vec};
 use core::iter;
 use rand_core::{CryptoRng, RngCore};
 use secp256kfun::{
-    derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::{HashAdd, Tagged},
@@ -851,36 +849,35 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen + AddTag> Frost<H, NG> {
     /// Generate nonces for secret shares
     ///
-    /// It is very important that you use a unique `sid` for this signing session and to also carefully
-    /// consider the implications of your choice of underlying [`NonceGen`].
+    /// This method should be used carefully.
+    /// This calls [`NonceKeyPair::generate`] internally with the `MuSig` instance's `NonceGen`.
+    /// See documentation for that for more usage info.
     ///
     /// When choosing a `secret` to use, if you are generating nonces prior to KeyGen completion,
     /// use the static first coefficient of your polynomial.
     /// Otherwise you can use your secret share of the joint FROST key.
     ///
     /// The application must decide upon a unique `sid` for this FROST multisignature.
-    /// For example, the concatenation of: my_signing_index, joint_key, verfication_shares
+    /// For example, the concatenation of: my_signing_index, verfication_shares, purpose
     ///
     /// ## Return Value
     ///
     /// A NonceKeyPair comprised of secret scalars [r1, r2] and public nonces [R1, R2]
-    pub fn gen_nonce(&self, secret: &Scalar, sid: &[u8]) -> NonceKeyPair {
-        let r1 = derive_nonce!(
-            nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret,
-            public => [ b"r1-frost", sid]
-        );
-        let r2 = derive_nonce!(
-            nonce_gen => self.schnorr.nonce_gen(),
-            secret => secret,
-            public => [ b"r2-frost", sid]
-        );
-        let R1 = g!(r1 * G).normalize();
-        let R2 = g!(r2 * G).normalize();
-        NonceKeyPair {
-            public: Nonce([R1, R2]),
-            secret: [r1, r2],
-        }
+    /// [`NonceKeyPair::generate`]: crate::binonce::NonceKeyPair::generate
+    pub fn gen_nonce(
+        &self,
+        secret: &Scalar,
+        session_id: &[u8],
+        public_key: Option<Point<impl Normalized>>,
+        message: Option<Message<'_>>,
+    ) -> NonceKeyPair {
+        NonceKeyPair::generate(
+            self.schnorr.nonce_gen(),
+            secret,
+            session_id,
+            public_key,
+            message,
+        )
     }
 }
 
@@ -977,7 +974,13 @@ mod test {
                 b"frost-prop-test".as_slice(),
             ]
             .concat();
-            let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i| frost.gen_nonce(&secret_shares[*i as usize], &[sid.as_slice(), [*i as u8].as_slice()].concat())).collect();
+            let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i|
+                frost.gen_nonce(
+                    &secret_shares[*i as usize],
+                    &[sid.as_slice(), [*i as u8].as_slice()].concat(),
+                    Some(frost_keys[signer_indexes[0]].joint_public_key),
+                    None)
+                ).collect();
 
             let mut recieved_nonces: Vec<_> = vec![];
             for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
@@ -1102,7 +1105,6 @@ mod test {
 
         // Create unique session IDs for these signing sessions
         let sid1 = [
-            xonly_frost_key.joint_public_key.to_bytes().as_slice(),
             verification_shares_bytes.concat().as_slice(),
             b"frost-end-to-end-test-1".as_slice(),
             b"0".as_slice(),
@@ -1110,28 +1112,32 @@ mod test {
         .concat();
 
         let sid2 = [
-            xonly_frost_key.joint_public_key.to_bytes().as_slice(),
             verification_shares_bytes.concat().as_slice(),
             b"frost-end-to-end-test-2".as_slice(),
             b"2".as_slice(),
         ]
         .concat();
 
-        let nonce1 = frost.gen_nonce(&secret_share1, &sid1);
-        let nonce3 = frost.gen_nonce(&secret_share3, &sid2);
+        let message = Message::plain("test", b"test");
+        let nonce1 = frost.gen_nonce(
+            &secret_share1,
+            &sid1,
+            Some(xonly_frost_key.joint_public_key),
+            Some(message),
+        );
+        let nonce3 = frost.gen_nonce(
+            &secret_share3,
+            &sid2,
+            Some(xonly_frost_key.joint_public_key),
+            Some(message),
+        );
         let nonces = vec![(0, nonce1.public()), (2, nonce3.public())];
         let nonces2 = vec![(0, nonce1.public()), (2, nonce3.public())];
 
-        let session =
-            frost.start_sign_session(&xonly_frost_key, nonces, Message::plain("test", b"test"));
-
+        let session = frost.start_sign_session(&xonly_frost_key, nonces, message);
         dbg!(&session);
         {
-            let session2 = frost.start_sign_session(
-                &xonly_frost_key2,
-                nonces2,
-                Message::plain("test", b"test"),
-            );
+            let session2 = frost.start_sign_session(&xonly_frost_key2, nonces2, message);
             assert_eq!(session2, session);
         }
 
