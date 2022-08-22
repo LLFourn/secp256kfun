@@ -15,10 +15,21 @@ pub struct NonZero;
 pub trait ZeroChoice:
     Default + Clone + PartialEq + Copy + DecideZero<NonZero> + DecideZero<Zero> + 'static
 {
+    /// Whether the `ZeroChoice` is [`Zero`] or [`NonZero`]
+    fn is_zero() -> bool;
 }
 
-impl ZeroChoice for Zero {}
-impl ZeroChoice for NonZero {}
+impl ZeroChoice for Zero {
+    fn is_zero() -> bool {
+        true
+    }
+}
+
+impl ZeroChoice for NonZero {
+    fn is_zero() -> bool {
+        false
+    }
+}
 
 /// A trait to figure out whether the result of a multiplication should be [`Zero`] or [`NonZero`] at compile time.
 

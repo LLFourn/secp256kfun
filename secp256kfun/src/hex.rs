@@ -67,9 +67,9 @@ pub fn encode(bytes: &[u8]) -> String {
 ///
 /// # Examples
 /// ```
-/// use secp256kfun::{G, hex};
+/// use secp256kfun::{G, hex, fun::marker::*};
 /// let G_bytes =  hex::decode("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
-/// assert_eq!(&G_bytes[..], G.to_bytes().as_ref());
+/// assert_eq!(&G_bytes[..], (*G.mark::<Normal>()).to_bytes().as_ref());
 pub fn decode(hex: &str) -> Result<Vec<u8>, HexError> {
     if (hex.len() % 2) != 0 {
         return Err(HexError::InvalidHex);
@@ -87,9 +87,9 @@ pub fn decode(hex: &str) -> Result<Vec<u8>, HexError> {
 ///
 /// # Examples
 /// ```
-/// use secp256kfun::{G, hex};
+/// use secp256kfun::{G, hex, fun::marker::*};
 /// let G_bytes : [u8;33] = hex::decode_array("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
-/// assert_eq!(G_bytes, G.to_bytes());
+/// assert_eq!(G_bytes, G.mark::<Normal>().to_bytes());
 pub fn decode_array<const N: usize>(hex: &str) -> Result<[u8; N], HexError> {
     let mut bytes = [0u8; N];
     if hex.len() % 2 != 0 {

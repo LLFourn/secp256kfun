@@ -73,7 +73,7 @@ pub trait EncryptedSign {
     fn encrypted_sign(
         &self,
         signing_keypair: &XOnlyKeyPair,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point<Normal, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature;
 }
@@ -86,7 +86,7 @@ where
     fn encrypted_sign(
         &self,
         signing_key: &XOnlyKeyPair,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point<Normal, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature {
         let (x, X) = signing_key.as_tuple();

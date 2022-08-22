@@ -21,12 +21,12 @@ impl From<SecretKey> for Scalar {
 
 impl From<PublicKey> for Point {
     fn from(pk: PublicKey) -> Self {
-        Point::from_bytes(pk.serialize()).unwrap()
+        Point::<Normal, Public, NonZero>::from_bytes(pk.serialize()).unwrap()
     }
 }
 
-impl<T: Normalized> From<Point<T>> for PublicKey {
-    fn from(pk: Point<T>) -> Self {
+impl From<Point> for PublicKey {
+    fn from(pk: Point) -> Self {
         PublicKey::from_slice(pk.to_bytes().as_ref()).unwrap()
     }
 }

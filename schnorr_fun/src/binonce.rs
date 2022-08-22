@@ -12,58 +12,20 @@ use secp256kfun::{derive_nonce, g, marker::*, nonce::NonceGen, Point, Scalar, G}
 /// The type argument determines whether the nonces can be `Zero` or not. The [musig
 /// spec](https://github.com/jonasnick/bips/pull/21) specifies that the aggregate nonce is allowed
 /// to be zero to avoid having to abort the protocol in this case.
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct Nonce<Z = NonZero>(pub [Point<Normal, Public, Z>; 2]);
+#[derive(Clone, Copy, PartialEq, Debug, Eq)]
+pub struct Nonce<Z=NonZero>(pub [Point<Normal, Public, Z>; 2]);
 
-impl Nonce<Zero> {
-    /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
-    ///
-    /// If either pair of 33 bytes is `[0u8;32]` that point is interpreted as `Zero`.
-    pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
-        fn deser(bytes: &[u8]) -> Option<Point<Normal, Public, Zero>> {
-            Point::from_slice(&bytes)
-                .map(|p| p.mark::<Zero>())
-                .or_else(|| {
-                    if bytes == [0u8; 33].as_slice() {
-                        Some(Point::zero())
-                    } else {
-                        None
-                    }
-                })
-        }
-
-        let R1 = deser(&bytes[33..])?;
-        let R2 = deser(&bytes[..33])?;
-
-        Some(Nonce([R1, R2]))
-    }
-
-    /// Serializes a public nonce as  as 66 bytes (two 33-byte serialized points).
-    ///
-    /// If either point is `Zero` it will be serialized as `[0u8;32]`.
-    pub fn to_bytes(self) -> [u8; 66] {
-        let mut bytes = [0u8; 66];
-        bytes[..33].copy_from_slice(
-            &self.0[0]
-                .mark::<NonZero>()
-                .map(|p| p.to_bytes())
-                .unwrap_or([0u8; 33]),
-        );
-        bytes[33..].copy_from_slice(
-            &self.0[1]
-                .mark::<NonZero>()
-                .map(|p| p.to_bytes())
-                .unwrap_or([0u8; 33]),
-        );
-        bytes
+impl<Z: ZeroChoice> core::hash::Hash for Nonce<Z> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
-impl Nonce<NonZero> {
+impl<Z: ZeroChoice> Nonce<Z> {
     /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
     pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
-        let R1 = Point::from_slice(&bytes[..33])?;
-        let R2 = Point::from_slice(&bytes[33..])?;
+        let R1 = Point::<Normal, Public, Z>::from_slice(&bytes[..33])?;
+        let R2 = Point::<Normal, Public, Z>::from_slice(&bytes[33..])?;
         Some(Nonce([R1, R2]))
     }
 
@@ -186,7 +148,7 @@ impl NonceKeyPair {
         nonce_gen: &impl NonceGen,
         secret: &Scalar,
         session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
+        public_key: Option<Point>,
         message: Option<Message<'_>>,
     ) -> Self {
         let message = message.unwrap_or(Message::raw(b""));

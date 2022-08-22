@@ -3,7 +3,7 @@
 //! ## Synopsis
 //!
 //! ```
-//! use schnorr_fun::{musig, nonce::Deterministic, Message, Schnorr};
+//! use schnorr_fun::{musig, nonce::Deterministic, Message, Schnorr, fun::marker::*};
 //! use sha2::Sha256;
 //! // use sha256 with deterministic nonce generation -- be careful!
 //! let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
@@ -23,11 +23,11 @@
 //!     .into_xonly_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
-//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key().mark::<Normal>()), None);
 //! let my_public_nonce = my_nonce.public();
-//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key().mark::<Normal>()), None);
 //! # let p2_public_nonce = p2_nonce.public();
-//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key().mark::<Normal>()), None);
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
@@ -306,7 +306,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
         &self,
         secret: &Scalar,
         session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
+        public_key: Option<Point>,
         message: Option<Message<'_>>,
     ) -> NonceKeyPair {
         NonceKeyPair::generate(self.nonce_gen(), secret, session_id, public_key, message)
@@ -724,9 +724,9 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test", Some(agg_key1.agg_public_key()), Some(message));
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test", Some(agg_key1.agg_public_key().mark::<Normal>()), Some(message));
+            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key().mark::<Normal>()), Some(message));
+            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key().mark::<Normal>()), Some(message));
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
 
@@ -816,9 +816,9 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test" ,Some(agg_key.agg_public_key()), Some(message));
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test" ,Some(agg_key.agg_public_key().mark::<Normal>()), Some(message));
+            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key().mark::<Normal>()), Some(message));
+            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key().mark::<Normal>()), Some(message));
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
             let mut p1_session = musig
