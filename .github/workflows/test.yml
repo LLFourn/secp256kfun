@@ -24,6 +24,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         args: [
             "--no-default-features",
@@ -34,6 +35,7 @@ jobs:
             ""
         ]
         rust: [nightly, stable]
+        target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
         exclude:
           - rust: stable
             args: --all-features
@@ -45,9 +47,24 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
           override: true
-      - uses: Swatinem/rust-cache@v1.2.0
-      - run: cargo test ${{ matrix.args }} --release --verbose
+      - uses: Swatinem/rust-cache@v2.0.0
+
+      - name: cross test (armv7)
+        uses: actions-rs/cargo@v1
+        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        with:
+          use-cross: true
+          command: test
+          args:  ${{ matrix.args }} --release --verbose --target ${{ matrix.target }}
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        if: matrix.target != 'armv7-unknown-linux-gnueabihf'
+        with:
+          command: test
+          args:  ${{ matrix.args }} --release --verbose --target ${{ matrix.target }}
 
   doc-build:
      name: doc-build
