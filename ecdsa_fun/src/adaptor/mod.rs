@@ -13,7 +13,12 @@
 //! ```
 //! use ecdsa_fun::{
 //!     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
-//!     fun::{digest::Digest, g, marker::*, nonce, Scalar, G},
+//!     fun::{
+//!         digest::{Digest, Update},
+//!         g,
+//!         marker::*,
+//!         nonce, Scalar, G,
+//!     },
 //! };
 //! use rand::rngs::ThreadRng;
 //! use rand_chacha::ChaCha20Rng;

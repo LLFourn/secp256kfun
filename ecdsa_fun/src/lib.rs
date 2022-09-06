@@ -138,7 +138,12 @@ impl<NG: NonceGen> ECDSA<NG> {
     ///
     /// ```
     /// use ecdsa_fun::{
-    ///     fun::{digest::Digest, g, marker::*, Scalar, G},
+    ///     fun::{
+    ///         digest::{Digest, Update},
+    ///         g,
+    ///         marker::*,
+    ///         Scalar, G,
+    ///     },
     ///     nonce, ECDSA,
     /// };
     /// use rand::rngs::ThreadRng;

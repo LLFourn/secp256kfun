@@ -4,9 +4,11 @@
 //!
 //! [`Digest`]: digest::Digest
 //! [`RustCrypto`]: https://github.com/RustCrypto/hashes
+use digest::crypto_common::BlockSizeUser;
+
 use crate::digest::{
     generic_array::typenum::{PartialDiv, Unsigned},
-    BlockInput, Digest,
+    Digest,
 };
 /// Extension trait to "tag" a hash as described in [BIP-340].
 ///
@@ -25,10 +27,10 @@ pub trait Tagged: Default + Clone {
     fn tagged(&self, tag: &[u8]) -> Self;
 }
 
-impl<H: BlockInput + Digest + Default + Clone> Tagged for H
+impl<H: BlockSizeUser + Digest + Default + Clone> Tagged for H
 where
-    <H as BlockInput>::BlockSize: PartialDiv<H::OutputSize>,
-    <<H as BlockInput>::BlockSize as PartialDiv<H::OutputSize>>::Output: Unsigned,
+    <H as BlockSizeUser>::BlockSize: PartialDiv<H::OutputSize>,
+    <<H as BlockSizeUser>::BlockSize as PartialDiv<H::OutputSize>>::Output: Unsigned,
 {
     fn tagged(&self, tag: &[u8]) -> Self {
         let hashed_tag = {
