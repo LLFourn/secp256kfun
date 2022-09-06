@@ -54,6 +54,7 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 - Adaptor signatures
 - compatibility with `rust-secp256k1`'s `schnorrsig` module with `libsecp_compat` feature.
 - [MuSig2] implementation compatible with [this PR](https://github.com/jonasnick/bips/pull/37) of the spec.
+- [FROST] implementation
 - Feature flags
   - `serde`: for serde implementations for signatures
   - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s Schnorr signatures.
@@ -64,3 +65,4 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 [secp256kfun]: https://docs.rs/secp256kfun
 [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
 [MuSig2]: https://eprint.iacr.org/2020/1261.pdf
+[FROST]: https://eprint.iacr.org/2020/852.pdf
