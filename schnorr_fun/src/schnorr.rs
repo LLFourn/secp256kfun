@@ -27,7 +27,7 @@ pub struct Schnorr<CH, NG = ()> {
     /// [`NonceGen`]: crate::nonce::NonceGen
     nonce_gen: NG,
     /// The challenge hash
-    pub challenge_hash: CH,
+    challenge_hash: CH,
 }
 
 impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, ()> {
