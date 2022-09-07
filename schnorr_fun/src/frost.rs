@@ -1034,7 +1034,7 @@ mod test {
                 .collect();
 
             let sid = [
-                frost_keys[signer_indexes[0]].public_key().to_bytes().as_slice(),
+                frost_keys[signer_indexes[0]].public_key().to_xonly_bytes().as_slice(),
                 verification_shares_bytes.concat().as_slice(),
                 b"frost-prop-test".as_slice(),
             ]

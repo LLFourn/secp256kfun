@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+- Added FROST implementation
+- Make Point<EvenY> serialization and hashing consistent (use 32 byte form)
+- Add `to_xonly_bytes` and `from_xonly_bytes` to `Point<EvenY>`
+- Allow `Zero` points to serialize
+
 ## 0.7.1
 
 - Fix critical bug in MuSig2 implementation where multiple tweaks would break it
