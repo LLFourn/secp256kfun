@@ -28,15 +28,15 @@ use rand_core::{CryptoRng, RngCore};
 ///
 /// # Serialization
 ///
-/// Only points that are marked with `Z` = `NonZero` and `T` ≠ `Jacobian` can be
-/// serialized. A Point that is `EvenY` serializes to and from the 32-byte
-/// x-only representation like the [`XOnly`] type. `Normal` points serialize to
-/// and from the standard 33-byte representation specified in [_Standards for
-/// Efficient Cryptography_] (the same as [`Point::to/from_bytes`])
+/// Only points that are normalized (i.e. `T` ≠ `Jacobian`) can be serialized. A Point that is
+/// `EvenY` serializes to and from the 32-byte x-only representation like the [`XOnly`] type.
+/// `Normal` points serialize to and from the standard 33-byte representation specified in
+/// [_Standards for Efficient Cryptography_] (the same as [`Point::to_bytes`]). Points that are
+/// marked as `Zero` will serialize to `[0u8;33]`.
 ///
 ///
 /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
-/// [`Point::to/from_bytes`]: crate::Point::to_bytes
+/// [`Point::to_bytes`]: crate::Point::to_bytes
 /// [`PointType`]: crate::marker::PointType
 /// [`Secrecy`]: crate::marker::Secrecy
 /// [`XOnly`]: crate::XOnly
@@ -59,6 +59,41 @@ impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
 impl<T: Copy, Z: Copy> Copy for Point<T, Public, Z> {}
 
 impl Point<Normal, Public, NonZero> {
+    /// Samples a point uniformly from the group.
+    ///
+    /// # Examples
+    ///
+    /// Generate a random point from `thread_rng`.
+    /// ```
+    /// # use secp256kfun::Point;
+    /// let random_point = Point::random(&mut rand::thread_rng());
+    pub fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
+        let mut bytes = [0u8; 33];
+        rng.fill_bytes(&mut bytes[..]);
+        bytes[0] &= 0x01;
+        bytes[0] |= 0x02;
+        Self::from_bytes(bytes).unwrap_or_else(|| Self::random(rng))
+    }
+
+    /// Creates a Point from a 65-byte uncompressed encoding specified in
+    /// [_Standards for Efficient Cryptography_].  The first byte must be
+    /// `0x04`.  The remaining 64 bytes must encode a valid x and y coordinate
+    /// on the curve. If the conditions are not met then it will return `None`.
+    ///
+    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
+    pub fn from_bytes_uncompressed(bytes: [u8; 65]) -> Option<Self> {
+        if bytes[0] != 0x04 {
+            return None;
+        }
+        let mut x = [0u8; 32];
+        let mut y = [0u8; 32];
+        x.copy_from_slice(&bytes[1..33]);
+        y.copy_from_slice(&bytes[33..65]);
+        backend::Point::norm_from_coordinates(x, y).map(|p| Point::from_inner(p, Normal))
+    }
+}
+
+impl<Z: ZeroChoice> Point<Normal, Public, Z> {
     /// Creates a Point the compressed encoding specified in [_Standards for
     /// Efficient Cryptography_]. This is the typical encoding used in
     /// Bitcoin. The first byte must be `0x02` or `0x03` to indicate that the
@@ -68,17 +103,20 @@ impl Point<Normal, Public, NonZero> {
     ///
     /// # Examples
     /// ```
-    /// use secp256kfun::{Point, G};
+    /// use secp256kfun::{marker::*, Point, G};
     /// let bytes = [
     ///     2, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155, 252,
     ///     219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152,
     /// ];
-    /// let point = Point::from_bytes(bytes).unwrap();
+    /// let point = Point::<_, Public, NonZero>::from_bytes(bytes).unwrap();
     /// assert_eq!(point, *G);
     /// ```
     ///
     /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
     pub fn from_bytes(bytes: [u8; 33]) -> Option<Self> {
+        if Z::is_zero() && bytes == [0u8; 33] {
+            return Some(Point::from_inner(backend::Point::zero(), Normal));
+        }
         let y_odd = match bytes[0] {
             2 => false,
             3 => true,
@@ -103,39 +141,6 @@ impl Point<Normal, Public, NonZero> {
         let mut bytes = [0u8; 33];
         bytes.copy_from_slice(slice);
         Self::from_bytes(bytes)
-    }
-
-    /// Creates a Point from a 65-byte uncompressed encoding specified in
-    /// [_Standards for Efficient Cryptography_].  The first byte must be
-    /// `0x04`.  The remaining 64 bytes must encode a valid x and y coordinate
-    /// on the curve. If the conditions are not met then it will return `None`.
-    ///
-    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
-    pub fn from_bytes_uncompressed(bytes: [u8; 65]) -> Option<Self> {
-        if bytes[0] != 0x04 {
-            return None;
-        }
-        let mut x = [0u8; 32];
-        let mut y = [0u8; 32];
-        x.copy_from_slice(&bytes[1..33]);
-        y.copy_from_slice(&bytes[33..65]);
-        backend::Point::norm_from_coordinates(x, y).map(|p| Point::from_inner(p, Normal))
-    }
-
-    /// Samples a point uniformly from the group.
-    ///
-    /// # Examples
-    ///
-    /// Generate a random point from `thread_rng`.
-    /// ```
-    /// # use secp256kfun::Point;
-    /// let random_point = Point::random(&mut rand::thread_rng());
-    pub fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
-        let mut bytes = [0u8; 33];
-        rng.fill_bytes(&mut bytes[..]);
-        bytes[0] &= 0x01;
-        bytes[0] |= 0x02;
-        Self::from_bytes(bytes).unwrap_or_else(|| Self::random(rng))
     }
 }
 
@@ -308,11 +313,52 @@ impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> 
 
 impl<T, S, Z> Eq for Point<T, S, Z> {}
 
-impl<T: Normalized> core::hash::Hash for Point<T, Public, NonZero> {
+impl core::hash::Hash for Point<Normal, Public, NonZero> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.to_bytes().hash(state)
     }
 }
+
+impl core::hash::Hash for Point<EvenY, Public, NonZero> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.to_xonly_bytes().hash(state)
+    }
+}
+
+impl<S, Z, T: Normalized> Point<T, S, Z> {
+    /// Converts the point to its compressed encoding as specified by [_Standards for Efficient Cryptography_].
+    ///
+    /// # Example
+    /// Round trip serialization with [`from_bytes`]
+    /// ```
+    /// use secp256kfun::{marker::*, Point};
+    /// let point = Point::random(&mut rand::thread_rng());
+    /// let bytes = point.to_bytes();
+    /// assert!(bytes[0] == 0x02 || bytes[0] == 0x03);
+    /// assert_eq!(Point::<_, _, NonZero>::from_bytes(bytes).unwrap(), point);
+    /// ```
+    ///
+    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
+    /// [`from_bytes`]: crate::Point::from_bytes
+    pub fn to_bytes(&self) -> [u8; 33] {
+        if self.is_zero() {
+            [0u8; 33]
+        } else {
+            let (x, y) = backend::BackendPoint::norm_to_coordinates(&self.0);
+            coords_to_bytes(x, y)
+        }
+    }
+}
+
+impl<S> Point<EvenY, S, NonZero> {
+    /// Creates a point with `EvenY` from 32 byte x-coordinate
+    pub fn from_xonly_bytes(bytes: [u8; 32]) -> Option<Self> {
+        backend::Point::norm_from_bytes_y_oddness(bytes, false)
+            .map(|point| Point::from_inner(point, EvenY))
+    }
+}
+
+impl<S> Point<Normal, S, NonZero> {}
 
 impl<S, T: Normalized> Point<T, S, NonZero> {
     /// Returns the x and y coordinates of the point as two 32-byte arrays containing their big endian encoding.
@@ -325,45 +371,6 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     /// let (x_coord, y_coord) = point.coordinates();
     pub fn coordinates(&self) -> ([u8; 32], [u8; 32]) {
         backend::BackendPoint::norm_to_coordinates(&self.0)
-    }
-
-    /// Converts the point to its compressed encoding as specified by [_Standards for Efficient Cryptography_].
-    ///
-    /// # Example
-    /// Round trip serialization with [`from_bytes`]
-    /// ```
-    /// # use secp256kfun::Point;
-    /// let point = Point::random(&mut rand::thread_rng());
-    /// let bytes = point.to_bytes();
-    /// assert!(bytes[0] == 0x02 || bytes[0] == 0x03);
-    /// assert_eq!(Point::from_bytes(bytes).unwrap(), point);
-    /// ```
-    ///
-    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
-    /// [`from_bytes`]: crate::Point::from_bytes
-    pub fn to_bytes(&self) -> [u8; 33] {
-        let (x, y) = self.coordinates();
-        coords_to_bytes(x, y)
-    }
-
-    /// Encodes a point as its compressed encoding as specified by [_Standards for Efficient Cryptography_].
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use secp256kfun::Point;
-    /// let point = Point::random(&mut rand::thread_rng());
-    /// let bytes = point.to_bytes_uncompressed();
-    /// assert_eq!(Point::from_bytes_uncompressed(bytes).unwrap(), point);
-    /// ```
-    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
-    pub fn to_bytes_uncompressed(&self) -> [u8; 65] {
-        let mut bytes = [0u8; 65];
-        let (x, y) = self.coordinates();
-        bytes[0] = 0x04;
-        bytes[1..33].copy_from_slice(x.as_ref());
-        bytes[33..65].copy_from_slice(y.as_ref());
-        bytes
     }
 
     /// Converts a point to an `XOnly` (i.e. just its x-coordinate).
@@ -384,11 +391,42 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     pub fn is_y_even(&self) -> bool {
         op::NormPointUnary::is_y_even(self)
     }
+
+    /// Serializes a point with `EvenY` to its 32-byte x-coordinate
+    pub fn to_xonly_bytes(&self) -> [u8; 32] {
+        self.to_xonly().into_bytes()
+    }
+
+    /// Encodes a point as its compressed encoding as specified by [_Standards for Efficient Cryptography_].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{marker::*, Point};
+    /// let point = Point::random(&mut rand::thread_rng());
+    /// let bytes = point.to_bytes_uncompressed();
+    /// assert_eq!(Point::from_bytes_uncompressed(bytes).unwrap(), point);
+    /// ```
+    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
+    pub fn to_bytes_uncompressed(&self) -> [u8; 65] {
+        let mut bytes = [0u8; 65];
+        let (x, y) = backend::BackendPoint::norm_to_coordinates(&self.0);
+        bytes[0] = 0x04;
+        bytes[1..33].copy_from_slice(x.as_ref());
+        bytes[33..65].copy_from_slice(y.as_ref());
+        bytes
+    }
 }
 
-impl<T: Normalized, S> HashInto for Point<T, S, NonZero> {
+impl<S> HashInto for Point<Normal, S, NonZero> {
     fn hash_into(self, hash: &mut impl digest::Digest) {
         hash.update(self.to_bytes().as_ref())
+    }
+}
+
+impl<S> HashInto for Point<EvenY, S, NonZero> {
+    fn hash_into(self, hash: &mut impl digest::Digest) {
+        hash.update(self.to_xonly_bytes().as_ref())
     }
 }
 
@@ -416,24 +454,17 @@ crate::impl_debug! {
     fn to_bytes<T, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
         let mut p = point.0.clone();
         backend::VariableTime::point_normalize(&mut p);
-        if backend::Point::is_zero(&p) {
-            Err("Zero")
-        }
-        else {
-            let (x, y) = backend::Point::norm_to_coordinates(&p);
-            Ok(coords_to_bytes(x,y))
-        }
+        let p: Point<Normal, S, Z> = Point::from_inner(p, Normal);
+        Ok(p.to_bytes())
     }
 }
 
 crate::impl_display_serialize! {
-    fn to_bytes<S>(point: &Point<Normal, S, NonZero>) -> [u8;33] {
+    fn to_bytes<S, Z>(point: &Point<Normal, S, Z>) -> [u8;33] {
         point.to_bytes()
     }
 }
 
-// For YChoice points they serialize and deserialize like XOnlys except when
-// deserializing we don't throw away y-coordinate
 crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<EvenY, S, NonZero>) -> [u8;32] {
         point.to_xonly().as_bytes().clone()
@@ -441,16 +472,16 @@ crate::impl_display_serialize! {
 }
 
 crate::impl_fromstr_deserialize! {
-    name => "secp256k1 x-coordinate",
+    name => "secp256k1 32-byte x-coordinate",
     fn from_bytes<S>(bytes: [u8;32]) -> Option<Point<EvenY,S, NonZero>> {
-        backend::Point::norm_from_bytes_y_oddness(bytes, false).map(|point| Point::from_inner(point, EvenY))
+        Point::from_xonly_bytes(bytes).map(|p| p.set_secrecy::<S>())
     }
 }
 
 crate::impl_fromstr_deserialize! {
     name => "33-byte encoded secp256k1 point",
-    fn from_bytes<S>(bytes: [u8;33]) -> Option<Point<Normal,S, NonZero>> {
-        Point::from_bytes(bytes).map(|point| point.set_secrecy::<S>())
+    fn from_bytes<S,Z: ZeroChoice>(bytes: [u8;33]) -> Option<Point<Normal,S, Z>> {
+        Point::from_bytes(bytes).map(|p| p.set_secrecy::<S>())
     }
 }
 
@@ -577,24 +608,32 @@ mod test {
         fn operations_jacobian_secret_zero(P in any::<Point<Jacobian, Secret, Zero>>()) {
             operations_test!(&P);
         }
+
+        #[cfg(feature = "serde")]
+        #[test]
+        fn point_even_y_json_deserialization_roundtrip(point in any::<Point<Normal, Public, Zero>>()) {
+            let string = serde_json::to_string(&point).unwrap();
+            let deser_point: Point<Normal, Public, Zero> = serde_json::from_str(&string).unwrap();
+            assert_eq!(point, deser_point);
+        }
     }
 
     #[test]
     fn g_to_and_from_bytes() {
         use core::str::FromStr;
         assert_eq!(
-            G.to_bytes_uncompressed(),
+            (*G).mark::<Normal>().to_bytes_uncompressed(),
             crate::hex::decode_array("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
             "G.to_bytes_uncompressed()"
         );
 
         assert_eq!(
-            Point::from_bytes_uncompressed(G.to_bytes_uncompressed()).unwrap(),
+            Point::from_bytes_uncompressed((*G).mark::<Normal>().to_bytes_uncompressed()).unwrap(),
             *G
         );
 
         assert_eq!(
-            G.to_bytes(),
+            (*G).mark::<Normal>().to_bytes(),
             crate::hex::decode_array(
                 "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"
             )
@@ -603,7 +642,7 @@ mod test {
         );
 
         assert_eq!(
-            &Point::from_bytes(
+            &Point::<_, Public>::from_bytes(
                 crate::hex::decode_array(
                     "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"
                 )
@@ -614,14 +653,14 @@ mod test {
         );
 
         assert_eq!(
-            &Point::from_bytes(
+            &Point::<_, Public>::from_bytes(
                 crate::hex::decode_array(
                     "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"
                 )
                 .unwrap()
             )
             .unwrap(),
-            &Point::<Normal, Secret, _>::from_str(
+            &Point::<Normal, Secret>::from_str(
                 "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"
             )
             .unwrap(),
@@ -645,6 +684,12 @@ mod test {
             .unwrap(),
             "-G.to_bytes()"
         );
+    }
+
+    #[test]
+    fn zero_to_and_from_bytes() {
+        let zero = Point::zero();
+        assert_eq!(Point::<_, _, Zero>::from_bytes(zero.to_bytes()), Some(zero));
     }
 
     #[test]
@@ -672,14 +717,5 @@ mod test {
         assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
         let mult_point = g!({ Scalar::random(&mut rand::thread_rng()) } * G);
         assert!(format!("{:?}", mult_point).starts_with("Point<Jacobian,Public,NonZero>"));
-    }
-
-    #[cfg(feature = "serde")]
-    #[test]
-    fn point_even_y_json_deserialization_roundtrip() {
-        let point = Point::random(&mut rand::thread_rng());
-        let string = serde_json::to_string(&point).unwrap();
-        let deser_point: Point = serde_json::from_str(&string).unwrap();
-        assert_eq!(point, deser_point);
     }
 }
