@@ -1,7 +1,11 @@
 name: Tests
 
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
 
@@ -47,16 +51,8 @@ jobs:
 
       - name: cross test (armv7)
         uses: actions-rs/cargo@v1
-        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
         with:
-          use-cross: true
-          command: test
-          args:  ${{ matrix.args }} --release --verbose --target ${{ matrix.target }}
-
-      - name: cargo test
-        uses: actions-rs/cargo@v1
-        if: matrix.target != 'armv7-unknown-linux-gnueabihf'
-        with:
+          use-cross:  ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
           command: test
           args:  ${{ matrix.args }} --release --verbose --target ${{ matrix.target }}
 
