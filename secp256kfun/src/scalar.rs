@@ -65,17 +65,17 @@ impl<Z, S> Scalar<S, Z> {
 
     /// Negates the scalar in-place if `cond` is true.
     pub fn conditional_negate(&mut self, cond: bool) {
-        op::ScalarUnary::conditional_negate(self, cond)
+        op::scalar_conditional_negate(self, cond)
     }
 
     /// Returns whether the scalar is greater than the `curve_order`/2.
     pub fn is_high(&self) -> bool {
-        op::ScalarUnary::is_high(self)
+        op::scalar_is_high(self)
     }
 
     /// Returns true if the scalar is equal to zero
     pub fn is_zero(&self) -> bool {
-        op::ScalarUnary::is_zero(self)
+        op::scalar_is_zero(self)
     }
 
     pub(crate) fn from_inner(inner: backend::Scalar) -> Self {
@@ -103,7 +103,7 @@ impl<S> Scalar<S, NonZero> {
     /// assert_eq!(s!(a * a_inverse), Scalar::one());
     /// ```
     pub fn invert(&self) -> Self {
-        Self::from_inner(op::ScalarUnary::invert(self))
+        op::scalar_invert(self)
     }
 }
 
@@ -268,7 +268,7 @@ impl<S> Scalar<S, Zero> {
 
 impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
     fn eq(&self, rhs: &Scalar<S2, Z2>) -> bool {
-        crate::op::ScalarBinary::eq((self, rhs))
+        crate::op::scalar_eq(self, rhs)
     }
 }
 
@@ -302,8 +302,7 @@ impl<S, Z> core::ops::Neg for Scalar<S, Z> {
     type Output = Scalar<S, Z>;
 
     fn neg(self) -> Self::Output {
-        use crate::op::ScalarUnary;
-        Scalar::from_inner(ScalarUnary::negate(&self))
+        crate::op::scalar_negate(&self)
     }
 }
 
@@ -311,8 +310,7 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
     type Output = Scalar<S, Z>;
 
     fn neg(self) -> Self::Output {
-        use crate::op::ScalarUnary;
-        Scalar::from_inner(ScalarUnary::negate(self))
+        crate::op::scalar_negate(self)
     }
 }
 

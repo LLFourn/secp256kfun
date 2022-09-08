@@ -30,17 +30,11 @@ jobs:
             "--no-default-features",
             # // test seperately from --all-features since for secp256kfun this will enable parity backend
             "--no-default-features --features=std,serde,libsecp_compat",
-            "--no-default-features --features=std,serde,libsecp_compat,nightly",
             "--all-features",
             ""
         ]
         rust: [nightly, stable]
         target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
-        exclude:
-          - rust: stable
-            args: --all-features
-          - rust: stable
-            args: "--no-default-features --features=std,serde,libsecp_compat,nightly"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
