@@ -1,12 +1,6 @@
-#[cfg(not(feature = "parity-backend"))]
+//! These traits are for accounting for what methods each backend actually needs.
 mod k256;
-#[cfg(not(feature = "parity-backend"))]
 pub use k256::*;
-
-#[cfg(feature = "parity-backend")]
-mod parity;
-#[cfg(feature = "parity-backend")]
-pub use parity::*;
 
 pub trait BackendScalar: Sized {
     fn minus_one() -> Self;

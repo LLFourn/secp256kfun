@@ -32,10 +32,7 @@ jobs:
       matrix:
         args: [
             "--no-default-features",
-            # // test seperately from --all-features since for secp256kfun this will enable parity backend
-            "--no-default-features --features=std,serde,libsecp_compat",
             "--all-features",
-            ""
         ]
         rust: [nightly, stable]
         target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
@@ -68,4 +65,4 @@ jobs:
            override: true
        - name: build-doc
          # convoluted way to make it fail on warnings
-         run: "cargo doc --no-deps --workspace --exclude secp256kfun_parity_backend 2>&1 | tee /dev/fd/2 | grep -iEq '^(warning|error)' && exit 1 || exit 0"
+         run: "cargo doc --no-deps --workspace 2>&1 | tee /dev/fd/2 | grep -iEq '^(warning|error)' && exit 1 || exit 0"

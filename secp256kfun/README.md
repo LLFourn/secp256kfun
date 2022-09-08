@@ -17,7 +17,7 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 Fun does not mean (yet -- please help!):
 
 - **well reviewed or tested**: This code is fresh and experimental and not rigorously tested.
-- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying [parity/libsecp256k1][4] is resistant against timing attacks etc.
+- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc.
 - **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
