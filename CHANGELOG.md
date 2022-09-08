@@ -7,6 +7,8 @@
 - Add `to_xonly_bytes` and `from_xonly_bytes` to `Point<EvenY>`
 - Allow `Zero` points to serialize
 - Remove requirement of `CryptoRng` everywhere
+- Rename `from_scalar_mul` to `even_y_from_scalar_mul` to be more explicit
+- Remove `XOnly` in favor of `Point<EvenY>`
 
 ## 0.7.1
 

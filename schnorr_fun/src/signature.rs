@@ -1,13 +1,12 @@
-use crate::fun::{marker::*, rand_core::RngCore, Scalar, XOnly};
+use crate::fun::{marker::*, rand_core::RngCore, Point, Scalar};
 
 /// A Schnorr signature.
 #[derive(Clone)]
 pub struct Signature<S = Public> {
-    /// The x-coordinate of the signature's public nonce. When verifying it is
-    /// interpreted as the [`Point`].
+    /// The signature's public nonce
     ///
     /// [`Point`]: secp256kfun::Point
-    pub R: XOnly,
+    pub R: Point<EvenY>,
     /// The challenge _response_ part of the signature.
     pub s: Scalar<S, Zero>,
 }
@@ -26,12 +25,12 @@ impl<S> Signature<S> {
     /// ```
     /// # let signature = schnorr_fun::Signature::random(&mut rand::thread_rng());
     /// let bytes = signature.to_bytes();
-    /// assert_eq!(signature.R.as_bytes(), &bytes[..32]);
-    /// assert_eq!(signature.s.to_bytes().as_ref(), &bytes[32..]);
+    /// assert_eq!(signature.R.to_xonly_bytes(), bytes[..32]);
+    /// assert_eq!(signature.s.to_bytes(), bytes[32..]);
     /// ```
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut bytes = [0u8; 64];
-        bytes[0..32].copy_from_slice(self.R.as_bytes());
+        bytes[0..32].copy_from_slice(&self.R.to_xonly_bytes());
         bytes[32..64].copy_from_slice(&self.s.to_bytes());
         bytes
     }
@@ -43,7 +42,7 @@ impl<S> Signature<S> {
     /// # let signature = schnorr_fun::Signature::random(&mut rand::thread_rng());
     /// let (R, s) = signature.as_tuple();
     /// ```
-    pub fn as_tuple(&self) -> (XOnly, &Scalar<S, Zero>) {
+    pub fn as_tuple(&self) -> (Point<EvenY>, &Scalar<S, Zero>) {
         (self.R, &self.s)
     }
 
@@ -80,13 +79,13 @@ impl Signature<Public> {
     /// let random_signature = Signature::random(&mut rand::thread_rng());
     pub fn random<R: RngCore>(rng: &mut R) -> Self {
         Signature {
-            R: XOnly::random(rng),
+            R: Point::random(rng).into_point_with_even_y().0,
             s: Scalar::random(rng).mark::<(Zero, Public)>(),
         }
     }
     /// Deserializes a signature from the byte representation produced by [`to_bytes`].
     ///
-    /// This returns `None` if the first 32 bytes were not a valid [`XOnly`] or the last 32 bytes were not a valid scalar.
+    /// This returns `None` if the first 32 bytes were not a valid x-only key or the last 32 bytes were not a valid scalar.
     ///
     /// # Examples
     /// ```
@@ -98,7 +97,6 @@ impl Signature<Public> {
     /// }
     /// ```
     ///
-    /// [`XOnly`]: secp256kfun::XOnly
     /// [`to_bytes`]: crate::Signature::to_bytes
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         let mut R = [0u8; 32];
@@ -106,11 +104,10 @@ impl Signature<Public> {
         let mut s = [0u8; 32];
         s.copy_from_slice(&bytes[32..64]);
 
-        XOnly::from_bytes(R).and_then(|R| {
-            Scalar::from_bytes(s).map(|s| Signature {
-                R,
-                s: s.mark::<Public>(),
-            })
+        let R = Point::from_xonly_bytes(R)?;
+        Some(Signature {
+            R,
+            s: Scalar::from_bytes(s)?.mark::<Public>(),
         })
     }
 }

@@ -20,7 +20,7 @@
 //! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
 //! let schnorr = Schnorr::<Sha256, _>::new(nonce_gen);
 //! let signing_keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-//! let verification_key = signing_keypair.public_key().to_point();
+//! let verification_key = signing_keypair.public_key();
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
 //! let encryption_key = schnorr.encryption_key_for(&decryption_key);
 //! let message = Message::<Public>::plain("text-bitcoin", b"send 1 BTC to Bob");
@@ -110,7 +110,7 @@ where
         // key before decrypting it
         r.conditional_negate(needs_negation);
 
-        let c = self.challenge(R.to_xonly(), X, message);
+        let c = self.challenge(&R, &X, message);
         let s_hat = s!(r + c * x).mark::<Public>();
 
         EncryptedSignature {
@@ -143,7 +143,7 @@ pub trait Adaptor {
     fn verify_encrypted_signature(
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point<impl PointType, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool;
@@ -200,7 +200,7 @@ where
     fn verify_encrypted_signature(
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point<impl PointType, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool {
@@ -216,7 +216,7 @@ where
         // !needs_negation => R_hat = R - Y
         let R_hat = g!(R + { Y.conditional_negate(!needs_negation) });
 
-        let c = self.challenge(R.to_xonly(), X.to_xonly(), message);
+        let c = self.challenge(R, &X, message);
 
         R_hat == g!(s_hat * G - c * X)
     }
@@ -235,12 +235,12 @@ where
         y.conditional_negate(needs_negation);
         let s = s!(s_hat + y).mark::<Public>();
 
-        Signature { s, R: R.to_xonly() }
+        Signature { s, R }
     }
 
     fn recover_decryption_key(
         &self,
-        encryption_key: &Point<impl Normalized, impl Secrecy>,
+        encryption_key: &Point<impl PointType, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
         signature: &Signature<impl Secrecy>,
     ) -> Option<Scalar> {
@@ -299,7 +299,7 @@ mod test {
         decryption_key: Scalar,
     ) {
         let signing_keypair = schnorr.new_keypair(secret_key);
-        let verification_key = signing_keypair.public_key().to_point();
+        let verification_key = signing_keypair.public_key();
         let encryption_key = schnorr.encryption_key_for(&decryption_key);
         let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
 

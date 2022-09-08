@@ -159,7 +159,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
             .dleq_proof_system
             .prove(&r, &(R_hat, (*Y, R)), Some(&mut rng));
 
-        let R_x = Scalar::from_bytes_mod_order(R.to_xonly().into_bytes())
+        let R_x = Scalar::from_bytes_mod_order(R.to_xonly_bytes())
             .mark::<(Public, NonZero)>()
             // The point with x-coordinate = 0 mod q exists, but it will never
             // occur since r is pseudorandomly chosen for a given Y, R = r*Y

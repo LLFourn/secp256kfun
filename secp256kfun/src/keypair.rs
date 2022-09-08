@@ -1,4 +1,4 @@
-use crate::{g, marker::*, Point, Scalar, XOnly, G};
+use crate::{g, marker::*, Point, Scalar, G};
 /// A secret and public key pair.
 ///
 /// The secret key is a [`Scalar`] and the public key is the [`Point`] resulting from multiplying the scalar by [`G`].
@@ -49,14 +49,13 @@ impl KeyPair {
     }
 }
 
-/// A secret and public key pair where the public key is an [`XOnly`].
+/// A secret and public key pair where the public key has an even y-coordinate.
 ///
-/// [`XOnly`]: crate::XOnly
 /// [`Scalar`]: crate::Scalar
 #[derive(Clone, Debug, PartialEq)]
 pub struct XOnlyKeyPair {
     sk: Scalar,
-    pk: XOnly,
+    pk: Point<EvenY>,
 }
 
 impl XOnlyKeyPair {
@@ -80,16 +79,13 @@ impl XOnlyKeyPair {
     ///         || &-original_secret_key == keypair.secret_key()
     /// );
     /// assert!(g!({ keypair.secret_key() } * G).normalize().is_y_even());
-    /// assert_eq!(
-    ///     g!({ keypair.secret_key() } * G),
-    ///     keypair.public_key().to_point()
-    /// );
+    /// assert_eq!(g!({ keypair.secret_key() } * G), keypair.public_key());
     /// ```
     ///
     /// [`Point`]: crate::Point
     /// [`EvenY`]: crate::marker::EvenY
     pub fn new(mut secret_key: Scalar) -> Self {
-        let pk = XOnly::from_scalar_mul(&G, &mut secret_key);
+        let pk = Point::even_y_from_scalar_mul(&G, &mut secret_key);
         Self { sk: secret_key, pk }
     }
 
@@ -101,8 +97,8 @@ impl XOnlyKeyPair {
         &self.sk
     }
 
-    /// The public key as an `XOnly` point.
-    pub fn public_key(&self) -> XOnly {
+    /// The public key as a point.
+    pub fn public_key(&self) -> Point<EvenY> {
         self.pk
     }
 
@@ -113,18 +109,12 @@ impl XOnlyKeyPair {
     /// use secp256kfun::{XOnlyKeyPair, Scalar};
     /// let keypair = XOnlyKeyPair::new(Scalar::random(&mut rand::thread_rng()));
     /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, XOnly) {
+    pub fn as_tuple(&self) -> (&Scalar, Point<EvenY>) {
         (&self.sk, self.pk)
-    }
-
-    /// Deprecated
-    #[deprecated(note = "use .public_key().to_point() instead")]
-    pub fn verification_key(&self) -> Point<EvenY> {
-        self.public_key().to_point()
     }
 }
 
-impl From<XOnlyKeyPair> for (Scalar, XOnly) {
+impl From<XOnlyKeyPair> for (Scalar, Point<EvenY>) {
     fn from(kp: XOnlyKeyPair) -> Self {
         (kp.sk, kp.pk)
     }
@@ -134,7 +124,7 @@ impl From<XOnlyKeyPair> for KeyPair {
     fn from(xonly: XOnlyKeyPair) -> Self {
         Self {
             sk: xonly.sk,
-            pk: xonly.pk.to_point().mark::<Normal>(),
+            pk: xonly.pk.mark::<Normal>(),
         }
     }
 }
@@ -144,9 +134,6 @@ impl From<KeyPair> for XOnlyKeyPair {
         let mut sk = kp.sk;
         let (pk, needs_negation) = kp.pk.into_point_with_even_y();
         sk.conditional_negate(needs_negation);
-        Self {
-            sk,
-            pk: pk.to_xonly(),
-        }
+        Self { sk, pk }
     }
 }

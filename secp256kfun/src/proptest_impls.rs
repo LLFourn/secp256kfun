@@ -2,7 +2,7 @@
 //!
 //! [`Arbitrary`]: proptest::arbitrary::Arbitrary
 
-use crate::{marker::*, Point, Scalar, XOnly, G};
+use crate::{marker::*, Point, Scalar, G};
 use ::proptest::prelude::*;
 
 impl<S: Secrecy> Arbitrary for Scalar<S, NonZero> {
@@ -89,14 +89,5 @@ impl<S: Secrecy> Arbitrary for Point<Normal, S, Zero> {
             9 => any::<Point<Normal, S>>().prop_map(|p| p.mark::<Zero>())
         ]
         .boxed()
-    }
-}
-
-impl Arbitrary for XOnly {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-        any::<Point>().prop_map(|p| p.to_xonly()).boxed()
     }
 }

@@ -16,7 +16,7 @@ secp256kfun::impl_fromstr_deserialize! {
     name => "compressed secp256k1 point",
     fn from_bytes(bytes: [u8;33]) -> Option<PointNonce> {
         Point::from_bytes(bytes).and_then(|point| {
-            Scalar::from_bytes_mod_order(point.to_xonly().into_bytes()).mark::<Public>()
+            Scalar::from_bytes_mod_order(point.to_xonly_bytes()).mark::<Public>()
                 .mark::<NonZero>().map(move |x_scalar| PointNonce { point, x_scalar } )
         })
     }

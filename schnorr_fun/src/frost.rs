@@ -786,11 +786,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             nonce.conditional_negate(nonces_need_negation);
         }
 
-        let challenge = self.schnorr.challenge(
-            agg_nonce.to_xonly(),
-            frost_key.public_key().to_xonly(),
-            message,
-        );
+        let challenge = self
+            .schnorr
+            .challenge(&agg_nonce, &frost_key.public_key(), message);
 
         SignSession {
             binding_coeff,
@@ -890,7 +888,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .reduce(|acc, partial_sig| s!(acc + partial_sig).mark::<Public>())
             .unwrap_or(Scalar::zero().mark::<Public>());
         Signature {
-            R: session.agg_nonce.to_xonly(),
+            R: session.agg_nonce,
             s: s!(sum_s + ck).mark::<Public>(),
         }
     }

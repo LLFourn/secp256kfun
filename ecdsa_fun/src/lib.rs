@@ -176,7 +176,7 @@ impl<NG: NonceGen> ECDSA<NG> {
         // man's version of the Fiat-Shamir challenge in a Schnorr
         // signature. The lack of any known algebraic relationship between r and
         // R_x is what makes ECDSA signatures difficult to forge.
-        let R_x = Scalar::from_bytes_mod_order(R.to_xonly().into_bytes())
+        let R_x = Scalar::from_bytes_mod_order(R.to_xonly_bytes())
             // There *is* a single point that will be zero here but since we're
             // choosing R pseudorandomly it won't occur.
             .mark::<(Public, NonZero)>()
