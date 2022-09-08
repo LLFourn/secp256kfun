@@ -49,12 +49,11 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
-all = ["std", "serde", "libsecp_compat", "nightly"]
+all = ["std", "serde", "libsecp_compat"]
 alloc = ["serde_crate/alloc", "secp256kfun_k256_backend/alloc"]
 std = ["alloc"]
 libsecp_compat = ["secp256k1"]
 serde = [ "serde_crate" ]
-nightly = []
 parity-backend = [ "secp256kfun_parity_backend" ]
 
 [[bench]]

@@ -1,5 +1,4 @@
 //!
-#![cfg_attr(feature = "nightly", feature(min_specialization, rustc_attrs))]
 #![no_std]
 #![allow(non_snake_case)]
 #![deny(missing_docs)]

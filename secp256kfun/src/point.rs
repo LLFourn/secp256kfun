@@ -157,11 +157,10 @@ impl<T, S> Point<T, S, NonZero> {
     /// let (point_with_even_y, was_odd) = point.clone().into_point_with_even_y();
     /// ```
     pub fn into_point_with_even_y(self) -> (Point<EvenY, S, NonZero>, bool) {
-        use crate::op::PointUnary;
         let normalized = self.mark::<Normal>();
         let needs_negation = !normalized.is_y_even();
         let negated = normalized.conditional_negate(needs_negation);
-        (Point::from_inner(negated, EvenY), needs_negation)
+        (Point::from_inner(negated.0, EvenY), needs_negation)
     }
 }
 
@@ -217,10 +216,7 @@ impl<T, S, Z> Point<T, S, Z> {
     where
         T: PointType,
     {
-        Point::from_inner(
-            op::PointUnary::conditional_negate(self.clone(), cond),
-            T::NegationType::default(),
-        )
+        op::point_conditional_negate(&self.clone(), cond)
     }
 
     /// A hack that is necessary when writing deserialization code until rust issue [#44491] is fixed.
@@ -291,23 +287,20 @@ impl<S, Z> Point<Jacobian, S, Z> {
 impl<T: PointType, S, Z> core::ops::Neg for Point<T, S, Z> {
     type Output = Point<T::NegationType, S, Z>;
     fn neg(self) -> Self::Output {
-        Point::from_inner(op::PointUnary::negate(self), T::NegationType::default())
+        op::point_negate(&self)
     }
 }
 
 impl<T: PointType, S, Z> core::ops::Neg for &Point<T, S, Z> {
     type Output = Point<T::NegationType, S, Z>;
     fn neg(self) -> Self::Output {
-        Point::from_inner(
-            op::PointUnary::negate(self.clone()),
-            T::NegationType::default(),
-        )
+        op::point_negate(self)
     }
 }
 
 impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> {
     fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
-        op::PointBinary::eq(self, rhs)
+        op::point_eq(self, rhs)
     }
 }
 
@@ -389,7 +382,7 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
 
     /// Returns whether the point has an even y-coordinate
     pub fn is_y_even(&self) -> bool {
-        op::NormPointUnary::is_y_even(self)
+        op::point_is_y_even(self)
     }
 
     /// Serializes a point with `EvenY` to its 32-byte x-coordinate

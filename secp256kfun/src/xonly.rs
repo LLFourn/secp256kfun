@@ -132,7 +132,7 @@ impl PartialEq<XOnly> for XOnly {
 
 impl<T, Z, S> PartialEq<XOnly> for Point<T, S, Z> {
     fn eq(&self, rhs: &XOnly) -> bool {
-        crate::op::PointEqXOnly::point_eq_xonly(self, rhs)
+        rhs.to_point() == *self
     }
 }
 
@@ -144,7 +144,7 @@ impl From<XOnly> for Point<EvenY, Public, NonZero> {
 
 impl<T, Z, S> PartialEq<Point<T, S, Z>> for XOnly {
     fn eq(&self, rhs: &Point<T, S, Z>) -> bool {
-        rhs == self
+        *rhs == self.to_point()
     }
 }
 
