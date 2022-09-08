@@ -4,9 +4,8 @@
 //!
 //! [`Digest`]: digest::Digest
 //! [`RustCrypto`]: https://github.com/RustCrypto/hashes
-use digest::crypto_common::BlockSizeUser;
-
 use crate::digest::{
+    crypto_common::BlockSizeUser,
     generic_array::typenum::{PartialDiv, Unsigned},
     Digest,
 };
