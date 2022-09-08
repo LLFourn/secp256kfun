@@ -1,8 +1,4 @@
-use crate::fun::{
-    marker::*,
-    rand_core::{CryptoRng, RngCore},
-    Scalar, XOnly,
-};
+use crate::fun::{marker::*, rand_core::RngCore, Scalar, XOnly};
 
 /// A Schnorr signature.
 #[derive(Clone)]
@@ -82,7 +78,7 @@ impl Signature<Public> {
     /// ```
     /// use schnorr_fun::Signature;
     /// let random_signature = Signature::random(&mut rand::thread_rng());
-    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn random<R: RngCore>(rng: &mut R) -> Self {
         Signature {
             R: XOnly::random(rng),
             s: Scalar::random(rng).mark::<(Zero, Public)>(),

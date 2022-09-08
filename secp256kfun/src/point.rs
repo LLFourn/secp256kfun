@@ -5,7 +5,7 @@ use crate::{
     op, Scalar, XOnly,
 };
 use core::marker::PhantomData;
-use rand_core::{CryptoRng, RngCore};
+use rand_core::RngCore;
 
 /// A point on the secp256k1 elliptic curve.
 ///
@@ -67,7 +67,7 @@ impl Point<Normal, Public, NonZero> {
     /// ```
     /// # use secp256kfun::Point;
     /// let random_point = Point::random(&mut rand::thread_rng());
-    pub fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    pub fn random(rng: &mut impl RngCore) -> Self {
         let mut bytes = [0u8; 33];
         rng.fill_bytes(&mut bytes[..]);
         bytes[0] &= 0x01;

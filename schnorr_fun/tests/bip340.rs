@@ -28,8 +28,6 @@ impl<'a> rand_core::RngCore for AuxRng<'a> {
     }
 }
 
-impl<'a> rand_core::CryptoRng for AuxRng<'a> {}
-
 impl<'a> NonceRng for AuxRng<'a> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
         bytes.copy_from_slice(&self.0[..])
