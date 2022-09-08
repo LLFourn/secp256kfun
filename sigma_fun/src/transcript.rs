@@ -7,7 +7,7 @@ use crate::{
     },
     Sigma, Writable,
 };
-use digest::{BlockInput, FixedOutput, Update};
+use digest::{crypto_common::BlockSizeUser, FixedOutput, Update};
 use generic_array::GenericArray;
 
 /// A trait for a Fiat-Shamir proof transcript.
@@ -91,7 +91,7 @@ impl<H, S: Sigma, R: Clone> Transcript<S> for HashTranscript<H, R>
 where
     S::ChallengeLength: IsLessOrEqual<U32>,
     <S::ChallengeLength as IsLessOrEqual<U32>>::Output: NonZero,
-    H: BlockInput<BlockSize = U64> + FixedOutput<OutputSize = U32> + Update + Default + Clone,
+    H: BlockSizeUser<BlockSize = U64> + FixedOutput<OutputSize = U32> + Update + Default + Clone,
 {
     fn add_name<N: Writable + ?Sized>(&mut self, name: &N) {
         let hashed_tag = {
@@ -146,7 +146,7 @@ where
         if let Some(rng) = in_rng {
             let mut randomness = [0u8; 32];
             rng.fill_bytes(&mut randomness);
-            rng_hash.update(randomness);
+            rng_hash.update(&randomness);
         }
         let secret_seed = rng_hash.finalize_fixed();
         R::from_seed(secret_seed.into())
