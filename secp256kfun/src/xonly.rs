@@ -4,7 +4,7 @@ use crate::{
     marker::*,
     Point, Scalar,
 };
-use rand_core::{CryptoRng, RngCore};
+use rand_core::RngCore;
 
 /// An `XOnly` is the compressed representation of a [`Point<EvenY,S,Z>`] which
 /// only stores the x-coordinate of the point.
@@ -57,7 +57,7 @@ impl XOnly {
     /// use secp256kfun::{marker::*, XOnly};
     /// let random_x_coordinate = XOnly::random(&mut rand::thread_rng());
     /// ```
-    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn random<R: RngCore>(rng: &mut R) -> Self {
         let mut bytes = [0u8; 32];
         rng.fill_bytes(&mut bytes);
         Self::from_bytes(bytes).unwrap_or_else(|| Self::random(rng))

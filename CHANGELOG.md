@@ -6,6 +6,7 @@
 - Make Point<EvenY> serialization and hashing consistent (use 32 byte form)
 - Add `to_xonly_bytes` and `from_xonly_bytes` to `Point<EvenY>`
 - Allow `Zero` points to serialize
+- Remove requirement of `CryptoRng` everywhere
 
 ## 0.7.1
 

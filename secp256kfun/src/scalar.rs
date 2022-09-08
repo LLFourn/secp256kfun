@@ -2,7 +2,7 @@
 use crate::{backend, hash::HashInto, marker::*, op};
 use core::marker::PhantomData;
 use digest::{generic_array::typenum::U32, Digest};
-use rand_core::{CryptoRng, RngCore};
+use rand_core::RngCore;
 
 /// A secp256k1 scalar (an integer mod the curve order)
 ///
@@ -116,7 +116,7 @@ impl Scalar<Secret, NonZero> {
     /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
     /// let public_point = g!(secret_scalar * G);
     /// ```
-    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn random<R: RngCore>(rng: &mut R) -> Self {
         let mut bytes = [0u8; 32];
         rng.fill_bytes(&mut bytes);
         Scalar::from_bytes_mod_order(bytes)

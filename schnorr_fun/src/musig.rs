@@ -68,7 +68,7 @@ use secp256kfun::{
     hash::{HashAdd, Tagged},
     marker::*,
     nonce::{self, NonceGen},
-    rand_core::{CryptoRng, RngCore},
+    rand_core::RngCore,
     s, KeyPair, Point, Scalar, G,
 };
 
@@ -636,7 +636,7 @@ pub fn new_with_synthetic_nonces<H, R>(
 ) -> MuSig<H, Schnorr<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>>
 where
     H: Tagged + Digest<OutputSize = U32>,
-    R: CryptoRng + RngCore + Default,
+    R: RngCore + Default,
 {
     MuSig::default()
 }

@@ -104,7 +104,7 @@
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature, Vec};
 use core::iter;
-use rand_core::{CryptoRng, RngCore};
+use rand_core::RngCore;
 use secp256kfun::{
     derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
@@ -166,7 +166,7 @@ impl ScalarPoly {
     }
 
     /// Create a random scalar polynomial
-    pub fn random(n_coefficients: u32, rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    pub fn random(n_coefficients: u32, rng: &mut impl RngCore) -> Self {
         ScalarPoly((0..n_coefficients).map(|_| Scalar::random(rng)).collect())
     }
 
@@ -175,7 +175,7 @@ impl ScalarPoly {
     pub fn random_using_secret(
         n_coefficients: u32,
         secret: Scalar,
-        rng: &mut (impl RngCore + CryptoRng),
+        rng: &mut impl RngCore,
     ) -> Self {
         let mut coeffs = vec![secret];
         for _ in 1..n_coefficients {

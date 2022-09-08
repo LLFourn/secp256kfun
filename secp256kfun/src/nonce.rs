@@ -20,7 +20,7 @@
 use crate::{hash::*, Scalar};
 use core::marker::PhantomData;
 use digest::{generic_array::typenum::U32, Digest};
-use rand_core::{CryptoRng, RngCore};
+use rand_core::RngCore;
 
 /// A helper trait over RNGs that handle internal mutablility.
 ///
@@ -40,7 +40,7 @@ pub trait NonceRng {
 }
 
 /// We implement NonceRng only for rngs we can conjure out of thin air with `Default`.
-impl<R: RngCore + CryptoRng + Default> NonceRng for GlobalRng<R> {
+impl<R: RngCore + Default> NonceRng for GlobalRng<R> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
         R::default().fill_bytes(bytes);
     }
