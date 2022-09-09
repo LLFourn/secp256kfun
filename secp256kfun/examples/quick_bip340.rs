@@ -32,15 +32,12 @@ pub fn sign(keypair: &(Scalar, Point<EvenY>), message: &[u8]) -> Signature {
     let c = Scalar::from_hash(BIP340_CHALLENGE.clone().add(&R).add(X).add(message));
     let s = s!(r + c * x);
 
-    Signature {
-        R,
-        s: s.mark::<Public>(),
-    }
+    Signature { R, s: s.public() }
 }
 
 pub fn verify(public_key: Point<EvenY>, message: &[u8], Signature { R, s }: &Signature) -> bool {
     let X = public_key;
-    let c = Scalar::from_hash(BIP340_CHALLENGE.clone().add(R).add(X).add(message)).mark::<Public>();
+    let c = Scalar::from_hash(BIP340_CHALLENGE.clone().add(R).add(X).add(message)).public();
     g!(s * G - c * X) == *R
 }
 

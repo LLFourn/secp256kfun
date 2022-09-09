@@ -13,15 +13,11 @@ use subtle::ConstantTimeEq;
 ///
 /// # Example
 ///
-/// To crate a new `Slice` just [`mark`] any `&[u8]`
-///
 /// ```
-/// use secp256kfun::marker::*;
+/// use secp256kfun::{marker::*, Slice};
 /// let bytes = b"a secret message";
-/// let secret_slice = bytes.as_ref().mark::<Secret>();
+/// let secret_slice = Slice::<Secret>::from(bytes.as_ref());
 /// ```
-///
-/// [`mark`]: crate::marker::Mark::mark
 #[derive(Debug)]
 pub struct Slice<'a, S = Public> {
     pub(crate) inner: &'a [u8],
@@ -58,11 +54,27 @@ impl<'a, S> Slice<'a, S> {
     pub fn as_inner(self) -> &'a [u8] {
         &self.inner
     }
+
+    /// Set the secrecy of the bytes to *public*.
+    pub fn public(self) -> Slice<'a, Public> {
+        Slice::from_inner(self.inner)
+    }
+
+    /// Set the secrecy of the bytes to *secret*.
+    pub fn secret(self) -> Slice<'a, Secret> {
+        Slice::from_inner(self.inner)
+    }
 }
 
 impl<'a, S> From<Slice<'a, S>> for &'a [u8] {
     fn from(msg: Slice<'a, S>) -> Self {
         msg.inner
+    }
+}
+
+impl<'a, S> From<&'a [u8]> for Slice<'a, S> {
+    fn from(bytes: &'a [u8]) -> Self {
+        Self::from_inner(bytes)
     }
 }
 

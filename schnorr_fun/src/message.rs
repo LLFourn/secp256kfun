@@ -17,7 +17,7 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
     /// challenge hash. Usually, you only use this when signing a pre-hashed message.
     pub fn raw(bytes: &'a [u8]) -> Self {
         Message {
-            bytes: bytes.mark::<S>(),
+            bytes: Slice::from(bytes),
             app_tag: None,
         }
     }
@@ -32,7 +32,7 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
         assert!(app_tag.len() <= 64, "tag must be 64 bytes or less");
         assert!(!app_tag.is_empty(), "tag must not be empty");
         Message {
-            bytes: bytes.mark::<S>(),
+            bytes: Slice::from(bytes),
             app_tag: Some(app_tag),
         }
     }

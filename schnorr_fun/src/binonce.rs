@@ -84,8 +84,8 @@ impl NonceKeyPair {
     }
     /// Deserializes a nonce key pair from 64-bytes (two 32-byte serialized scalars).
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
-        let r1 = Scalar::from_slice(&bytes[..32])?.mark::<NonZero>()?;
-        let r2 = Scalar::from_slice(&bytes[32..])?.mark::<NonZero>()?;
+        let r1 = Scalar::from_slice(&bytes[..32])?.non_zero()?;
+        let r2 = Scalar::from_slice(&bytes[32..])?.non_zero()?;
         let R1 = g!(r1 * G).normalize();
         let R2 = g!(r2 * G).normalize();
         let pub_nonce = Nonce([R1, R2]);
@@ -141,7 +141,7 @@ impl NonceKeyPair {
         let msg_len = (message.len() as u64).to_be_bytes();
         let sid_len = (session_id.len() as u64).to_be_bytes();
         let pk_bytes = public_key
-            .map(|p| p.mark::<Normal>().to_bytes())
+            .map(|p| p.normalize().to_bytes())
             .unwrap_or([0u8; 33]);
         let r1 = derive_nonce!(
             nonce_gen => nonce_gen,

@@ -143,7 +143,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     {
         let x = signing_key;
         let Y = encryption_key;
-        let m = Scalar::from_bytes_mod_order(message.clone()).mark::<Public>();
+        let m = Scalar::from_bytes_mod_order(message.clone()).public();
         let mut rng = derive_nonce_rng!(
             nonce_gen => self.ecdsa.nonce_gen,
             secret => x,
@@ -152,22 +152,24 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
         );
 
         let r = Scalar::random(&mut rng);
-        let R_hat = g!(r * G).mark::<Normal>();
-        let R = g!(r * Y).mark::<Normal>();
+        let R_hat = g!(r * G).normalize();
+        let R = g!(r * Y).normalize();
 
         let proof = self
             .dleq_proof_system
             .prove(&r, &(R_hat, (*Y, R)), Some(&mut rng));
 
         let R_x = Scalar::from_bytes_mod_order(R.to_xonly_bytes())
-            .mark::<(Public, NonZero)>()
+            .public()
+            .non_zero()
             // The point with x-coordinate = 0 mod q exists, but it will never
             // occur since r is pseudorandomly chosen for a given Y, R = r*Y
             // will also be uniform.
             .expect("computationally unreachable");
 
         let s_hat = s!({ r.invert() } * (m + R_x * x))
-            .mark::<(Public, NonZero)>()
+            .public()
+            .non_zero()
             .expect("computationally unreachable");
 
         EncryptedSignatureInternal {
@@ -191,7 +193,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     /// let secret_decryption_key = Scalar::random(&mut rand::thread_rng());
     /// let public_encryption_key = adaptor.encryption_key_for(&secret_decryption_key);
     pub fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
-        g!(decryption_key * G).mark::<Normal>()
+        g!(decryption_key * G).normalize()
     }
     /// Verifies an encrypted signature is valid i.e. if it is decrypted it will yield a signature
     /// on `message_hash` under `verification_key`.
@@ -252,8 +254,8 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
         let mut s = s!(s_hat * { y.invert() });
         s.conditional_negate(s.is_high());
         Signature {
-            R_x: R.x_scalar.mark::<Public>(),
-            s: s.mark::<Public>(),
+            R_x: R.x_scalar.public(),
+            s: s.public(),
         }
     }
 

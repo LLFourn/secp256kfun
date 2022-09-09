@@ -9,6 +9,7 @@
 - Remove requirement of `CryptoRng` everywhere
 - Rename `from_scalar_mul` to `even_y_from_scalar_mul` to be more explicit
 - Remove `XOnly` in favor of `Point<EvenY>`
+- Replace `.mark` system with methods for changing each marker type.
 
 ## 0.7.1
 

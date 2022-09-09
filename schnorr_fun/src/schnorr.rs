@@ -130,7 +130,7 @@ where
 
         let R = Point::even_y_from_scalar_mul(&G, &mut r);
         let c = self.challenge(&R, &X, message);
-        let s = s!(r + c * x).mark::<Public>();
+        let s = s!(r + c * x).public();
 
         Signature { R, s }
     }
@@ -195,9 +195,9 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         challenge
             // Since the challenge pre-image is adversarially controlled we
             // conservatively allow for it to be zero
-            .mark::<Zero>()
+            .mark_zero()
             // The resulting challenge should take the secrecy of the message
-            .mark::<S>()
+            .set_secrecy::<S>()
     }
 
     /// Verifies a signature on a message under a given public key.
@@ -231,7 +231,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         let X = public_key;
         let (R, s) = signature.as_tuple();
         let c = self.challenge(&R, X, message);
-        let R_implied = g!(s * G - c * X).mark::<Normal>();
+        let R_implied = g!(s * G - c * X).normalize();
         R_implied == R
     }
 
@@ -243,7 +243,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         X: &Point<EvenY, impl Secrecy>,
         R: &Point<EvenY, impl Secrecy>,
         m: Message<'_, impl Secrecy>,
-    ) -> Point<Jacobian, Public, Zero> {
+    ) -> Point<NonNormal, Public, Zero> {
         let c = self.challenge(R, X, m);
         g!(R + c * X)
     }

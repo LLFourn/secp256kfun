@@ -124,7 +124,7 @@ impl From<XOnlyKeyPair> for KeyPair {
     fn from(xonly: XOnlyKeyPair) -> Self {
         Self {
             sk: xonly.sk,
-            pk: xonly.pk.mark::<Normal>(),
+            pk: xonly.pk.normalize(),
         }
     }
 }

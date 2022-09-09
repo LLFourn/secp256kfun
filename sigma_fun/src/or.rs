@@ -199,7 +199,7 @@ mod test {
         use ::proptest::prelude::*;
         use generic_array::typenum::U32;
         use rand_chacha::ChaCha20Rng;
-        use secp256kfun::{g, marker::*, G};
+        use secp256kfun::{g, G};
         use sha2::Sha256;
 
         proptest! {
@@ -208,7 +208,7 @@ mod test {
                 x in any::<Scalar>(),
                 Y in any::<Point>(),
             ) {
-                let xG = g!(x * G).mark::<Normal>();
+                let xG = g!(x * G).normalize();
                 type OrDL = Or<secp256k1::DLG<U32>, secp256k1::DLG<U32>>;
                 let statement = (xG, Y);
                 let proof_system = crate::FiatShamir::<OrDL, HashTranscript<Sha256,ChaCha20Rng>>::default();

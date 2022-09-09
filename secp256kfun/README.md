@@ -91,7 +91,7 @@ error[E0308]: mismatched types
 To fix this, the library forces you to manually mark the value as `NonZero` and then deal with the case that it is `Zero`.
 
 ```rust,compile_fail
-match sum.normalize().mark::<NonZero>() {
+match sum.normalize().non_zero() {
     Some(public_key) => send_pubkey_to_bob(&public_key), // it was actually NonZero
     None => .. // deal with the case it is Zero
 }
@@ -128,7 +128,7 @@ fn pedersen_commit(
         // If the result is zero we could easily compute the discrete
         // logarithm of B with respect to A. Since this is meant to be unknown
         // this is computionally unreachable.
-        .expect_nonzero("computationally unreachable")
+        .non_zero().expect("computationally unreachable")
 }
 
 // public setup
@@ -143,8 +143,8 @@ let commitment = pedersen_commit(A, &B, &r, &x);
 // Imagine Later on, Bob receives the public opening (r,x) for commitment. He
 // doesn't care about leaking these values via execution time so he marks them
 // as public.
-let r = r.mark::<Public>();
-let x = x.mark::<Public>();
+let r = r.public();
+let x = x.public();
 
 // Now he'll compute the commitment in faster variable time and check it
 // against the original
