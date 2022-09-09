@@ -135,7 +135,12 @@ pub struct AggKey {
 }
 
 impl AggKey {
-    /// The aggregate key prior to converting to a BIP340 `XOnly` key.
+    /// The aggregate key.
+    ///
+    /// Note that before using it as a key in a system that accepts "x-only" keys like `[BIP341]`
+    /// you must call [`into_xonly_key`] and use that aggregate key.
+    ///
+    /// [`into_xonly_key`]: Self::into_xonly_key
     pub fn agg_key(&self) -> Point {
         self.agg_key
     }
@@ -173,7 +178,9 @@ impl AggKey {
 
     /// Convert the key into an `XOnlyAggKey`.
     ///
-    /// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
+    /// This is the [BIP340] x-only version of the key which you can put in a segwitv1 output and create/verify BIP340 signatures under.
+    ///
+    /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> XOnlyAggKey {
         let (agg_key, needs_negation) = self.agg_key.into_point_with_even_y();
         let mut tweak = self.tweak;
@@ -188,7 +195,7 @@ impl AggKey {
     }
 }
 
-/// A [`AggKey`] that has been converted into a [BIP340] `XOnly` key.
+/// A [`AggKey`] that has been converted into a [BIP340] x-only key.
 ///
 /// [BIP340]: https://bips.xyz/340
 #[derive(Debug, Clone)]
@@ -216,7 +223,11 @@ impl XOnlyAggKey {
         self.keys.iter().map(|point| *point)
     }
 
-    /// Applies an "XOnly" tweak to the aggregate key
+    /// Applies an "x-only" tweak to the aggregate key.
+    ///
+    /// This function exists to allow for [BIP341] tweaks to the aggregate public key.
+    ///
+    /// [BIP341]: https://bips.xyz/341
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let (new_agg_key, needs_negation) = g!(self.agg_key + tweak * G)
             .normalize()
@@ -245,7 +256,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     ///
     /// ```
     /// use schnorr_fun::{
-    ///     fun::{Point, Scalar, XOnly},
+    ///     fun::{Point, Scalar},
     ///     musig::MuSig,
     ///     nonce::Deterministic,
     ///     Schnorr,
@@ -467,7 +478,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
             let H = self.nonce_coeff_hash.clone();
             Scalar::from_hash(
                 H.add(agg_Rs.to_bytes())
-                    .add(agg_key.agg_public_key().to_xonly())
+                    .add(agg_key.agg_public_key())
                     .add(message),
             )
         }
@@ -489,7 +500,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
         let c = self
             .schnorr
-            .challenge(R.to_xonly(), agg_key.agg_public_key().to_xonly(), message);
+            .challenge(&R, &agg_key.agg_public_key(), message);
 
         (b, c, Rs, R, r_needs_negation)
     }
@@ -565,7 +576,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> Signature {
         let (R, s) = self._combine_partial_signatures(agg_key, &session, partial_sigs);
-        Signature { R: R.to_xonly(), s }
+        Signature { R, s }
     }
 
     /// Combines all the partial encrypted signatures into one encrypted signature.

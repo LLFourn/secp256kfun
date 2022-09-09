@@ -1,7 +1,7 @@
 use crate::{
     marker::*,
     secp256k1::{PublicKey, SecretKey, XOnlyPublicKey},
-    Point, Scalar, XOnly,
+    Point, Scalar,
 };
 
 impl From<Scalar> for SecretKey {
@@ -31,27 +31,15 @@ impl From<Point> for PublicKey {
     }
 }
 
-impl From<XOnlyPublicKey> for XOnly {
-    fn from(pk: XOnlyPublicKey) -> Self {
-        XOnly::from_bytes(pk.serialize()).unwrap()
-    }
-}
-
-impl From<XOnly> for XOnlyPublicKey {
-    fn from(xonly: XOnly) -> Self {
-        XOnlyPublicKey::from_slice(xonly.as_bytes()).unwrap()
-    }
-}
-
 impl From<Point<EvenY>> for XOnlyPublicKey {
     fn from(point: Point<EvenY>) -> Self {
-        point.to_xonly().into()
+        XOnlyPublicKey::from_slice(point.to_xonly_bytes().as_ref()).unwrap()
     }
 }
 
 impl From<XOnlyPublicKey> for Point<EvenY> {
     fn from(pk: XOnlyPublicKey) -> Self {
-        XOnly::from(pk).to_point()
+        Point::from_xonly_bytes(pk.serialize()).unwrap()
     }
 }
 

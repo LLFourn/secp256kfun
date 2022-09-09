@@ -27,7 +27,7 @@
 use crate::{
     backend::{self, ConstantTime, TimeSensitive, VariableTime},
     marker::*,
-    Point, Scalar, XOnly,
+    Point, Scalar,
 };
 
 /// Computes `x * A + y * B` more efficiently than calling [`scalar_mul_point`] twice.

@@ -25,7 +25,6 @@ mod keypair;
 mod point;
 mod scalar;
 mod slice;
-mod xonly;
 
 #[macro_use]
 mod macros;
@@ -37,7 +36,6 @@ pub use keypair::*;
 pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;
-pub use xonly::XOnly;
 
 #[cfg(feature = "secp256k1")]
 pub extern crate secp256k1;

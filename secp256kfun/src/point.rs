@@ -2,7 +2,7 @@ use crate::{
     backend::{self, BackendPoint, TimeSensitive},
     hash::HashInto,
     marker::*,
-    op, Scalar, XOnly,
+    op, Scalar,
 };
 use core::marker::PhantomData;
 use rand_core::RngCore;
@@ -29,19 +29,19 @@ use rand_core::RngCore;
 /// # Serialization
 ///
 /// Only points that are normalized (i.e. `T` ≠ `Jacobian`) can be serialized. A Point that is
-/// `EvenY` serializes to and from the 32-byte x-only representation like the [`XOnly`] type.
+/// `EvenY` points serialize to and from their 32-byte x-only representation.
 /// `Normal` points serialize to and from the standard 33-byte representation specified in
 /// [_Standards for Efficient Cryptography_] (the same as [`Point::to_bytes`]). Points that are
-/// marked as `Zero` will serialize to `[0u8;33]`.
+/// are zero (see [`is_zero`]) will serialize to `[0u8;33]`.
 ///
 ///
 /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
 /// [`Point::to_bytes`]: crate::Point::to_bytes
 /// [`PointType`]: crate::marker::PointType
 /// [`Secrecy`]: crate::marker::Secrecy
-/// [`XOnly`]: crate::XOnly
 /// [`ZeroChoice`]: crate::marker::ZeroChoice
 /// [`Public`]: crate::marker::Public
+/// [`is_zero`]: crate::Point::is_zero
 /// [_identity element_]: https://en.wikipedia.org/wiki/Identity_element
 #[derive(Default)]
 pub struct Point<T = Normal, S = Public, Z = NonZero>(
@@ -175,10 +175,10 @@ impl Point<EvenY, Public, NonZero> {
     /// ```
     /// use secp256kfun::{marker::*, Point, Scalar, G};
     /// let mut secret_key = Scalar::random(&mut rand::thread_rng());
-    /// let public_key = Point::<EvenY>::from_scalar_mul(G, &mut secret_key);
+    /// let public_key = Point::even_y_from_scalar_mul(G, &mut secret_key);
     /// assert!(public_key.is_y_even());
     /// ```
-    pub fn from_scalar_mul(
+    pub fn even_y_from_scalar_mul(
         base: &Point<impl PointType, impl Secrecy>,
         scalar: &mut Scalar<impl Secrecy>,
     ) -> Self {
@@ -366,20 +366,6 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
         backend::BackendPoint::norm_to_coordinates(&self.0)
     }
 
-    /// Converts a point to an `XOnly` (i.e. just its x-coordinate).
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use secp256kfun::{marker::*, Point};
-    /// let (point_even_y, _) = Point::random(&mut rand::thread_rng()).into_point_with_even_y();
-    /// let xonly = point_even_y.to_xonly();
-    /// assert_eq!(xonly.to_point(), point_even_y);
-    /// ```
-    pub fn to_xonly(&self) -> XOnly {
-        XOnly::from_inner(backend::BackendPoint::norm_to_xonly(&self.0))
-    }
-
     /// Returns whether the point has an even y-coordinate
     pub fn is_y_even(&self) -> bool {
         op::point_is_y_even(self)
@@ -387,7 +373,7 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
 
     /// Serializes a point with `EvenY` to its 32-byte x-coordinate
     pub fn to_xonly_bytes(&self) -> [u8; 32] {
-        self.to_xonly().into_bytes()
+        self.coordinates().0
     }
 
     /// Encodes a point as its compressed encoding as specified by [_Standards for Efficient Cryptography_].
@@ -460,7 +446,7 @@ crate::impl_display_serialize! {
 
 crate::impl_display_serialize! {
     fn to_bytes<S>(point: &Point<EvenY, S, NonZero>) -> [u8;32] {
-        point.to_xonly().as_bytes().clone()
+        point.to_xonly_bytes()
     }
 }
 

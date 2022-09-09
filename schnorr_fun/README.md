@@ -43,7 +43,7 @@ let message = Message::<Public>::plain("the-times-of-london", b"Chancellor on br
 // Sign the message with our keypair
 let signature = schnorr.sign(&keypair, message);
 // Get the verifier's key
-let verification_key = keypair.public_key().to_point();
+let verification_key = keypair.public_key();
 // Check it's valid 🍿
 assert!(schnorr.verify(&verification_key, message, &signature));
 ```

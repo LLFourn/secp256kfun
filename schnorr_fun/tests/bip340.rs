@@ -3,10 +3,11 @@ use schnorr_fun::{
         hex,
         marker::*,
         nonce::{NonceRng, Synthetic},
-        rand_core, Scalar, XOnly,
+        rand_core, Scalar,
     },
     Message, Schnorr, Signature,
 };
+use secp256kfun::Point;
 use sha2::Sha256;
 
 static BIP340_CSV: &'static str = include_str!("./bip340-test-vectors.csv");
@@ -46,7 +47,7 @@ fn signing_test_vectors() {
         let fake_rng = AuxRng(&aux_bytes[..]);
         let bip340 = Schnorr::<Sha256, _>::new(Synthetic::<Sha256, _>::new(fake_rng));
         let secret_key = Scalar::<Secret, NonZero>::from_str(line[1]).unwrap();
-        let expected_public_key = XOnly::from_str(line[2]).unwrap();
+        let expected_public_key = Point::<EvenY>::from_str(line[2]).unwrap();
         let keypair = bip340.new_keypair(secret_key);
         assert_eq!(keypair.public_key(), expected_public_key);
         let message = hex::decode(line[4]).unwrap();
@@ -64,7 +65,7 @@ fn verification_test_vectors() {
     for line in &lines[5..16] {
         let line: Vec<&str> = line.split(',').collect();
 
-        let public_key = match XOnly::from_str(line[2]) {
+        let public_key = match Point::<EvenY>::from_str(line[2]) {
             Ok(public_key) => public_key,
             Err(e) => {
                 if line[6] == "TRUE" {
@@ -88,11 +89,8 @@ fn verification_test_vectors() {
 
         println!("{:?}", line);
         assert!(
-            bip340.verify(
-                &public_key.to_point(),
-                Message::<Public>::raw(&message),
-                &signature
-            ) == (line[6] == "TRUE")
+            bip340.verify(&public_key, Message::<Public>::raw(&message), &signature)
+                == (line[6] == "TRUE")
         );
     }
 }

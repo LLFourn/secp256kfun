@@ -6,7 +6,7 @@ use crate::{
         hash::{HashAdd, Tagged},
         marker::*,
         nonce::{AddTag, NonceGen},
-        s, Point, Scalar, XOnly, XOnlyKeyPair, G,
+        s, Point, Scalar, XOnlyKeyPair, G,
     },
     Message, Signature,
 };
@@ -117,7 +117,7 @@ where
     ///     b"Chancellor on brink of second bailout for banks",
     /// );
     /// let signature = schnorr.sign(&keypair, message);
-    /// assert!(schnorr.verify(&keypair.public_key().to_point(), message, &signature));
+    /// assert!(schnorr.verify(&keypair.public_key(), message, &signature));
     /// ```
     pub fn sign(&self, keypair: &XOnlyKeyPair, message: Message<'_, impl Secrecy>) -> Signature {
         let (x, X) = keypair.as_tuple();
@@ -128,8 +128,8 @@ where
             public => [X, message]
         );
 
-        let R = XOnly::from_scalar_mul(&G, &mut r);
-        let c = self.challenge(R, X, message);
+        let R = Point::even_y_from_scalar_mul(&G, &mut r);
+        let c = self.challenge(&R, &X, message);
         let s = s!(r + c * x).mark::<Public>();
 
         Signature { R, s }
@@ -167,23 +167,28 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     ///
     /// ```
     /// use schnorr_fun::{
-    ///     fun::{marker::*, s, Scalar, XOnly, G},
+    ///     fun::{marker::*, s, Point, Scalar, G},
     ///     Message, Schnorr, Signature,
     /// };
     /// # let schnorr = schnorr_fun::test_instance!();
     /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
-    /// let R = XOnly::from_scalar_mul(G, &mut r);
-    /// let challenge = schnorr.challenge(R, keypair.public_key(), message);
+    /// let R = Point::even_y_from_scalar_mul(G, &mut r);
+    /// let challenge = schnorr.challenge(&R, &keypair.public_key(), message);
     /// let s = s!(r + challenge * { keypair.secret_key() });
     /// let signature = Signature { R, s };
-    /// assert!(schnorr.verify(&keypair.public_key().to_point(), message, &signature));
+    /// assert!(schnorr.verify(&keypair.public_key(), message, &signature));
     /// ```
     ///
     /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
     /// [`Secrecy`]: secp256kfun::marker::Secrecy
-    pub fn challenge<S: Secrecy>(&self, R: XOnly, X: XOnly, m: Message<'_, S>) -> Scalar<S, Zero> {
+    pub fn challenge<S: Secrecy>(
+        &self,
+        R: &Point<EvenY, impl Secrecy>,
+        X: &Point<EvenY, impl Secrecy>,
+        m: Message<'_, S>,
+    ) -> Scalar<S, Zero> {
         let hash = self.challenge_hash.clone();
         let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
 
@@ -196,10 +201,6 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     }
 
     /// Verifies a signature on a message under a given public key.
-    ///
-    /// Note that a full `Point<EvenY,..>` is passed in rather than a `XOnly` because it's more
-    /// efficient for repeated verification (where as `XOnly` is more efficient for repeated
-    /// signing).
     ///
     /// # Example
     ///
@@ -217,8 +218,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     /// let message = hex::decode("4df3c3f68fcc83b27e9d42c90431a72499f17875c81a599b566c9889b9696703").unwrap();
     /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
     ///
-    /// // We could also say the message is secret if we don't want to leak which message we are
-    /// // verifying through execution time.
+    /// // We could also say the message is secret if we want to use a constant time algorithm to verify the signature.
     /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
     /// ```
     #[must_use]
@@ -230,7 +230,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     ) -> bool {
         let X = public_key;
         let (R, s) = signature.as_tuple();
-        let c = self.challenge(R, X.to_xonly(), message);
+        let c = self.challenge(&R, X, message);
         let R_implied = g!(s * G - c * X).mark::<Normal>();
         R_implied == R
     }
@@ -244,7 +244,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         R: &Point<EvenY, impl Secrecy>,
         m: Message<'_, impl Secrecy>,
     ) -> Point<Jacobian, Public, Zero> {
-        let c = self.challenge(R.to_xonly(), X.to_xonly(), m);
+        let c = self.challenge(R, X, m);
         g!(R + c * X)
     }
 }
@@ -299,8 +299,8 @@ pub mod test {
             );
             let signature = schnorr.sign(&keypair, msg);
             let anticipated_signature = schnorr.anticipate_signature(
-                &keypair.public_key().to_point(),
-                &signature.R.to_point(),
+                &keypair.public_key(),
+                &signature.R,
                 msg,
             );
 
@@ -323,7 +323,7 @@ pub mod test {
             let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);
             let signature_4 = schnorr.sign(&keypair_2, msg_atkdwn);
 
-            assert!(schnorr.verify(&keypair_1.public_key().to_point(), msg_atkdwn, &signature_1));
+            assert!(schnorr.verify(&keypair_1.public_key(), msg_atkdwn, &signature_1));
             assert_eq!(signature_1, signature_2);
             if keypair_1 != keypair_2 {
                 assert_ne!(signature_3.R, signature_1.R);
