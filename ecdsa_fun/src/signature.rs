@@ -18,10 +18,10 @@ impl<S> Signature<S> {
         (&self.R_x, &self.s)
     }
 
-    pub fn mark<SigSec: Secrecy>(self) -> Signature<SigSec> {
+    pub fn set_secrecy<SigSec: Secrecy>(self) -> Signature<SigSec> {
         Signature {
             R_x: self.R_x,
-            s: self.s.mark::<SigSec>(),
+            s: self.s.set_secrecy::<SigSec>(),
         }
     }
 }
@@ -29,10 +29,10 @@ impl<S> Signature<S> {
 impl Signature<Public> {
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         Scalar::from_slice(&bytes[0..32])
-            .and_then(|R_x| R_x.mark::<Public>().mark::<NonZero>())
+            .and_then(|R_x| R_x.public().non_zero())
             .and_then(|R_x| {
                 Scalar::from_slice(&bytes[32..64])
-                    .and_then(|s| s.mark::<Public>().mark::<NonZero>())
+                    .and_then(|s| s.public().non_zero())
                     .map(|s| Self { R_x, s })
             })
     }
@@ -41,7 +41,7 @@ impl Signature<Public> {
 secp256kfun::impl_fromstr_deserialize! {
     name => "secp256k1 ECDSA signature",
     fn from_bytes<S: Secrecy>(bytes: [u8;64]) -> Option<Signature<S>> {
-        Signature::from_bytes(bytes).map(|signature| signature.mark::<S>())
+        Signature::from_bytes(bytes).map(|signature| signature.set_secrecy::<S>())
     }
 }
 

@@ -3,7 +3,7 @@
 mod against_c_lib {
     use proptest::prelude::*;
     use secp256k1::{PublicKey, SecretKey, SECP256K1 as SECP};
-    use secp256kfun::{g, marker::*, op::double_mul, s, Scalar, G};
+    use secp256kfun::{g, op::double_mul, s, Scalar, G};
 
     proptest! {
         #[test]
@@ -12,7 +12,7 @@ mod against_c_lib {
             // Multiply a generator by scalar for both libraries and test equality
             let (point_1, secp_pk_1) = {
                 let point_1 = g!({ Scalar::from_bytes_mod_order(s1.clone()) } * G)
-                    .mark::<(Normal, NonZero)>()
+                    .normalize().non_zero()
                     .unwrap();
 
                 let secp_pk_1 =
@@ -28,7 +28,7 @@ mod against_c_lib {
             // Multiply the resulting points by another scalar and test equality
             {
                 let point_2 = g!({ Scalar::from_bytes_mod_order(s2.clone()) } * point_1)
-                    .mark::<(Normal, NonZero)>()
+                    .normalize().non_zero()
                     .unwrap();
                 let secp_pk_2 = {
                     let mut secp_pk_2 = secp_pk_1.clone();
@@ -47,12 +47,12 @@ mod against_c_lib {
             let result = {
                 let H = g!({ Scalar::from_bytes_mod_order(scalar_H.clone()) } * G);
                 double_mul(
-                    &Scalar::from_bytes_mod_order(x.clone()).mark::<Public>(),
+                    &Scalar::from_bytes_mod_order(x.clone()).public(),
                     G,
-                    &Scalar::from_bytes_mod_order(y.clone()).mark::<Public>(),
+                    &Scalar::from_bytes_mod_order(y.clone()).public(),
                     &H,
                 )
-                    .mark::<(Normal, NonZero)>()
+                    .normalize().non_zero()
                     .unwrap()
             };
 
@@ -79,7 +79,7 @@ mod against_c_lib {
 
             prop_assert_eq!(
                 (g!(point_1 + point_1))
-                    .mark::<(Normal, NonZero)>()
+                    .normalize().non_zero()
                     .unwrap()
                     .to_bytes_uncompressed(),
                 secp_pk_1

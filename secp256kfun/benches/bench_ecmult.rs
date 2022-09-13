@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use secp256kfun::{g, marker::*, Point, Scalar, G};
+use secp256kfun::{g, Point, Scalar, G};
 
 fn scalar_mul_point(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecmult");
@@ -15,7 +15,7 @@ fn scalar_mul_point(c: &mut Criterion) {
 
     group.bench_function("scalar_mul_point:basepoint,public", |b| {
         b.iter_batched(
-            || Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
+            || Scalar::random(&mut rand::thread_rng()).public(),
             |scalar| g!(scalar * G),
             BatchSize::SmallInput,
         )
@@ -38,7 +38,7 @@ fn scalar_mul_point(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
+                    Scalar::random(&mut rand::thread_rng()).public(),
                     Point::random(&mut rand::thread_rng()),
                 )
             },
@@ -63,7 +63,7 @@ fn scalar_mul_point(c: &mut Criterion) {
     group.bench_function("scalar_mul_point:jacobian,public", |b| {
         b.iter_batched(
             || {
-                (Scalar::random(&mut rand::thread_rng()).mark::<Public>(), {
+                (Scalar::random(&mut rand::thread_rng()).public(), {
                     let P = Point::random(&mut rand::thread_rng());
                     g!(P + P)
                 })
@@ -81,8 +81,8 @@ fn double_mul(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
-                    Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
+                    Scalar::random(&mut rand::thread_rng()).public(),
+                    Scalar::random(&mut rand::thread_rng()).public(),
                     Point::random(&mut rand::thread_rng()),
                     Point::random(&mut rand::thread_rng()),
                 )
@@ -111,8 +111,8 @@ fn double_mul(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
-                    Scalar::random(&mut rand::thread_rng()).mark::<Public>(),
+                    Scalar::random(&mut rand::thread_rng()).public(),
+                    Scalar::random(&mut rand::thread_rng()).public(),
                     Point::random(&mut rand::thread_rng()),
                 )
             },

@@ -102,7 +102,8 @@ where
             // R_hat = r * G is sampled pseudorandomly for every Y which means R_hat + Y is also
             // be pseudoranodm and therefore will not be zero.
             // NOTE: Crucially we add Y to the nonce derivation to ensure this is true.
-            .expect_nonzero("computationally unreachable");
+            .non_zero()
+            .expect("computationally unreachable");
 
         let (R, needs_negation) = R.into_point_with_even_y();
         // We correct r here but we can't correct the decryption key (y) so we
@@ -111,7 +112,7 @@ where
         r.conditional_negate(needs_negation);
 
         let c = self.challenge(&R, &X, message);
-        let s_hat = s!(r + c * x).mark::<Public>();
+        let s_hat = s!(r + c * x).public();
 
         EncryptedSignature {
             R,
@@ -233,7 +234,7 @@ where
         } = encrypted_signature;
         let mut y = decryption_key;
         y.conditional_negate(needs_negation);
-        let s = s!(s_hat + y).mark::<Public>();
+        let s = s!(s_hat + y).public();
 
         Signature { s, R }
     }
@@ -260,7 +261,10 @@ where
         let implied_encryption_key = g!(y * G);
 
         if implied_encryption_key == *encryption_key {
-            Some(y.expect_nonzero("unreachable - encryption_key is NonZero and y*G equals it"))
+            Some(
+                y.non_zero()
+                    .expect("unreachable - encryption_key is NonZero and y*G equals it"),
+            )
         } else {
             None
         }
@@ -313,7 +317,7 @@ mod test {
             &encrypted_signature,
         ));
 
-        let decryption_key = decryption_key.mark::<Public>();
+        let decryption_key = decryption_key.public();
         let signature =
             schnorr.decrypt_signature(decryption_key.clone(), encrypted_signature.clone());
         assert!(schnorr.verify(&verification_key, message, &signature));

@@ -26,10 +26,10 @@ impl<OldSec> EncryptedSignature<OldSec> {
     ///
     /// [`Secrecy`]: secp256kfun::marker::Secrecy
     #[must_use]
-    pub fn mark<NewSec: Secrecy>(self) -> EncryptedSignature<NewSec> {
+    pub fn set_secrecy<NewSec: Secrecy>(self) -> EncryptedSignature<NewSec> {
         EncryptedSignature {
             R: self.R,
-            s_hat: self.s_hat.mark::<NewSec>(),
+            s_hat: self.s_hat.set_secrecy::<NewSec>(),
             needs_negation: self.needs_negation,
         }
     }

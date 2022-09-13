@@ -15,7 +15,7 @@
 //! use secp256kfun::{marker::*, op, Scalar, G};
 //! let x = Scalar::random(&mut rand::thread_rng());
 //! let X1 = op::scalar_mul_point(&x, G); // fast
-//! let H = &G.clone().mark::<Normal>(); // scrub `BasePoint` marker
+//! let H = &G.clone().normalize(); // scrub `BasePoint` marker
 //! let X2 = op::scalar_mul_point(&x, &H); // slow
 //! assert_eq!(X1, X2);
 //! ```
@@ -36,10 +36,10 @@ pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
     A: &Point<TA, SA, ZA>,
     y: &Scalar<SY, ZY>,
     B: &Point<TB, SB, ZB>,
-) -> Point<Jacobian, Public, Zero> {
+) -> Point<NonNormal, Public, Zero> {
     Point::from_inner(
         ConstantTime::point_double_mul(&x.0, &A.0, &y.0, &B.0),
-        Jacobian,
+        NonNormal,
     )
 }
 
@@ -47,11 +47,11 @@ pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
 pub fn scalar_mul_point<Z1, S1, T2, S2, Z2>(
     x: &Scalar<S1, Z1>,
     P: &Point<T2, S2, Z2>,
-) -> Point<Jacobian, Public, Z1::Out>
+) -> Point<NonNormal, Public, Z1::Out>
 where
     Z1: DecideZero<Z2>,
 {
-    Point::from_inner(ConstantTime::scalar_mul_point(&x.0, &P.0), Jacobian)
+    Point::from_inner(ConstantTime::scalar_mul_point(&x.0, &P.0), NonNormal)
 }
 
 /// Multiplies two scalars together (modulo the curve order)
@@ -108,16 +108,16 @@ pub fn scalar_is_zero<S, Z>(x: &Scalar<S, Z>) -> bool {
 pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
-) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(ConstantTime::point_sub_point(&A.0, &B.0), Jacobian)
+) -> Point<NonNormal, Public, Zero> {
+    Point::from_inner(ConstantTime::point_sub_point(&A.0, &B.0), NonNormal)
 }
 
 /// Adds two points together
 pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
-) -> Point<Jacobian, Public, Zero> {
-    Point::from_inner(ConstantTime::point_add_point(&A.0, &B.0), Jacobian)
+) -> Point<NonNormal, Public, Zero> {
+    Point::from_inner(ConstantTime::point_add_point(&A.0, &B.0), NonNormal)
 }
 
 /// Checks if two points are equal
@@ -152,13 +152,13 @@ pub fn point_normalize<T, S, Z>(mut A: Point<T, S, Z>) -> Point<Normal, S, Z> {
 pub fn lincomb<'a, T1: 'a, S1: 'a, Z1: 'a, S2: 'a, Z2: 'a>(
     scalars: impl IntoIterator<Item = &'a Scalar<S2, Z2>>,
     points: impl IntoIterator<Item = &'a Point<T1, S1, Z1>>,
-) -> Point<Jacobian, Public, Zero> {
+) -> Point<NonNormal, Public, Zero> {
     Point::from_inner(
         ConstantTime::lincomb_iter(
             points.into_iter().map(|p| &p.0),
             scalars.into_iter().map(|s| &s.0),
         ),
-        Jacobian,
+        NonNormal,
     )
 }
 
@@ -187,7 +187,7 @@ mod test {
             "02fe8d1eb1bcb3432b1db5833ff5f2226d9cb5e65cee430558c18ed3a3c86ce1af",
         )
         .unwrap()
-        .mark::<Zero>();
+        .mark_zero();
         let R_implied = g!(s * G + minus_c * X).normalize();
         let R_expected = Point::<Normal, Public, NonZero>::from_str(
             "025cbdf0646e5db4eaa398f365f2ea7a0e3d419b7e0330e39ce92bddedcac4f9bc",

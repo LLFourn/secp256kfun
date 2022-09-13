@@ -148,14 +148,15 @@ impl ScalarPoly {
     /// Evaluate the scalar polynomial at position x.
     pub fn eval(&self, x: u32) -> Scalar<Secret, Zero> {
         let x = Scalar::from(x)
-            .expect_nonzero("must be non-zero")
-            .mark::<Public>();
-        let mut xpow = s!(1).mark::<Public>();
+            .non_zero()
+            .expect("must be non-zero")
+            .public();
+        let mut xpow = s!(1).public();
         self.0
             .iter()
             .skip(1)
-            .fold(self.0[0].clone().mark::<Zero>(), move |sum, coeff| {
-                xpow = s!(xpow * x).mark::<Public>();
+            .fold(self.0[0].clone().mark_zero(), move |sum, coeff| {
+                xpow = s!(xpow * x).public();
                 s!(sum + xpow * coeff)
             })
     }
@@ -220,15 +221,14 @@ pub struct PointPoly<Z = NonZero>(
 
 impl<Z> PointPoly<Z> {
     /// Evaluate the point polynomial at position x.
-    pub fn eval(&self, x: u32) -> Point<Jacobian, Public, Zero> {
+    pub fn eval(&self, x: u32) -> Point<NonNormal, Public, Zero> {
         let x = Scalar::from(x)
-            .expect_nonzero("must be non-zero")
-            .mark::<Public>();
-        let xpows = iter::successors(Some(s!(1).mark::<Public>()), |xpow| {
-            Some(s!(x * xpow).mark::<Public>())
-        })
-        .take(self.0.len())
-        .collect::<Vec<_>>();
+            .non_zero()
+            .expect("must be non-zero")
+            .public();
+        let xpows = iter::successors(Some(s!(1).public()), |xpow| Some(s!(x * xpow).public()))
+            .take(self.0.len())
+            .collect::<Vec<_>>();
         crate::fun::op::lincomb(&xpows, &self.0)
     }
 
@@ -240,7 +240,7 @@ impl<Z> PointPoly<Z> {
             .expect("cannot combine empty list of polys")
             .0
             .into_iter()
-            .map(|p| p.mark::<(Jacobian, Zero)>())
+            .map(|p| p.non_normal().mark_zero())
             .collect::<Vec<_>>();
         // add the coefficients of the remaining polys
         for poly in polys {
@@ -390,10 +390,8 @@ impl FrostKey {
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn tweak(&mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let public_key = g!(self.public_key + tweak * G)
-            .normalize()
-            .mark::<NonZero>()?;
-        let tweak = s!(self.tweak + tweak).mark::<Public>();
+        let public_key = g!(self.public_key + tweak * G).normalize().non_zero()?;
+        let tweak = s!(self.tweak + tweak).public();
 
         Some(FrostKey {
             public_key,
@@ -488,9 +486,9 @@ impl XOnlyFrostKey {
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let (new_public_key, needs_negation) = g!(self.public_key + tweak * G)
             .normalize()
-            .mark::<NonZero>()?
+            .non_zero()?
             .into_point_with_even_y();
-        let mut new_tweak = s!(self.tweak + tweak).mark::<Public>();
+        let mut new_tweak = s!(self.tweak + tweak).public();
         new_tweak.conditional_negate(needs_negation);
         let needs_negation = self.needs_negation ^ needs_negation;
 
@@ -601,7 +599,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
         let joint_poly = PointPoly::combine(point_polys.clone().into_iter());
         let public_key = joint_poly.0[0]
-            .mark::<NonZero>()
+            .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         let mut keygen_hash = self.keygen_id_hash.clone();
@@ -615,7 +613,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let keygen_id = keygen_hash.finalize().into();
 
         let verification_shares = (1..=point_polys.len())
-            .map(|i| joint_poly.eval(i as u32).normalize().mark::<NonZero>())
+            .map(|i| joint_poly.eval(i as u32).normalize().non_zero())
             .collect::<Option<Vec<Point>>>()
             .ok_or(NewKeyGenError::ZeroVerificationShare)?;
 
@@ -626,7 +624,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 verification_shares,
                 public_key,
                 threshold: joint_poly.poly_len() as u32,
-                tweak: Scalar::zero().mark::<Public>(),
+                tweak: Scalar::zero().public(),
             },
         })
     }
@@ -675,7 +673,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             total_secret_share = s!(total_secret_share + secret_share);
         }
 
-        let total_secret_share = total_secret_share.expect_nonzero(
+        let total_secret_share = total_secret_share.non_zero().expect(
             "since verification shares are non-zero, the total secret share cannot be zero",
         );
 
@@ -702,12 +700,19 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
 /// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
 fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
-    let x_j = Scalar::from(x_j).expect_nonzero("target xcoord can not be zero");
+    let x_j = Scalar::from(x_j)
+        .non_zero()
+        .expect("target xcoord can not be zero");
     x_ms.iter()
-        .map(|x_m| Scalar::from(*x_m).expect_nonzero("index can not be zero"))
+        .map(|x_m| {
+            Scalar::from(*x_m)
+                .non_zero()
+                .expect("index can not be zero")
+        })
         .fold(Scalar::one(), |acc, x_m| {
             let denominator = s!(x_m - x_j)
-                .expect_nonzero("removed duplicate indexes")
+                .non_zero()
+                .expect("removed duplicate indexes")
                 .invert();
             s!(acc * x_m * denominator)
         })
@@ -745,27 +750,24 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let mut nonce_map: BTreeMap<_, _> =
             nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
 
-        let agg_nonce_jac: [Point<Jacobian, Public, Zero>; 2] =
+        let agg_nonce_jac: [Point<NonNormal, Public, Zero>; 2] =
             nonce_map
                 .iter()
-                .fold([Point::zero().mark::<Jacobian>(); 2], |acc, (_, nonce)| {
+                .fold([Point::zero().non_normal(); 2], |acc, (_, nonce)| {
                     [
                         g!({ acc[0] } + { nonce.0[0] }),
                         g!({ acc[1] } + { nonce.0[1] }),
                     ]
                 });
         let agg_nonce_points = [
-            agg_nonce_jac[0]
-                .normalize()
-                .mark::<NonZero>()
-                .unwrap_or_else(|| {
-                    // Like in musig spec, if the final nonce is zero we set to the generator
-                    G.clone().mark::<Normal>()
-                }),
+            agg_nonce_jac[0].normalize().non_zero().unwrap_or_else(|| {
+                // Like in musig spec, if the final nonce is zero we set to the generator
+                G.clone().normalize()
+            }),
             agg_nonce_jac[1]
                 .normalize()
-                .mark::<NonZero>()
-                .unwrap_or_else(|| G.clone().mark::<Normal>()),
+                .non_zero()
+                .unwrap_or_else(|| G.clone().normalize()),
         ];
 
         let binding_coeff = Scalar::from_hash(
@@ -779,7 +781,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let (agg_nonce, nonces_need_negation) =
             g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
                 .normalize()
-                .expect_nonzero("computationally unreachable, input is a hash")
+                .non_zero()
+                .expect("computationally unreachable, input is a hash")
                 .into_point_with_even_y();
 
         for (_, nonce) in &mut nonce_map {
@@ -829,7 +832,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let b = &session.binding_coeff;
         let x = secret_share;
         let c = &session.challenge;
-        s!(r1 + (r2 * b) + lambda * x * c).mark::<Public>()
+        s!(r1 + (r2 * b) + lambda * x * c).public()
     }
 
     /// Verify a partial signature at `index`.
@@ -885,11 +888,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let ck = s!(session.challenge * frost_key.tweak);
         let sum_s = partial_sigs
             .into_iter()
-            .reduce(|acc, partial_sig| s!(acc + partial_sig).mark::<Public>())
-            .unwrap_or(Scalar::zero().mark::<Public>());
+            .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
+            .unwrap_or(Scalar::zero().public());
         Signature {
             R: session.agg_nonce,
-            s: s!(sum_s + ck).mark::<Public>(),
+            s: s!(sum_s + ck).public(),
         }
     }
 }
@@ -1245,7 +1248,12 @@ mod test {
 
     #[test]
     fn test_lagrange_lambda() {
-        let res = s!((1 * 4 * 5) * { s!((1 - 2) * (4 - 2) * (5 - 2)).expect_nonzero("").invert() });
+        let res = s!((1 * 4 * 5) * {
+            s!((1 - 2) * (4 - 2) * (5 - 2))
+                .non_zero()
+                .expect("")
+                .invert()
+        });
         assert_eq!(res, lagrange_lambda(2, &[1, 4, 5]));
     }
 }

@@ -41,7 +41,7 @@ where
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
-        s!(announce_secret + challenge * witness).mark::<Public>()
+        s!(announce_secret + challenge * witness).public()
     }
 
     fn announce(
@@ -55,7 +55,7 @@ where
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {
-        Scalar::random(rng).mark::<(Public, Zero)>()
+        Scalar::random(rng).public().mark_zero()
     }
 
     fn implied_announcement(
@@ -66,7 +66,7 @@ where
     ) -> Option<Self::Announcement> {
         let (G, X) = statement;
         let challenge = normalize_challenge(challenge);
-        g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
+        g!(response * G - challenge * X).normalize().non_zero()
     }
 
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -127,7 +127,7 @@ where
         challenge: &GenericArray<u8, Self::ChallengeLength>,
     ) -> Self::Response {
         let challenge = normalize_challenge(challenge);
-        s!(announce_secret + challenge * witness).mark::<Public>()
+        s!(announce_secret + challenge * witness).public()
     }
 
     fn announce(
@@ -137,11 +137,11 @@ where
     ) -> Self::Announcement {
         let G = fun::G;
         let announce = g!(announce_secret * G);
-        announce.mark::<Normal>()
+        announce.normalize()
     }
 
     fn sample_response<Rng: CryptoRng + RngCore>(&self, rng: &mut Rng) -> Self::Response {
-        Scalar::random(rng).mark::<(Public, Zero)>()
+        Scalar::random(rng).public().mark_zero()
     }
 
     fn implied_announcement(
@@ -153,7 +153,7 @@ where
         let X = statement;
         let G = fun::G;
         let challenge = normalize_challenge(challenge);
-        g!(response * G - challenge * X).mark::<(Normal, NonZero)>()
+        g!(response * G - challenge * X).normalize().non_zero()
     }
 
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
@@ -184,7 +184,7 @@ fn normalize_challenge<L: ArrayLength<u8>>(
     // secp256k1 scalar byte representation is interpreted as big-endian and to
     // be consistent we always copy the bits into the least signgificant bytes.
     challenge_bytes[(32 - challenge.len())..].copy_from_slice(challenge.as_slice());
-    Scalar::from_bytes_mod_order(challenge_bytes).mark::<Public>()
+    Scalar::from_bytes_mod_order(challenge_bytes).public()
 }
 
 impl<L> crate::Writable for DLG<L> {

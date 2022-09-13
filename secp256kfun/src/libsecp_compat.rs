@@ -14,7 +14,7 @@ impl From<SecretKey> for Scalar {
     fn from(sk: SecretKey) -> Self {
         Scalar::from_slice(&sk[..])
             .unwrap()
-            .mark::<NonZero>()
+            .non_zero()
             .expect("SecretKey is never zero")
     }
 }

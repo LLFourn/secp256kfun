@@ -82,12 +82,32 @@ impl<Z, S> Scalar<S, Z> {
         Scalar(inner, PhantomData)
     }
 
-    /// A hack that is necessary when writing deserialization code until rust issue [#44491] is fixed.
-    /// Don't use this method use [`mark`] which checks the type is a valid secrecy.
-    ///
-    /// [`mark`]: crate::marker::Mark::mark
-    /// [#44491]: https://github.com/rust-lang/rust/issues/44491
+    /// Set the secrecy of the `Scalar` to the type parameter.
     pub fn set_secrecy<SNew>(self) -> Scalar<SNew, Z> {
+        Scalar::from_inner(self.0)
+    }
+
+    /// Set the secrecy of the Scalar to `Public`.
+    ///
+    /// A scalar should be set to public when the adversary is meant to know it as part of the protocol.
+    pub fn public(self) -> Scalar<Public, Z> {
+        Scalar::from_inner(self.0)
+    }
+
+    /// Set the secrecy of the Scalar to `Secret`.
+    ///
+    /// A scalar should be set to secret when the adversary is not meant to know about it in the
+    /// protocol.
+    pub fn secret(self) -> Scalar<Secret, Z> {
+        Scalar::from_inner(self.0)
+    }
+
+    /// Mark the scalar as possibly being `Zero` (even though it isn't).
+    ///
+    /// This is useful in accumulator variables where although the initial value is non-zero, every
+    /// sum addition after that might make it zero so it's necessary to start off with `Zero` marked
+    /// scalar.
+    pub fn mark_zero(self) -> Scalar<S, Zero> {
         Scalar::from_inner(self.0)
     }
 }
@@ -120,7 +140,7 @@ impl Scalar<Secret, NonZero> {
         let mut bytes = [0u8; 32];
         rng.fill_bytes(&mut bytes);
         Scalar::from_bytes_mod_order(bytes)
-            .mark::<NonZero>()
+            .non_zero()
             .expect("computationally unreachable")
     }
     /// Converts the output of a 32-byte hash into a scalar by reducing it modulo the curve order.
@@ -140,7 +160,7 @@ impl Scalar<Secret, NonZero> {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(hash.finalize().as_slice());
         Scalar::from_bytes_mod_order(bytes)
-            .mark::<NonZero>()
+            .non_zero()
             .expect("computationally unreachable")
     }
 
@@ -244,25 +264,15 @@ impl Scalar<Secret, Zero> {
 }
 
 impl<S> Scalar<S, Zero> {
-    /// Converts a scalar marked with `Zero` to one that is marked `NonZero`.
-    /// You must provide a justification for this as the `reason`.
-    /// **If you're wrong the method will panic with the reason**.
+    /// Converts a scalar marked with `Zero` to `NonZero`.
     ///
-    /// This is shorthand for:
-    ///
-    /// ```ignore
-    /// use secp256kfun::marker::{Mark, NonZero};
-    /// scalar.mark::<NonZero>().expect(reason);
-    /// ```
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use secp256kfun::{s, Scalar};
-    /// let two = s!(1 + 1).expect_nonzero("one plus one is not zero");
-    /// ```
-    pub fn expect_nonzero(self, reason: &str) -> Scalar<S, NonZero> {
-        self.mark::<NonZero>().expect(reason)
+    /// Returns `None` in the case that the scalar was in fact zero.
+    pub fn non_zero(self) -> Option<Scalar<S, NonZero>> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Scalar::from_inner(self.0))
+        }
     }
 }
 
@@ -281,7 +291,7 @@ impl From<u32> for Scalar<Secret, Zero> {
 crate::impl_fromstr_deserialize! {
     name => "non-zero secp256k1 scalar",
     fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,NonZero>> {
-        Scalar::from_bytes(bytes).and_then(|scalar| scalar.set_secrecy::<S>().mark::<NonZero>())
+        Scalar::from_bytes(bytes).and_then(|scalar| scalar.set_secrecy::<S>().non_zero())
     }
 }
 
@@ -325,7 +335,7 @@ where
     S: Secrecy,
 {
     fn default() -> Self {
-        Scalar::zero().mark::<S>()
+        Scalar::zero().set_secrecy::<S>()
     }
 }
 
@@ -334,7 +344,7 @@ where
     S: Secrecy,
 {
     fn default() -> Self {
-        Scalar::one().mark::<S>()
+        Self::from_inner(backend::BackendScalar::from_u32(1))
     }
 }
 
@@ -409,14 +419,20 @@ mod test {
 
     #[test]
     fn one() {
-        assert_eq!(Scalar::one(), Scalar::from(1));
-        assert_eq!(Scalar::minus_one(), -Scalar::one());
-        assert_eq!(op::scalar_mul(&s!(3), &Scalar::minus_one()), -s!(3));
+        assert_eq!(Scalar::<Secret, NonZero>::one(), Scalar::from(1));
+        assert_eq!(
+            Scalar::<Secret, NonZero>::minus_one(),
+            -Scalar::<Secret, NonZero>::one()
+        );
+        assert_eq!(
+            op::scalar_mul(&s!(3), &Scalar::<Secret, NonZero>::minus_one()),
+            -s!(3)
+        );
     }
 
     #[test]
     fn zero() {
-        assert_eq!(Scalar::zero(), Scalar::from(0));
+        assert_eq!(Scalar::<Secret, Zero>::zero(), Scalar::from(0));
     }
 
     #[test]
@@ -467,16 +483,5 @@ mod test {
                 .unwrap()
             )
         );
-    }
-
-    #[test]
-    fn nz_scalar_to_scalar_subtraction_is_not_commutative() {
-        let two = s!(2);
-        let three = s!(3);
-        let minus_1 = Scalar::minus_one();
-        let one = Scalar::from(1);
-
-        assert_eq!(s!(two - three), minus_1);
-        assert_eq!(s!(three - two), one);
     }
 }

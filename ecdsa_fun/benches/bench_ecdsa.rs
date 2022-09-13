@@ -5,7 +5,7 @@ use sha2::Sha256;
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
-    static ref SK: Scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").mark::<NonZero>().unwrap();
+    static ref SK: Scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();
     static ref ECDSA: ecdsa_fun::ECDSA<Deterministic::<Sha256>> = ecdsa_fun::ECDSA::default();
 }
 
@@ -37,7 +37,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     });
 
     {
-        let signature = signature.clone().mark::<Secret>();
+        let signature = signature.clone().set_secrecy::<Secret>();
         group.bench_function("fun::ecdsa_verify_ct", |b| {
             b.iter(|| ECDSA.verify(&pk, MESSAGE, &signature))
         });

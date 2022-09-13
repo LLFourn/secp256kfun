@@ -28,7 +28,7 @@ use rand_core::RngCore;
 ///
 /// # Serialization
 ///
-/// Only points that are normalized (i.e. `T` ≠ `Jacobian`) can be serialized. A Point that is
+/// Only points that are normalized (i.e. `T` ≠ `NonNormal`) can be serialized. A Point that is
 /// `EvenY` points serialize to and from their 32-byte x-only representation.
 /// `Normal` points serialize to and from the standard 33-byte representation specified in
 /// [_Standards for Efficient Cryptography_] (the same as [`Point::to_bytes`]). Points that are
@@ -157,7 +157,7 @@ impl<T, S> Point<T, S, NonZero> {
     /// let (point_with_even_y, was_odd) = point.clone().into_point_with_even_y();
     /// ```
     pub fn into_point_with_even_y(self) -> (Point<EvenY, S, NonZero>, bool) {
-        let normalized = self.mark::<Normal>();
+        let normalized = self.normalize();
         let needs_negation = !normalized.is_y_even();
         let negated = normalized.conditional_negate(needs_negation);
         (Point::from_inner(negated.0, EvenY), needs_negation)
@@ -182,7 +182,7 @@ impl Point<EvenY, Public, NonZero> {
         base: &Point<impl PointType, impl Secrecy>,
         scalar: &mut Scalar<impl Secrecy>,
     ) -> Self {
-        let point = crate::op::scalar_mul_point(scalar, base).mark::<Normal>();
+        let point = crate::op::scalar_mul_point(scalar, base);
         let (point, needs_negation) = point.into_point_with_even_y();
         scalar.conditional_negate(needs_negation);
         point
@@ -219,12 +219,58 @@ impl<T, S, Z> Point<T, S, Z> {
         op::point_conditional_negate(&self.clone(), cond)
     }
 
-    /// A hack that is necessary when writing deserialization code until rust issue [#44491] is fixed.
-    /// Don't use this method use [`mark`] which checks the type is a valid secrecy.
-    ///
-    /// [`mark`]: crate::marker::Mark::mark
-    /// [#44491]: https://github.com/rust-lang/rust/issues/44491
+    /// Set the [`Secrecy`] of the point.
     pub fn set_secrecy<SNew>(self) -> Point<T, SNew, Z> {
+        Point::from_inner(self.0, self.1)
+    }
+
+    /// Set the [`Secrecy`] of the point to [`Public`].
+    ///
+    /// Note that points are by default `Public`.
+    ///
+    /// [`Secrecy`]: crate::marker::Secrecy
+    /// [`Public`]: crate::marker::Public
+    pub fn public(self) -> Point<T, Public, Z> {
+        Point::from_inner(self.0, self.1)
+    }
+
+    /// Set the [`Secrecy`] of the point to [`Secret`].
+    ///
+    /// [`Secrecy`]: crate::marker::Secrecy
+    /// [`Public`]: crate::marker::Public
+    pub fn secret(self) -> Point<T, Secret, Z> {
+        Point::from_inner(self.0, self.1)
+    }
+
+    /// Normalize a point.
+    ///
+    /// This is usually only useful to do if the `Point` is marked as [`NonNormal`].
+    /// Otherwise it will be no-op and just set the [`PointType`] to [`Normal`].
+    ///
+    /// [`NonNormal`]: crate::marker::NonNormal
+    /// [`PointType`]: crate::marker::PointType
+    /// [`Normal`]: crate::marker::Normal
+    pub fn normalize(self) -> Point<Normal, S, Z> {
+        op::point_normalize(self)
+    }
+
+    /// Mark the point as being [`NonNormal`].
+    ///
+    /// This is sometimes helpful when you have an accumulater variable where although the first
+    /// value of the point is normalized the subsequent values will not be so to satisfy the
+    /// compiler you have to set it to `NonNormal` before you start.
+    ///
+    /// [`NonNormal`]: crate::marker::NonNormal
+    pub fn non_normal(self) -> Point<NonNormal, S, Z> {
+        Point::from_inner(self.0, NonNormal)
+    }
+
+    /// Mark the point as possibly being `Zero` (even though it isn't).
+    ///
+    /// This is useful in accumulator variables where although the initial value is non-zero, every
+    /// sum addition after that might make it zero so it's necessary to start off with `Zero` marked
+    /// point.
+    pub fn mark_zero(self) -> Point<T, S, Zero> {
         Point::from_inner(self.0, self.1)
     }
 }
@@ -244,43 +290,11 @@ impl Point<Normal, Public, Zero> {
     }
 }
 
-impl<T, S> Point<T, S, Zero> {
-    /// Converts a point marked with `Zero` to one that is marked `NonZero`.
-    /// You must provide a justification for this as the `reason`.
-    /// **If you're wrong the method will panic with the reason**.
-    ///
-    /// This is shorthand for:
-    ///
-    /// ```ignore
-    /// use secp256kfun::marker::*;
-    /// point.mark::<NonZero>().expect(reason);
-    /// ```
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use secp256kfun::{g, G};
-    /// let two_g = g!(G + G).expect_nonzero("2 * G is not zero");
-    /// ```
-    pub fn expect_nonzero(self, reason: &str) -> Point<T, S, NonZero> {
-        self.mark::<NonZero>().expect(reason)
-    }
-}
-
 impl<Z, T> Point<T, Public, Z> {
     /// Checks if this point's x-coordiante is the equal to the scalar mod the
     /// curve order. This is only useful for ECDSA implementations.
     pub fn x_eq_scalar<Z2>(&self, scalar: &Scalar<Public, Z2>) -> bool {
         crate::backend::VariableTime::point_x_eq_scalar(&self.0, &scalar.0)
-    }
-}
-
-impl<S, Z> Point<Jacobian, S, Z> {
-    /// Normalize a point.
-    ///
-    /// Shorthand for calling [`.mark::<Normal>()`](crate::marker::Mark::mark).
-    pub fn normalize(self) -> Point<Normal, S, Z> {
-        self.mark::<Normal>()
     }
 }
 
@@ -351,7 +365,20 @@ impl<S> Point<EvenY, S, NonZero> {
     }
 }
 
-impl<S> Point<Normal, S, NonZero> {}
+impl<T, S> Point<T, S, Zero> {
+    /// Convert a point that is marked as `Zero` to `NonZero`.
+    ///
+    /// If the point *was* actually zero ([`is_zero`] returns true) it returns `None`.
+    ///
+    /// [`is_zero`]: Point::is_zero
+    pub fn non_zero(self) -> Option<Point<T, S, NonZero>> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Point::from_inner(self.0, self.1))
+        }
+    }
+}
 
 impl<S, T: Normalized> Point<T, S, NonZero> {
     /// Returns the x and y coordinates of the point as two 32-byte arrays containing their big endian encoding.
@@ -510,7 +537,7 @@ mod test {
             expression_eq!([42 * p + 1337 * p] == [1379 * q]);
             expression_eq!([42 * p - 1337 * p] == [-1295 * q]);
             let add_100_times = {
-                let p = p.clone().mark::<(Zero, Jacobian)>();
+                let p = p.clone().mark_zero().non_normal();
                 let i = g!(p - p);
                 assert_eq!(i, Point::zero());
                 (0..100).fold(i, |acc, _| g!(acc + p))
@@ -531,13 +558,13 @@ mod test {
             expression_eq!([p - i] == [p]);
             expression_eq!([0 * p] == [i]);
 
-            let q = p.clone().mark::<(Normal, Public)>();
+            let q = p.clone().normalize().public();
             operations_test!(@binary p,q);
-            let q = p.clone().mark::<(Jacobian, Public)>();
+            let q = p.clone().non_normal().public();
             operations_test!(@binary p,q);
-            let q = p.clone().mark::<(Normal, Secret)>();
+            let q = p.clone().normalize().secret();
             operations_test!(@binary p,q);
-            let q = p.clone().mark::<(Jacobian, Secret)>();
+            let q = p.clone().non_normal().secret();
             operations_test!(@binary p,q);
         }}
     }
@@ -554,7 +581,7 @@ mod test {
         }
 
         #[test]
-        fn operations_jacobian(P in any::<Point<Jacobian>>()) {
+        fn operations_jacobian(P in any::<Point<NonNormal>>()) {
             operations_test!(&P);
         }
 
@@ -564,7 +591,7 @@ mod test {
         }
 
         #[test]
-        fn operations_jacobian_secret(P in any::<Point<Jacobian, Secret>>()) {
+        fn operations_jacobian_secret(P in any::<Point<NonNormal, Secret>>()) {
             operations_test!(&P);
         }
 
@@ -579,12 +606,12 @@ mod test {
         }
 
         #[test]
-        fn operations_jacobian_public_zero(P in any::<Point<Jacobian, Public, Zero>>()) {
+        fn operations_jacobian_public_zero(P in any::<Point<NonNormal, Public, Zero>>()) {
             operations_test!(&P);
         }
 
         #[test]
-        fn operations_jacobian_secret_zero(P in any::<Point<Jacobian, Secret, Zero>>()) {
+        fn operations_jacobian_secret_zero(P in any::<Point<NonNormal, Secret, Zero>>()) {
             operations_test!(&P);
         }
 
@@ -601,18 +628,18 @@ mod test {
     fn g_to_and_from_bytes() {
         use core::str::FromStr;
         assert_eq!(
-            (*G).mark::<Normal>().to_bytes_uncompressed(),
+            (*G).normalize().to_bytes_uncompressed(),
             crate::hex::decode_array("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap(),
             "G.to_bytes_uncompressed()"
         );
 
         assert_eq!(
-            Point::from_bytes_uncompressed((*G).mark::<Normal>().to_bytes_uncompressed()).unwrap(),
+            Point::from_bytes_uncompressed((*G).normalize().to_bytes_uncompressed()).unwrap(),
             *G
         );
 
         assert_eq!(
-            (*G).mark::<Normal>().to_bytes(),
+            (*G).normalize().to_bytes(),
             crate::hex::decode_array(
                 "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"
             )
@@ -676,7 +703,7 @@ mod test {
         use crate::s;
         let i = Point::zero();
         let forty_two = s!(42);
-        let forty_two_pub = s!(42).mark::<Public>();
+        let forty_two_pub = s!(42).public();
         assert!(i.is_zero());
         expression_eq!([i] == [i]);
         expression_eq!([i] == [-i]);
@@ -695,6 +722,6 @@ mod test {
         let random_point = Point::random(&mut rand::thread_rng());
         assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
         let mult_point = g!({ Scalar::random(&mut rand::thread_rng()) } * G);
-        assert!(format!("{:?}", mult_point).starts_with("Point<Jacobian,Public,NonZero>"));
+        assert!(format!("{:?}", mult_point).starts_with("Point<NonNormal,Public,NonZero>"));
     }
 }

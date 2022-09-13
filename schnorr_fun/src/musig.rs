@@ -165,8 +165,8 @@ impl AggKey {
     /// [BIP32]: https://bips.xyz/32
     /// [`XOnlyAggKey`]: crate::musig::XOnlyAggKey
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let agg_key = g!(self.agg_key + tweak * G).normalize().mark::<NonZero>()?;
-        let tweak = s!(self.tweak + tweak).mark::<Public>();
+        let agg_key = g!(self.agg_key + tweak * G).normalize().non_zero()?;
+        let tweak = s!(self.tweak + tweak).public();
 
         Some(AggKey {
             keys: self.keys.clone(),
@@ -231,9 +231,9 @@ impl XOnlyAggKey {
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let (new_agg_key, needs_negation) = g!(self.agg_key + tweak * G)
             .normalize()
-            .mark::<NonZero>()?
+            .non_zero()?
             .into_point_with_even_y();
-        let mut new_tweak = s!(self.tweak + tweak).mark::<Public>();
+        let mut new_tweak = s!(self.tweak + tweak).public();
         new_tweak.conditional_negate(needs_negation);
         let needs_negation = self.needs_negation ^ needs_negation;
 
@@ -289,18 +289,18 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
                 } else {
                     Scalar::one()
                 }
-                .mark::<Public>()
+                .public()
             })
             .collect::<Vec<_>>();
 
         let agg_key = crate::fun::op::lincomb(coefs.iter(), keys.iter())
-            .expect_nonzero("computationally unreachable: linear combination of hash randomised points cannot add to zero");
+            .non_zero().expect("computationally unreachable: linear combination of hash randomised points cannot add to zero");
 
         AggKey {
             keys,
             coefs,
-            agg_key: agg_key.mark::<Normal>(),
-            tweak: Scalar::zero().mark::<Public>(),
+            agg_key: agg_key.normalize(),
+            tweak: Scalar::zero().public(),
         }
     }
 }
@@ -463,7 +463,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         let mut Rs = nonces;
         let agg_Rs = Rs
             .iter()
-            .fold([Point::zero().mark::<Jacobian>(); 2], |acc, nonce| {
+            .fold([Point::zero().non_normal(); 2], |acc, nonce| {
                 [
                     g!({ acc[0] } + { nonce.0[0] }),
                     g!({ acc[1] } + { nonce.0[1] }),
@@ -482,15 +482,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
                     .add(message),
             )
         }
-        .mark::<(Public, Zero)>();
+        .public()
+        .mark_zero();
 
         let (R, r_needs_negation) = g!({ agg_Rs.0[0] } + b * { agg_Rs.0[1] })
             .normalize()
-            .mark::<NonZero>()
+            .non_zero()
             .unwrap_or_else(|| {
                 // if final nonce is zero we set it to generator as in MuSig spec
                 debug_assert!(G.is_y_even());
-                G.clone().mark::<Normal>()
+                G.clone().normalize()
             })
             .into_point_with_even_y();
 
@@ -529,7 +530,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         let [mut r1, mut r2] = local_secret_nonce.secret.clone();
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
-        s!(c * a * x_i + r1 + b * r2).mark::<(Public, Zero)>()
+        s!(c * a * x_i + r1 + b * r2).public()
     }
 
     #[must_use]
@@ -609,10 +610,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     ) -> (Point<EvenY>, Scalar<Public, Zero>) {
         let sum_s = partial_sigs
             .into_iter()
-            .reduce(|acc, s| s!(acc + s).mark::<Public>())
-            .unwrap_or(Scalar::zero().mark::<Public>());
+            .reduce(|acc, s| s!(acc + s).public())
+            .unwrap_or(Scalar::zero().public());
 
-        let s = s!(sum_s + agg_key.tweak * session.c).mark::<Public>();
+        let s = s!(sum_s + agg_key.tweak * session.c).public();
 
         (session.R, s)
     }

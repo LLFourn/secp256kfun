@@ -12,9 +12,9 @@ impl<S: Secrecy> Arbitrary for Scalar<S, NonZero> {
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         prop_oneof![
             // insert some pathological cases
-            1 => Just(Scalar::one().mark::<S>()),
-            1 => Just(Scalar::minus_one().mark::<S>()),
-            18 => any::<[u8;32]>().prop_filter_map("zero bytes not acceptable", |bytes| Scalar::from_bytes_mod_order(bytes).mark::<(S,NonZero)>()),
+            1 => Just(Scalar::one().set_secrecy::<S>()),
+            1 => Just(Scalar::minus_one().set_secrecy::<S>()),
+            18 => any::<[u8;32]>().prop_filter_map("zero bytes not acceptable", |bytes| Some(Scalar::from_bytes_mod_order(bytes).non_zero()?.set_secrecy::<S>())),
         ].boxed()
     }
 }
@@ -25,21 +25,22 @@ impl<S: Secrecy> Arbitrary for Scalar<S, Zero> {
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         prop_oneof![
-            1 => Just(Scalar::zero().mark::<S>()),
-            1 => Just(Scalar::one().mark::<(S, Zero)>()),
-            1 => Just(Scalar::minus_one().mark::<(S, Zero)>()),
-            27 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes).mark::<S>()),
-        ].boxed()
+            1 => Just(Scalar::zero().set_secrecy::<S>()),
+            1 => Just(Scalar::one().mark_zero().set_secrecy::<S>().mark_zero()),
+            1 => Just(Scalar::minus_one().mark_zero().set_secrecy::<S>().mark_zero()),
+            27 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes).set_secrecy::<S>()),
+        ]
+        .boxed()
     }
 }
 
-impl<S: Secrecy> Arbitrary for Point<Jacobian, S, NonZero> {
+impl<S: Secrecy> Arbitrary for Point<NonNormal, S, NonZero> {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         any::<Scalar>()
-            .prop_map(|scalar| g!(scalar * G).mark::<S>())
+            .prop_map(|scalar| g!(scalar * G).set_secrecy())
             .boxed()
     }
 }
@@ -49,7 +50,7 @@ impl<S: Secrecy> Arbitrary for Point<Normal, S, NonZero> {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-        any::<Point<Jacobian, S>>()
+        any::<Point<NonNormal, S>>()
             .prop_map(|point| point.normalize())
             .boxed()
     }
@@ -61,21 +62,19 @@ impl<S: Secrecy> Arbitrary for Point<EvenY, S, NonZero> {
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         any::<Point<Normal, S>>()
-            .prop_map(|point| point.into_point_with_even_y().0.mark::<S>())
+            .prop_map(|point| point.into_point_with_even_y().0)
             .boxed()
     }
 }
 
-impl<S: Secrecy> Arbitrary for Point<Jacobian, S, Zero> {
+impl<S: Secrecy> Arbitrary for Point<NonNormal, S, Zero> {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-        prop_oneof![
-            1 => Just(Point::zero().mark::<(Jacobian, S)>()),
-            9 => any::<Point<Jacobian,S>>().prop_map(|p| p.mark::<Zero>()),
-        ]
-        .boxed()
+        any::<Scalar<S, Zero>>()
+            .prop_map(|scalar| g!(scalar * G).set_secrecy())
+            .boxed()
     }
 }
 
@@ -84,10 +83,8 @@ impl<S: Secrecy> Arbitrary for Point<Normal, S, Zero> {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
-        prop_oneof![
-            1 => Just(Point::zero().mark::<S>()),
-            9 => any::<Point<Normal, S>>().prop_map(|p| p.mark::<Zero>())
-        ]
-        .boxed()
+        any::<Point<NonNormal, S, Zero>>()
+            .prop_map(|point| point.normalize())
+            .boxed()
     }
 }

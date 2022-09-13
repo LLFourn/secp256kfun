@@ -122,11 +122,11 @@ impl<NG> ECDSA<NG> {
             return false;
         }
 
-        let m = Scalar::from_bytes_mod_order(message.clone()).mark::<Public>();
+        let m = Scalar::from_bytes_mod_order(message.clone()).public();
         let s_inv = s.invert();
 
         g!((s_inv * m) * G + (s_inv * R_x) * verification_key)
-            .mark::<NonZero>()
+            .non_zero()
             .map_or(false, |implied_R| implied_R.x_eq_scalar(R_x))
     }
 }
@@ -164,7 +164,7 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// ```
     pub fn sign(&self, secret_key: &Scalar, message_hash: &[u8; 32]) -> Signature {
         let x = secret_key;
-        let m = Scalar::from_bytes_mod_order(message_hash.clone()).mark::<Public>();
+        let m = Scalar::from_bytes_mod_order(message_hash.clone()).public();
         let r = derive_nonce!(
             nonce_gen => self.nonce_gen,
             secret => x,
@@ -179,23 +179,21 @@ impl<NG: NonceGen> ECDSA<NG> {
         let R_x = Scalar::from_bytes_mod_order(R.to_xonly_bytes())
             // There *is* a single point that will be zero here but since we're
             // choosing R pseudorandomly it won't occur.
-            .mark::<(Public, NonZero)>()
+            .public()
+            .non_zero()
             .expect("computationally unreachable");
 
         let mut s = s!({ r.invert() } * (m + R_x * x))
             // Given R_x is determined by x and m through a hash, reaching
             // (m + R_x * x) = 0 is intractable.
-            .mark::<NonZero>()
+            .non_zero()
             .expect("computationally unreachable");
 
         // s values must be low (less than half group order), otherwise signatures
         // would be malleable i.e. (R,s) and (R,-s) would both be valid signatures.
         s.conditional_negate(s.is_high());
 
-        Signature {
-            R_x,
-            s: s.mark::<Public>(),
-        }
+        Signature { R_x, s: s.public() }
     }
 }
 

@@ -97,7 +97,8 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             Some((
                 g!(H2P + H2P)
                     .normalize()
-                    .expect_nonzero("power of two addition"),
+                    .non_zero()
+                    .expect("power of two addition"),
                 (H2Q + H2Q),
             ))
         })
@@ -138,7 +139,8 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             bytes.reverse();
             ScalarP::from_bytes(bytes)
                 .expect("will never overflow since ed25519 order is lower")
-                .expect_nonzero("must not be zero")
+                .non_zero()
+                .expect("must not be zero")
         };
 
         let claim = (g!(secp_secret * GP).normalize(), secret * GQ);
@@ -151,7 +153,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             (ScalarP::zero(), ScalarQ::zero()),
             |(accP, accQ), (rP, rQ)| (s!(accP + rP), accQ + rQ),
         );
-        let sum_blindings = (sum_blindings.0.mark::<Public>(), sum_blindings.1);
+        let sum_blindings = (sum_blindings.0.public(), sum_blindings.1);
 
         let bits = to_bits(secret);
 
@@ -163,7 +165,8 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             .map(|(((H2P, H2Q), bit), (rP, rQ))| {
                 let zero_commit_p = g!(rP * GP);
                 let one_commit_p = g!(zero_commit_p + H2P)
-                    .expect_nonzero("computationally unreachable since zero_comit_p is random");
+                    .non_zero()
+                    .expect("computationally unreachable since zero_comit_p is random");
 
                 let zero_commit_q = rQ * GQ;
                 let one_commit_q = &zero_commit_q + H2Q;
@@ -224,7 +227,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             .zip(commitments)
             .map(|((H2P, H2Q), (CP, CQ))| {
                 // This goes first since we bail if it's zero
-                g!(CP - H2P).mark::<(Normal, NonZero)>().map(|CP_sub_H2P| {
+                g!(CP - H2P).normalize().non_zero().map(|CP_sub_H2P| {
                     (
                         // represents the claim the commitment is equal to 0
                         (CP.clone(), CQ.clone()),
@@ -236,11 +239,11 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             .collect::<Option<Vec<_>>>()?;
 
         let (sumP, sumQ) = commitments.iter().fold(
-            (PointP::zero().mark::<Jacobian>(), PointQ::identity()),
+            (PointP::zero().non_normal(), PointQ::identity()),
             |(accP, accQ), (CP, CQ)| (g!(accP + CP), accQ + CQ),
         );
 
-        let unblindedP = g!(sumP - rP * GP).mark::<(Normal, NonZero)>()?;
+        let unblindedP = g!(sumP - rP * GP).normalize().non_zero()?;
         let unblindedQ = sumQ - rQ * GQ;
 
         let dleq_G_to_H = (

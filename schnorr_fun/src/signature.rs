@@ -54,15 +54,12 @@ impl<S> Signature<S> {
     /// ```
     /// use schnorr_fun::{fun::marker::*, Signature};
     /// let signature = Signature::random(&mut rand::thread_rng());
-    /// let secret_sig = signature.mark::<Secret>();
+    /// let secret_sig = signature.set_secrecy::<Secret>();
     /// ```
-    ///
-    /// [`Secrecy`]: secp256kfun::marker::Secrecy
-    #[must_use]
-    pub fn mark<M: Secrecy>(self) -> Signature<M> {
+    pub fn set_secrecy<M: Secrecy>(self) -> Signature<M> {
         Signature {
             R: self.R,
-            s: self.s.mark::<M>(),
+            s: self.s.set_secrecy(),
         }
     }
 }
@@ -80,7 +77,7 @@ impl Signature<Public> {
     pub fn random<R: RngCore>(rng: &mut R) -> Self {
         Signature {
             R: Point::random(rng).into_point_with_even_y().0,
-            s: Scalar::random(rng).mark::<(Zero, Public)>(),
+            s: Scalar::random(rng).public().mark_zero(),
         }
     }
     /// Deserializes a signature from the byte representation produced by [`to_bytes`].
@@ -107,7 +104,7 @@ impl Signature<Public> {
         let R = Point::from_xonly_bytes(R)?;
         Some(Signature {
             R,
-            s: Scalar::from_bytes(s)?.mark::<Public>(),
+            s: Scalar::from_bytes(s)?.public(),
         })
     }
 }
@@ -115,7 +112,7 @@ impl Signature<Public> {
 secp256kfun::impl_fromstr_deserialize! {
     name => "secp256k1 Schnorr signature",
     fn from_bytes<S: Secrecy>(bytes: [u8;64]) -> Option<Signature<S>> {
-        Signature::from_bytes(bytes).map(|sig| sig.mark::<S>())
+        Signature::from_bytes(bytes).map(|sig| sig.set_secrecy::<S>())
     }
 }
 
