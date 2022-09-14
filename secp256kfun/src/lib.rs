@@ -4,7 +4,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "alloc"))]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
