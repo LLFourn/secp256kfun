@@ -231,7 +231,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         let X = public_key;
         let (R, s) = signature.as_tuple();
         let c = self.challenge(&R, X, message);
-        let R_implied = g!(s * G - c * X).normalize();
+        let R_implied = g!(s * G - c * X);
         R_implied == R
     }
 

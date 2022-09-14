@@ -31,6 +31,7 @@ use crate::{
 };
 
 /// Computes `x * A + y * B` more efficiently than calling [`scalar_mul_point`] twice.
+#[inline(always)]
 pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
     x: &Scalar<SX, ZX>,
     A: &Point<TA, SA, ZA>,
@@ -44,6 +45,7 @@ pub fn double_mul<ZA, SA, TA, ZX, SX, ZB, SB, TB, ZY, SY>(
 }
 
 /// Computes multiplies the point `P` by the scalar `x`.
+#[inline(always)]
 pub fn scalar_mul_point<Z1, S1, T2, S2, Z2>(
     x: &Scalar<S1, Z1>,
     P: &Point<T2, S2, Z2>,
@@ -55,6 +57,7 @@ where
 }
 
 /// Multiplies two scalars together (modulo the curve order)
+#[inline(always)]
 pub fn scalar_mul<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Z1::Out>
 where
     Z1: DecideZero<Z2>,
@@ -63,21 +66,25 @@ where
 }
 
 /// Adds two scalars together (modulo the curve order)
+#[inline(always)]
 pub fn scalar_add<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
     Scalar::from_inner(ConstantTime::scalar_add(&x.0, &y.0))
 }
 
 /// Subtracts one scalar from another
+#[inline(always)]
 pub fn scalar_sub<Z1, Z2, S1, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> Scalar<Secret, Zero> {
     Scalar::from_inner(ConstantTime::scalar_sub(&x.0, &y.0))
 }
 
 /// Checks equality between two scalars
+#[inline(always)]
 pub fn scalar_eq<Z1, S1, Z2, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> bool {
     ConstantTime::scalar_eq(&x.0, &y.0)
 }
 
 /// Negate a scalar
+#[inline(always)]
 pub fn scalar_negate<Z, S>(x: &Scalar<S, Z>) -> Scalar<S, Z> {
     let mut negated = x.0.clone();
     ConstantTime::scalar_cond_negate(&mut negated, true);
@@ -85,26 +92,31 @@ pub fn scalar_negate<Z, S>(x: &Scalar<S, Z>) -> Scalar<S, Z> {
 }
 
 /// Invert a scalar
+#[inline(always)]
 pub fn scalar_invert<S1>(x: &Scalar<S1, NonZero>) -> Scalar<S1, NonZero> {
     Scalar::from_inner(ConstantTime::scalar_invert(&x.0))
 }
 
 /// Conditionally negate a scalar
+#[inline(always)]
 pub fn scalar_conditional_negate<S, Z>(x: &mut Scalar<S, Z>, cond: bool) {
     ConstantTime::scalar_cond_negate(&mut x.0, cond)
 }
 
 /// Check if the scalar is high
+#[inline(always)]
 pub fn scalar_is_high<S, Z>(x: &Scalar<S, Z>) -> bool {
     ConstantTime::scalar_is_high(&x.0)
 }
 
 /// Check if the scalar is zero
+#[inline(always)]
 pub fn scalar_is_zero<S, Z>(x: &Scalar<S, Z>) -> bool {
     ConstantTime::scalar_is_zero(&x.0)
 }
 
 /// Subtracts one point from another
+#[inline(always)]
 pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
@@ -113,6 +125,7 @@ pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
 }
 
 /// Adds two points together
+#[inline(always)]
 pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
     A: &Point<T1, S1, Z1>,
     B: &Point<T2, S2, Z2>,
@@ -121,11 +134,22 @@ pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
 }
 
 /// Checks if two points are equal
-pub fn point_eq<Z1, Z2, S1, S2, T1, T2>(A: &Point<T1, S1, Z1>, B: &Point<T2, S2, Z2>) -> bool {
-    ConstantTime::point_eq_point(&A.0, &B.0)
+#[inline(always)]
+pub fn point_eq<Z1, Z2, S1, S2, T1, T2>(A: &Point<T1, S1, Z1>, B: &Point<T2, S2, Z2>) -> bool
+where
+    T1: PointType,
+    T2: PointType,
+{
+    match (T1::is_normalized(), T2::is_normalized()) {
+        (true, true) => ConstantTime::norm_point_eq_norm_point(&A.0, &B.0),
+        (true, false) => ConstantTime::point_eq_norm_point(&B.0, &A.0),
+        (false, true) => ConstantTime::point_eq_norm_point(&A.0, &B.0),
+        (false, false) => ConstantTime::point_eq_point(&A.0, &B.0),
+    }
 }
 
 /// Negate a point
+#[inline(always)]
 pub fn point_negate<T: PointType, S, Z>(A: &Point<T, S, Z>) -> Point<T::NegationType, S, Z> {
     let mut A = A.0.clone();
     ConstantTime::any_point_neg(&mut A);
@@ -133,6 +157,7 @@ pub fn point_negate<T: PointType, S, Z>(A: &Point<T, S, Z>) -> Point<T::Negation
 }
 
 /// Conditionally negate a point
+#[inline(always)]
 pub fn point_conditional_negate<T: PointType, S, Z>(
     A: &Point<T, S, Z>,
     cond: bool,
@@ -143,12 +168,19 @@ pub fn point_conditional_negate<T: PointType, S, Z>(
 }
 
 /// Normalize a point
-pub fn point_normalize<T, S, Z>(mut A: Point<T, S, Z>) -> Point<Normal, S, Z> {
-    ConstantTime::point_normalize(&mut A.0);
+#[inline(always)]
+pub fn point_normalize<T, S, Z>(mut A: Point<T, S, Z>) -> Point<Normal, S, Z>
+where
+    T: PointType,
+{
+    if !T::is_normalized() {
+        ConstantTime::point_normalize(&mut A.0);
+    }
     Point::from_inner(A.0, Normal)
 }
 
 /// Does a linear combination of points
+#[inline(always)]
 pub fn lincomb<'a, T1: 'a, S1: 'a, Z1: 'a, S2: 'a, Z2: 'a>(
     scalars: impl IntoIterator<Item = &'a Scalar<S2, Z2>>,
     points: impl IntoIterator<Item = &'a Point<T1, S1, Z1>>,
@@ -163,6 +195,7 @@ pub fn lincomb<'a, T1: 'a, S1: 'a, Z1: 'a, S2: 'a, Z2: 'a>(
 }
 
 /// Check if a point has an even y-coordinate
+#[inline(always)]
 pub fn point_is_y_even<T: Normalized, S>(A: &Point<T, S, NonZero>) -> bool {
     ConstantTime::norm_point_is_y_even(&A.0)
 }

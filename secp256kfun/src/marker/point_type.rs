@@ -11,6 +11,9 @@
 pub trait PointType: Sized + Clone + Copy + 'static {
     /// The point type returned from the negation of a point of this type.
     type NegationType: Default;
+
+    /// Whether the point type is normalized or not (i.e. not [`NonNormal`])
+    fn is_normalized() -> bool;
 }
 
 /// A Fully Normalized Point. Internally `Normal` points are represented using
@@ -70,8 +73,18 @@ impl NotBasePoint for Normal {}
 
 impl<N: Normalized> PointType for N {
     type NegationType = Normal;
+
+    #[inline(always)]
+    fn is_normalized() -> bool {
+        true
+    }
 }
 
 impl PointType for NonNormal {
     type NegationType = NonNormal;
+
+    #[inline(always)]
+    fn is_normalized() -> bool {
+        false
+    }
 }
