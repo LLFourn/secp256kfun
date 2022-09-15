@@ -58,7 +58,8 @@
 //! #        proofs_of_possession.clone(),
 //! #    )
 //! #    .unwrap();
-//! // signing parties must use a common set of nonces when creating signature shares
+//! // signing parties must use a common set of nonces when creating signature shares.
+//! // nonces can be derived from a session id that use includes publicly known values.
 //! let verification_shares_bytes: Vec<_> = frost_key
 //!     .verification_shares()
 //!     .map(|share| share.to_bytes())
@@ -133,9 +134,9 @@ impl<H: Tagged, NG: AddTag + Clone> Frost<H, NG> {
     /// Generate a new Frost context from a Schnorr context.
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self {
-            schnorr: schnorr.clone(),
-            binding_hash: H::default().tagged(b"frost/binding"),
-            keygen_id_hash: H::default().tagged(b"frost/keygenid"),
+            schnorr,
+            binding_hash: H::default().tagged(b"FROST/noncecoef"),
+            keygen_id_hash: H::default().tagged(b"FROST/keygenid"),
         }
     }
 }
@@ -603,8 +604,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         let mut keygen_hash = self.keygen_id_hash.clone();
-        keygen_hash.update((len_first_poly as u32).to_be_bytes());
-        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
         for poly in &point_polys {
             for point in poly.0.iter() {
                 keygen_hash.update(point.to_bytes());
@@ -747,8 +746,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         nonces: Vec<(u32, Nonce)>,
         message: Message,
     ) -> SignSession {
-        let mut nonce_map: BTreeMap<_, _> =
-            nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
+        let mut nonce_map: BTreeMap<_, _> = nonces
+            .clone()
+            .into_iter()
+            .map(|(i, nonce)| (i, nonce))
+            .collect();
 
         let agg_nonce_jac: [Point<NonNormal, Public, Zero>; 2] =
             nonce_map
@@ -770,14 +772,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 .unwrap_or_else(|| G.clone().normalize()),
         ];
 
-        let binding_coeff = Scalar::from_hash(
-            self.binding_hash
-                .clone()
-                .add(agg_nonce_points[0])
-                .add(agg_nonce_points[1])
-                .add(frost_key.public_key())
-                .add(message),
-        );
+        // encode group commitment
+        let mut hash = self.binding_hash.clone();
+        for (i, nonce) in nonces {
+            hash = hash.add(i as u8).add(nonce.0[0]).add(nonce.0[1]);
+        }
+
+        hash = hash.add(message);
+        let binding_coeff = Scalar::from_hash(hash);
+
         let (agg_nonce, nonces_need_negation) =
             g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
                 .normalize()
@@ -969,6 +972,7 @@ mod test {
                     Scalar::from_non_zero_u32(NonZeroU32::new(i*j)
                         .expect("starts from 1")))
                         .collect();
+
                 scalar_polys.push(ScalarPoly::new(scalar_poly));
             }
             let point_polys: Vec<PointPoly> = scalar_polys.iter().map(|sp| sp.to_point_poly()).collect();
