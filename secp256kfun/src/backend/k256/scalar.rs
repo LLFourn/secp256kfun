@@ -15,44 +15,13 @@ use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, Sub, SubAssign};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 /// Scalars are elements in the finite field modulo n.
-///
-/// # Trait impls
-///
-/// Much of the important functionality of scalars is provided by traits from
-/// the [`ff`](https://docs.rs/ff/) crate, which is re-exported as
-/// `k256::elliptic_curve::ff`:
-///
-/// - [`Field`](https://docs.rs/ff/latest/ff/trait.Field.html) -
-///   represents elements of finite fields and provides:
-///   - [`Field::random`](https://docs.rs/ff/latest/ff/trait.Field.html#tymethod.random) -
-///     generate a random scalar
-///   - `double`, `square`, and `invert` operations
-///   - Bounds for [`Add`], [`Sub`], [`Mul`], and [`Neg`] (as well as `*Assign` equivalents)
-///   - Bounds for [`ConditionallySelectable`] from the `subtle` crate
-/// - [`PrimeField`](https://docs.rs/ff/latest/ff/trait.PrimeField.html) -
-///   represents elements of prime fields and provides:
-///   - `from_repr`/`to_repr` for converting field elements from/to big integers.
-///   - `char_le_bits`, `multiplicative_generator`, `root_of_unity` constants.
-/// - [`PrimeFieldBits`](https://docs.rs/ff/latest/ff/trait.PrimeFieldBits.html) -
-///   operations over field elements represented as bits (requires `bits` feature)
-///
-/// Please see the documentation for the relevant traits for more information.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Scalar(ScalarImpl);
 
 impl Scalar {
-    #[must_use]
-    pub fn double(&self) -> Self {
-        self.add(self)
-    }
+    /// Zero scalar.
+    pub const ZERO: Self = Self(ScalarImpl::zero());
 
-    // TODO(tarcieri): stub! See: https://github.com/RustCrypto/elliptic-curves/issues/170
-    pub fn sqrt(&self) -> CtOption<Self> {
-        todo!("see RustCrypto/elliptic-curves#170");
-    }
-}
-
-impl Scalar {
     /// Attempts to parse the given byte array as an SEC1-encoded scalar.
     ///
     /// Returns None if the byte array does not contain a big-endian integer in the range
@@ -60,51 +29,12 @@ impl Scalar {
     pub fn from_repr(bytes: FieldBytes) -> Option<Self> {
         ScalarImpl::from_bytes(bytes.as_ref()).map(Self).into()
     }
-
-    pub fn to_repr(&self) -> FieldBytes {
-        self.to_bytes()
-    }
-
-    pub fn is_odd(&self) -> bool {
-        self.0.is_odd().into()
-    }
-
-    pub fn multiplicative_generator() -> Self {
-        7u64.into()
-    }
-}
-
-impl From<u32> for Scalar {
-    fn from(k: u32) -> Self {
-        Self(ScalarImpl::from(k))
-    }
-}
-
-impl From<u64> for Scalar {
-    fn from(k: u64) -> Self {
-        Self(ScalarImpl::from(k))
-    }
-}
-
-impl Scalar {
-    /// Returns the zero scalar.
-    pub const fn zero() -> Self {
-        Self(ScalarImpl::zero())
-    }
-
-    /// Returns the multiplicative identity.
-    pub const fn one() -> Scalar {
-        Self(ScalarImpl::one())
-    }
+    /// Multiplicative identity.
+    pub const ONE: Self = Self(ScalarImpl::one());
 
     /// Checks if the scalar is zero.
     pub fn is_zero(&self) -> Choice {
         self.0.is_zero()
-    }
-
-    /// Returns the value of the scalar truncated to a 32-bit unsigned integer.
-    pub fn truncate_to_u32(&self) -> u32 {
-        self.0.truncate_to_u32()
     }
 
     /// Attempts to parse the given byte array as a scalar.
@@ -190,7 +120,7 @@ impl Scalar {
         let x56 = x28.pow2k(28).mul(&x28);
 
         #[rustfmt::skip]
-        let res = x56
+            let res = x56
             .pow2k(56).mul(&x56)
             .pow2k(14).mul(&x14)
             .pow2k(3).mul(&x_101)
@@ -220,30 +150,104 @@ impl Scalar {
 
         CtOption::new(res, !self.is_zero())
     }
+}
 
-    /// If `flag` evaluates to `true`, adds `(1 << bit)` to `self`.
-    pub fn conditional_add_bit(&self, bit: usize, flag: Choice) -> Self {
-        Self(self.0.conditional_add_bit(bit, flag))
-    }
-
+impl Scalar {
     /// Multiplies `self` by `b` (without modulo reduction) divide the result by `2^shift`
     /// (rounding to the nearest integer).
     /// Variable time in `shift`.
     pub fn mul_shift_var(&self, b: &Scalar, shift: usize) -> Self {
         Self(self.0.mul_shift_var(&(b.0), shift))
     }
+
+    /// Tonelli-Shank's algorithm for q mod 16 = 1
+    /// <https://eprint.iacr.org/2012/685.pdf> (page 12, algorithm 5)
+    #[allow(clippy::many_single_char_names)]
+    pub fn sqrt(&self) -> CtOption<Self> {
+        // Note: `pow_vartime` is constant-time with respect to `self`
+        let w = self.pow_vartime(&[
+            0x777fa4bd19a06c82,
+            0xfd755db9cd5e9140,
+            0xffffffffffffffff,
+            0x1ffffffffffffff,
+        ]);
+
+        let mut v = Self::S;
+        let mut x = *self * w;
+        let mut b = x * w;
+        let mut z = Self::root_of_unity();
+
+        for max_v in (1..=Self::S).rev() {
+            let mut k = 1;
+            let mut tmp = b.square();
+            let mut j_less_than_v = Choice::from(1);
+
+            for j in 2..max_v {
+                let tmp_is_one = tmp.ct_eq(&Self::ONE);
+                let squared = Self::conditional_select(&tmp, &z, tmp_is_one).square();
+                tmp = Self::conditional_select(&squared, &tmp, tmp_is_one);
+                let new_z = Self::conditional_select(&z, &squared, tmp_is_one);
+                j_less_than_v &= !j.ct_eq(&v);
+                k = u32::conditional_select(&j, &k, tmp_is_one);
+                z = Self::conditional_select(&z, &new_z, j_less_than_v);
+            }
+
+            let result = x * z;
+            x = Self::conditional_select(&result, &x, b.ct_eq(&Self::ONE));
+            z = z.square();
+            b *= z;
+            v = k;
+        }
+
+        CtOption::new(x, x.square().ct_eq(self))
+    }
+
+    /// Exponentiates `self` by `exp`, where `exp` is a little-endian order
+    /// integer exponent.
+    ///
+    /// **This operation is variable time with respect to the exponent.** If the
+    /// exponent is fixed, this operation is effectively constant time.
+    fn pow_vartime<S: AsRef<[u64]>>(&self, exp: S) -> Self {
+        let mut res = Self::ONE;
+        for e in exp.as_ref().iter().rev() {
+            for i in (0..64).rev() {
+                res = res.square();
+
+                if ((*e >> i) & 1) == 1 {
+                    res.mul_assign(self);
+                }
+            }
+        }
+
+        res
+    }
 }
 
-#[cfg(feature = "digest")]
-#[cfg_attr(docsrs, doc(cfg(feature = "digest")))]
-impl FromDigest<Secp256k1> for Scalar {
-    /// Convert the output of a digest algorithm into a [`Scalar`] reduced
-    /// modulo n.
-    fn from_digest<D>(digest: D) -> Self
-    where
-        D: Digest<OutputSize = U32>,
-    {
-        Self::from_bytes_reduced(&digest.finalize())
+impl Scalar {
+    const S: u32 = 6;
+
+    pub fn is_odd(&self) -> Choice {
+        self.0.is_odd()
+    }
+
+    fn root_of_unity() -> Self {
+        Scalar::from_bytes_unchecked(&[
+            0x0c, 0x1d, 0xc0, 0x60, 0xe7, 0xa9, 0x19, 0x86, 0xdf, 0x98, 0x79, 0xa3, 0xfb, 0xc4,
+            0x83, 0xa8, 0x98, 0xbd, 0xea, 0xb6, 0x80, 0x75, 0x60, 0x45, 0x99, 0x2f, 0x4b, 0x54,
+            0x02, 0xb0, 0x52, 0xf2,
+        ])
+    }
+}
+
+impl From<u32> for Scalar {
+    fn from(k: u32) -> Self {
+        Self::from(k as u64)
+    }
+}
+
+impl From<u64> for Scalar {
+    fn from(k: u64) -> Self {
+        Self(k.into())
     }
 }
 
@@ -268,7 +272,6 @@ impl ConditionallySelectable for Scalar {
         Self(ScalarImpl::conditional_select(&(a.0), &(b.0), choice))
     }
 }
-
 impl ConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&(other.0))
@@ -339,7 +342,7 @@ impl AddAssign<Scalar> for Scalar {
 
 impl AddAssign<&Scalar> for Scalar {
     fn add_assign(&mut self, rhs: &Scalar) {
-        *self = Scalar::add(self, &rhs);
+        *self = Scalar::add(self, rhs);
     }
 }
 

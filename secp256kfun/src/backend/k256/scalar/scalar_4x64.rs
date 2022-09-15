@@ -149,11 +149,6 @@ impl Scalar4x64 {
         Self([1, 0, 0, 0])
     }
 
-    /// Truncates the scalar to a `u32` value. All the higher bits are discarded.
-    pub fn truncate_to_u32(&self) -> u32 {
-        self.0[0] as u32
-    }
-
     pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
         // Interpret the bytes as a big-endian integer w.
         let w3 = ((bytes[0] as u64) << 56)
@@ -373,54 +368,57 @@ impl Scalar4x64 {
     pub fn mul_shift_var(&self, b: &Self, shift: usize) -> Self {
         debug_assert!(shift >= 256);
 
-        fn ifelse(c: bool, x: u64, y: u64) -> u64 {
-            if c {
-                x
-            } else {
-                y
-            }
-        }
-
-        let l = self.mul_wide(b);
+        let l = Self::mul_wide(self, b).0;
         let shiftlimbs = shift >> 6;
         let shiftlow = shift & 0x3F;
         let shifthigh = 64 - shiftlow;
-        let r0 = ifelse(
-            shift < 512,
-            (l.0[shiftlimbs] >> shiftlow)
-                | ifelse(
-                    shift < 448 && shiftlow != 0,
-                    l.0[1 + shiftlimbs] << shifthigh,
-                    0,
-                ),
-            0,
-        );
-        let r1 = ifelse(
-            shift < 448,
-            (l.0[1 + shiftlimbs] >> shiftlow)
-                | ifelse(
-                    shift < 448 && shiftlow != 0,
-                    l.0[2 + shiftlimbs] << shifthigh,
-                    0,
-                ),
-            0,
-        );
-        let r2 = ifelse(
-            shift < 384,
-            (l.0[2 + shiftlimbs] >> shiftlow)
-                | ifelse(
-                    shift < 320 && shiftlow != 0,
-                    l.0[3 + shiftlimbs] << shifthigh,
-                    0,
-                ),
-            0,
-        );
-        let r3 = ifelse(shift < 320, l.0[3 + shiftlimbs] >> shiftlow, 0);
+
+        let r0 = if shift < 512 {
+            let lo = l[shiftlimbs] >> shiftlow;
+            let hi = if shift < 448 && shiftlow != 0 {
+                l[1 + shiftlimbs] << shifthigh
+            } else {
+                0
+            };
+            hi | lo
+        } else {
+            0
+        };
+
+        let r1 = if shift < 448 {
+            let lo = l[1 + shiftlimbs] >> shiftlow;
+            let hi = if shift < 384 && shiftlow != 0 {
+                l[2 + shiftlimbs] << shifthigh
+            } else {
+                0
+            };
+            hi | lo
+        } else {
+            0
+        };
+
+        let r2 = if shift < 384 {
+            let lo = l[2 + shiftlimbs] >> shiftlow;
+            let hi = if shift < 320 && shiftlow != 0 {
+                l[3 + shiftlimbs] << shifthigh
+            } else {
+                0
+            };
+            hi | lo
+        } else {
+            0
+        };
+
+        let r3 = if shift < 320 {
+            l[3 + shiftlimbs] >> shiftlow
+        } else {
+            0
+        };
 
         let res = Self([r0, r1, r2, r3]);
 
         // Check the highmost discarded bit and round up if it is set.
-        let c = (l.0[(shift - 1) >> 6] >> ((shift - 1) & 0x3f)) & 1;
+        let c = (l[(shift - 1) >> 6] >> ((shift - 1) & 0x3f)) & 1;
         res.conditional_add_bit(0, Choice::from(c as u8))
     }
 }

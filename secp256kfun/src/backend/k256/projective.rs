@@ -17,75 +17,46 @@ const ENDOMORPHISM_BETA: FieldElement = FieldElement::from_bytes_unchecked(&[
 
 /// A point on the secp256k1 curve in projective coordinates.
 #[derive(Clone, Copy, Debug)]
-#[allow(missing_docs)]
 pub struct ProjectivePoint {
     pub x: FieldElement,
     pub y: FieldElement,
     pub z: FieldElement,
 }
 
-impl From<AffinePoint> for ProjectivePoint {
-    fn from(p: AffinePoint) -> Self {
-        let projective = ProjectivePoint {
-            x: p.x,
-            y: p.y,
-            z: FieldElement::ONE,
-        };
-        Self::conditional_select(&projective, &Self::identity(), p.infinity)
-    }
-}
-
-impl From<ProjectivePoint> for AffinePoint {
-    fn from(p: ProjectivePoint) -> AffinePoint {
-        p.to_affine()
-    }
-}
-
-impl ConditionallySelectable for ProjectivePoint {
-    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        ProjectivePoint {
-            x: FieldElement::conditional_select(&a.x, &b.x, choice),
-            y: FieldElement::conditional_select(&a.y, &b.y, choice),
-            z: FieldElement::conditional_select(&a.z, &b.z, choice),
-        }
-    }
-}
-
-impl ConstantTimeEq for ProjectivePoint {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.to_affine().ct_eq(&other.to_affine())
-    }
-}
-
-impl PartialEq for ProjectivePoint {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-impl Eq for ProjectivePoint {}
-
 impl ProjectivePoint {
+    /// Additive identity of the group: the point at infinity.
+    pub const IDENTITY: Self = Self {
+        x: FieldElement::ZERO,
+        y: FieldElement::ONE,
+        z: FieldElement::ZERO,
+    };
+
+    /// Base point of secp256k1.
+    pub const GENERATOR: Self = Self {
+        x: AffinePoint::GENERATOR.x,
+        y: AffinePoint::GENERATOR.y,
+        z: FieldElement::ONE,
+    };
+
     /// Returns the additive identity of SECP256k1, also known as the "neutral element" or
     /// "point at infinity".
+    #[deprecated(since = "0.10.2", note = "use `ProjectivePoint::IDENTITY` instead")]
     pub const fn identity() -> ProjectivePoint {
-        ProjectivePoint {
-            x: FieldElement::ZERO,
-            y: FieldElement::ONE,
-            z: FieldElement::ZERO,
-        }
+        Self::IDENTITY
+    }
+
+    /// Returns the base point of SECP256k1.
+    #[deprecated(since = "0.10.2", note = "use `ProjectivePoint::GENERATOR` instead")]
+    pub fn generator() -> ProjectivePoint {
+        Self::GENERATOR
     }
 
     /// Returns the affine representation of this point, or `None` if it is the identity.
     pub fn to_affine(&self) -> AffinePoint {
         self.z
             .invert()
-            .map(|zinv| AffinePoint {
-                x: self.x * &zinv,
-                y: self.y * &zinv,
-                infinity: Choice::from(0),
-            })
-            .unwrap_or_else(AffinePoint::identity)
+            .map(|zinv| AffinePoint::new(self.x * &zinv, self.y * &zinv))
+            .unwrap_or_else(|| AffinePoint::IDENTITY)
     }
 
     /// Returns `-self`.
@@ -230,18 +201,121 @@ impl ProjectivePoint {
             z: self.z,
         }
     }
+
+    /// Check whether `self` is equal to an affine point.
+    ///
+    /// This is a lot faster than first converting `self` to an `AffinePoint` and then doing the
+    /// comparision. It is a little bit faster than converting `other` to a `ProjectivePoint` first.
+    pub fn eq_affine(&self, other: &AffinePoint) -> Choice {
+        // For understanding of this algorithm see Projective equality comment. It's the same except
+        // that we know z = 1 for rhs and we have to check identity as a separate case.
+        let both_identity = self.is_identity() & other.is_identity();
+        let rhs_identity = other.is_identity();
+        let rhs_x = &other.x * &self.z;
+        let x_eq = rhs_x.negate(1).add(&self.x).normalizes_to_zero();
+
+        let rhs_y = &other.y * &self.z;
+        let y_eq = rhs_y.negate(1).add(&self.y).normalizes_to_zero();
+
+        both_identity | (!rhs_identity & x_eq & y_eq)
+    }
 }
 
+impl From<AffinePoint> for ProjectivePoint {
+    fn from(p: AffinePoint) -> Self {
+        let projective = ProjectivePoint {
+            x: p.x,
+            y: p.y,
+            z: FieldElement::ONE,
+        };
+        Self::conditional_select(&projective, &Self::IDENTITY, p.is_identity())
+    }
+}
+
+impl From<&AffinePoint> for ProjectivePoint {
+    fn from(p: &AffinePoint) -> Self {
+        Self::from(*p)
+    }
+}
+
+impl From<ProjectivePoint> for AffinePoint {
+    fn from(p: ProjectivePoint) -> AffinePoint {
+        p.to_affine()
+    }
+}
+
+impl From<&ProjectivePoint> for AffinePoint {
+    fn from(p: &ProjectivePoint) -> AffinePoint {
+        p.to_affine()
+    }
+}
+
+impl ConditionallySelectable for ProjectivePoint {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        ProjectivePoint {
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+            z: FieldElement::conditional_select(&a.z, &b.z, choice),
+        }
+    }
+}
+
+impl ConstantTimeEq for ProjectivePoint {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        // If both points are not equal to inifinity then they are in the form:
+        //
+        // lhs: (x₁z₁, y₁z₁, z₁), rhs: (x₂z₂, y₂z₂, z₂) where z₁ ≠ 0 and z₂ ≠ 0.
+        // we want to know if x₁ == x₂ and y₁ == y₂
+        // So we multiply the x and y by the opposing z to get:
+        // lhs: (x₁z₁z₂, y₁z₁z₂) rhs: (x₂z₁z₂, y₂z₁z₂)
+        // and check lhs == rhs which implies x₁ == x₂ and y₁ == y₂.
+        //
+        // If one point is infinity it is always in the form (0, y, 0). Note that the above
+        // algorithm still works here. If They are both infinity then they'll both evalute to (0,0).
+        // If for example the first point is infinity then the above will evaluate to (z₂ * 0, z₂ *
+        // y₂) = (0, z₂y₂) for the first point and (0 * x₂z₂, 0 * y₂z₂) = (0, 0) for the second.
+        //
+        // Since z₂y₂ will never be 0 they will not be equal in this case either.
+        let lhs_x = self.x * &other.z;
+        let rhs_x = other.x * &self.z;
+        let x_eq = rhs_x.negate(1).add(&lhs_x).normalizes_to_zero();
+
+        let lhs_y = self.y * &other.z;
+        let rhs_y = other.y * &self.z;
+        let y_eq = rhs_y.negate(1).add(&lhs_y).normalizes_to_zero();
+        x_eq & y_eq
+    }
+}
+
+impl PartialEq for ProjectivePoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
+impl PartialEq<AffinePoint> for ProjectivePoint {
+    fn eq(&self, other: &AffinePoint) -> bool {
+        self.eq_affine(other).into()
+    }
+}
+
+impl PartialEq<ProjectivePoint> for AffinePoint {
+    fn eq(&self, other: &ProjectivePoint) -> bool {
+        other.eq_affine(self).into()
+    }
+}
+
+impl Eq for ProjectivePoint {}
+
 impl ProjectivePoint {
-    /// is it identity
     pub fn is_identity(&self) -> Choice {
-        self.ct_eq(&Self::identity())
+        self.z.normalizes_to_zero()
     }
 }
 
 impl Default for ProjectivePoint {
     fn default() -> Self {
-        Self::identity()
+        Self::IDENTITY
     }
 }
 
@@ -319,7 +393,7 @@ impl AddAssign<&AffinePoint> for ProjectivePoint {
 
 impl Sum for ProjectivePoint {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(ProjectivePoint::identity(), |a, b| a + b)
+        iter.fold(ProjectivePoint::IDENTITY, |a, b| a + b)
     }
 }
 
