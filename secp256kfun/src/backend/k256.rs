@@ -11,7 +11,7 @@ use mul::{lincomb, lincomb_iter};
 pub mod util;
 
 mod k256_impl;
-pub(crate) use k256_impl::*;
+pub use k256_impl::{ConstantTime, VariableTime};
 
 use digest::generic_array::{typenum::U32, GenericArray};
 
@@ -29,3 +29,8 @@ const CURVE_EQUATION_B: FieldElement = FieldElement::from_bytes_unchecked(&[
 ///
 /// Byte array containing a serialized field element value (base field or scalar).
 pub type FieldBytes = GenericArray<u8, U32>;
+
+pub static G_TABLE: ProjectivePoint = ProjectivePoint::GENERATOR;
+pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
+pub type Point = ProjectivePoint;
+pub type BasePoint = ProjectivePoint;

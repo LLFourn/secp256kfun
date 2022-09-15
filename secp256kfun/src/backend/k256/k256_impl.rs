@@ -1,13 +1,9 @@
-use super::{lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint};
+use super::{
+    lincomb, AffinePoint, BasePoint, FieldBytes, FieldElement, Point, ProjectivePoint, Scalar,
+};
 use crate::backend::{BackendPoint, BackendScalar, TimeSensitive};
 use core::ops::Neg;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
-pub type Point = ProjectivePoint;
-pub type BasePoint = ProjectivePoint;
-pub use super::Scalar;
-
-pub static G_TABLE: ProjectivePoint = ProjectivePoint::GENERATOR;
-pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
 
 impl BackendScalar for Scalar {
     fn minus_one() -> Self {
