@@ -44,7 +44,7 @@ pub trait Secrecy: Default + Clone + PartialEq + Copy + 'static {}
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
-#[derive(Debug, Clone, Default, PartialEq, Copy)]
+#[derive(Debug, Clone, Default, PartialEq, Copy, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
