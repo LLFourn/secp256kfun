@@ -1,5 +1,5 @@
 use super::{lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint};
-use crate::backend::{BackendPoint, BackendScalar, BackendXOnly, TimeSensitive};
+use crate::backend::{BackendPoint, BackendScalar, TimeSensitive};
 use core::ops::{Add, Neg};
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 pub type Point = ProjectivePoint;
@@ -48,37 +48,6 @@ impl BackendScalar for Scalar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy, Eq, Hash)]
-pub struct XOnly([u8; 32]);
-
-impl BackendXOnly for XOnly {
-    fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
-        let bytes = FieldBytes::from(bytes);
-        let option: Option<AffinePoint> = AffinePoint::decompress(&bytes, 0u8.into()).into();
-        option.map(|_| XOnly(bytes.into()))
-    }
-
-    fn as_bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-
-    fn into_bytes(self) -> [u8; 32] {
-        self.0
-    }
-
-    fn into_norm_point_even_y(self) -> Point {
-        let bytes = FieldBytes::from(self.0);
-        let affine = AffinePoint::decompress(&bytes, 0u8.into()).unwrap();
-        affine.into()
-    }
-}
-
-impl XOnly {
-    fn to_field_elem(&self) -> FieldElement {
-        FieldElement::from_bytes_unchecked(&self.0)
-    }
-}
-
 impl BackendPoint for Point {
     fn zero() -> Point {
         ProjectivePoint::identity()
@@ -90,10 +59,6 @@ impl BackendPoint for Point {
 
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]) {
         (self.x.to_bytes().into(), self.y.to_bytes().into())
-    }
-
-    fn norm_to_xonly(&self) -> XOnly {
-        XOnly(self.x.to_bytes().into())
     }
 
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point> {
@@ -171,18 +136,6 @@ impl TimeSensitive for ConstantTime {
         let y_eq = rhs_y.negate(1).add(&lhs.y).normalizes_to_zero();
 
         (both_infinity | (!rhs_infinity & (x_eq & y_eq))).into()
-    }
-
-    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool {
-        let mut lhs = lhs.clone();
-        Self::point_normalize(&mut lhs);
-        Self::norm_point_eq_xonly(&lhs, rhs)
-    }
-
-    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool {
-        let are_equal = point.x.ct_eq(&xonly.to_field_elem());
-        let y_is_even = !point.y.is_odd();
-        (are_equal & y_is_even).into()
     }
 
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point {
@@ -304,10 +257,6 @@ impl TimeSensitive for ConstantTime {
         base * scalar
     }
 
-    fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool {
-        lhs.0.ct_eq(&rhs.0).into()
-    }
-
     fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
         points: A,
         scalars: B,
@@ -344,10 +293,6 @@ impl TimeSensitive for VariableTime {
         ConstantTime::point_eq_norm_point(lhs, rhs)
     }
 
-    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool {
-        ConstantTime::point_eq_xonly(lhs, rhs)
-    }
-
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point {
         ConstantTime::point_add_point(lhs, rhs)
     }
@@ -382,10 +327,6 @@ impl TimeSensitive for VariableTime {
 
     fn norm_point_neg(point: &mut Point) {
         ConstantTime::norm_point_neg(point)
-    }
-
-    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool {
-        ConstantTime::norm_point_eq_xonly(point, xonly)
     }
 
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
@@ -434,10 +375,6 @@ impl TimeSensitive for VariableTime {
 
     fn scalar_mul_basepoint(scalar: &Scalar, base: &BasePoint) -> Point {
         ConstantTime::scalar_mul_basepoint(scalar, base)
-    }
-
-    fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool {
-        ConstantTime::xonly_eq(lhs, rhs)
     }
 
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
