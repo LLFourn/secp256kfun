@@ -14,7 +14,7 @@ mod field_impl;
 use field_impl::FieldElementImpl;
 
 use super::FieldBytes;
-use core::ops::{Add, AddAssign, Mul, MulAssign};
+use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 /// An element in the finite field used for curve coordinates.
@@ -22,17 +22,13 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 pub struct FieldElement(FieldElementImpl);
 
 impl FieldElement {
-    /// Returns the zero element.
-    pub const fn zero() -> Self {
-        Self(FieldElementImpl::zero())
-    }
+    /// Zero element.
+    pub const ZERO: Self = Self(FieldElementImpl::zero());
 
-    /// Returns the multiplicative identity.
-    pub const fn one() -> Self {
-        Self(FieldElementImpl::one())
-    }
+    /// Multiplicative identity.
+    pub const ONE: Self = Self(FieldElementImpl::one());
 
-    /// Determine if this `FieldElement10x26` is zero.
+    /// Determine if this `FieldElement` is zero.
     ///
     /// # Returns
     ///
@@ -41,7 +37,16 @@ impl FieldElement {
         self.0.is_zero()
     }
 
-    /// Determine if this `FieldElement10x26` is odd in the SEC1 sense: `self mod 2 == 1`.
+    /// Determine if this `FieldElement` is even in the SEC1 sense: `self mod 2 == 0`.
+    ///
+    /// # Returns
+    ///
+    /// If even, return `Choice(1)`.  Otherwise, return `Choice(0)`.
+    pub fn is_even(&self) -> Choice {
+        !self.0.is_odd()
+    }
+
+    /// Determine if this `FieldElement` is odd in the SEC1 sense: `self mod 2 == 1`.
     ///
     /// # Returns
     ///
@@ -52,7 +57,7 @@ impl FieldElement {
 
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     /// Does not check the result for being in the correct range.
-    pub const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
+    pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
         Self(FieldElementImpl::from_bytes_unchecked(bytes))
     }
 
@@ -65,7 +70,7 @@ impl FieldElement {
     }
 
     /// Returns the SEC1 encoding of this field element.
-    pub fn to_bytes(&self) -> FieldBytes {
+    pub fn to_bytes(self) -> FieldBytes {
         self.0.normalize().to_bytes()
     }
 
@@ -111,7 +116,8 @@ impl FieldElement {
         Self(self.0.mul(&(rhs.0)))
     }
 
-    /// Returns self * self
+    /// Returns self * self.
+    ///
     /// Brings the magnitude to 1 (but doesn't normalize the result).
     /// The magnitudes of arguments should be <= 8.
     pub fn square(&self) -> Self {
@@ -178,8 +184,8 @@ impl FieldElement {
         // { 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each block:
         // 1, [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
 
-        let x2 = self.pow2k(1).mul(&self);
-        let x3 = x2.pow2k(1).mul(&self);
+        let x2 = self.pow2k(1).mul(self);
+        let x3 = x2.pow2k(1).mul(self);
         let x6 = x3.pow2k(3).mul(&x3);
         let x9 = x6.pow2k(3).mul(&x3);
         let x11 = x9.pow2k(2).mul(&x2);
@@ -200,18 +206,6 @@ impl FieldElement {
     }
 }
 
-impl PartialEq for FieldElement {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.ct_eq(&(other.0)).into()
-    }
-}
-
-impl Default for FieldElement {
-    fn default() -> Self {
-        Self::zero()
-    }
-}
-
 impl ConditionallySelectable for FieldElement {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Self(FieldElementImpl::conditional_select(&(a.0), &(b.0), choice))
@@ -224,10 +218,24 @@ impl ConstantTimeEq for FieldElement {
     }
 }
 
-impl Add<&FieldElement> for &FieldElement {
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl Eq for FieldElement {}
+
+impl PartialEq for FieldElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.ct_eq(&(other.0)).into()
+    }
+}
+
+impl Add<FieldElement> for FieldElement {
     type Output = FieldElement;
 
-    fn add(self, other: &FieldElement) -> FieldElement {
+    fn add(self, other: FieldElement) -> FieldElement {
         FieldElement(self.0.add(&(other.0)))
     }
 }
@@ -240,16 +248,58 @@ impl Add<&FieldElement> for FieldElement {
     }
 }
 
-impl AddAssign<FieldElement> for FieldElement {
-    fn add_assign(&mut self, rhs: FieldElement) {
-        *self = *self + &rhs;
+impl Add<&FieldElement> for &FieldElement {
+    type Output = FieldElement;
+
+    fn add(self, other: &FieldElement) -> FieldElement {
+        FieldElement(self.0.add(&(other.0)))
     }
 }
 
-impl Mul<&FieldElement> for &FieldElement {
+impl AddAssign<FieldElement> for FieldElement {
+    fn add_assign(&mut self, other: FieldElement) {
+        *self = *self + &other;
+    }
+}
+
+impl AddAssign<&FieldElement> for FieldElement {
+    fn add_assign(&mut self, other: &FieldElement) {
+        *self = *self + other;
+    }
+}
+
+impl Sub<FieldElement> for FieldElement {
     type Output = FieldElement;
 
-    fn mul(self, other: &FieldElement) -> FieldElement {
+    fn sub(self, other: FieldElement) -> FieldElement {
+        self + -other
+    }
+}
+
+impl Sub<&FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn sub(self, other: &FieldElement) -> FieldElement {
+        self + -other
+    }
+}
+
+impl SubAssign<FieldElement> for FieldElement {
+    fn sub_assign(&mut self, other: FieldElement) {
+        *self = *self + -other;
+    }
+}
+
+impl SubAssign<&FieldElement> for FieldElement {
+    fn sub_assign(&mut self, other: &FieldElement) {
+        *self = *self + -other;
+    }
+}
+
+impl Mul<FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn mul(self, other: FieldElement) -> FieldElement {
         FieldElement(self.0.mul(&(other.0)))
     }
 }
@@ -262,8 +312,38 @@ impl Mul<&FieldElement> for FieldElement {
     }
 }
 
+impl Mul<&FieldElement> for &FieldElement {
+    type Output = FieldElement;
+
+    fn mul(self, other: &FieldElement) -> FieldElement {
+        FieldElement(self.0.mul(&(other.0)))
+    }
+}
+
 impl MulAssign<FieldElement> for FieldElement {
     fn mul_assign(&mut self, rhs: FieldElement) {
         *self = *self * &rhs;
+    }
+}
+
+impl MulAssign<&FieldElement> for FieldElement {
+    fn mul_assign(&mut self, rhs: &FieldElement) {
+        *self = *self * rhs;
+    }
+}
+
+impl Neg for FieldElement {
+    type Output = FieldElement;
+
+    fn neg(self) -> FieldElement {
+        self.negate(1)
+    }
+}
+
+impl Neg for &FieldElement {
+    type Output = FieldElement;
+
+    fn neg(self) -> FieldElement {
+        self.negate(1)
     }
 }

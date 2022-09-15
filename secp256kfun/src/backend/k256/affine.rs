@@ -16,8 +16,8 @@ impl AffinePoint {
     /// Returns the identity of the group: the point at infinity.
     pub fn identity() -> Self {
         Self {
-            x: FieldElement::zero(),
-            y: FieldElement::zero(),
+            x: FieldElement::ZERO,
+            y: FieldElement::ZERO,
             infinity: Choice::from(1),
         }
     }

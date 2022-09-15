@@ -17,7 +17,7 @@ pub const G_JACOBIAN: ProjectivePoint = ProjectivePoint {
         0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19, 0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10,
         0xd4, 0xb8,
     ]),
-    z: FieldElement::one(),
+    z: FieldElement::ONE,
 };
 
 pub static G_TABLE: ProjectivePoint = G_JACOBIAN;
@@ -135,12 +135,12 @@ impl TimeSensitive for ConstantTime {
     fn point_normalize(point: &mut Point) {
         let zinv_opt = point.z.invert();
         let was_zero = zinv_opt.is_none();
-        let zinv = zinv_opt.unwrap_or(FieldElement::one());
+        let zinv = zinv_opt.unwrap_or(FieldElement::ONE);
         point.x *= zinv;
         point.y *= zinv;
         point.x = point.x.normalize();
         point.y = point.y.normalize();
-        point.z.conditional_assign(&FieldElement::one(), !was_zero);
+        point.z.conditional_assign(&FieldElement::ONE, !was_zero);
     }
 
     fn point_eq_point(lhs: &Point, rhs: &Point) -> bool {

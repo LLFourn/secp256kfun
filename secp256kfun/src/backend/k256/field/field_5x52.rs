@@ -1,5 +1,5 @@
-//! Field element modulo the curve internal modulus using 32-bit limbs.
-//! Ported from https://github.com/bitcoin-core/secp256k1
+//! Field element modulo the curve internal modulus using 64-bit limbs.
+//! Inspired by the implementation in <https://github.com/bitcoin-core/secp256k1>
 
 use super::FieldBytes;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -79,7 +79,7 @@ impl FieldElement5x52 {
     }
 
     /// Returns the SEC1 encoding of this field element.
-    pub fn to_bytes(&self) -> FieldBytes {
+    pub fn to_bytes(self) -> FieldBytes {
         let mut ret = FieldBytes::default();
         ret[0] = (self.0[4] >> 40) as u8;
         ret[1] = (self.0[4] >> 32) as u8;
@@ -313,13 +313,10 @@ impl FieldElement5x52 {
         // for 4 <= x <= 8, px is a shorthand for sum(a[i]*b[x-i], i=(x-4)..4)
         // Note that [x 0 0 0 0 0] = [x*r].
 
-        let mut c: u128;
-        let mut d: u128;
-
-        d = a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0;
+        let mut d = a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0;
         debug_assert!(d >> 114 == 0);
         // [d 0 0 0] = [p3 0 0 0]
-        c = a4 * b4;
+        let mut c = a4 * b4;
         debug_assert!(c >> 112 == 0);
         // [c 0 0 0 0 d 0 0 0] = [p8 0 0 0 0 p3 0 0 0]
         d += (c & m) * r;
@@ -486,7 +483,6 @@ impl ConstantTimeEq for FieldElement5x52 {
 
 #[cfg(test)]
 mod tests {
-
     use super::FieldElement5x52;
 
     #[test]
@@ -494,7 +490,7 @@ mod tests {
         // A regression test for a missing condition in `get_overflow()`.
         // The condition was only missing in the 32-bit case,
         // but we're adding a 64-bit testcase nevertheless.
-
+        //
         // In `normalize()`, after the `normalize_weak()` call,
         // the excess bit from the limb 0 is propagated all the way to the last limb.
         // This constitutes an overflow, since the last bit becomes equal to (1 << 22),
@@ -503,7 +499,7 @@ mod tests {
         // since the corresponding condition (checking for the last limb being > 22 bits)
         // was missing.
         // This resulted in a debug assert firing later.
-
+        //
         // This is essentially 2^256
         let z = FieldElement5x52([
             (1 << 52), // an excess bit here

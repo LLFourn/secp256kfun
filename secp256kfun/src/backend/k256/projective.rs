@@ -29,7 +29,7 @@ impl From<AffinePoint> for ProjectivePoint {
         let projective = ProjectivePoint {
             x: p.x,
             y: p.y,
-            z: FieldElement::one(),
+            z: FieldElement::ONE,
         };
         Self::conditional_select(&projective, &Self::identity(), p.infinity)
     }
@@ -70,9 +70,9 @@ impl ProjectivePoint {
     /// "point at infinity".
     pub const fn identity() -> ProjectivePoint {
         ProjectivePoint {
-            x: FieldElement::zero(),
-            y: FieldElement::one(),
-            z: FieldElement::zero(),
+            x: FieldElement::ZERO,
+            y: FieldElement::ONE,
+            z: FieldElement::ZERO,
         }
     }
 
