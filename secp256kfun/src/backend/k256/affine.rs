@@ -115,11 +115,3 @@ impl Neg for AffinePoint {
         }
     }
 }
-
-#[cfg(feature = "zeroize")]
-impl Zeroize for AffinePoint {
-    fn zeroize(&mut self) {
-        self.x.zeroize();
-        self.y.zeroize();
-    }
-}

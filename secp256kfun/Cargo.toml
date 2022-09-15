@@ -19,7 +19,6 @@ features = ["all"]
 [dependencies]
 digest = "0.10"
 subtle = { package = "subtle-ng", version = "2" }
-cfg-if = "1.0"
 rand_core = { version = "0.6" }
 
 # optional

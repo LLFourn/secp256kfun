@@ -1,7 +1,7 @@
 //! ProjectiveArithmetic modulo curve base order using 32-bit limbs.
 //! Ported from <https://github.com/bitcoin-core/secp256k1>
 use super::{
-    util::{adc32, sbb32},
+    super::util::{adc32, sbb32},
     FieldBytes,
 };
 use core::convert::TryInto;
@@ -165,7 +165,6 @@ fn muladd_fast(a: u32, b: u32, c0: u32, c1: u32) -> (u32, u32) {
 
 /// A scalar with arithmetic modulo curve order, represented as 8 32-bit limbs (little-endian).
 #[derive(Clone, Copy, Debug, Default)]
-#[cfg_attr(docsrs, doc(cfg(feature = "arithmetic")))]
 pub struct Scalar8x32([u32; 8]);
 
 impl Scalar8x32 {

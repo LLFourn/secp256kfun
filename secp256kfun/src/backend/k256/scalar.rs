@@ -1,21 +1,14 @@
 //! Scalar field arithmetic.
 
-use cfg_if::cfg_if;
+#[cfg(target_pointer_width = "64")]
+mod scalar_4x64;
+#[cfg(target_pointer_width = "64")]
+use scalar_4x64::Scalar4x64 as ScalarImpl;
 
-cfg_if! {
-    if #[cfg(any(target_pointer_width = "32", feature = "force-32-bit"))] {
-        mod scalar_8x32;
-        use scalar_8x32::Scalar8x32 as ScalarImpl;
-
-        #[cfg(feature = "bits")]
-        use scalar_8x32::MODULUS;
-    } else if #[cfg(target_pointer_width = "64")] {
-        mod scalar_4x64;
-        use scalar_4x64::Scalar4x64 as ScalarImpl;
-        #[cfg(feature = "bits")]
-        use scalar_4x64::MODULUS;
-    }
-}
+#[cfg(target_pointer_width = "32")]
+mod scalar_8x32;
+#[cfg(target_pointer_width = "32")]
+use scalar_8x32::Scalar8x32 as ScalarImpl;
 
 use super::FieldBytes;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Shr, Sub, SubAssign};
@@ -45,7 +38,6 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 ///
 /// Please see the documentation for the relevant traits for more information.
 #[derive(Clone, Copy, Debug, Default)]
-#[cfg_attr(docsrs, doc(cfg(feature = "arithmetic")))]
 pub struct Scalar(ScalarImpl);
 
 impl Scalar {
@@ -79,26 +71,6 @@ impl Scalar {
 
     pub fn multiplicative_generator() -> Self {
         7u64.into()
-    }
-}
-
-#[cfg(feature = "bits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bits")))]
-impl PrimeFieldBits for Scalar {
-    cfg_if! {
-        if #[cfg(any(target_pointer_width = "32", feature = "force-32-bit"))] {
-            type ReprBits = [u32; 8];
-        } else if #[cfg(target_pointer_width = "64")] {
-            type ReprBits = [u64; 4];
-        }
-    }
-
-    fn to_le_bits(&self) -> ScalarBits {
-        self.into()
-    }
-
-    fn char_le_bits() -> ScalarBits {
-        MODULUS.into()
     }
 }
 
@@ -440,14 +412,6 @@ impl MulAssign<Scalar> for Scalar {
 impl MulAssign<&Scalar> for Scalar {
     fn mul_assign(&mut self, rhs: &Scalar) {
         *self = Scalar::mul(self, rhs);
-    }
-}
-
-#[cfg(feature = "bits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bits")))]
-impl From<&Scalar> for ScalarBits {
-    fn from(scalar: &Scalar) -> ScalarBits {
-        scalar.0.into()
     }
 }
 

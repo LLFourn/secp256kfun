@@ -3,16 +3,13 @@
 //! Only enabled when `debug_assertions` feature is on.
 
 use super::FieldBytes;
-use cfg_if::cfg_if;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-cfg_if! {
-    if #[cfg(any(target_pointer_width = "32", feature = "force-32-bit"))] {
-        use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
-    } else if #[cfg(target_pointer_width = "64")] {
-        use super::field_5x52::FieldElement5x52 as FieldElementUnsafeImpl;
-    }
-}
+#[cfg(target_pointer_width = "32")]
+use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
+
+#[cfg(target_pointer_width = "64")]
+use super::field_5x52::FieldElement5x52 as FieldElementUnsafeImpl;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FieldElementImpl {
@@ -156,14 +153,5 @@ impl ConstantTimeEq for FieldElementImpl {
             & self.magnitude.ct_eq(&(other.magnitude))
             // See the comment in `conditional_select()`
             & Choice::from((self.normalized == other.normalized) as u8)
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl Zeroize for FieldElementImpl {
-    fn zeroize(&mut self) {
-        self.value.zeroize();
-        self.magnitude.zeroize();
-        self.normalized.zeroize();
     }
 }

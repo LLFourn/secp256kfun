@@ -136,7 +136,6 @@ fn muladd_fast(a: u64, b: u64, c0: u64, c1: u64) -> (u64, u64) {
 
 /// A scalar with arithmetic modulo curve order, represented as 4 64-bit limbs (little-endian).
 #[derive(Clone, Copy, Debug, Default)]
-#[cfg_attr(docsrs, doc(cfg(feature = "arithmetic")))]
 pub struct Scalar4x64([u64; 4]);
 
 impl Scalar4x64 {
@@ -426,13 +425,6 @@ impl Scalar4x64 {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl Zeroize for Scalar4x64 {
-    fn zeroize(&mut self) {
-        self.0.as_mut().zeroize()
-    }
-}
-
 impl From<u32> for Scalar4x64 {
     fn from(k: u32) -> Self {
         Scalar4x64([k as u64, 0, 0, 0])
@@ -457,14 +449,6 @@ impl ConstantTimeEq for Scalar4x64 {
             & self.0[1].ct_eq(&other.0[1])
             & self.0[2].ct_eq(&other.0[2])
             & self.0[3].ct_eq(&other.0[3])
-    }
-}
-
-#[cfg(feature = "bits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bits")))]
-impl From<Scalar4x64> for crate::ScalarBits {
-    fn from(scalar: Scalar4x64) -> crate::ScalarBits {
-        scalar.0.into()
     }
 }
 

@@ -484,13 +484,6 @@ impl ConstantTimeEq for FieldElement5x52 {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl Zeroize for FieldElement5x52 {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
-    }
-}
-
 #[cfg(test)]
 mod tests {
 

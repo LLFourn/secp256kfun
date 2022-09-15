@@ -1,11 +1,8 @@
 //! Field element modulo the curve internal modulus using 32-bit limbs.
 //! Ported from https://github.com/bitcoin-core/secp256k1
 
-use crate::FieldBytes;
+use super::FieldBytes;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-
-#[cfg(feature = "zeroize")]
-use elliptic_curve::zeroize::Zeroize;
 
 /// Scalars modulo SECP256k1 modulus (2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1).
 /// Uses 10 32-bit limbs (little-endian), where in the normalized form
@@ -698,13 +695,6 @@ impl ConstantTimeEq for FieldElement10x26 {
             & self.0[7].ct_eq(&other.0[7])
             & self.0[8].ct_eq(&other.0[8])
             & self.0[9].ct_eq(&other.0[9])
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl Zeroize for FieldElement10x26 {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
     }
 }
 
