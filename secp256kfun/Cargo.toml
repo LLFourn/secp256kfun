@@ -54,3 +54,7 @@ serde = [ "serde_crate" ]
 [[bench]]
 name = "bench_ecmult"
 harness = false
+
+[[bench]]
+name = "bench_point"
+harness = false

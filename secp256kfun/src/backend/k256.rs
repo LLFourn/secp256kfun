@@ -86,7 +86,7 @@ impl BackendPoint for Point {
     }
 
     fn is_zero(&self) -> bool {
-        ProjectivePoint::is_identity(self).into()
+        self.z.normalizes_to_zero().into()
     }
 
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]) {
@@ -150,9 +150,6 @@ impl TimeSensitive for ConstantTime {
         // we want to know if x₁ == x₂ and y₁ == y₂
         // So we transform these both to
         // lhs: (x₁z₁z₂, y₁z₁z₂) rhs: (x₂z₁z₂, y₂z₁z₂)
-        let only_one_is_infinity = lhs.is_identity() ^ rhs.is_identity();
-        let both_infinity = lhs.is_identity() & rhs.is_identity();
-
         let lhs_x = lhs.x * &rhs.z;
         let rhs_x = rhs.x * &lhs.z;
         let x_eq = rhs_x.negate(1).add(&lhs_x).normalizes_to_zero();
@@ -161,12 +158,12 @@ impl TimeSensitive for ConstantTime {
         let rhs_y = rhs.y * &lhs.z;
         let y_eq = rhs_y.negate(1).add(&lhs_y).normalizes_to_zero();
 
-        (both_infinity | (!only_one_is_infinity & x_eq & y_eq)).into()
+        (x_eq & y_eq).into()
     }
 
     fn point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
-        let only_one_is_infinity = lhs.is_identity() ^ rhs.is_identity();
-        let both_infinity = lhs.is_identity() & rhs.is_identity();
+        let both_infinity = Choice::from((lhs.is_zero() && rhs.is_zero()) as u8);
+        let rhs_infinity = Choice::from(rhs.is_zero() as u8);
 
         let rhs_x = &rhs.x * &lhs.z;
         let x_eq = rhs_x.negate(1).add(&lhs.x).normalizes_to_zero();
@@ -174,7 +171,7 @@ impl TimeSensitive for ConstantTime {
         let rhs_y = &rhs.y * &lhs.z;
         let y_eq = rhs_y.negate(1).add(&lhs.y).normalizes_to_zero();
 
-        (both_infinity | (!only_one_is_infinity & x_eq & y_eq)).into()
+        (both_infinity | (!rhs_infinity & (x_eq & y_eq))).into()
     }
 
     fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool {
@@ -256,7 +253,8 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
-        lhs.ct_eq(rhs).into()
+        let both_infinity = Choice::from((lhs.is_zero() && rhs.is_zero()) as u8);
+        (both_infinity | lhs.x.ct_eq(&rhs.x) & lhs.y.ct_eq(&rhs.y)).into()
     }
 
     fn norm_point_is_y_even(point: &Point) -> bool {

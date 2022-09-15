@@ -144,7 +144,7 @@ impl<Z: ZeroChoice> Point<Normal, Public, Z> {
     }
 }
 
-impl<T, S> Point<T, S, NonZero> {
+impl<T: PointType, S> Point<T, S, NonZero> {
     /// Converts this point into the point with the same x-coordinate but with
     /// an even y-coordinate. Returns a Point marked `EvenY` with a `bool`
     /// indicating whether the point had to be negated to make its y-coordinate
@@ -250,7 +250,10 @@ impl<T, S, Z> Point<T, S, Z> {
     /// [`NonNormal`]: crate::marker::NonNormal
     /// [`PointType`]: crate::marker::PointType
     /// [`Normal`]: crate::marker::Normal
-    pub fn normalize(self) -> Point<Normal, S, Z> {
+    pub fn normalize(self) -> Point<Normal, S, Z>
+    where
+        T: PointType,
+    {
         op::point_normalize(self)
     }
 
@@ -312,13 +315,17 @@ impl<T: PointType, S, Z> core::ops::Neg for &Point<T, S, Z> {
     }
 }
 
-impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1> {
+impl<T1, S1, Z1, T2, S2, Z2> PartialEq<Point<T2, S2, Z2>> for Point<T1, S1, Z1>
+where
+    T1: PointType,
+    T2: PointType,
+{
     fn eq(&self, rhs: &Point<T2, S2, Z2>) -> bool {
         op::point_eq(self, rhs)
     }
 }
 
-impl<T, S, Z> Eq for Point<T, S, Z> {}
+impl<T: PointType, S, Z> Eq for Point<T, S, Z> {}
 
 impl core::hash::Hash for Point<Normal, Public, NonZero> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
@@ -705,6 +712,7 @@ mod test {
         let forty_two = s!(42);
         let forty_two_pub = s!(42).public();
         assert!(i.is_zero());
+        assert!((-i).is_zero());
         expression_eq!([i] == [i]);
         expression_eq!([i] == [-i]);
         expression_eq!([i + i] == [i]);
