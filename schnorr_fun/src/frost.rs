@@ -69,7 +69,8 @@
 //! #        proofs_of_possession.clone(),
 //! #    )
 //! #    .unwrap();
-//! // signing parties must use a common set of nonces when creating signature shares
+//! // signing parties must use a common set of nonces when creating signature shares.
+//! // nonces can be derived from a session id that use includes publicly known values.
 //! let verification_shares_bytes: Vec<_> = frost_key
 //!     .verification_shares()
 //!     .map(|share| share.to_bytes())
@@ -637,8 +638,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         let mut keygen_hash = self.keygen_id_hash.clone();
-        keygen_hash.update((len_first_poly).to_be_bytes());
-        keygen_hash.update((point_polys.len()).to_be_bytes());
+        keygen_hash.update((len_first_poly as u32).to_be_bytes());
+        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
         for poly in &point_polys {
             for point in poly.0.iter() {
                 keygen_hash.update(point.to_bytes());
@@ -979,8 +980,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
 #[cfg(test)]
 mod test {
-    use core::num::NonZeroU32;
-
     use super::*;
     use rand::seq::SliceRandom;
     use secp256kfun::{
@@ -1012,10 +1011,8 @@ mod test {
             let mut scalar_polys = vec![];
             for _ in 1..=n_parties {
                 let scalar_poly = (1..=threshold).map(|_|
-                    Scalar::from_non_zero_u32(
-                        NonZeroU32::new(rng.next_u32())
-                        .expect("computationally unreachable")))
-                        .collect();
+                    Scalar::from(rng.next_u32()).non_zero().expect("computationally unreachable")
+                ).collect();
                 scalar_polys.push(ScalarPoly::new(scalar_poly));
             }
             let point_polys: Vec<PointPoly> = scalar_polys.iter().map(|sp| sp.to_point_poly()).collect();
