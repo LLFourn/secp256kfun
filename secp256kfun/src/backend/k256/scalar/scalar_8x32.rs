@@ -178,10 +178,10 @@ impl Scalar8x32 {
         Self([1, 0, 0, 0, 0, 0, 0, 0])
     }
 
-    /// Truncates the scalar to a `u32` value. All the higher bits are discarded.
-    pub fn truncate_to_u32(&self) -> u32 {
-        self.0[0]
-    }
+    //// Truncates the scalar to a `u32` value. All the higher bits are discarded.
+    // pub fn truncate_to_u32(&self) -> u32 {
+    //     self.0[0]
+    // }
 
     pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
         // Interpret the bytes as a big-endian integer w.
@@ -623,6 +623,7 @@ impl ConstantTimeEq for Scalar8x32 {
 pub struct WideScalar16x32([u32; 16]);
 
 impl WideScalar16x32 {
+    #[allow(dead_code)]
     pub fn from_bytes(bytes: &[u8; 64]) -> Self {
         let mut w = [0u32; 16];
         for i in 0..16 {

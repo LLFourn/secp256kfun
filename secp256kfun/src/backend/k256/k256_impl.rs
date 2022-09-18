@@ -1,5 +1,6 @@
 use super::{
-    lincomb, AffinePoint, BasePoint, FieldBytes, FieldElement, Point, ProjectivePoint, Scalar,
+    mul::lincomb_iter, AffinePoint, BasePoint, FieldBytes, FieldElement, Point, ProjectivePoint,
+    Scalar,
 };
 use crate::backend::{BackendPoint, BackendScalar, TimeSensitive};
 use core::ops::Neg;
@@ -151,8 +152,16 @@ impl TimeSensitive for ConstantTime {
         Self::point_double_mul(x, A, y, B)
     }
 
+    // Only use the "lincomb" method if we don't have alloc. If we do we might as well use the
+    // allocating verison to avoid compiling two methods that do the same thing.
+    #[cfg(not(feature = "alloc"))]
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
-        lincomb(A, x, B, y)
+        super::lincomb_generic(&[A, B], &[x, y])
+    }
+
+    #[cfg(feature = "alloc")]
+    fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
+        lincomb_iter([A, B].into_iter(), [x, y].into_iter())
     }
 
     fn scalar_add(lhs: &Scalar, rhs: &Scalar) -> Scalar {

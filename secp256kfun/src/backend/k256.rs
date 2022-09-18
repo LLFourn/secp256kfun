@@ -7,7 +7,8 @@ pub use projective::ProjectivePoint;
 mod scalar;
 pub use scalar::Scalar;
 mod mul;
-use mul::{lincomb, lincomb_iter};
+#[allow(unused)]
+use mul::{lincomb_generic, lincomb_iter};
 pub mod util;
 
 mod k256_impl;
