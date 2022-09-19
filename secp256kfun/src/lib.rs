@@ -26,6 +26,8 @@ mod point;
 mod scalar;
 mod slice;
 
+mod vendor;
+
 #[macro_use]
 mod macros;
 mod backend;

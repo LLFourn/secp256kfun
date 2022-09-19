@@ -1,10 +1,15 @@
-use super::{
-    mul::lincomb_iter, AffinePoint, BasePoint, FieldBytes, FieldElement, Point, ProjectivePoint,
-    Scalar,
+pub use crate::vendor::k256::Scalar;
+use crate::{
+    backend::{BackendPoint, BackendScalar, TimeSensitive},
+    vendor::k256::{mul, AffinePoint, FieldBytes, FieldElement, ProjectivePoint},
 };
-use crate::backend::{BackendPoint, BackendScalar, TimeSensitive};
 use core::ops::Neg;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
+
+pub static G_TABLE: ProjectivePoint = ProjectivePoint::GENERATOR;
+pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
+pub type Point = ProjectivePoint;
+pub type BasePoint = ProjectivePoint;
 
 impl BackendScalar for Scalar {
     fn minus_one() -> Self {
@@ -156,12 +161,12 @@ impl TimeSensitive for ConstantTime {
     // allocating verison to avoid compiling two methods that do the same thing.
     #[cfg(not(feature = "alloc"))]
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
-        super::lincomb_generic(&[A, B], &[x, y])
+        mul::lincomb_generic(&[A, B], &[x, y])
     }
 
     #[cfg(feature = "alloc")]
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
-        lincomb_iter([A, B].into_iter(), [x, y].into_iter())
+        mul::lincomb_iter([A, B].into_iter(), [x, y].into_iter())
     }
 
     fn scalar_add(lhs: &Scalar, rhs: &Scalar) -> Scalar {
@@ -200,7 +205,7 @@ impl TimeSensitive for ConstantTime {
         points: A,
         scalars: B,
     ) -> Point {
-        super::lincomb_iter(points, scalars)
+        mul::lincomb_iter(points, scalars)
     }
 }
 

@@ -1,6 +1,6 @@
 //! These traits are for accounting for what methods each backend actually needs.
-mod k256;
-pub use k256::*;
+mod k256_impl;
+pub use k256_impl::*;
 
 pub trait BackendScalar: Sized {
     fn minus_one() -> Self;
