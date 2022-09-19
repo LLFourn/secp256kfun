@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use secp256kfun::{g, Point, Scalar, G};
+use secp256kfun::{g, op, Point, Scalar, G};
 
 fn scalar_mul_point(c: &mut Criterion) {
     let mut group = c.benchmark_group("ecmult");
@@ -74,8 +74,8 @@ fn scalar_mul_point(c: &mut Criterion) {
     });
 }
 
-fn double_mul(c: &mut Criterion) {
-    let mut group = c.benchmark_group("double_mul");
+fn multi_mul(c: &mut Criterion) {
+    let mut group = c.benchmark_group("multi_mul");
 
     group.bench_function("double_mul:normal,public", |b| {
         b.iter_batched(
@@ -134,7 +134,30 @@ fn double_mul(c: &mut Criterion) {
             BatchSize::SmallInput,
         )
     });
+
+    group.bench_function("lincomb", |b| {
+        b.iter_batched(
+            || {
+                (
+                    vec![
+                        Scalar::random(&mut rand::thread_rng()),
+                        Scalar::random(&mut rand::thread_rng()),
+                        Scalar::random(&mut rand::thread_rng()),
+                        Scalar::random(&mut rand::thread_rng()),
+                    ],
+                    vec![
+                        Point::random(&mut rand::thread_rng()),
+                        Point::random(&mut rand::thread_rng()),
+                        Point::random(&mut rand::thread_rng()),
+                        Point::random(&mut rand::thread_rng()),
+                    ],
+                )
+            },
+            |(scalars, points)| op::lincomb(scalars.iter(), points.iter()),
+            BatchSize::SmallInput,
+        )
+    });
 }
 
-criterion_group!(benches, scalar_mul_point, double_mul);
+criterion_group!(benches, scalar_mul_point, multi_mul);
 criterion_main!(benches);

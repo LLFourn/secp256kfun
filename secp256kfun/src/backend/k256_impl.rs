@@ -1,31 +1,19 @@
-use core::ops::{Add, Neg};
-pub use secp256kfun_k256_backend::Scalar;
-use secp256kfun_k256_backend::{lincomb, AffinePoint, FieldBytes, FieldElement, ProjectivePoint};
+pub use crate::vendor::k256::Scalar;
+use crate::{
+    backend::{BackendPoint, BackendScalar, TimeSensitive},
+    vendor::k256::{mul, AffinePoint, FieldBytes, FieldElement, ProjectivePoint},
+};
+use core::ops::Neg;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
-use super::{BackendPoint, BackendScalar, BackendXOnly, TimeSensitive};
+pub static G_TABLE: ProjectivePoint = ProjectivePoint::GENERATOR;
+pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
 pub type Point = ProjectivePoint;
 pub type BasePoint = ProjectivePoint;
 
-pub const G_JACOBIAN: ProjectivePoint = ProjectivePoint {
-    x: FieldElement::from_bytes_unchecked(&[
-        0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b,
-        0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8,
-        0x17, 0x98,
-    ]),
-    y: FieldElement::from_bytes_unchecked(&[
-        0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4, 0xfb, 0xfc, 0x0e, 0x11, 0x08,
-        0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19, 0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10,
-        0xd4, 0xb8,
-    ]),
-    z: FieldElement::one(),
-};
-
-pub static G_TABLE: ProjectivePoint = G_JACOBIAN;
-
 impl BackendScalar for Scalar {
     fn minus_one() -> Self {
-        -Scalar::one()
+        -Scalar::ONE
     }
 
     fn from_u32(int: u32) -> Self {
@@ -33,7 +21,7 @@ impl BackendScalar for Scalar {
     }
 
     fn zero() -> Self {
-        Scalar::zero()
+        Scalar::ZERO
     }
 
     fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
@@ -49,52 +37,17 @@ impl BackendScalar for Scalar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy, Eq, Hash)]
-pub struct XOnly([u8; 32]);
-
-impl BackendXOnly for XOnly {
-    fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
-        let bytes = FieldBytes::from(bytes);
-        let option: Option<AffinePoint> = AffinePoint::decompress(&bytes, 0u8.into()).into();
-        option.map(|_| XOnly(bytes.into()))
-    }
-
-    fn as_bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
-
-    fn into_bytes(self) -> [u8; 32] {
-        self.0
-    }
-
-    fn into_norm_point_even_y(self) -> Point {
-        let bytes = FieldBytes::from(self.0);
-        let affine = AffinePoint::decompress(&bytes, 0u8.into()).unwrap();
-        affine.into()
-    }
-}
-
-impl XOnly {
-    fn to_field_elem(&self) -> FieldElement {
-        FieldElement::from_bytes_unchecked(&self.0)
-    }
-}
-
 impl BackendPoint for Point {
     fn zero() -> Point {
-        ProjectivePoint::identity()
+        ProjectivePoint::IDENTITY
     }
 
     fn is_zero(&self) -> bool {
-        self.z.normalizes_to_zero().into()
+        self.is_identity().into()
     }
 
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]) {
         (self.x.to_bytes().into(), self.y.to_bytes().into())
-    }
-
-    fn norm_to_xonly(&self) -> XOnly {
-        XOnly(self.x.to_bytes().into())
     }
 
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point> {
@@ -107,14 +60,7 @@ impl BackendPoint for Point {
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point> {
         let x = Option::from(FieldElement::from_bytes(&FieldBytes::from(x)))?;
         let y = Option::from(FieldElement::from_bytes(&FieldBytes::from(y)))?;
-        Some(
-            AffinePoint {
-                x,
-                y,
-                infinity: Choice::from(0u8),
-            }
-            .into(),
-        )
+        Some(AffinePoint::new(x, y).into())
     }
 }
 
@@ -136,54 +82,21 @@ impl TimeSensitive for ConstantTime {
     fn point_normalize(point: &mut Point) {
         let zinv_opt = point.z.invert();
         let was_zero = zinv_opt.is_none();
-        let zinv = zinv_opt.unwrap_or(FieldElement::one());
+        let zinv = zinv_opt.unwrap_or(FieldElement::ONE);
         point.x *= zinv;
         point.y *= zinv;
         point.x = point.x.normalize();
         point.y = point.y.normalize();
-        point.z.conditional_assign(&FieldElement::one(), !was_zero);
+        point.z.conditional_assign(&FieldElement::ONE, !was_zero);
     }
 
     fn point_eq_point(lhs: &Point, rhs: &Point) -> bool {
-        // The points are stored internally in projective coordinates:
-        // lhs: (x₁z₁, y₁z₁, z₁), rhs: (x₂z₂, y₂z₂, z₂)
-        // we want to know if x₁ == x₂ and y₁ == y₂
-        // So we transform these both to
-        // lhs: (x₁z₁z₂, y₁z₁z₂) rhs: (x₂z₁z₂, y₂z₁z₂)
-        let lhs_x = lhs.x * &rhs.z;
-        let rhs_x = rhs.x * &lhs.z;
-        let x_eq = rhs_x.negate(1).add(&lhs_x).normalizes_to_zero();
-
-        let lhs_y = lhs.y * &rhs.z;
-        let rhs_y = rhs.y * &lhs.z;
-        let y_eq = rhs_y.negate(1).add(&lhs_y).normalizes_to_zero();
-
-        (x_eq & y_eq).into()
+        lhs.ct_eq(rhs).into()
     }
 
     fn point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
-        let both_infinity = Choice::from((lhs.is_zero() && rhs.is_zero()) as u8);
-        let rhs_infinity = Choice::from(rhs.is_zero() as u8);
-
-        let rhs_x = &rhs.x * &lhs.z;
-        let x_eq = rhs_x.negate(1).add(&lhs.x).normalizes_to_zero();
-
-        let rhs_y = &rhs.y * &lhs.z;
-        let y_eq = rhs_y.negate(1).add(&lhs.y).normalizes_to_zero();
-
-        (both_infinity | (!rhs_infinity & (x_eq & y_eq))).into()
-    }
-
-    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool {
-        let mut lhs = lhs.clone();
-        Self::point_normalize(&mut lhs);
-        Self::norm_point_eq_xonly(&lhs, rhs)
-    }
-
-    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool {
-        let are_equal = point.x.ct_eq(&xonly.to_field_elem());
-        let y_is_even = !point.y.is_odd();
-        (are_equal & y_is_even).into()
+        let rhs = norm_point_to_affine(rhs);
+        lhs.eq_affine(&rhs).into()
     }
 
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point {
@@ -192,15 +105,7 @@ impl TimeSensitive for ConstantTime {
 
     fn point_add_norm_point(lhs: &Point, rhs: &Point) -> Point {
         // use more efficient version for affine
-        let rhs = AffinePoint::conditional_select(
-            &AffinePoint {
-                x: rhs.x,
-                y: rhs.y,
-                infinity: Choice::from(0),
-            },
-            &AffinePoint::identity(),
-            rhs.is_identity(),
-        );
+        let rhs = norm_point_to_affine(rhs);
         lhs + &rhs
     }
 
@@ -218,16 +123,7 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn point_sub_norm_point(lhs: &Point, rhs: &Point) -> Point {
-        // use more efficient version for affine
-        let rhs = AffinePoint::conditional_select(
-            &AffinePoint {
-                x: rhs.x,
-                y: rhs.y,
-                infinity: Choice::from(0),
-            },
-            &AffinePoint::identity(),
-            rhs.is_identity(),
-        );
+        let rhs = norm_point_to_affine(rhs);
         lhs + &rhs.neg()
     }
 
@@ -236,15 +132,7 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point {
-        let lhs = AffinePoint::conditional_select(
-            &AffinePoint {
-                x: lhs.x,
-                y: lhs.y,
-                infinity: Choice::from(0),
-            },
-            &AffinePoint::identity(),
-            lhs.is_identity(),
-        );
+        let lhs = norm_point_to_affine(lhs);
         &rhs.neg() + &lhs
     }
 
@@ -269,8 +157,16 @@ impl TimeSensitive for ConstantTime {
         Self::point_double_mul(x, A, y, B)
     }
 
+    // Only use the "lincomb" method if we don't have alloc. If we do we might as well use the
+    // allocating verison to avoid compiling two methods that do the same thing.
+    #[cfg(not(feature = "alloc"))]
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
-        lincomb(A, x, B, y)
+        mul::lincomb_generic(&[A, B], &[x, y])
+    }
+
+    #[cfg(feature = "alloc")]
+    fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
+        mul::lincomb_iter([A, B].into_iter(), [x, y].into_iter())
     }
 
     fn scalar_add(lhs: &Scalar, rhs: &Scalar) -> Scalar {
@@ -305,15 +201,11 @@ impl TimeSensitive for ConstantTime {
         base * scalar
     }
 
-    fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool {
-        lhs.0.ct_eq(&rhs.0).into()
-    }
-
     fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
         points: A,
         scalars: B,
     ) -> Point {
-        secp256kfun_k256_backend::lincomb_iter(points, scalars)
+        mul::lincomb_iter(points, scalars)
     }
 }
 
@@ -343,10 +235,6 @@ impl TimeSensitive for VariableTime {
 
     fn point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
         ConstantTime::point_eq_norm_point(lhs, rhs)
-    }
-
-    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool {
-        ConstantTime::point_eq_xonly(lhs, rhs)
     }
 
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point {
@@ -383,10 +271,6 @@ impl TimeSensitive for VariableTime {
 
     fn norm_point_neg(point: &mut Point) {
         ConstantTime::norm_point_neg(point)
-    }
-
-    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool {
-        ConstantTime::norm_point_eq_xonly(point, xonly)
     }
 
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
@@ -437,10 +321,6 @@ impl TimeSensitive for VariableTime {
         ConstantTime::scalar_mul_basepoint(scalar, base)
     }
 
-    fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool {
-        ConstantTime::xonly_eq(lhs, rhs)
-    }
-
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
         ConstantTime::point_double_mul(x, A, y, B)
     }
@@ -463,4 +343,16 @@ impl VariableTime {
         Self::point_normalize(&mut point);
         Scalar::from_bytes_reduced(&point.x.to_bytes()).eq(scalar)
     }
+}
+
+fn norm_point_to_affine(proj_point: &Point) -> AffinePoint {
+    debug_assert!(
+        proj_point.is_identity().into() && proj_point.z.normalizes_to_zero().into()
+            || proj_point.z == FieldElement::ONE
+    );
+    AffinePoint::conditional_select(
+        &AffinePoint::new(proj_point.x, proj_point.y),
+        &AffinePoint::IDENTITY,
+        proj_point.is_identity(),
+    )
 }

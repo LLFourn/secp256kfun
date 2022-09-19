@@ -49,10 +49,11 @@ pub type Jacobian = NonNormal;
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EvenY;
 
-/// A [`Normal`] point which has pre-computed tables for accelerating scalar
+/// A [`Normal`] point which may have pre-computed tables for accelerating scalar
 /// multiplications. The only example of this is [`G`].
 ///
-/// Note that whether G does have pre-computed tables depends on the arithmetic backend being used.
+/// Note that whether G does have pre-computed tables depends on the current state of the backend.
+/// At the time of writing no pre-computation is done.
 ///
 /// [`G`]: crate::G
 #[derive(Clone, Copy)]

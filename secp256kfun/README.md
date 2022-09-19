@@ -171,3 +171,7 @@ However this situation may improve in future versions.
 [3]: https://github.com/dalek-cryptography/curve25519-dalek
 [4]: https://github.com/paritytech/libsecp256k1
 [k256]: https://docs.rs/k256/0.10.1/k256/
+
+## LICENSE
+
+Code is licensed under [`0BSD`](https://opensource.org/licenses/0BSD) except for the code under `secp256kfun/src/vendor` where you will find the licenses for the vendor'd code.

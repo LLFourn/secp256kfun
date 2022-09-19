@@ -1,6 +1,6 @@
 //! These traits are for accounting for what methods each backend actually needs.
-mod k256;
-pub use k256::*;
+mod k256_impl;
+pub use k256_impl::*;
 
 pub trait BackendScalar: Sized {
     fn minus_one() -> Self;
@@ -11,18 +11,10 @@ pub trait BackendScalar: Sized {
     fn to_bytes(&self) -> [u8; 32];
 }
 
-pub trait BackendXOnly: Sized {
-    fn from_bytes(bytes: [u8; 32]) -> Option<Self>;
-    fn as_bytes(&self) -> &[u8; 32];
-    fn into_bytes(self) -> [u8; 32];
-    fn into_norm_point_even_y(self) -> Point;
-}
-
 pub trait BackendPoint {
     fn zero() -> Point;
     fn is_zero(&self) -> bool;
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]);
-    fn norm_to_xonly(&self) -> XOnly;
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point>;
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point>;
 }
@@ -34,7 +26,6 @@ pub trait TimeSensitive {
     fn point_eq_point(lhs: &Point, rhs: &Point) -> bool;
     fn point_normalize(point: &mut Point);
     fn point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool;
-    fn point_eq_xonly(lhs: &Point, rhs: &XOnly) -> bool;
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_add_norm_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_sub_point(lhs: &Point, rhs: &Point) -> Point {
@@ -51,7 +42,6 @@ pub trait TimeSensitive {
     fn point_conditional_negate(point: &mut Point, cond: bool);
     fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point;
     fn norm_point_neg(point: &mut Point);
-    fn norm_point_eq_xonly(point: &Point, xonly: &XOnly) -> bool;
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool;
     fn norm_point_is_y_even(point: &Point) -> bool;
     fn norm_point_conditional_negate(point: &mut Point, cond: bool);
@@ -69,7 +59,6 @@ pub trait TimeSensitive {
     fn scalar_mul(lhs: &Scalar, rhs: &Scalar) -> Scalar;
     fn scalar_invert(scalar: &Scalar) -> Scalar;
     fn scalar_mul_basepoint(scalar: &Scalar, base: &BasePoint) -> Point;
-    fn xonly_eq(lhs: &XOnly, rhs: &XOnly) -> bool;
     fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
         points: A,
         scalars: B,

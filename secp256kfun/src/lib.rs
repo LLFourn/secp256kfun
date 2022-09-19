@@ -4,7 +4,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "alloc"))]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
@@ -25,6 +25,8 @@ mod keypair;
 mod point;
 mod scalar;
 mod slice;
+
+mod vendor;
 
 #[macro_use]
 mod macros;
@@ -61,7 +63,7 @@ pub extern crate proptest;
 ///[_SEC 2: Recommended Elliptic Curve Domain Parameters_]: https://www.secg.org/sec2-v2.pdf
 ///[`BasePoint`]: crate::marker::BasePoint
 pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero> =
-    &Point::from_inner(backend::G_JACOBIAN, marker::BasePoint(backend::G_TABLE));
+    &Point::from_inner(backend::G_POINT, marker::BasePoint(backend::G_TABLE));
 
 #[doc(hidden)]
 /// How many times to repeat tests
