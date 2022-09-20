@@ -73,7 +73,7 @@
 //! #    )
 //! #    .unwrap();
 //! // signing parties must use a common set of nonces when creating signature shares.
-//! // nonces can be derived from a session id that use includes publicly known values.
+//! // nonces can be derived from a session id which is created from publicly known values.
 //! let verification_shares_bytes: Vec<_> = frost_key
 //!     .verification_shares()
 //!     .map(|share| share.to_bytes())
@@ -494,7 +494,7 @@ impl XOnlyFrostKey {
     ///
     /// ## Return value
     ///
-    /// A point (normalised to have an even Y coordinate).
+    /// A point (normalized to have an even Y coordinate).
     pub fn public_key(&self) -> Point<EvenY> {
         self.public_key
     }
@@ -613,7 +613,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ///
     /// ## Return value
     ///
-    /// Returns `bool` true if the proof of possession matches the point
+    /// Returns `bool` true if the proof of possession matches the point polynomial
     fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
@@ -1134,10 +1134,11 @@ mod test {
                 received_nonces.push((*i, nonce.public()));
             }
 
+            let message = Message::plain("test", b"test");
             let signing_session = frost.start_sign_session(
                 &frost_keys[signer_indexes[0]],
                 received_nonces.clone(),
-                Message::plain("test", b"test")
+                message
             );
 
             let mut signatures = vec![];
@@ -1146,7 +1147,7 @@ mod test {
                 let session = frost.start_sign_session(
                     &frost_keys[signer_index],
                     received_nonces.clone(),
-                    Message::plain("test", b"test")
+                    message
                 );
                 let sig = frost.sign(
                     &frost_keys[signer_index],
@@ -1169,7 +1170,7 @@ mod test {
 
             assert!(frost.schnorr.verify(
                 &frost_keys[signer_indexes[0]].public_key(),
-                Message::<Public>::plain("test", b"test"),
+                message,
                 &combined_sig
             ));
         }
