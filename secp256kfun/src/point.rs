@@ -4,7 +4,10 @@ use crate::{
     marker::*,
     op, Scalar,
 };
-use core::marker::PhantomData;
+use core::{
+    marker::PhantomData,
+    ops::{AddAssign, SubAssign},
+};
 use rand_core::RngCore;
 
 /// A point on the secp256k1 elliptic curve.
@@ -498,6 +501,30 @@ crate::impl_fromstr_deserialize! {
     }
 }
 
+impl<TR, SL, SR, ZR> AddAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+    fn add_assign(&mut self, rhs: Point<TR, SR, ZR>) {
+        *self = crate::op::point_add(self, &rhs).set_secrecy::<SL>()
+    }
+}
+
+impl<TR, SL, SR, ZR> AddAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+    fn add_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
+        *self = crate::op::point_add(self, rhs).set_secrecy::<SL>()
+    }
+}
+
+impl<TR, SL, SR, ZR> SubAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+    fn sub_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
+        *self = crate::op::point_sub(self, rhs).set_secrecy::<SL>()
+    }
+}
+
+impl<TR, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+    fn sub_assign(&mut self, rhs: Point<TR, SR, ZR>) {
+        *self = crate::op::point_sub(self, &rhs).set_secrecy::<SL>()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -731,5 +758,18 @@ mod test {
         assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
         let mult_point = g!({ Scalar::random(&mut rand::thread_rng()) } * G);
         assert!(format!("{:?}", mult_point).starts_with("Point<NonNormal,Public,NonZero>"));
+    }
+
+    #[test]
+    fn assign_tests() {
+        let a_orig = Point::random(&mut rand::thread_rng())
+            .mark_zero()
+            .non_normal();
+        let mut a = a_orig.clone();
+        let b = Point::random(&mut rand::thread_rng());
+        a += b;
+        assert_eq!(a, op::point_add(&a_orig, &b));
+        a -= b;
+        assert_eq!(a, a_orig);
     }
 }

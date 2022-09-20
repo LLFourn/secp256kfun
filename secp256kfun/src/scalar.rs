@@ -1,6 +1,9 @@
 //! Scalar arithmetic (integers mod the secp256k1 group order)
 use crate::{backend, hash::HashInto, marker::*, op};
-use core::marker::PhantomData;
+use core::{
+    marker::PhantomData,
+    ops::{AddAssign, MulAssign, SubAssign},
+};
 use digest::{generic_array::typenum::U32, Digest};
 use rand_core::RngCore;
 
@@ -348,6 +351,54 @@ where
     }
 }
 
+impl<SL, SR, ZR> AddAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn add_assign(&mut self, rhs: Scalar<SR, ZR>) {
+        *self = crate::op::scalar_add(&self, &rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR, ZR> AddAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn add_assign(&mut self, rhs: &Scalar<SR, ZR>) {
+        *self = crate::op::scalar_add(&self, rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR, ZR> SubAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn sub_assign(&mut self, rhs: &Scalar<SR, ZR>) {
+        *self = crate::op::scalar_sub(&self, rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR, ZR> SubAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn sub_assign(&mut self, rhs: Scalar<SR, ZR>) {
+        *self = crate::op::scalar_sub(&self, &rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR> MulAssign<Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
+    fn mul_assign(&mut self, rhs: Scalar<SR, NonZero>) {
+        *self = crate::op::scalar_mul(&self, &rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR> MulAssign<&Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
+    fn mul_assign(&mut self, rhs: &Scalar<SR, NonZero>) {
+        *self = crate::op::scalar_mul(&self, rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR, ZR: ZeroChoice> MulAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn mul_assign(&mut self, rhs: Scalar<SR, ZR>) {
+        *self = crate::op::scalar_mul(&self, &rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<SL, SR, ZR: ZeroChoice> MulAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
+    fn mul_assign(&mut self, rhs: &Scalar<SR, ZR>) {
+        *self = crate::op::scalar_mul(&self, rhs).set_secrecy::<SL>();
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -483,5 +534,17 @@ mod test {
                 .unwrap()
             )
         );
+    }
+
+    #[test]
+    fn assign_tests() {
+        let mut a = Scalar::from(42);
+        let b = Scalar::from(1337).public();
+        a += b;
+        assert_eq!(a, Scalar::from(1379));
+        a -= b;
+        assert_eq!(a, Scalar::from(42));
+        a *= b;
+        assert_eq!(a, Scalar::from(42 * 1337));
     }
 }
