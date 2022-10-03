@@ -176,7 +176,7 @@ impl Scalar<Secret, NonZero> {
 
     /// Returns the integer `1` as a `Scalar<Secret, NonZero>`.
     pub fn one() -> Self {
-        crate::s!(1)
+        Scalar::from(1).non_zero().unwrap()
     }
 
     /// Returns the integer -1 (modulo the curve order) as a `Scalar<Secret, NonZero>`.
@@ -285,7 +285,7 @@ impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
     }
 }
 
-impl From<u32> for Scalar<Secret, Zero> {
+impl<S> From<u32> for Scalar<S, Zero> {
     fn from(int: u32) -> Self {
         Self::from_inner(backend::BackendScalar::from_u32(int))
     }
@@ -470,7 +470,10 @@ mod test {
 
     #[test]
     fn one() {
-        assert_eq!(Scalar::<Secret, NonZero>::one(), Scalar::from(1));
+        assert_eq!(
+            Scalar::<Secret, NonZero>::one(),
+            Scalar::<Secret, _>::from(1u32)
+        );
         assert_eq!(
             Scalar::<Secret, NonZero>::minus_one(),
             -Scalar::<Secret, NonZero>::one()
@@ -483,7 +486,7 @@ mod test {
 
     #[test]
     fn zero() {
-        assert_eq!(Scalar::<Secret, Zero>::zero(), Scalar::from(0));
+        assert_eq!(Scalar::<Secret, Zero>::zero(), Scalar::<Secret, _>::from(0));
     }
 
     #[test]
@@ -519,7 +522,7 @@ mod test {
                 .as_ref()
             )
             .unwrap(),
-            Scalar::from(1)
+            Scalar::<Secret, _>::from(1)
         )
     }
 
@@ -538,13 +541,13 @@ mod test {
 
     #[test]
     fn assign_tests() {
-        let mut a = Scalar::from(42);
-        let b = Scalar::from(1337).public();
+        let mut a = Scalar::<Secret, _>::from(42);
+        let b = Scalar::<Secret, _>::from(1337).public();
         a += b;
-        assert_eq!(a, Scalar::from(1379));
+        assert_eq!(a, Scalar::<Secret, _>::from(1379));
         a -= b;
-        assert_eq!(a, Scalar::from(42));
+        assert_eq!(a, Scalar::<Secret, _>::from(42));
         a *= b;
-        assert_eq!(a, Scalar::from(42 * 1337));
+        assert_eq!(a, Scalar::<Secret, _>::from(42 * 1337));
     }
 }
