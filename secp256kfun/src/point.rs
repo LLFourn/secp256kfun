@@ -59,7 +59,7 @@ impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
     }
 }
 
-impl<T: Copy, Z: Copy> Copy for Point<T, Public, Z> {}
+impl<T: Copy, Z> Copy for Point<T, Public, Z> {}
 
 impl Point<Normal, Public, NonZero> {
     /// Samples a point uniformly from the group.
