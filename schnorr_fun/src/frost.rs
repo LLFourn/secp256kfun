@@ -620,7 +620,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ///
     /// ## Return value
     ///
-    /// Returns `bool` true if the proof of possession matches the point polynomial
+    /// Returns `bool` true if the proof of possession matches the point
     fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
