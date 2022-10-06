@@ -281,21 +281,6 @@ impl<T, S, Z> Point<T, S, Z> {
     }
 }
 
-impl Point<Normal, Public, Zero> {
-    /// Returns the [`identity element`] of the group A.K.A. the point at infinity.
-    ///
-    /// # Example
-    /// ```
-    /// use secp256kfun::{g, Point, G};
-    /// assert!(Point::zero().is_zero());
-    /// assert_eq!(g!({ Point::zero() } + G), *G);
-    /// ```
-    /// [`identity_element`]: https://en.wikipedia.org/wiki/Identity_element
-    pub fn zero() -> Self {
-        Self::from_inner(backend::Point::zero(), Normal)
-    }
-}
-
 impl<Z, T> Point<T, Public, Z> {
     /// Checks if this point's x-coordiante is the equal to the scalar mod the
     /// curve order. This is only useful for ECDSA implementations.
@@ -387,6 +372,24 @@ impl<T, S> Point<T, S, Zero> {
         } else {
             Some(Point::from_inner(self.0, self.1))
         }
+    }
+
+    /// Returns the [`identity element`] of the group A.K.A. the point at infinity.
+    ///
+    /// # Example
+    /// ```
+    /// use secp256kfun::{g,s, Point, G, marker::*};
+    /// let zero = Point::<Normal, Public, _>::zero();
+    /// assert!(zero.is_zero());
+    /// assert_eq!(g!(zero + G), *G);
+    /// assert_eq!(zero, g!(0 * G))
+    /// ```
+    /// [`identity_element`]: https://en.wikipedia.org/wiki/Identity_element
+    pub fn zero() -> Self
+    where
+        T: PointType + Default,
+    {
+        Self::from_inner(backend::Point::zero(), T::default())
     }
 }
 
@@ -525,6 +528,16 @@ impl<TR, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero>
     }
 }
 
+impl<S: Secrecy> core::iter::Sum for Point<NonNormal, S, Zero> {
+    fn sum<I: Iterator<Item = Self>>(mut iter: I) -> Self {
+        let mut sum = iter.next().unwrap_or(Point::zero());
+        for point in iter {
+            sum += point;
+        }
+        sum
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -548,7 +561,7 @@ mod test {
         (@binary $P:expr, $Q:expr) => {{
             let p = $P;
             let q = $Q;
-            let i = Point::zero();
+            let i = Point::<Normal, Public, _>::zero();
             expression_eq!([p] == [q]);
             expression_eq!([q] == [p]);
             expression_eq!([1 * p] == [q]);
@@ -573,7 +586,7 @@ mod test {
             let add_100_times = {
                 let p = p.clone().mark_zero().non_normal();
                 let i = g!(p - p);
-                assert_eq!(i, Point::zero());
+                assert_eq!(i, Point::<NonNormal, Secret,_>::zero());
                 (0..100).fold(i, |acc, _| g!(acc + p))
             };
 
@@ -584,7 +597,7 @@ mod test {
         }};
         ($P:expr) => {{
             let p = $P;
-            let i = Point::zero();
+            let i = Point::<Normal, Public, _>::zero();
 
             expression_eq!([p] == [p]);
             expression_eq!([p + i] == [p]);
@@ -735,7 +748,7 @@ mod test {
     #[test]
     fn zero_cases() {
         use crate::s;
-        let i = Point::zero();
+        let i = Point::<Normal, Public, _>::zero();
         let forty_two = s!(42);
         let forty_two_pub = s!(42).public();
         assert!(i.is_zero());

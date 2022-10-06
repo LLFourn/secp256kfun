@@ -683,7 +683,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 verification_shares,
                 public_key,
                 threshold: joint_poly.n_terms(),
-                tweak: Scalar::zero().public(),
+                tweak: Scalar::zero(),
             },
         })
     }
@@ -858,7 +858,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let agg_nonce_jac: [Point<NonNormal, Public, Zero>; 2] =
             nonce_map
                 .iter()
-                .fold([Point::zero().non_normal(); 2], |acc, (_, nonce)| {
+                .fold([Point::zero(); 2], |acc, (_, nonce)| {
                     [
                         g!({ acc[0] } + { nonce.0[0] }),
                         g!({ acc[1] } + { nonce.0[1] }),
@@ -994,7 +994,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let sum_s = partial_sigs
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
-            .unwrap_or(Scalar::zero().public());
+            .unwrap_or(Scalar::zero());
         Signature {
             R: session.agg_nonce,
             s: s!(sum_s + ck).public(),

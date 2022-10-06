@@ -239,7 +239,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
             .collect::<Option<Vec<_>>>()?;
 
         let (sumP, sumQ) = commitments.iter().fold(
-            (PointP::zero().non_normal(), PointQ::identity()),
+            (PointP::zero(), PointQ::identity()),
             |(accP, accQ), (CP, CQ)| (g!(accP + CP), accQ + CQ),
         );
 

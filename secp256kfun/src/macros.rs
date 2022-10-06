@@ -18,7 +18,7 @@ macro_rules! _s {
         $crate::_s!(@dot [$($a)*] [$scalar] $($t)*)
     };
     (@scalar [$($a:tt)*] 0 $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::Scalar::zero()} $($a)*] $($t)*)
+        $crate::_s!(@next [{$crate::Scalar::<$crate::marker::Secret,_>::zero()} $($a)*] $($t)*)
     };
     (@scalar [$($a:tt)*] $num:literal $($t:tt)*) => {
         $crate::_s!(@next [{{
@@ -109,7 +109,7 @@ macro_rules! _g {
         $crate::_g!(@point [s $block $($a)*] $($t)*)
     };
     (@scalar [$($a:tt)*] 0 * $($t:tt)+) => {
-        $crate::_g!(@point [s {$crate::Scalar::zero()} $($a)*] $($t)+)
+        $crate::_g!(@point [s {$crate::Scalar::<$crate::marker::Secret,_>::zero()} $($a)*] $($t)+)
     };
     (@scalar [$($a:tt)*] $num:literal * $($t:tt)+) => {
         $crate::_g!(@point [s {{
