@@ -25,16 +25,14 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  # We want to test stable on multiple platforms with --all-features
   test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        args: [
-            "--no-default-features",
-            "--all-features",
-        ]
-        rust: [nightly, stable]
+        args: [ "--all-features" ]
+        rust: [stable]
         target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
     steps:
       - uses: actions/checkout@v2
@@ -52,6 +50,40 @@ jobs:
           use-cross:  ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
           command: test
           args:  ${{ matrix.args }} --release --verbose --target ${{ matrix.target }}
+
+  # test nightly build/test
+  test-nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: "x86_64-unknown-linux-gnu"
+          override: true
+      - uses: Swatinem/rust-cache@v2.0.0
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --verbose --all-features
+
+  # test without default features
+  test-minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: "x86_64-unknown-linux-gnu"
+          override: true
+      - uses: Swatinem/rust-cache@v2.0.0
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --verbose --no-default-features
 
   doc-build:
      name: doc-build
