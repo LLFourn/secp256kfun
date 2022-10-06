@@ -137,7 +137,7 @@ let B = Point::random(&mut rand::thread_rng());
 
 // Alice commits to her secret value x with randomness r
 let r = Scalar::random(&mut rand::thread_rng());
-let x = Scalar::from(42);
+let x = Scalar::<Secret, Zero>::from(42);
 let commitment = pedersen_commit(A, &B, &r, &x);
 
 // Imagine Later on, Bob receives the public opening (r,x) for commitment. He

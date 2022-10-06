@@ -117,7 +117,7 @@ use rand_chacha::ChaCha20Rng;
 // Pretend to choose H securely in a public setup
 let H = Point::random(&mut rand::thread_rng());
 // our commitment will be to 1
-let c = Scalar::from(1u32);
+let c = Scalar::<Secret, _>::from(1u32);
 // We use a 16-byte (128-bit) challenge length
 type L = U16;
 
