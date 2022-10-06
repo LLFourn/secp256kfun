@@ -209,7 +209,6 @@ macro_rules! test_instance {
 mod test {
     use super::*;
     use rand::RngCore;
-    use secp256kfun::TEST_SOUNDNESS;
 
     #[test]
     fn repeated_sign_and_verify() {
@@ -228,7 +227,8 @@ mod test {
     fn low_s() {
         let ecdsa_enforce_low_s = test_instance!().enforce_low_s();
         let ecdsa = test_instance!();
-        for _ in 0..TEST_SOUNDNESS {
+        // TODO: use proptest
+        for _ in 0..20 {
             let mut message = [0u8; 32];
             rand::thread_rng().fill_bytes(&mut message);
             let secret_key = Scalar::random(&mut rand::thread_rng());
