@@ -378,7 +378,7 @@ impl<T, S> Point<T, S, Zero> {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{g,s, Point, G, marker::*};
+    /// use secp256kfun::{g, marker::*, s, Point, G};
     /// let zero = Point::<Normal, Public, _>::zero();
     /// assert!(zero.is_zero());
     /// assert_eq!(g!(zero + G), *G);

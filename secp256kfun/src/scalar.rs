@@ -126,7 +126,7 @@ impl<S> Scalar<S, NonZero> {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{s, Scalar, marker::*};
+    /// use secp256kfun::{marker::*, s, Scalar};
     /// let a = Scalar::random(&mut rand::thread_rng());
     /// let a_inverse = a.invert();
     /// assert_eq!(s!(a * a_inverse), s!(1));
@@ -196,7 +196,7 @@ impl Scalar<Secret, Zero> {
     /// # Example
     /// ```
     /// # use core::convert::TryInto;
-    /// use secp256kfun::{hex, Scalar, s};
+    /// use secp256kfun::{hex, s, Scalar};
     /// let scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// let scalar_overflowed = Scalar::from_bytes_mod_order(

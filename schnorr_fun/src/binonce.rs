@@ -125,9 +125,11 @@ impl NonceKeyPair {
     ///
     ///   How important the `session_id` is depends on whether you add a `message` and whether you are using randomness in your `nonce_gen`.
     ///   If you are using a deterministic `nonce_gen` it is crucial that this is set to a unique value for each signing session.
-    ///   If your application doesn't naturally provide you with a unique value store a counter.
     ///
-    /// Optionally you may pass in `public_key` and `message` which should be passed in when available.
+    /// Optionally you may pass in:
+    ///
+    /// - `public_key`: The public key we're signing under (if we know it at nonce generation time).
+    /// - `message`: The message we're signing (if we know it at nonce generation time)
     ///
     /// [`MuSig::sign`]: crate::musig::MuSig::sign
     pub fn generate(
@@ -141,7 +143,13 @@ impl NonceKeyPair {
         let msg_len = (message.len() as u64).to_be_bytes();
         let sid_len = (session_id.len() as u64).to_be_bytes();
         let pk_bytes = public_key
-            .map(|p| p.normalize().to_bytes())
+            // NOTE: the `.normalize` here is very important. Even though the public key is already
+            // normalized we want it in particular to be Normal so that it serialzes correctly
+            // regardless of whether you pass in a Normal or EvenY point.
+            .map(|public_key| {
+                let public_key: Point<Normal> = public_key.normalize();
+                public_key.to_bytes()
+            })
             .unwrap_or([0u8; 33]);
         let r1 = derive_nonce!(
             nonce_gen => nonce_gen,
