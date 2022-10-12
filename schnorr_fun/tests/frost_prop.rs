@@ -1,4 +1,5 @@
 #![cfg(feature = "alloc")]
+#![cfg(feature = "serde")]
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha20Rng;
 use schnorr_fun::{
