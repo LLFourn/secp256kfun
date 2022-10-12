@@ -5,7 +5,9 @@
 //! Derived binonces should be unique and and must not be reused for signing under any circumstances
 //! as this can leak your secret key.
 use crate::Message;
-use secp256kfun::{derive_nonce, g, marker::*, nonce::NonceGen, Point, Scalar, G};
+use secp256kfun::{
+    derive_nonce, g, marker::*, nonce::NonceGen, rand_core::RngCore, Point, Scalar, G,
+};
 
 /// A nonce (pair of points) that each party must share with the others in the first stage of signing.
 ///
@@ -162,13 +164,12 @@ impl NonceKeyPair {
             public => [ b"r2", pk_bytes, msg_len, message, sid_len, session_id]
         );
 
-        let R1 = g!(r1 * G).normalize();
-        let R2 = g!(r2 * G).normalize();
+        Self::from_secrets([r1, r2])
+    }
 
-        NonceKeyPair {
-            public: Nonce([R1, R2]),
-            secret: [r1, r2],
-        }
+    /// Generate a nonce keypair from an rng
+    pub fn random(rng: &mut impl RngCore) -> Self {
+        Self::from_secrets([Scalar::random(rng), Scalar::random(rng)])
     }
 }
 

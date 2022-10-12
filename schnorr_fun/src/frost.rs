@@ -707,39 +707,33 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let mut nonce_map: BTreeMap<_, _> =
             nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
 
-        let agg_nonce_jac: [Point<NonNormal, Public, Zero>; 2] =
-            nonce_map
-                .iter()
-                .fold([Point::zero(); 2], |acc, (_, nonce)| {
-                    [
-                        g!({ acc[0] } + { nonce.0[0] }),
-                        g!({ acc[1] } + { nonce.0[1] }),
-                    ]
-                });
-        let agg_nonce_points = [
-            agg_nonce_jac[0].normalize().non_zero().unwrap_or_else(|| {
-                // Like in musig spec, if the final nonce is zero we set to the generator
-                G.clone().normalize()
-            }),
-            agg_nonce_jac[1]
-                .normalize()
-                .non_zero()
-                .unwrap_or_else(|| G.clone().normalize()),
-        ];
+        let agg_nonce = nonce_map
+            .iter()
+            .fold([Point::zero(); 2], |acc, (_, nonce)| {
+                [
+                    g!({ acc[0] } + { nonce.0[0] }),
+                    g!({ acc[1] } + { nonce.0[1] }),
+                ]
+            });
+
+        let agg_nonce = [agg_nonce[0].normalize(), agg_nonce[1].normalize()];
 
         let binding_coeff = Scalar::from_hash(
             self.binding_hash
                 .clone()
-                .add(agg_nonce_points[0])
-                .add(agg_nonce_points[1])
+                .add(agg_nonce[0])
+                .add(agg_nonce[1])
                 .add(frost_key.public_key())
                 .add(message),
         );
         let (agg_nonce, nonces_need_negation) =
-            g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
+            g!({ agg_nonce[0] } + binding_coeff * { agg_nonce[1] })
                 .normalize()
                 .non_zero()
-                .expect("computationally unreachable, input is a hash")
+                .unwrap_or_else(|| {
+                    // Use the same trick as the MuSig spec
+                    G.clone().normalize()
+                })
                 .into_point_with_even_y();
 
         for (_, nonce) in &mut nonce_map {
@@ -989,6 +983,7 @@ fn point_poly_eval(
 mod test {
 
     use super::*;
+    use sha2::Sha256;
 
     #[test]
     fn test_lagrange_lambda() {
@@ -999,5 +994,22 @@ mod test {
                 .invert()
         });
         assert_eq!(res, lagrange_lambda(2, &[1, 4, 5]));
+    }
+
+    #[test]
+    fn zero_agg_nonce_results_in_G() {
+        let frost = new_with_deterministic_nonces::<Sha256>();
+        let (frost_key, _shares) = frost.simulate_keygen(2, 3, &mut rand::thread_rng());
+        let nonce = NonceKeyPair::random(&mut rand::thread_rng()).public();
+        let mut malicious_nonce = nonce.clone();
+        malicious_nonce.conditional_negate(true);
+
+        let session = frost.start_sign_session(
+            &frost_key.into_xonly_key(),
+            vec![(0, nonce), (1, malicious_nonce)],
+            Message::<Public>::plain("test", b"hello"),
+        );
+
+        assert_eq!(session.agg_nonce, *G);
     }
 }
