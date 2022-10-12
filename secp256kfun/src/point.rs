@@ -437,7 +437,7 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     }
 }
 
-impl<S> HashInto for Point<Normal, S, NonZero> {
+impl<S, Z> HashInto for Point<Normal, S, Z> {
     fn hash_into(self, hash: &mut impl digest::Digest) {
         hash.update(self.to_bytes().as_ref())
     }
