@@ -117,8 +117,8 @@
 //! library yet but plan to in the future.
 //!
 //! This implementation doesn't provide a default policy with regards to polynomial generation. Here
-//! we give an example of how to deterministically generate a RNG for the forst key generation
-//! session that should make sense in most applications:
+//! we give an example of how to generate a deterministic RNG for the forst key generation session
+//! that should make sense in most applications:
 //!
 //! ```
 //! use schnorr_fun::{frost, fun::{ Scalar, nonce::{self, AddTag}, derive_nonce_rng }};
@@ -160,8 +160,8 @@ use std::collections::BTreeMap;
 ///
 /// Type parametres:
 ///
-/// - `H`: hash for challenges, keygen_id, and binding coefficient.
-/// - `NG`: hash for nonce generation when signing.
+/// - `H`: hash type for challenges, keygen_id, and binding coefficient.
+/// - `NG`: nonce generator for proofs-of-possessions and FROST nonces
 #[derive(Clone)]
 pub struct Frost<H, NG> {
     /// The instance of the Schnorr signature scheme.
@@ -249,7 +249,7 @@ impl std::error::Error for NewKeyGenError {}
 pub enum FinishKeyGenError {
     /// Secret share does not match the expected. Incorrect ordering?
     InvalidShare(usize),
-    /// Proof of possession does not match the expected. Incorrect ordering?
+    /// proof-of-possession does not match the expected. Incorrect ordering?
     InvalidProofOfPossession(usize),
 }
 
@@ -265,7 +265,7 @@ impl core::fmt::Display for FinishKeyGenError {
             ),
             &InvalidProofOfPossession(i) => write!(
                 f,
-                "the proof of possession provided by party at index {} was invalid, check ordering.",
+                "the proof-of-possession provided by party at index {} was invalid, check ordering.",
                 i
             ),
         }
@@ -294,26 +294,21 @@ pub struct FrostKey {
 }
 
 impl FrostKey {
-    /// The joint public key of the frost multisignature
-    ///
-    /// ## Return value
-    ///
-    /// A point
+    /// The joint public key
     pub fn public_key(&self) -> Point<Normal> {
         self.public_key
     }
 
-    /// An iterator over the verification shares of each party in the key.
+    /// The verification shares of each party in the key.
     ///
-    /// ## Return value
-    ///
-    /// An iterator over verification share points
+    /// The verification share is the image of their secret share.
     pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
         self.verification_shares.iter().map(|point| *point)
     }
 
     /// Apply a plain tweak to the frost public key.
-    /// This is how you derive child public keys from a frost public key using BIP32.
+    ///
+    /// This is useful for deriving unhardened child frost keys from a master frost public key using [BIP32].
     ///
     /// Tweak the frost public key with a scalar so that the resulting key is equal to the
     /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
@@ -324,6 +319,8 @@ impl FrostKey {
     /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
+    ///
+    /// [BIP32]: https://bips.xyz/32
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let public_key = g!(self.public_key + tweak * G).normalize().non_zero()?;
         let tweak = s!(self.tweak + tweak).public();
@@ -338,7 +335,9 @@ impl FrostKey {
 
     /// Convert the key into a `Bip340AggKey`.
     ///
-    /// This is the BIP340 compatible version of the key which you can put in a segwitv1
+    /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
+    ///
+    /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> XOnlyFrostKey {
         let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
         let mut tweak = self.tweak;
@@ -365,9 +364,11 @@ impl FrostKey {
 
 /// A [`FrostKey`] that has been converted into an x-only key.
 ///
-/// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
-/// Tweaks applied to a `XOnlyFrostKey` are x-only tweaks to the frost public key.
-/// BIP340: <https://bips.xyz/340>
+/// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output and
+/// create BIP340 signatures under. Tweaks applied to a `XOnlyFrostKey` are x-only tweaks to the
+/// frost public key.
+///
+/// [BIP340]: https://bips.xyz/340
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
@@ -389,10 +390,6 @@ pub struct XOnlyFrostKey {
 
 impl XOnlyFrostKey {
     /// The joint public key of the frost multisignature
-    ///
-    /// ## Return value
-    ///
-    /// A point (normalized to have an even Y coordinate).
     pub fn public_key(&self) -> Point<EvenY> {
         self.public_key
     }
@@ -450,16 +447,13 @@ impl XOnlyFrostKey {
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// Create our secret shares and proof-of-possession to be shared with other participants.
     ///
-    /// Secret shares are created for every other participant by evaluating our secret polynomial
-    /// at their participant index. f(i) for 1<=i<=n.
-    ///
-    /// Each secret share f(i) needs to be securely communicated to participant i. Additionally
-    /// we share a proof of possession for the first coefficient in our secret scalar polynomial.
+    /// Each secret share needs to be securely communicated to the intended participant.
+    /// The proof-of-possession should be sent to all participants.
     ///
     /// ## Return value
     ///
-    /// Returns a vector of secret shares and a proof-of-possession Signature
-    /// The secret shares at index 0 is destined for participant 1.
+    /// Returns a vector of secret shares where the index represents the signer index and a
+    /// proof-of-possession as a `Signature`.
     pub fn create_shares(
         &self,
         keygen: &KeyGen,
@@ -557,11 +551,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Verify a proof of possession of a point
+    /// Verify a proof-of-possession of a point
     ///
     /// ## Return value
     ///
-    /// Returns `bool` true if the proof of possession matches the point
+    /// Returns `bool` true if the proof-of-possession matches the point
     fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
@@ -638,17 +632,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         })
     }
 
-    /// Collect the vector of all received secret shares into your total long-lived secret share.
-    /// The secret_shares includes your own share as well as shares from each of the other parties.
+    /// Combine all receieved shares into your long-lived secret share.
     ///
-    /// The secret_shares are validated to match the expected result
-    /// by evaluating their polynomial at our participant index.
-    ///
-    /// Each participant's proof of possession is verified against their polynomial.
+    /// The `secret_shares` includes your own share as well as shares from each of the other
+    /// parties. The `secret_shares` are validated to match the expected result by evaluating their
+    /// polynomial at our participant index. Each participant's proof-of-possession is verified
+    /// against what they provided in the first round of key generation.
     ///
     /// # Return value
     ///
-    /// Your total secret share Scalar and the [`FrostKey`]
+    /// Your secret share and the [`FrostKey`]
     pub fn finish_keygen(
         &self,
         keygen: KeyGen,
@@ -692,12 +685,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
     /// Start a FROST signing session.
     ///
-    /// Signing participants must use a common set of nonces to each produce a
-    /// signature share. See [`Frost::gen_nonce`] and [`NonceKeyPair::generate`].
+    /// Each signing party must call this with the same arguments for it to succeeed. This means you
+    /// must all agree on each other's nonces before starting the sign session. In `nonces` each
+    /// item is the signer's index and their `Nonce`. It's length must be at least `threshold`.
+    /// Generating your own nonces can be done with [`Frost::gen_nonce`].
     ///
-    /// ## Return value
+    /// # Panics
     ///
-    /// A FROST signing session
+    /// If the number of nonces is less than the threshold.
     pub fn start_sign_session(
         &self,
         frost_key: &XOnlyFrostKey,
@@ -706,6 +701,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ) -> SignSession {
         let mut nonce_map: BTreeMap<_, _> =
             nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
+
+        if nonce_map.len() < frost_key.threshold() {
+            panic!("nonces' length was less than the threshold");
+        }
 
         let agg_nonce = nonce_map
             .iter()
@@ -757,7 +756,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ///
     /// ## Return value
     ///
-    /// Returns a signature Scalar.
+    /// Returns a signature share
     pub fn sign(
         &self,
         frost_key: &XOnlyFrostKey,
@@ -788,11 +787,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
     /// Verify a partial signature for a participant at `index` (from zero).
     ///
-    /// Check partial signature against the verification shares created during keygen.
-    ///
     /// ## Return Value
     ///
     /// Returns `bool`, true if partial signature is valid.
+    ///
+    /// ## Panics
+    ///
+    /// If the `index` is is greater than the number of signers in the threshold.
     pub fn verify_signature_share(
         &self,
         frost_key: &XOnlyFrostKey,
@@ -822,22 +823,23 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
-    /// Combine a vector of partial signatures into an aggregate signature.
+    /// Combine a vector of signatures shares into an aggregate signature.
     ///
-    /// Includes the [`XOnlyFrostKey`] tweak in the combined signature.
+    /// This method does not check the validity of the `signature_shares` but if you have verified
+    /// each signautre share individually the output will be a valid siganture under the `frost_key`
+    /// and message provided when starting the session.
     ///
     /// ## Return value
     ///
-    /// Returns a combined schnorr [`Signature`] for the message.
-    /// Valid against the frost public key.
+    /// Returns a combined schnorr [`Signature`] on the message
     pub fn combine_signature_shares(
         &self,
         frost_key: &XOnlyFrostKey,
         session: &SignSession,
-        partial_sigs: Vec<Scalar<Public, Zero>>,
+        signature_shares: Vec<Scalar<Public, Zero>>,
     ) -> Signature {
         let ck = s!(session.challenge * frost_key.tweak);
-        let sum_s = partial_sigs
+        let sum_s = signature_shares
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
             .unwrap_or(Scalar::zero());
