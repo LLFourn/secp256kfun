@@ -17,6 +17,7 @@ keywords = ["bitcoin", "schnorr"]
 features = ["all"]
 
 [dependencies]
+rand = "0.8"
 secp256kfun = { path = "../secp256kfun", version = "0.7.1",  default-features = false }
 serde_crate = { package = "serde", version = "1.0", default-features = false, optional = true, features = ["derive", "alloc"] }
 
@@ -44,7 +45,7 @@ harness = false
 
 [features]
 default = ["std"]
-all = ["std","serde", "libsecp_compat", "proptest"]
+all = ["std", "serde", "libsecp_compat", "proptest"]
 alloc = ["secp256kfun/alloc"]
 std = ["alloc", "secp256kfun/std"]
 serde = ["serde_crate", "secp256kfun/serde"]

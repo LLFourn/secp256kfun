@@ -5,10 +5,9 @@
 //! ```
 //! use schnorr_fun::{
 //!     frost,
-//!     Schnorr,
 //!     Message,
-//!     fun::Scalar
 //! };
+//! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
 //! // use sha256 to produce deterministic nonces -- be careful!
 //! let proto = frost::new_with_deterministic_nonces::<Sha256>();
@@ -60,8 +59,9 @@
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
 //! let session_id = b"signing-cool-message-attempt-1".as_slice(); // ⚠ must be different for every session
-//! let my_nonce = proto.gen_nonce(&my_secret_share, session_id, Some(frost_key.public_key()), Some(message));
-//! # let nonce3 = proto.gen_nonce(&secret_share3, session_id, Some(frost_key.public_key()), Some(message));
+//! let mut nonce_rng: ChaCha20Rng = proto.gen_nonce_rng(&my_secret_share, session_id, Some(frost_key.public_key()), Some(message));
+//! let my_nonce = proto.gen_nonce(&mut nonce_rng);
+//! # let nonce3 = proto.gen_nonce(&mut nonce_rng);
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
 //! // receive public nonces from other signers
@@ -145,8 +145,13 @@
 //! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature, Vec};
+use rand::SeedableRng;
 use secp256kfun::{
-    digest::{generic_array::typenum::U32, Digest},
+    derive_nonce_rng,
+    digest::{
+        generic_array::{typenum::U32, GenericArray},
+        Digest,
+    },
     g,
     hash::{HashAdd, Tagged},
     marker::*,
@@ -473,9 +478,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Generate nonces for creating signatures shares.
     ///
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`FrostKey::gen_nonce_rng`]
+    ///
+    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
+        NonceKeyPair::random(nonce_rng)
+    }
+
+    /// Generate a reusable nonce rng.
+    ///
     /// This method should be used carefully.
-    /// This calls [`NonceKeyPair::generate`] internally with the frost instance's [`NonceGen`].
-    /// See documentation for that for more usage info.
     ///
     /// When choosing a `secret` to use, if you are generating nonces prior to [`KeyGen`] completion,
     /// use the static first coefficient of your polynomial.
@@ -483,20 +494,35 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// The application should decide upon a unique `session_id`. If the `NonceGen` of this FROST
     /// instance is `Deterministic` then the `session_id` **must** be unique per signing session.
-    pub fn gen_nonce(
+    pub fn gen_nonce_rng<R: SeedableRng>(
         &self,
         secret: &Scalar,
         session_id: &[u8],
         public_key: Option<Point<impl Normalized>>,
         message: Option<Message<'_>>,
-    ) -> NonceKeyPair {
-        NonceKeyPair::generate(
-            self.schnorr.nonce_gen(),
-            secret,
-            session_id,
-            public_key,
-            message,
-        )
+    ) -> R
+    where
+        <R as SeedableRng>::Seed: From<GenericArray<u8, U32>>,
+    {
+        let message = message.unwrap_or(Message::raw(b""));
+        let msg_len = (message.len() as u64).to_be_bytes();
+        let sid_len = (session_id.len() as u64).to_be_bytes();
+        let pk_bytes = public_key
+            // NOTE: the `.normalize` here is very important. Even though the public key is already
+            // normalized we want it in particular to be Normal so that it serialzes correctly
+            // regardless of whether you pass in a Normal or EvenY point.
+            .map(|public_key| {
+                let public_key: Point<Normal> = public_key.normalize();
+                public_key.to_bytes()
+            })
+            .unwrap_or([0u8; 33]);
+        let rng: R = derive_nonce_rng!(
+            nonce_gen => self.schnorr.nonce_gen(),
+            secret => &secret,
+            public => [b"r1", pk_bytes, msg_len, message, sid_len, session_id],
+            seedable_rng => R
+        );
+        rng
     }
 
     /// Run the key generation protocol while simulating the parties internally.
