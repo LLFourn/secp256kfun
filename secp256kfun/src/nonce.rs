@@ -293,4 +293,20 @@ mod test {
         let one = s!(1);
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, one));
     }
+
+    #[test]
+    fn derive_nonce_macros_work_with_fixed_length_data() {
+        let _ = crate::derive_nonce_rng! {
+            nonce_gen => Deterministic::<Sha256>::default(),
+            secret => Scalar::random(&mut rand::thread_rng()),
+            public => [b"a fixed length array"],
+            seedable_rng => rand::rngs::StdRng,
+        };
+
+        let _ = crate::derive_nonce! {
+            nonce_gen => Deterministic::<Sha256>::default(),
+            secret => Scalar::random(&mut rand::thread_rng()),
+            public => [b"a fixed length array"],
+        };
+    }
 }
