@@ -312,7 +312,7 @@ macro_rules! derive_nonce {
     (
         nonce_gen => $nonce_gen:expr,
         secret => $secret:expr,
-        public => [$($public:expr),+]
+        public => [$($public:expr),+]$(,)?
     ) => {{
         use $crate::hash::HashAdd;
         use core::borrow::Borrow;
@@ -352,7 +352,7 @@ macro_rules! derive_nonce_rng {
         nonce_gen => $nonce_gen:expr,
         secret => $secret:expr,
         public => [$($public:expr),+],
-        seedable_rng => $rng:ty
+        seedable_rng => $rng:ty$(,)?
     ) => {{
         use $crate::hash::HashAdd;
         use core::borrow::Borrow;
@@ -360,7 +360,7 @@ macro_rules! derive_nonce_rng {
         use $crate::rand_core::SeedableRng;
         use $crate::digest::Digest;
 
-        let hash = $nonce_gen.begin_derivation($secret.borrow())$(.add($public.borrow()))+;
+        let hash = $nonce_gen.begin_derivation($secret.borrow())$(.add($public))+;
         <$rng>::from_seed(hash.finalize().into())
     }}
 }
