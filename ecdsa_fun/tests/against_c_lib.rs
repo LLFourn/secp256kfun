@@ -4,9 +4,11 @@ use ecdsa_fun::{
     fun::{
         hex,
         secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
-        Point, Scalar, TEST_SOUNDNESS,
+        Point, Scalar,
     },
 };
+
+const TEST_SOUNDNESS: usize = 20;
 
 fn rand_32_bytes() -> [u8; 32] {
     use rand::RngCore;

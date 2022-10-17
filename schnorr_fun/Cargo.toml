@@ -28,6 +28,7 @@ sha2 = "0.10"
 secp256kfun = { path = "../secp256kfun", version = "0.7.1", default-features = false, features = ["alloc", "libsecp_compat", "proptest"] }
 secp256k1 = { version = "0.22", features = ["std", "global-context"]}
 serde_json = "1"
+rand_chacha = { version = "0.3" }
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

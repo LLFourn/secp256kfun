@@ -300,7 +300,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
             keys,
             coefs,
             agg_key: agg_key.normalize(),
-            tweak: Scalar::zero().public(),
+            tweak: Scalar::zero(),
         }
     }
 }
@@ -394,8 +394,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
     ) -> SignSession {
-        let (b, c, public_nonces, R, nonce_needs_negation) =
-            self._start_sign_session(agg_key, nonces, message, &Point::zero());
+        let (b, c, public_nonces, R, nonce_needs_negation) = self._start_sign_session(
+            agg_key,
+            nonces,
+            message,
+            &Point::<Normal, Public, _>::zero(),
+        );
         SignSession {
             b,
             c,
@@ -461,14 +465,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         bool,
     ) {
         let mut Rs = nonces;
-        let agg_Rs = Rs
-            .iter()
-            .fold([Point::zero().non_normal(); 2], |acc, nonce| {
-                [
-                    g!({ acc[0] } + { nonce.0[0] }),
-                    g!({ acc[1] } + { nonce.0[1] }),
-                ]
-            });
+        let agg_Rs = Rs.iter().fold([Point::zero(); 2], |acc, nonce| {
+            [
+                g!({ acc[0] } + { nonce.0[0] }),
+                g!({ acc[1] } + { nonce.0[1] }),
+            ]
+        });
         let agg_Rs = Nonce::<Zero>([
             g!({ agg_Rs[0] } + encryption_key).normalize(),
             agg_Rs[1].normalize(),
@@ -611,7 +613,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
         let sum_s = partial_sigs
             .into_iter()
             .reduce(|acc, s| s!(acc + s).public())
-            .unwrap_or(Scalar::zero().public());
+            .unwrap_or(Scalar::zero());
 
         let s = s!(sum_s + agg_key.tweak * session.c).public();
 

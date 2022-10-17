@@ -1,65 +1,46 @@
-//! In FROST, multiple parties cooperatively generate a single joint public key ([`FrostKey`]) for
-//! creating Schnorr signatures. Unlike in [`musig`], only some threshold `t` of the `n` signers are
-//! required to generate a signature under the key (rather than all `n`).
-//!
-//! This implementation has **not yet** been made compatible with other existing FROST
-//! implementations (notably [secp256k1-zkp]).
-//!
-//! The original scheme was introduced in *[FROST: Flexible Round-Optimized Schnorr Threshold
-//! Signatures]*. A more satisfying security proof was provided in *[Security of Multi- and Threshold
-//! Signatures]*.
-//!
-//! > ⚠ At this stage this implementation is for API exploration purposes only. The way it is
-//! currently implemented is not proven secure.
-//!
-//! [FROST: Flexible Round-Optimized Schnorr Threshold Signatures]: <https://eprint.iacr.org/2020/852.pdf>
-//! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
-//! [Security of Multi- and Threshold Signatures]: <https://eprint.iacr.org/2021/1375.pdf>
-//! [`musig`]: crate::musig
+//! The FROST threshold multisignature scheme.
 //!
 //! ## Synopsis
 //!
 //! ```
 //! use schnorr_fun::{
-//!     frost::{self, Frost, ScalarPoly},
+//!     frost,
 //!     Schnorr,
 //!     Message,
-//!     nonce::Deterministic,
-//!     fun::marker::Public
+//!     fun::Scalar
 //! };
-//! use schnorr_fun::fun::Scalar;
 //! use sha2::Sha256;
-//! // use sha256 with deterministic nonce generation -- be careful!
+//! // use sha256 to produce deterministic nonces -- be careful!
 //! let proto = frost::new_with_deterministic_nonces::<Sha256>();
-//! // use synthetic nonces with randomness from ThredRng -- harder to make a mistake.
+//! // Use randomness from ThreadRng to create synthetic nonces -- harder to make a mistake.
 //! let proto = frost::new_with_synthetic_nonces::<Sha256, rand::rngs::ThreadRng>();
+//! // We need an RNG for key generation -- don't use ThreadRng in practice see note below.
 //! let mut rng = rand::thread_rng();
-//! // Usually we start with an existing secret key
-//! let static_secret_key = Scalar::random(&mut rng);
-//! // Start key generation of a frost key with a threshold of two. each participant uses a secret
-//! // scalar to derive a random scalar polynomial with two coefficients.
+//! // we're doing a 2 out of 3
 //! let threshold = 2;
-//! let scalar_poly = proto.new_scalar_poly(static_secret_key, threshold, b"frost-unique-id");
-//! # let scalar_poly2 = proto.new_scalar_poly(Scalar::random(&mut rng), threshold, b"frost-unique-id");
-//! # let scalar_poly3 = proto.new_scalar_poly(Scalar::random(&mut rng), threshold, b"frost-unique-id");
+//! // Generate our secret scalar polynomial we'll use in the key generation protocol
+//! let my_secret_poly = frost::generate_scalar_poly(threshold, &mut rng);
+//! let my_public_poly = frost::to_point_poly(&my_secret_poly);
+//! # let secret_poly2 = frost::generate_scalar_poly(threshold, &mut rng);
+//! # let secret_poly3 = frost::generate_scalar_poly(threshold, &mut rng);
+//! # let public_poly2 = frost::to_point_poly(&secret_poly2);
+//! # let public_poly3 = frost::to_point_poly(&secret_poly3);
 //! // share our public point poly, and receive the point polys from other participants
-//! # let point_poly2 = scalar_poly2.to_point_poly();
-//! # let point_poly3 = scalar_poly3.to_point_poly();
-//! let point_polys = vec![scalar_poly.to_point_poly(), point_poly2, point_poly3];
-//! // create secret shares and proofs-of-possession using our secret scalar polynomial
-//! let keygen = proto.new_keygen(point_polys).expect("something wrong with what was provided by other parties");
-//! let (shares, pop) = proto.create_shares(&keygen, scalar_poly);
-//! # let (shares2, pop2) = proto.create_shares(&keygen, scalar_poly2);
-//! # let (shares3, pop3) = proto.create_shares(&keygen, scalar_poly3);
-//! // send the secret share at index i and all proofs-of-possession to each other participant i,
-//! // and receive our shares from each other participant as well as their proofs-of-possession.
-//! let received_shares = vec![shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
-//! # let received_shares3 = vec![shares[2].clone(), shares2[2].clone(), shares3[2].clone()];
-//! let proofs_of_possession = vec![pop, pop2, pop3];
+//! let public_polys = vec![my_public_poly, public_poly2, public_poly3];
+//! let keygen = proto.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
+//! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
+//! let (my_shares, my_pop) = proto.create_shares(&keygen, my_secret_poly);
+//! # let (shares2, pop2) = proto.create_shares(&keygen, secret_poly2);
+//! # let (shares3, pop3) = proto.create_shares(&keygen, secret_poly3);
+//! // for i = 0..3, Send the secret share at index i and all proofs-of-possession to the participant with index i,
+//! // and receive our shares and pops from each participant as well.
+//! let received_shares = vec![my_shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
+//! # let received_shares3 = vec![my_shares[2].clone(), shares2[2].clone(), shares3[2].clone()];
+//! let proofs_of_possession = vec![my_pop, pop2, pop3];
 //! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
 //! // and calculate our long-lived secret share of the joint FROST key.
-//! let (secret_share, frost_key) = proto
-//!     .finish_keygen_to_xonly(
+//! let (my_secret_share, frost_key) = proto
+//!     .finish_keygen(
 //!         keygen.clone(),
 //!         0,
 //!         received_shares,
@@ -67,69 +48,111 @@
 //!     )
 //!     .unwrap();
 //! # let (secret_share3, _frost_key3) = proto
-//! #    .finish_keygen_to_xonly(
+//! #    .finish_keygen(
 //! #        keygen.clone(),
 //! #        2,
 //! #        received_shares3,
 //! #        proofs_of_possession.clone(),
 //! #    )
 //! #    .unwrap();
-//! // signing parties must use a common set of nonces when creating signature shares.
-//! // nonces can be derived from a session id which is created from publicly known values.
-//! let verification_shares_bytes: Vec<_> = frost_key
-//!     .verification_shares()
-//!     .map(|share| share.to_bytes())
-//!     .collect();
-//! // create a unique session id
-//! let sid = [
-//!     verification_shares_bytes.concat().as_slice(),
-//!     b"frost-very-unique-id".as_slice(),
-//!     b"0".as_slice(),
-//! ]
-//! .concat();
-//! # let sid3 = [
-//! #    verification_shares_bytes.concat().as_slice(),
-//! #    b"frost-very-unique-id".as_slice(),
-//! #    b"2".as_slice(),
-//! # ]
-//! # .concat();
-//! // generate nonces for this signing session
-//! let nonce = proto.gen_nonce(&secret_share, &sid, Some(frost_key.public_key().normalize()), None);
-//! # let nonce3 = proto.gen_nonce(&secret_share3, &sid3, Some(frost_key.public_key().normalize()), None);
+//! // We're ready to do some signing, so convert to xonly key
+//! let frost_key = frost_key.into_xonly_key();
+//! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
+//! // Generate nonces for this signing session.
+//! let session_id = b"signing-cool-message-attempt-1".as_slice(); // ⚠ must be different for every session
+//! let my_nonce = proto.gen_nonce(&my_secret_share, session_id, Some(frost_key.public_key()), Some(message));
+//! # let nonce3 = proto.gen_nonce(&secret_share3, session_id, Some(frost_key.public_key()), Some(message));
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
-//! // receive public nonces from other signers with their participant index
-//! let nonces = vec![(0, nonce.public()), (2, received_nonce3)];
-//! # let nonces3 = vec![(0, nonce.public()), (2, received_nonce3)];
+//! // receive public nonces from other signers
+//! let nonces = vec![(0, my_nonce.public()), (2, received_nonce3)];
+//! # let nonces3 = vec![(0, my_nonce.public()), (2, received_nonce3)];
 //! // start a sign session with these nonces for a message
-//! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! let session = proto.start_sign_session(&frost_key, nonces, message);
 //! # let session3 = proto.start_sign_session(&frost_key, nonces3, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let sig = proto.sign(&frost_key, &session, 0, &secret_share, nonce);
+//! let my_sig = proto.sign(&frost_key, &session, 0, &my_secret_share, my_nonce);
 //! # let sig3 = proto.sign(&frost_key, &session3, 2, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
 //! assert!(proto.verify_signature_share(&frost_key, &session, 2, sig3));
 //! // combine signature shares into a single signature that is valid under the FROST key
-//! let combined_sig = proto.combine_signature_shares(&frost_key, &session, vec![sig, sig3]);
+//! let combined_sig = proto.combine_signature_shares(&frost_key, &session, vec![my_sig, sig3]);
 //! assert!(proto.schnorr.verify(
 //!     &frost_key.public_key(),
 //!     message,
 //!     &combined_sig
 //! ));
 //! ```
+//!
+//! # FROST
+//!
+//! In FROST, multiple parties cooperatively generate a single joint public key ([`FrostKey`]) for
+//! creating Schnorr signatures. Unlike in [`musig`], only some threshold `t` of the `n` signers are
+//! required to generate a signature under the key (rather than all `n`).
+//!
+//! This implementation is **not** yet compatible with other existing FROST
+//! implementations (notably [secp256k1-zkp]).
+//!
+//! The original scheme was introduced in *[FROST: Flexible Round-Optimized Schnorr Threshold
+//! Signatures][FROST]*. A more satisfying security proof was provided in *[Security of Multi- and Threshold
+//! Signatures]*.
+//!
+//! > ⚠ At this stage this implementation is for API exploration purposes only. The way it is
+//! currently implemented is not proven secure.
+//!
+//! [FROST]: <https://eprint.iacr.org/2020/852.pdf>
+//! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
+//! [Security of Multi- and Threshold Signatures]: <https://eprint.iacr.org/2021/1375.pdf>
+//! [`musig`]: crate::musig
+
+//! ##  Polynomial Generation
+//!
+//! The FROST key generation protocol takes as input a *secret* polynomial of degree `threshold - 1`.
+//! We represent a polynomial as a `Vec<Scalar>` where each `Scalar` represents a coefficient in the polynomal.
+//!
+//! The security of the protocol is only guaranteed if you sample your secret polynomial uniformly
+//! at random from the perspective of the other parties. You might also want to be able to
+//! deterministically re-generate the polynomial from some secret data so that you may restore the
+//! polynomial later from the secret. We don't have tools to use the restored polynomial in this
+//! library yet but plan to in the future.
+//!
+//! This implementation doesn't provide a default policy with regards to polynomial generation. Here
+//! we give an example of how to generate a deterministic RNG for the forst key generation session
+//! that should make sense in most applications:
+//!
+//! ```
+//! use schnorr_fun::{frost, fun::{ Scalar, nonce::{self, AddTag}, derive_nonce_rng }};
+//! use sha2::Sha256;
+//! use rand_chacha::ChaCha20Rng;
+//!
+//! let static_secret_key = /* from local storage */
+//! # Scalar::random(&mut rand::thread_rng());
+//! let mut poly_rng = derive_nonce_rng! {
+//!     // use Deterministic nonce gen so we reproduce it later
+//!     nonce_gen => nonce::Deterministic::<Sha256>::default().add_tag("my-app-name"),
+//!     secret => static_secret_key,
+//!     // session id must be unique for each key generation session
+//!     public => ["forst_key_session_1053"],
+//!     seedable_rng => ChaCha20Rng
+//! };
+//!
+//! let threshold = 2;
+//! // we can always reproduce my_secret_poly knowing `static_secret_key`,
+//! // the threshold and the session id
+//! let my_secret_poly: Vec<Scalar> = frost::generate_scalar_poly(threshold, &mut poly_rng);
+//! ```
+//!
+//! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature, Vec};
-use core::iter;
-use rand_core::RngCore;
 use secp256kfun::{
-    derive_nonce,
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::{HashAdd, Tagged},
     marker::*,
     nonce::{self, AddTag, NonceGen},
-    rand_core, s, Point, Scalar, G,
+    rand_core::RngCore,
+    s, Point, Scalar, G,
 };
 use std::collections::BTreeMap;
 
@@ -137,15 +160,15 @@ use std::collections::BTreeMap;
 ///
 /// Type parametres:
 ///
-/// - `H`: hash for challenges, keygen_id, and binding coefficient.
-/// - `NG`: hash for nonce generation when signing.
+/// - `H`: hash type for challenges, keygen_id, and binding coefficient.
+/// - `NG`: nonce generator for proofs-of-possessions and FROST nonces
 #[derive(Clone)]
 pub struct Frost<H, NG> {
     /// The instance of the Schnorr signature scheme.
     pub schnorr: Schnorr<H, NG>,
-    /// The hash used in the binding coefficient of the frost key.
+    /// The hash used to generate the nonce binding coefficient when signing.
     binding_hash: H,
-    /// The hash used to generate the keygen_id.
+    /// The hash used to generate the `keygen_id`
     keygen_id_hash: H,
 }
 
@@ -177,135 +200,6 @@ impl<H: Tagged, NG> Frost<H, NG> {
     }
 }
 
-/// A participant's secret polynomial with `t` random coefficients.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ScalarPoly(Vec<Scalar>);
-
-impl ScalarPoly {
-    /// Evaluate the scalar polynomial at position x.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use schnorr_fun::{frost::ScalarPoly, fun::s};
-    /// let scalar_poly = ScalarPoly::random(3, &mut rand::thread_rng());
-    /// let value_at_1 = scalar_poly.eval(s!(1));
-    /// let value_at_2 = scalar_poly.eval(s!(2));
-    /// ```
-    pub fn eval(&self, x: Scalar<impl Secrecy, impl ZeroChoice>) -> Scalar<Secret, Zero> {
-        let mut xpow = s!(1).public().mark_zero();
-        let mut sum = self.0[0].clone().mark_zero();
-
-        for coeff in &self.0[1..] {
-            xpow *= &x;
-            sum += s!(xpow * coeff);
-        }
-
-        sum
-    }
-
-    /// Create a point polynomial by multiplying each coefficient by `G`
-    pub fn to_point_poly(&self) -> PointPoly {
-        PointPoly(self.0.iter().map(|a| g!(a * G).normalize()).collect())
-    }
-
-    /// Create a random scalar polynomial with a specific number of terms.
-    pub fn random(n_terms: usize, rng: &mut impl RngCore) -> Self {
-        ScalarPoly((0..n_terms).map(|_| Scalar::random(rng)).collect())
-    }
-
-    /// Create a scalar polynomial where the first coefficient (the coefficient to x^0) is a
-    /// specified secret and the remaining coefficients are random. `n_terms` is inclusive of the
-    /// first coefficient so `n_terms == 1` means it will just return a polynomial where the single
-    /// term is the passed in secret.
-    pub fn random_using_secret(n_terms: usize, secret: Scalar, rng: &mut impl RngCore) -> Self {
-        ScalarPoly(
-            iter::once(secret)
-                .chain((1..n_terms).map(|_| Scalar::random(rng)))
-                .collect(),
-        )
-    }
-
-    /// The number of terms in the polynomial. In FROST this corresponds to the threshold `t`.
-    pub fn n_terms(&self) -> usize {
-        self.0.len()
-    }
-
-    /// The first coefficient in the polynomial (the coefficient to x^0)
-    pub fn first_coef(&self) -> &Scalar {
-        &self.0[0]
-    }
-
-    /// Create a new scalar polynomial from a vector of scalars.
-    pub fn new(x: Vec<Scalar>) -> Self {
-        Self(x)
-    }
-}
-
-/// A participant's public commitment polynomial.
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
-pub struct PointPoly<Z = NonZero>(
-    #[cfg_attr(
-        feature = "serde",
-        serde(bound(
-            deserialize = "Point<Normal, Public, Z>: serde::Deserialize<'de>",
-            serialize = "Point<Normal, Public, Z>: serde::Serialize"
-        ))
-    )]
-    pub Vec<Point<Normal, Public, Z>>,
-);
-
-impl<Z> PointPoly<Z> {
-    /// Evaluate the point polynomial at position x.
-    pub fn eval(&self, x: Scalar<Public, impl ZeroChoice>) -> Point<NonNormal, Public, Zero> {
-        let xpows = iter::successors(Some(s!(1).public().mark_zero()), |xpow| {
-            Some(s!(x * xpow).public().mark_zero())
-        })
-        .take(self.0.len())
-        .collect::<Vec<_>>();
-        crate::fun::op::lincomb(&xpows, &self.0)
-    }
-
-    /// Combine a vector of point polynomials into a joint polynomial.
-    fn combine(mut polys: impl Iterator<Item = Self>) -> PointPoly<Zero> {
-        // take the first point polynomial and collect its coefficients
-        let mut combined_poly = polys
-            .next()
-            .expect("cannot combine empty list of polys")
-            .0
-            .into_iter()
-            .map(|p| p.non_normal().mark_zero())
-            .collect::<Vec<_>>();
-        // add the coefficients of the remaining polys
-        for poly in polys {
-            for (combined_point, point) in combined_poly.iter_mut().zip(poly.0) {
-                *combined_point = g!({ *combined_point } + point);
-            }
-        }
-        PointPoly(combined_poly.into_iter().map(|p| p.normalize()).collect())
-    }
-
-    /// The number of terms in the polynomial. In FROST this corresponds to the threshold `t`.
-    pub fn n_terms(&self) -> usize {
-        self.0.len()
-    }
-
-    /// The first coefficient in the polynomial (the coefficient to x^0)
-    pub fn first_coef(&self) -> Point<Normal, Public, Z> {
-        self.0[0]
-    }
-
-    /// Fetch the points for the polynomial
-    pub fn points(&self) -> &[Point<Normal, Public, Z>] {
-        &self.0
-    }
-}
-
 /// A KeyGen (distributed key generation) session
 ///
 /// Created using [`Frost::new_keygen`]
@@ -313,7 +207,7 @@ impl<Z> PointPoly<Z> {
 /// [`Frost::new_keygen`]
 #[derive(Clone, Debug)]
 pub struct KeyGen {
-    point_polys: Vec<PointPoly>,
+    point_polys: Vec<Vec<Point>>,
     keygen_id: [u8; 32],
     frost_key: FrostKey,
 }
@@ -332,10 +226,8 @@ pub enum NewKeyGenError {
     PolyDifferentLength(usize),
     /// Number of parties is less than the length of polynomials specifying the threshold.
     NotEnoughParties,
-    /// Frost key is zero. Computationally unreachable, likely has been maliciously chosen.
+    /// Frost key is zero. Computationally unreachable *if* all parties are honest.
     ZeroFrostKey,
-    /// Verification share is zero. Computationally unreachable, likely has been maliciously chosen.
-    ZeroVerificationShare,
 }
 
 impl core::fmt::Display for NewKeyGenError {
@@ -345,7 +237,6 @@ impl core::fmt::Display for NewKeyGenError {
             PolyDifferentLength(i) => write!(f, "polynomial commitment from party at index {} was a different length", i),
             NotEnoughParties => write!(f, "the number of parties was less than the threshold"),
             ZeroFrostKey => write!(f, "The frost public key was zero. Computationally unreachable, one party is acting maliciously."),
-            ZeroVerificationShare => write!(f, "Zero verification share. Computationally unreachable, one party is acting maliciously."),
         }
     }
 }
@@ -358,7 +249,7 @@ impl std::error::Error for NewKeyGenError {}
 pub enum FinishKeyGenError {
     /// Secret share does not match the expected. Incorrect ordering?
     InvalidShare(usize),
-    /// Proof of possession does not match the expected. Incorrect ordering?
+    /// proof-of-possession does not match the expected. Incorrect ordering?
     InvalidProofOfPossession(usize),
 }
 
@@ -374,7 +265,7 @@ impl core::fmt::Display for FinishKeyGenError {
             ),
             &InvalidProofOfPossession(i) => write!(
                 f,
-                "the proof of possession provided by party at index {} was invalid, check ordering.",
+                "the proof-of-possession provided by party at index {} was invalid, check ordering.",
                 i
             ),
         }
@@ -395,7 +286,7 @@ pub struct FrostKey {
     /// The joint public key of the frost multisignature.
     public_key: Point<Normal>,
     /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
-    verification_shares: Vec<Point>,
+    verification_shares: Vec<Point<Normal, Public, Zero>>,
     /// Number of partial signatures required to create a combined signature under this key.
     threshold: usize,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
@@ -403,26 +294,21 @@ pub struct FrostKey {
 }
 
 impl FrostKey {
-    /// The joint public key of the frost multisignature
-    ///
-    /// ## Return value
-    ///
-    /// A point
+    /// The joint public key
     pub fn public_key(&self) -> Point<Normal> {
         self.public_key
     }
 
-    /// An iterator over the verification shares of each party in the key.
+    /// The verification shares of each party in the key.
     ///
-    /// ## Return value
-    ///
-    /// An iterator over verification share points
-    pub fn verification_shares(&self) -> impl Iterator<Item = Point> + '_ {
+    /// The verification share is the image of their secret share.
+    pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
         self.verification_shares.iter().map(|point| *point)
     }
 
     /// Apply a plain tweak to the frost public key.
-    /// This is how you derive child public keys from a frost public key using BIP32.
+    ///
+    /// This is useful for deriving unhardened child frost keys from a master frost public key using [BIP32].
     ///
     /// Tweak the frost public key with a scalar so that the resulting key is equal to the
     /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
@@ -433,6 +319,8 @@ impl FrostKey {
     /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
+    ///
+    /// [BIP32]: https://bips.xyz/32
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
         let public_key = g!(self.public_key + tweak * G).normalize().non_zero()?;
         let tweak = s!(self.tweak + tweak).public();
@@ -447,7 +335,9 @@ impl FrostKey {
 
     /// Convert the key into a `Bip340AggKey`.
     ///
-    /// This is the BIP340 compatible version of the key which you can put in a segwitv1
+    /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
+    ///
+    /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> XOnlyFrostKey {
         let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
         let mut tweak = self.tweak;
@@ -472,11 +362,13 @@ impl FrostKey {
     }
 }
 
-/// A [`FrostKey`] that has been converted into an [`XOnlyFrostKey`] key.
+/// A [`FrostKey`] that has been converted into an x-only key.
 ///
-/// This is the BIP340 compatible version of the key which you can put in a segwitv1 output and create BIP340 signatures under.
-/// Tweaks applied to a `XOnlyFrostKey` are XOnly tweaks to the frost public key.
-/// BIP340: <https://bips.xyz/340>
+/// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output and
+/// create BIP340 signatures under. Tweaks applied to a `XOnlyFrostKey` are x-only tweaks to the
+/// frost public key.
+///
+/// [BIP340]: https://bips.xyz/340
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
@@ -487,7 +379,7 @@ pub struct XOnlyFrostKey {
     /// The BIP340 public key of the frost multisignature.
     public_key: Point<EvenY>,
     /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
-    verification_shares: Vec<Point>,
+    verification_shares: Vec<Point<Normal, Public, Zero>>,
     /// Number of partial signatures required to create a combined signature under this key.
     threshold: usize,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
@@ -498,10 +390,6 @@ pub struct XOnlyFrostKey {
 
 impl XOnlyFrostKey {
     /// The joint public key of the frost multisignature
-    ///
-    /// ## Return value
-    ///
-    /// A point (normalized to have an even Y coordinate).
     pub fn public_key(&self) -> Point<EvenY> {
         self.public_key
     }
@@ -511,7 +399,7 @@ impl XOnlyFrostKey {
     /// ## Return value
     ///
     /// An iterator over verification share points
-    pub fn verification_shares(&self) -> impl Iterator<Item = Point> + '_ {
+    pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
         self.verification_shares.iter().map(|point| *point)
     }
 
@@ -557,70 +445,117 @@ impl XOnlyFrostKey {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
-    /// Create a scalar polynomial where the first coefficient is a specified secret
-    /// and the remaining coefficients are generated using the internal nonce_gen.
-    ///
-    /// Depending on your choice of [`NonceGen`], this can be deterministic based
-    /// on the secret and session_id. Be careful not to reuse scalar polys!
-    ///
-    /// ## Return value
-    ///
-    /// Returns a scalar polynomial
-    pub fn new_scalar_poly(
-        &self,
-        secret: Scalar,
-        threshold: usize,
-        session_id: &[u8],
-    ) -> ScalarPoly {
-        let mut coeffs = vec![secret.clone()];
-        for _ in 1..threshold {
-            let schnorr = self.schnorr.nonce_gen();
-            let nonce = derive_nonce!(
-                nonce_gen => schnorr,
-                secret => secret,
-                public => [session_id]
-            );
-            coeffs.push(nonce)
-        }
-        ScalarPoly(coeffs)
-    }
-
     /// Create our secret shares and proof-of-possession to be shared with other participants.
     ///
-    /// Secret shares are created for every other participant by evaluating our secret polynomial
-    /// at their participant index. f(i) for 1<=i<=n.
-    ///
-    /// Each secret share f(i) needs to be securely communicated to participant i. Additionally
-    /// we share a proof of possession for the first coefficient in our secret scalar polynomial.
+    /// Each secret share needs to be securely communicated to the intended participant.
+    /// The proof-of-possession should be sent to all participants.
     ///
     /// ## Return value
     ///
-    /// Returns a vector of secret shares and a proof-of-possession Signature
-    /// The secret shares at index 0 is destined for participant 1.
+    /// Returns a vector of secret shares where the index represents the signer index and a
+    /// proof-of-possession as a `Signature`.
     pub fn create_shares(
         &self,
         keygen: &KeyGen,
-        scalar_poly: ScalarPoly,
+        scalar_poly: Vec<Scalar>,
     ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
-        let key_pair = self.schnorr.new_keypair(scalar_poly.0[0].clone());
+        let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
         let pop = self
             .schnorr
             .sign(&key_pair, Message::<Public>::raw(&keygen.keygen_id));
 
         let shares = (1..=keygen.point_polys.len())
-            .map(|i| scalar_poly.eval((i as u32).into()))
+            .map(|i| scalar_poly_eval(&scalar_poly, (i as u32).into()))
             .collect();
 
         (shares, pop)
     }
+
+    /// Generate nonces for creating signatures shares.
+    ///
+    /// This method should be used carefully.
+    /// This calls [`NonceKeyPair::generate`] internally with the frost instance's [`NonceGen`].
+    /// See documentation for that for more usage info.
+    ///
+    /// When choosing a `secret` to use, if you are generating nonces prior to [`KeyGen`] completion,
+    /// use the static first coefficient of your polynomial.
+    /// Otherwise you can use your secret share of the frost key.
+    ///
+    /// The application should decide upon a unique `session_id`. If the `NonceGen` of this FROST
+    /// instance is `Deterministic` then the `session_id` **must** be unique per signing session.
+    pub fn gen_nonce(
+        &self,
+        secret: &Scalar,
+        session_id: &[u8],
+        public_key: Option<Point<impl Normalized>>,
+        message: Option<Message<'_>>,
+    ) -> NonceKeyPair {
+        NonceKeyPair::generate(
+            self.schnorr.nonce_gen(),
+            secret,
+            session_id,
+            public_key,
+            message,
+        )
+    }
+
+    /// Run the key generation protocol while simulating the parties internally.
+    ///
+    /// This can be used to do generate a "trusted setup" FROST key. It returns the joint `FrostKey`
+    /// along with the secret keys for each party.
+    pub fn simulate_keygen(
+        &self,
+        threshold: usize,
+        n_parties: usize,
+        rng: &mut impl RngCore,
+    ) -> (FrostKey, Vec<Scalar>) {
+        let scalar_polys = (0..n_parties)
+            .map(|_| generate_scalar_poly(threshold, rng))
+            .collect::<Vec<_>>();
+        let point_polys = scalar_polys
+            .iter()
+            .map(|sp| to_point_poly(sp))
+            .collect::<Vec<_>>();
+        let keygen = self.new_keygen(point_polys).unwrap();
+        let (shares, proofs_of_possesion): (Vec<_>, Vec<_>) = scalar_polys
+            .into_iter()
+            .map(|sp| self.create_shares(&keygen, sp))
+            .unzip();
+        // collect the received shares for each party
+        let received_shares = (0..n_parties)
+            .map(|party_index| {
+                (0..n_parties)
+                    .map(|share_index| shares[share_index][party_index].clone())
+                    .collect()
+            })
+            .collect::<Vec<Vec<_>>>();
+
+        // finish keygen for each party
+        let (secret_shares, mut frost_keys): (Vec<_>, Vec<_>) = (0..n_parties)
+            .map(|party_index| {
+                let (secret_share, frost_key) = self
+                    .finish_keygen(
+                        keygen.clone(),
+                        party_index,
+                        received_shares[party_index].clone(),
+                        proofs_of_possesion.clone(),
+                    )
+                    .unwrap();
+
+                (secret_share, frost_key)
+            })
+            .unzip();
+
+        (frost_keys.remove(0), secret_shares)
+    }
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Verify a proof of possession of a point
+    /// Verify a proof-of-possession of a point
     ///
     /// ## Return value
     ///
-    /// Returns `bool` true if the proof of possession matches the point
+    /// Returns `bool` true if the proof-of-possession matches the point
     fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
@@ -639,13 +574,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a [`KeyGen`] containing a [`FrostKey`]
-    pub fn new_keygen(&self, point_polys: Vec<PointPoly>) -> Result<KeyGen, NewKeyGenError> {
-        let len_first_poly = point_polys[0].n_terms();
+    pub fn new_keygen(&self, point_polys: Vec<Vec<Point>>) -> Result<KeyGen, NewKeyGenError> {
+        let len_first_poly = point_polys[0].len();
         {
             if let Some((i, _)) = point_polys
                 .iter()
                 .enumerate()
-                .find(|(_, point_poly)| point_poly.n_terms() != len_first_poly)
+                .find(|(_, point_poly)| point_poly.len() != len_first_poly)
             {
                 return Err(NewKeyGenError::PolyDifferentLength(i));
             }
@@ -656,8 +591,18 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             }
         }
 
-        let joint_poly = PointPoly::combine(point_polys.clone().into_iter());
-        let public_key = joint_poly.0[0]
+        let mut joint_poly = (0..len_first_poly)
+            .map(|_| Point::<NonNormal, Public, _>::zero())
+            .collect::<Vec<_>>();
+
+        for poly in &point_polys {
+            for i in 0..len_first_poly {
+                joint_poly[i] += poly[i];
+            }
+        }
+
+        let public_key = joint_poly[0]
+            .normalize()
             .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
@@ -665,16 +610,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         keygen_hash.update((len_first_poly as u32).to_be_bytes());
         keygen_hash.update((point_polys.len() as u32).to_be_bytes());
         for poly in &point_polys {
-            for point in poly.0.iter() {
+            for point in poly {
                 keygen_hash.update(point.to_bytes());
             }
         }
         let keygen_id = keygen_hash.finalize().into();
 
         let verification_shares = (1..=point_polys.len())
-            .map(|i| joint_poly.eval((i as u32).into()).normalize().non_zero())
-            .collect::<Option<Vec<Point>>>()
-            .ok_or(NewKeyGenError::ZeroVerificationShare)?;
+            .map(|i| point_poly_eval(&joint_poly, (i as u32).into()).normalize())
+            .collect();
 
         Ok(KeyGen {
             point_polys,
@@ -682,23 +626,22 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             frost_key: FrostKey {
                 verification_shares,
                 public_key,
-                threshold: joint_poly.n_terms(),
-                tweak: Scalar::zero().public(),
+                threshold: joint_poly.len(),
+                tweak: Scalar::zero(),
             },
         })
     }
 
-    /// Collect the vector of all received secret shares into your total long-lived secret share.
-    /// The secret_shares includes your own share as well as shares from each of the other parties.
+    /// Combine all receieved shares into your long-lived secret share.
     ///
-    /// The secret_shares are validated to match the expected result
-    /// by evaluating their polynomial at our participant index.
-    ///
-    /// Each participant's proof of possession is verified against their polynomial.
+    /// The `secret_shares` includes your own share as well as shares from each of the other
+    /// parties. The `secret_shares` are validated to match the expected result by evaluating their
+    /// polynomial at our participant index. Each participant's proof-of-possession is verified
+    /// against what they provided in the first round of key generation.
     ///
     /// # Return value
     ///
-    /// Your total secret share Scalar and the [`FrostKey`]
+    /// Your secret share and the [`FrostKey`]
     pub fn finish_keygen(
         &self,
         keygen: KeyGen,
@@ -718,14 +661,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .zip(proofs_of_possession)
             .enumerate()
         {
-            if !self.verify_pop(&keygen, poly.first_coef(), pop) {
+            if !self.verify_pop(&keygen, poly[0], pop) {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(i));
             }
         }
 
         let mut total_secret_share = s!(0);
         for (i, (secret_share, poly)) in secret_shares.iter().zip(&keygen.point_polys).enumerate() {
-            let expected_public_share = poly.eval(((my_index + 1) as u32).into());
+            let expected_public_share =
+                point_poly_eval(poly, Scalar::<Public, Zero>::from((my_index + 1) as u32));
             if g!(secret_share * G) != expected_public_share {
                 return Err(FinishKeyGenError::InvalidShare(i));
             }
@@ -739,56 +683,170 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         Ok((total_secret_share, keygen.frost_key))
     }
 
-    /// Calls [`Frost::finish_keygen`] but immediately provides the the key as an [`XOnlyFrostKey`].
+    /// Start a FROST signing session.
     ///
-    /// # Return value
+    /// Each signing party must call this with the same arguments for it to succeeed. This means you
+    /// must all agree on each other's nonces before starting the sign session. In `nonces` each
+    /// item is the signer's index and their `Nonce`. It's length must be at least `threshold`.
+    /// Generating your own nonces can be done with [`Frost::gen_nonce`].
     ///
-    /// Your total secret share Scalar and the [`XOnlyFrostKey`]
-    pub fn finish_keygen_to_xonly(
+    /// # Panics
+    ///
+    /// If the number of nonces is less than the threshold.
+    pub fn start_sign_session(
         &self,
-        keygen: KeyGen,
-        my_index: usize,
-        secret_shares: Vec<Scalar<Secret, Zero>>,
-        proofs_of_possession: Vec<Signature>,
-    ) -> Result<(Scalar, XOnlyFrostKey), FinishKeyGenError> {
-        let (secret_share, frost_key) =
-            self.finish_keygen(keygen, my_index, secret_shares, proofs_of_possession)?;
-        Ok((secret_share, frost_key.into_xonly_key()))
-    }
-}
+        frost_key: &XOnlyFrostKey,
+        nonces: Vec<(usize, Nonce)>,
+        message: Message,
+    ) -> SignSession {
+        let mut nonce_map: BTreeMap<_, _> =
+            nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
 
-impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
-    /// Generate nonces for secret shares
+        if nonce_map.len() < frost_key.threshold() {
+            panic!("nonces' length was less than the threshold");
+        }
+
+        let agg_nonce = nonce_map
+            .iter()
+            .fold([Point::zero(); 2], |acc, (_, nonce)| {
+                [
+                    g!({ acc[0] } + { nonce.0[0] }),
+                    g!({ acc[1] } + { nonce.0[1] }),
+                ]
+            });
+
+        let agg_nonce = [agg_nonce[0].normalize(), agg_nonce[1].normalize()];
+
+        let binding_coeff = Scalar::from_hash(
+            self.binding_hash
+                .clone()
+                .add(agg_nonce[0])
+                .add(agg_nonce[1])
+                .add(frost_key.public_key())
+                .add(message),
+        );
+        let (agg_nonce, nonces_need_negation) =
+            g!({ agg_nonce[0] } + binding_coeff * { agg_nonce[1] })
+                .normalize()
+                .non_zero()
+                .unwrap_or_else(|| {
+                    // Use the same trick as the MuSig spec
+                    G.clone().normalize()
+                })
+                .into_point_with_even_y();
+
+        for (_, nonce) in &mut nonce_map {
+            nonce.conditional_negate(nonces_need_negation);
+        }
+
+        let challenge = self
+            .schnorr
+            .challenge(&agg_nonce, &frost_key.public_key(), message);
+
+        SignSession {
+            binding_coeff,
+            nonces_need_negation,
+            agg_nonce,
+            challenge,
+            nonces: nonce_map,
+        }
+    }
+
+    /// Generates a partial signature share under the frost key using a secret share.
     ///
-    /// This method should be used carefully.
-    /// This calls [`NonceKeyPair::generate`] internally with the frost instance's [`NonceGen`].
-    /// See documentation for that for more usage info.
+    /// ## Return value
     ///
-    /// When choosing a `secret` to use, if you are generating nonces prior to [`KeyGen`] completion,
-    /// use the static first coefficient of your polynomial.
-    /// Otherwise you can use your secret share of the frost key.
-    ///
-    /// The application must decide upon a unique `sid` for this frost multisignature.
-    /// For example, the concatenation of: my_signing_index, verification_shares, purpose
+    /// Returns a signature share
+    pub fn sign(
+        &self,
+        frost_key: &XOnlyFrostKey,
+        session: &SignSession,
+        my_index: usize,
+        secret_share: &Scalar,
+        secret_nonce: NonceKeyPair,
+    ) -> Scalar<Public, Zero> {
+        let mut lambda = lagrange_lambda(
+            my_index as u32 + 1,
+            &session
+                .nonces
+                .iter()
+                .filter(|(j, _)| **j != my_index)
+                .map(|(j, _)| *j as u32 + 1)
+                .collect::<Vec<_>>(),
+        );
+        lambda.conditional_negate(frost_key.needs_negation);
+        let [mut r1, mut r2] = secret_nonce.secret;
+        r1.conditional_negate(session.nonces_need_negation);
+        r2.conditional_negate(session.nonces_need_negation);
+
+        let b = &session.binding_coeff;
+        let x = secret_share;
+        let c = &session.challenge;
+        s!(r1 + (r2 * b) + lambda * x * c).public()
+    }
+
+    /// Verify a partial signature for a participant at `index` (from zero).
     ///
     /// ## Return Value
     ///
-    /// A NonceKeyPair comprised of secret scalars [r1, r2] and public nonces [R1, R2]
-    /// [`NonceKeyPair::generate`]: crate::binonce::NonceKeyPair::generate
-    pub fn gen_nonce(
+    /// Returns `bool`, true if partial signature is valid.
+    ///
+    /// ## Panics
+    ///
+    /// If the `index` is is greater than the number of signers in the threshold.
+    pub fn verify_signature_share(
         &self,
-        secret: &Scalar,
-        session_id: &[u8],
-        public_key: Option<Point>,
-        message: Option<Message<'_>>,
-    ) -> NonceKeyPair {
-        NonceKeyPair::generate(
-            self.schnorr.nonce_gen(),
-            secret,
-            session_id,
-            public_key,
-            message,
-        )
+        frost_key: &XOnlyFrostKey,
+        session: &SignSession,
+        index: usize,
+        signature_share: Scalar<Public, Zero>,
+    ) -> bool {
+        let s = signature_share;
+        let mut lambda = lagrange_lambda(
+            index as u32 + 1,
+            &session
+                .nonces
+                .iter()
+                .filter(|(j, _)| **j != index)
+                .map(|(j, _)| *j as u32 + 1)
+                .collect::<Vec<_>>(),
+        );
+        lambda.conditional_negate(frost_key.needs_negation);
+        let c = &session.challenge;
+        let b = &session.binding_coeff;
+        let X = frost_key.verification_shares().nth(index).unwrap();
+        let [ref R1, ref R2] = session
+            .nonces
+            .get(&index)
+            .expect("verifying party index that is not part of frost signing coalition")
+            .0;
+        g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
+    }
+
+    /// Combine a vector of signatures shares into an aggregate signature.
+    ///
+    /// This method does not check the validity of the `signature_shares` but if you have verified
+    /// each signautre share individually the output will be a valid siganture under the `frost_key`
+    /// and message provided when starting the session.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a combined schnorr [`Signature`] on the message
+    pub fn combine_signature_shares(
+        &self,
+        frost_key: &XOnlyFrostKey,
+        session: &SignSession,
+        signature_shares: Vec<Scalar<Public, Zero>>,
+    ) -> Signature {
+        let ck = s!(session.challenge * frost_key.tweak);
+        let sum_s = signature_shares
+            .into_iter()
+            .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
+            .unwrap_or(Scalar::zero());
+        Signature {
+            R: session.agg_nonce,
+            s: s!(sum_s + ck).public(),
+        }
     }
 }
 
@@ -837,171 +895,6 @@ fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
         })
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Start a FROST signing session.
-    ///
-    /// Signing participants must use a common set of nonces to each produce a
-    /// signature share. See [`Frost::gen_nonce`] and [`NonceKeyPair::generate`].
-    ///
-    /// ## Return value
-    ///
-    /// A FROST signing session
-    pub fn start_sign_session(
-        &self,
-        frost_key: &XOnlyFrostKey,
-        nonces: Vec<(usize, Nonce)>,
-        message: Message,
-    ) -> SignSession {
-        let mut nonce_map: BTreeMap<_, _> =
-            nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
-
-        let agg_nonce_jac: [Point<NonNormal, Public, Zero>; 2] =
-            nonce_map
-                .iter()
-                .fold([Point::zero().non_normal(); 2], |acc, (_, nonce)| {
-                    [
-                        g!({ acc[0] } + { nonce.0[0] }),
-                        g!({ acc[1] } + { nonce.0[1] }),
-                    ]
-                });
-        let agg_nonce_points = [
-            agg_nonce_jac[0].normalize().non_zero().unwrap_or_else(|| {
-                // Like in musig spec, if the final nonce is zero we set to the generator
-                G.clone().normalize()
-            }),
-            agg_nonce_jac[1]
-                .normalize()
-                .non_zero()
-                .unwrap_or_else(|| G.clone().normalize()),
-        ];
-
-        let binding_coeff = Scalar::from_hash(
-            self.binding_hash
-                .clone()
-                .add(agg_nonce_points[0])
-                .add(agg_nonce_points[1])
-                .add(frost_key.public_key())
-                .add(message),
-        );
-        let (agg_nonce, nonces_need_negation) =
-            g!({ agg_nonce_points[0] } + binding_coeff * { agg_nonce_points[1] })
-                .normalize()
-                .non_zero()
-                .expect("computationally unreachable, input is a hash")
-                .into_point_with_even_y();
-
-        for (_, nonce) in &mut nonce_map {
-            nonce.conditional_negate(nonces_need_negation);
-        }
-
-        let challenge = self
-            .schnorr
-            .challenge(&agg_nonce, &frost_key.public_key(), message);
-
-        SignSession {
-            binding_coeff,
-            nonces_need_negation,
-            agg_nonce,
-            challenge,
-            nonces: nonce_map,
-        }
-    }
-
-    /// Generates a partial signature share under the frost key using a secret share.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a signature Scalar.
-    pub fn sign(
-        &self,
-        frost_key: &XOnlyFrostKey,
-        session: &SignSession,
-        my_index: usize,
-        secret_share: &Scalar,
-        secret_nonce: NonceKeyPair,
-    ) -> Scalar<Public, Zero> {
-        let mut lambda = lagrange_lambda(
-            my_index as u32 + 1,
-            &session
-                .nonces
-                .iter()
-                .filter(|(j, _)| **j != my_index)
-                .map(|(j, _)| *j as u32 + 1)
-                .collect::<Vec<_>>(),
-        );
-        lambda.conditional_negate(frost_key.needs_negation);
-        let [mut r1, mut r2] = secret_nonce.secret;
-        r1.conditional_negate(session.nonces_need_negation);
-        r2.conditional_negate(session.nonces_need_negation);
-
-        let b = &session.binding_coeff;
-        let x = secret_share;
-        let c = &session.challenge;
-        s!(r1 + (r2 * b) + lambda * x * c).public()
-    }
-
-    /// Verify a partial signature for a participant at `index` (from zero).
-    ///
-    /// Check partial signature against the verification shares created during keygen.
-    ///
-    /// ## Return Value
-    ///
-    /// Returns `bool`, true if partial signature is valid.
-    pub fn verify_signature_share(
-        &self,
-        frost_key: &XOnlyFrostKey,
-        session: &SignSession,
-        index: usize,
-        signature_share: Scalar<Public, Zero>,
-    ) -> bool {
-        let s = signature_share;
-        let mut lambda = lagrange_lambda(
-            index as u32 + 1,
-            &session
-                .nonces
-                .iter()
-                .filter(|(j, _)| **j != index)
-                .map(|(j, _)| *j as u32 + 1)
-                .collect::<Vec<_>>(),
-        );
-        lambda.conditional_negate(frost_key.needs_negation);
-        let c = &session.challenge;
-        let b = &session.binding_coeff;
-        let X = frost_key.verification_shares().nth(index).unwrap();
-        let [ref R1, ref R2] = session
-            .nonces
-            .get(&index)
-            .expect("verifying party index that is not part of frost signing coalition")
-            .0;
-        g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
-    }
-
-    /// Combine a vector of partial signatures into an aggregate signature.
-    ///
-    /// Includes the [`XOnlyFrostKey`] tweak in the combined signature.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a combined schnorr [`Signature`] for the message.
-    /// Valid against the frost public key.
-    pub fn combine_signature_shares(
-        &self,
-        frost_key: &XOnlyFrostKey,
-        session: &SignSession,
-        partial_sigs: Vec<Scalar<Public, Zero>>,
-    ) -> Signature {
-        let ck = s!(session.challenge * frost_key.tweak);
-        let sum_s = partial_sigs
-            .into_iter()
-            .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
-            .unwrap_or(Scalar::zero().public());
-        Signature {
-            R: session.agg_nonce,
-            s: s!(sum_s + ck).public(),
-        }
-    }
-}
-
 /// Constructor for a Frost instance using deterministic nonce generation.
 ///
 /// If you use deterministic nonce generation you will have to provide a unique session id to every signing session.
@@ -1045,143 +938,54 @@ where
     Frost::default()
 }
 
+/// Create a vector of points by multiplying each scalar by `G`.
+///
+/// # Example
+///
+/// ```
+/// use schnorr_fun::{
+///     frost,
+///     fun::{g, s, Scalar, G},
+/// };
+/// let secret_poly = (0..5)
+///     .map(|_| Scalar::random(&mut rand::thread_rng()))
+///     .collect::<Vec<_>>();
+/// let point_poly = frost::to_point_poly(&secret_poly);
+/// ```
+pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
+    scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
+}
+
+/// Generate a `Scalar` polynomial for key generation
+pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
+    (0..threshold).map(|_| Scalar::random(rng)).collect()
+}
+
+fn scalar_poly_eval(poly: &[Scalar], x: Scalar<Public, impl ZeroChoice>) -> Scalar<Secret, Zero> {
+    poly.iter()
+        .fold((s!(0), s!(1).mark_zero()), |(eval, xpow), coeff| {
+            (s!(eval + xpow * coeff), s!(xpow * x))
+        })
+        .0
+}
+
+fn point_poly_eval(
+    poly: &[Point<impl PointType, Public, impl ZeroChoice>],
+    x: Scalar<Public, impl ZeroChoice>,
+) -> Point<NonNormal, Public, Zero> {
+    let xpows = core::iter::successors(Some(s!(1).public().mark_zero()), |xpow| {
+        Some(s!(xpow * x).public())
+    })
+    .take(poly.len())
+    .collect::<Vec<_>>();
+    secp256kfun::op::lincomb(&xpows, poly.iter())
+}
+
 #[cfg(test)]
 mod test {
+
     use super::*;
-    use rand::seq::SliceRandom;
-    use secp256kfun::{
-        nonce::Deterministic,
-        proptest::{
-            arbitrary::any,
-            option, proptest,
-            strategy::{Just, Strategy},
-            test_runner::{RngAlgorithm, TestRng},
-        },
-    };
     use sha2::Sha256;
-
-    proptest! {
-        #[test]
-        fn frost_prop_test(
-            (n_parties, threshold) in (2usize..=4).prop_flat_map(|n| (Just(n), 2usize..=n)),
-            plain_tweak in option::of(any::<Scalar<Public, Zero>>()),
-            xonly_tweak in option::of(any::<Scalar<Public, Zero>>())
-        ) {
-            let frost = Frost::new(Schnorr::<Sha256, Deterministic<Sha256>>::new(
-                Deterministic::<Sha256>::default(),
-            ));
-            assert!(threshold <= n_parties);
-
-            // create some scalar polynomial for each party
-            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-            let scalar_polys = (0..n_parties).map(|_| ScalarPoly::random(threshold, &mut rng)).collect::<Vec<_>>();
-            let point_polys = scalar_polys.iter().map(ScalarPoly::to_point_poly).collect::<Vec<_>>();
-            let keygen = frost.new_keygen(point_polys).unwrap();
-            let (shares, proofs_of_possesion): (Vec<_>, Vec<_>) =  scalar_polys.into_iter().map(|sp| frost.create_shares(&keygen, sp)).unzip();
-            // collect the received shares for each party
-            let received_shares = (0..n_parties).map(|party_index| (0..n_parties).map(|share_index| shares[share_index][party_index].clone()).collect()).collect::<Vec<Vec<_>>>();
-
-            // finish keygen for each party
-            let (secret_shares, frost_keys): (Vec<_>, Vec<_>) = (0..n_parties).map(|party_index| {
-                let (secret_share, mut frost_key) = frost.finish_keygen(
-                    keygen.clone(),
-                    party_index,
-                    received_shares[party_index].clone(),
-                    proofs_of_possesion.clone(),
-                )
-                .unwrap();
-
-                if let Some(tweak) = plain_tweak {
-                    frost_key = frost_key.tweak(tweak).unwrap();
-                }
-
-                let mut xonly_frost_key = frost_key.into_xonly_key();
-
-                if let Some(tweak) = xonly_tweak {
-                    xonly_frost_key = xonly_frost_key.tweak(tweak).unwrap();
-                }
-                (secret_share, xonly_frost_key)
-            }).unzip();
-
-            // use a boolean mask for which t participants are signers
-            let mut signer_mask = vec![true; threshold];
-            signer_mask.append(&mut vec![false; n_parties - threshold]);
-            // shuffle the mask for random signers
-            signer_mask.shuffle(&mut rng);
-
-            let signer_indexes: Vec<_> = signer_mask
-                .iter()
-                .enumerate()
-                .filter(|(_, is_signer)| **is_signer)
-                .map(|(i,_)| i)
-                .collect();
-
-            let verification_shares_bytes: Vec<_> = frost_keys[signer_indexes[0]]
-                .verification_shares
-                .iter()
-                .map(|share| share.to_bytes())
-                .collect();
-
-            let sid = [
-                frost_keys[signer_indexes[0]].public_key().to_xonly_bytes().as_slice(),
-                verification_shares_bytes.concat().as_slice(),
-                b"frost-prop-test".as_slice(),
-            ]
-            .concat();
-            let nonces: Vec<NonceKeyPair> = signer_indexes.iter().map(|i|
-                frost.gen_nonce(
-                    &secret_shares[*i],
-                    &[sid.as_slice(), [*i as u8].as_slice()].concat(),
-                    Some(frost_keys[signer_indexes[0]].public_key().normalize()),
-                    None)
-                ).collect();
-
-            let mut received_nonces: Vec<_> = vec![];
-            for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
-                received_nonces.push((*i, nonce.public()));
-            }
-
-            let message = Message::plain("test", b"test");
-            let signing_session = frost.start_sign_session(
-                &frost_keys[signer_indexes[0]],
-                received_nonces.clone(),
-                message
-            );
-
-            let mut signatures = vec![];
-            for i in 0..signer_indexes.len() {
-                let signer_index = signer_indexes[i];
-                let session = frost.start_sign_session(
-                    &frost_keys[signer_index],
-                    received_nonces.clone(),
-                    message
-                );
-                let sig = frost.sign(
-                    &frost_keys[signer_index],
-                    &session, signer_index,
-                    &secret_shares[signer_index],
-                    nonces[i].clone()
-                );
-                assert!(frost.verify_signature_share(
-                    &frost_keys[signer_index],
-                    &session,
-                    signer_index,
-                    sig)
-                );
-                signatures.push(sig);
-            }
-            let combined_sig = frost.combine_signature_shares(
-                &frost_keys[signer_indexes[0]],
-                &signing_session,
-                signatures);
-
-            assert!(frost.schnorr.verify(
-                &frost_keys[signer_indexes[0]].public_key(),
-                message,
-                &combined_sig
-            ));
-        }
-    }
 
     #[test]
     fn test_lagrange_lambda() {
@@ -1192,5 +996,22 @@ mod test {
                 .invert()
         });
         assert_eq!(res, lagrange_lambda(2, &[1, 4, 5]));
+    }
+
+    #[test]
+    fn zero_agg_nonce_results_in_G() {
+        let frost = new_with_deterministic_nonces::<Sha256>();
+        let (frost_key, _shares) = frost.simulate_keygen(2, 3, &mut rand::thread_rng());
+        let nonce = NonceKeyPair::random(&mut rand::thread_rng()).public();
+        let mut malicious_nonce = nonce.clone();
+        malicious_nonce.conditional_negate(true);
+
+        let session = frost.start_sign_session(
+            &frost_key.into_xonly_key(),
+            vec![(0, nonce), (1, malicious_nonce)],
+            Message::<Public>::plain("test", b"hello"),
+        );
+
+        assert_eq!(session.agg_nonce, *G);
     }
 }

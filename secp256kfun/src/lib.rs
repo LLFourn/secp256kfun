@@ -4,7 +4,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
@@ -64,7 +64,3 @@ pub extern crate proptest;
 ///[`BasePoint`]: crate::marker::BasePoint
 pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero> =
     &Point::from_inner(backend::G_POINT, marker::BasePoint(backend::G_TABLE));
-
-#[doc(hidden)]
-/// How many times to repeat tests
-pub const TEST_SOUNDNESS: usize = 20;

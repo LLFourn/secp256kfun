@@ -49,10 +49,16 @@ use rand_core::RngCore;
 /// [`Secrecy`]: crate::marker::Secrecy
 /// [`Secret`]: crate::marker::Secret
 /// [`ZeroChoice]: crate::marker::ZeroChoice
-#[derive(Clone, Eq)]
+#[derive(Eq)]
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
 
-impl<Z: Clone> Copy for Scalar<Public, Z> {}
+impl<Z> Copy for Scalar<Public, Z> {}
+
+impl<S, Z> Clone for Scalar<S, Z> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1.clone())
+    }
+}
 
 impl<Z> core::hash::Hash for Scalar<Public, Z> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
@@ -120,13 +126,23 @@ impl<S> Scalar<S, NonZero> {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{s, Scalar};
+    /// use secp256kfun::{marker::*, s, Scalar};
     /// let a = Scalar::random(&mut rand::thread_rng());
     /// let a_inverse = a.invert();
-    /// assert_eq!(s!(a * a_inverse), Scalar::one());
+    /// assert_eq!(s!(a * a_inverse), s!(1));
     /// ```
     pub fn invert(&self) -> Self {
         op::scalar_invert(self)
+    }
+
+    /// Returns the integer `1` as a `Scalar`.
+    pub fn one() -> Self {
+        Scalar::from(1).non_zero().unwrap()
+    }
+
+    /// Returns the integer -1 (modulo the curve order) as a `Scalar`.
+    pub fn minus_one() -> Self {
+        Self::from_inner(backend::BackendScalar::minus_one())
     }
 }
 
@@ -173,16 +189,6 @@ impl Scalar<Secret, NonZero> {
     pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
         Self::from_inner(backend::BackendScalar::from_u32(int.get()))
     }
-
-    /// Returns the integer `1` as a `Scalar<Secret, NonZero>`.
-    pub fn one() -> Self {
-        Scalar::from(1).non_zero().unwrap()
-    }
-
-    /// Returns the integer -1 (modulo the curve order) as a `Scalar<Secret, NonZero>`.
-    pub fn minus_one() -> Self {
-        Self::from_inner(backend::BackendScalar::minus_one())
-    }
 }
 
 impl Scalar<Secret, Zero> {
@@ -190,14 +196,14 @@ impl Scalar<Secret, Zero> {
     /// # Example
     /// ```
     /// # use core::convert::TryInto;
-    /// use secp256kfun::{hex, Scalar};
+    /// use secp256kfun::{hex, s, Scalar};
     /// let scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// let scalar_overflowed = Scalar::from_bytes_mod_order(
     ///     hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
     ///         .unwrap(),
     /// );
-    /// assert_eq!(scalar_overflowed, Scalar::one())
+    /// assert_eq!(scalar_overflowed, s!(1))
     /// ```
     pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
         Self::from_inner(backend::BackendScalar::from_bytes_mod_order(bytes))
@@ -252,18 +258,6 @@ impl Scalar<Secret, Zero> {
         bytes.copy_from_slice(&slice);
         Self::from_bytes(bytes)
     }
-
-    /// Returns the zero scalar.
-    /// # Example
-    /// ```
-    /// # use secp256kfun::{Scalar, s};
-    /// let x = Scalar::random(&mut rand::thread_rng());
-    /// let zero = Scalar::zero();
-    /// assert_eq!(s!(zero * x), zero);
-    /// assert_eq!(s!(x + zero), x);
-    pub fn zero() -> Self {
-        Self::from_inner(backend::BackendScalar::zero())
-    }
 }
 
 impl<S> Scalar<S, Zero> {
@@ -276,6 +270,18 @@ impl<S> Scalar<S, Zero> {
         } else {
             Some(Scalar::from_inner(self.0))
         }
+    }
+
+    /// Returns the zero scalar.
+    /// # Example
+    /// ```
+    /// # use secp256kfun::{Scalar, s, marker::*};
+    /// let x = Scalar::random(&mut rand::thread_rng());
+    /// let zero = Scalar::<Secret,_>::zero();
+    /// assert_eq!(s!(zero * x), zero);
+    /// assert_eq!(s!(x + zero), x);
+    pub fn zero() -> Self {
+        Self::from_inner(backend::BackendScalar::zero())
     }
 }
 
@@ -338,7 +344,7 @@ where
     S: Secrecy,
 {
     fn default() -> Self {
-        Scalar::zero().set_secrecy::<S>()
+        Scalar::<S, _>::zero()
     }
 }
 
@@ -529,7 +535,7 @@ mod test {
     #[test]
     fn minus_one() {
         assert_eq!(
-            Scalar::minus_one(),
+            Scalar::<Secret, _>::minus_one(),
             Scalar::from_bytes_mod_order(
                 hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
