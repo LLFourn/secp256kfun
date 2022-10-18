@@ -4,6 +4,7 @@
 //!
 //! ```
 //! use schnorr_fun::{
+//!     binonce::NonceKeyPair,
 //!     frost,
 //!     Message,
 //! };
@@ -59,9 +60,9 @@
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
 //! let session_id = b"signing-cool-message-attempt-1".as_slice(); // ⚠ must be different for every session
-//! let mut nonce_rng: ChaCha20Rng = proto.gen_nonce_rng(&my_secret_share, session_id, Some(frost_key.public_key()), Some(message));
+//! let mut nonce_rng: ChaCha20Rng = proto.gen_nonce_rng(&frost_key, &my_secret_share, session_id, Some(message));
 //! let my_nonce = proto.gen_nonce(&mut nonce_rng);
-//! # let nonce3 = proto.gen_nonce(&mut nonce_rng);
+//! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
 //! // receive public nonces from other signers
@@ -146,18 +147,14 @@
 #![cfg(feature = "serde")]
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature, Vec};
-use rand::SeedableRng;
 use secp256kfun::{
     derive_nonce_rng,
-    digest::{
-        generic_array::{typenum::U32, GenericArray},
-        Digest,
-    },
+    digest::{generic_array::typenum::U32, Digest},
     g,
     hash::{HashAdd, Tagged},
     marker::*,
     nonce::{self, AddTag, NonceGen},
-    rand_core::RngCore,
+    rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
 use std::collections::BTreeMap;
@@ -212,13 +209,13 @@ impl<H: Tagged, NG> Frost<H, NG> {
 ///
 /// [`Frost::new_keygen`]
 #[derive(Clone, Debug)]
-pub struct KeyGen<T> {
+pub struct KeyGen {
+    frost_key: FrostKey<Normal>,
     point_polys: Vec<Vec<Point>>,
     keygen_id: [u8; 32],
-    frost_key: FrostKey<T>,
 }
 
-impl<T> KeyGen<T> {
+impl KeyGen {
     /// Return the number of parties in the KeyGen
     pub fn n_parties(&self) -> usize {
         self.point_polys.len()
@@ -282,13 +279,13 @@ impl core::fmt::Display for FinishKeyGenError {
 impl std::error::Error for FinishKeyGenError {}
 
 /// A joint FROST key
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
     serde(crate = "serde_crate")
 )]
-pub struct FrostKey<T> {
+pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
     #[serde(bound(
         deserialize = "Point<T>: serde::de::Deserialize<'de>",
@@ -305,7 +302,7 @@ pub struct FrostKey<T> {
     needs_negation: bool,
 }
 
-impl<T: Copy> FrostKey<T> {
+impl<T: Copy + PointType> FrostKey<T> {
     /// The joint public key
     pub fn public_key(&self) -> Point<T> {
         self.public_key
@@ -400,9 +397,9 @@ impl FrostKey<EvenY> {
         let needs_negation = self.needs_negation ^ needs_negation;
 
         Some(Self {
+            public_key: new_public_key,
             needs_negation,
             tweak: new_tweak,
-            public_key: new_public_key,
             verification_shares: self.verification_shares,
             threshold: self.threshold,
         })
@@ -419,9 +416,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// Returns a vector of secret shares where the index represents the signer index and a
     /// proof-of-possession as a `Signature`.
-    pub fn create_shares<T>(
+    pub fn create_shares(
         &self,
-        keygen: &KeyGen<T>,
+        keygen: &KeyGen,
         scalar_poly: Vec<Scalar>,
     ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
         let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
@@ -453,32 +450,33 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// The application should decide upon a unique `session_id`. If the `NonceGen` of this FROST
     /// instance is `Deterministic` then the `session_id` **must** be unique per signing session.
-    pub fn gen_nonce_rng<R: SeedableRng>(
+    pub fn gen_nonce_rng<T: PointType, R: SeedableRng<Seed = [u8; 32]>>(
         &self,
+        frost_key: &FrostKey<T>,
         secret: &Scalar,
         session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
+        // public_key: Option<Point<impl Normalized>>,
         message: Option<Message<'_>>,
-    ) -> R
-    where
-        <R as SeedableRng>::Seed: From<GenericArray<u8, U32>>,
-    {
+    ) -> R {
         let message = message.unwrap_or(Message::raw(b""));
         let msg_len = (message.len() as u64).to_be_bytes();
         let sid_len = (session_id.len() as u64).to_be_bytes();
-        let pk_bytes = public_key
-            // NOTE: the `.normalize` here is very important. Even though the public key is already
-            // normalized we want it in particular to be Normal so that it serialzes correctly
-            // regardless of whether you pass in a Normal or EvenY point.
-            .map(|public_key| {
-                let public_key: Point<Normal> = public_key.normalize();
-                public_key.to_bytes()
-            })
-            .unwrap_or([0u8; 33]);
+
+        // let mut ver_share_bytes = b"";
+        // for ver_share in frost_key.verification_shares {
+        //     ver_share_bytes = [ver_share_bytes, ver_share.to_bytes()].concat();
+        // }
+        let ver_shares_bytes: Vec<_> = frost_key
+            .verification_shares
+            .iter()
+            .map(|ver_share| ver_share.to_bytes())
+            .collect();
+        let threshold_bytes = [frost_key.threshold() as u8];
+        let pk_bytes = &ver_shares_bytes[..];
         let rng: R = derive_nonce_rng!(
             nonce_gen => self.schnorr.nonce_gen(),
             secret => &secret,
-            public => [b"r1", pk_bytes, msg_len, message, sid_len, session_id],
+            public => [pk_bytes, threshold_bytes, msg_len, message, sid_len, session_id],
             seedable_rng => R
         );
         rng
@@ -541,7 +539,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns `bool` true if the proof-of-possession matches the point
-    fn verify_pop<T>(&self, keygen: &KeyGen<T>, point: Point, pop: Signature) -> bool {
+    fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
         self.schnorr.verify(
@@ -559,10 +557,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a [`KeyGen`] containing a [`FrostKey`]
-    pub fn new_keygen(
-        &self,
-        point_polys: Vec<Vec<Point>>,
-    ) -> Result<KeyGen<Normal>, NewKeyGenError> {
+    pub fn new_keygen(&self, point_polys: Vec<Vec<Point>>) -> Result<KeyGen, NewKeyGenError> {
         let len_first_poly = point_polys[0].len();
         {
             if let Some((i, _)) = point_polys
@@ -631,13 +626,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// # Return value
     ///
     /// Your secret share and the [`FrostKey`]
-    pub fn finish_keygen<T>(
+    pub fn finish_keygen(
         &self,
-        keygen: KeyGen<T>,
+        keygen: KeyGen,
         my_index: usize,
         secret_shares: Vec<Scalar<Secret, Zero>>,
         proofs_of_possession: Vec<Signature>,
-    ) -> Result<(Scalar, FrostKey<T>), FinishKeyGenError> {
+    ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
         assert_eq!(
             secret_shares.len(),
             keygen.frost_key.verification_shares.len()

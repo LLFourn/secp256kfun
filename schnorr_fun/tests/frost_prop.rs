@@ -58,9 +58,9 @@ proptest! {
 
         let mut nonce_rngs: Vec<ChaCha20Rng> = secret_shares.iter().map(|secret_share| {
             proto.gen_nonce_rng(
+                &frost_key,
                 secret_share,
                 sid,
-                Some(frost_key.public_key()),
                 Some(message),
             )
         }).collect();
