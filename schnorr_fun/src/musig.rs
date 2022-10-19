@@ -61,7 +61,8 @@
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature, Vec};
+use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature};
+use alloc::vec::Vec;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,

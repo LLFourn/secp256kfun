@@ -1,13 +1,8 @@
 //! Utility module for hex encoding and decoding
-//XXX: is this actually meant to be this hard??
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(feature = "alloc")]
 use alloc::string::String;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::string::String;
-#[cfg(feature = "std")]
-use std::vec::Vec;
 
 use core::fmt;
 /// Error representing a failed conversion from hex into the bytes for the target type.

@@ -2,8 +2,7 @@
 #![no_std]
 #![allow(non_snake_case)]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-#[macro_use]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(feature = "std")]

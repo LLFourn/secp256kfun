@@ -146,7 +146,8 @@
 //! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
 #![cfg(feature = "serde")]
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{Message, Schnorr, Signature, Vec};
+use crate::{Message, Schnorr, Signature};
+use alloc::{collections::BTreeMap, vec::Vec};
 use secp256kfun::{
     derive_nonce_rng,
     digest::{generic_array::typenum::U32, Digest},
@@ -157,7 +158,6 @@ use secp256kfun::{
     rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
-use std::collections::BTreeMap;
 
 /// The FROST context.
 ///
