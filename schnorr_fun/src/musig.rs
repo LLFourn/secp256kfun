@@ -123,25 +123,27 @@ impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
 ///
 /// [`MuSig::new_agg_key`]
 #[derive(Debug, Clone)]
-pub struct AggKey {
+pub struct AggKey<T> {
     /// The keys involved in the key aggregation.
     keys: Vec<Point>,
     /// The coefficients of each key
     coefs: Vec<Scalar<Public>>,
+    /// Whether the secret keys needs to be negated when signing
+    needs_negation: bool,
     /// The aggregate key
-    agg_key: Point<Normal>,
+    agg_key: Point<T>,
     /// The tweak on the aggregate key
     tweak: Scalar<Public, Zero>,
 }
 
-impl AggKey {
+impl<T: Copy> AggKey<T> {
     /// The aggregate key.
     ///
     /// Note that before using it as a key in a system that accepts "x-only" keys like `[BIP341]`
     /// you must call [`into_xonly_key`] and use that aggregate key.
     ///
     /// [`into_xonly_key`]: Self::into_xonly_key
-    pub fn agg_key(&self) -> Point {
+    pub fn agg_public_key(&self) -> Point<T> {
         self.agg_key
     }
 
@@ -149,43 +151,20 @@ impl AggKey {
     pub fn keys(&self) -> impl Iterator<Item = Point> + '_ {
         self.keys.iter().map(|point| *point)
     }
+}
 
-    /// Add a scalar `tweak` to aggregate MuSig public key.
+impl AggKey<Normal> {
+    /// Convert the key into a BIP340 AggKey.
     ///
-    /// The resulting key is equal to the existing key plus `tweak * G`. The tweak mutates the
-    /// public key while still allowing the original set of signers to sign under the new key.
-    /// This function is appropriate for doing [BIP32] tweaks before calling `into_xonly_key`.
-    /// It **is not** appropriate for doing taproot tweaking which must be done on a [`XOnlyAggKey`].
-    ///
-    /// ## Return value
-    ///
-    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
-    /// secret key it returns `None`.
-    ///
-    /// [BIP32]: https://bips.xyz/32
-    /// [`XOnlyAggKey`]: crate::musig::XOnlyAggKey
-    pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let agg_key = g!(self.agg_key + tweak * G).normalize().non_zero()?;
-        let tweak = s!(self.tweak + tweak).public();
-
-        Some(AggKey {
-            keys: self.keys.clone(),
-            coefs: self.coefs.clone(),
-            agg_key,
-            tweak,
-        })
-    }
-
-    /// Convert the key into an `XOnlyAggKey`.
-    ///
-    /// This is the [BIP340] x-only version of the key which you can put in a segwitv1 output and create/verify BIP340 signatures under.
+    /// This is the [BIP340] x-only version of the key which you can put in a segwitv1 output
+    /// and create/verify BIP340 signatures under.
     ///
     /// [BIP340]: https://bips.xyz/340
-    pub fn into_xonly_key(self) -> XOnlyAggKey {
+    pub fn into_xonly_key(self) -> AggKey<EvenY> {
         let (agg_key, needs_negation) = self.agg_key.into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
-        XOnlyAggKey {
+        AggKey {
             keys: self.keys,
             coefs: self.coefs,
             needs_negation,
@@ -193,36 +172,41 @@ impl AggKey {
             agg_key,
         }
     }
-}
 
-/// A [`AggKey`] that has been converted into a [BIP340] x-only key.
-///
-/// [BIP340]: https://bips.xyz/340
-#[derive(Debug, Clone)]
-pub struct XOnlyAggKey {
-    /// The keys involved in the key aggregation.
-    keys: Vec<Point>,
-    /// The coefficients of each key
-    coefs: Vec<Scalar<Public>>,
-    /// Whether the secret keys needs to be negated when signing
-    needs_negation: bool,
-    /// The tweaks that have been applied
-    tweak: Scalar<Public, Zero>,
+    /// Add a scalar `tweak` to aggregate MuSig public key.
     ///
-    agg_key: Point<EvenY>,
+    /// The resulting key is equal to the existing key plus `tweak * G`. The tweak mutates the
+    /// public key while still allowing the original set of signers to sign under the new key.
+    /// This function is appropriate for doing [BIP32] tweaks before calling `into_xonly_key`.
+    /// It **is not** appropriate for doing taproot tweaking which must be done on an [`AggKey`]
+    /// with [`EvenY`] public key in BIP340 form, see [`into_xonly_key`].
+    ///
+    /// ## Return value
+    ///
+    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
+    /// secret key it returns `None`.
+    ///
+    /// [BIP32]: https://bips.xyz/32
+    /// [`AggKey`]: crate::musig::AggKey
+    /// [`into_xonly_key`]: crate::musig::AggKey::into_xonly_key
+    pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
+        let agg_key = g!(self.agg_key + tweak * G).normalize().non_zero()?;
+        let tweak = s!(self.tweak + tweak).public();
+
+        Some(AggKey {
+            keys: self.keys.clone(),
+            coefs: self.coefs.clone(),
+            needs_negation: false,
+            agg_key,
+            tweak,
+        })
+    }
 }
 
-impl XOnlyAggKey {
-    /// The aggregate key as a `Point`
-    pub fn agg_public_key(&self) -> Point<EvenY> {
-        self.agg_key
-    }
-
-    /// An iterator over the **public keys** of each party in the agg_key.
-    pub fn keys(&self) -> impl Iterator<Item = Point> + '_ {
-        self.keys.iter().map(|point| *point)
-    }
-
+// /// A [`AggKey`] that has been converted into a [BIP340] x-only key.
+// ///
+// /// [BIP340]: https://bips.xyz/340
+impl AggKey<EvenY> {
     /// Applies an "x-only" tweak to the aggregate key.
     ///
     /// This function exists to allow for [BIP341] tweaks to the aggregate public key.
@@ -270,7 +254,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// // Note the keys have to come in the same order on the other side!
     /// let agg_key = musig.new_agg_key(vec![their_public_key, my_public_key]);
     /// ```
-    pub fn new_agg_key(&self, keys: Vec<Point>) -> AggKey {
+    pub fn new_agg_key(&self, keys: Vec<Point>) -> AggKey<Normal> {
         let coeff_hash = {
             let L = self.pk_hash.clone().add(&keys[..]).finalize();
             self.coeff_hash.clone().add(L.as_slice())
@@ -301,6 +285,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
             coefs,
             agg_key: agg_key.normalize(),
             tweak: Scalar::zero(),
+            needs_negation: false,
         }
     }
 }
@@ -390,7 +375,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Panics if number of nonces does not align with the keys in `agg_key`.
     pub fn start_sign_session(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
     ) -> SignSession {
@@ -432,7 +417,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`adaptor`]: crate::adaptor
     pub fn start_encrypted_sign_session(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
@@ -453,7 +438,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _start_sign_session(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         nonces: Vec<Nonce>,
         message: Message<'_, Public>,
         encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
@@ -511,7 +496,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
     pub fn sign<T>(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         session: &SignSession<T>,
         my_index: usize,
         keypair: &KeyPair,
@@ -545,7 +530,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// Panics when `index` is equal to or greater than the number of keys in the agg_key.
     pub fn verify_partial_signature<T>(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         session: &SignSession<T>,
         index: usize,
         partial_sig: Scalar<Public, Zero>,
@@ -574,7 +559,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_signatures(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         session: &SignSession<Ordinary>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> Signature {
@@ -591,7 +576,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
     /// [`verify_partial_signature`]: Self::verify_partial_signature
     pub fn combine_partial_encrypted_signatures(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         session: &SignSession<Adaptor>,
         partial_encrypted_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> EncryptedSignature {
@@ -606,7 +591,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
     fn _combine_partial_signatures<T>(
         &self,
-        agg_key: &XOnlyAggKey,
+        agg_key: &AggKey<EvenY>,
         session: &SignSession<T>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> (Point<EvenY>, Scalar<Public, Zero>) {

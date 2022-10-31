@@ -44,7 +44,7 @@ harness = false
 
 [features]
 default = ["std"]
-all = ["std","serde", "libsecp_compat", "proptest"]
+all = ["std", "serde", "libsecp_compat", "proptest"]
 alloc = ["secp256kfun/alloc"]
 std = ["alloc", "secp256kfun/std"]
 serde = ["serde_crate", "secp256kfun/serde"]

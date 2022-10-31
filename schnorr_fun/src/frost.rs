@@ -4,11 +4,11 @@
 //!
 //! ```
 //! use schnorr_fun::{
+//!     binonce::NonceKeyPair,
 //!     frost,
-//!     Schnorr,
 //!     Message,
-//!     fun::Scalar
 //! };
+//! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
 //! // use sha256 to produce deterministic nonces -- be careful!
 //! let proto = frost::new_with_deterministic_nonces::<Sha256>();
@@ -60,8 +60,9 @@
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
 //! let session_id = b"signing-cool-message-attempt-1".as_slice(); // ⚠ must be different for every session
-//! let my_nonce = proto.gen_nonce(&my_secret_share, session_id, Some(frost_key.public_key()), Some(message));
-//! # let nonce3 = proto.gen_nonce(&secret_share3, session_id, Some(frost_key.public_key()), Some(message));
+//! let mut nonce_rng: ChaCha20Rng = proto.gen_nonce_rng(&frost_key, &my_secret_share, session_id, Some(message));
+//! let my_nonce = proto.gen_nonce(&mut nonce_rng);
+//! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
 //! // receive public nonces from other signers
@@ -143,15 +144,17 @@
 //! ```
 //!
 //! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
+#![cfg(feature = "serde")]
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature, Vec};
 use secp256kfun::{
+    derive_nonce_rng,
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::{HashAdd, Tagged},
     marker::*,
     nonce::{self, AddTag, NonceGen},
-    rand_core::RngCore,
+    rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
 use std::collections::BTreeMap;
@@ -207,9 +210,9 @@ impl<H: Tagged, NG> Frost<H, NG> {
 /// [`Frost::new_keygen`]
 #[derive(Clone, Debug)]
 pub struct KeyGen {
+    frost_key: FrostKey<Normal>,
     point_polys: Vec<Vec<Point>>,
     keygen_id: [u8; 32],
-    frost_key: FrostKey,
 }
 
 impl KeyGen {
@@ -282,20 +285,26 @@ impl std::error::Error for FinishKeyGenError {}
     derive(serde::Deserialize, serde::Serialize),
     serde(crate = "serde_crate")
 )]
-pub struct FrostKey {
+pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
-    public_key: Point<Normal>,
+    #[serde(bound(
+        deserialize = "Point<T>: serde::de::Deserialize<'de>",
+        serialize = "Point<T>: serde::Serialize"
+    ))]
+    public_key: Point<T>,
     /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
     verification_shares: Vec<Point<Normal, Public, Zero>>,
     /// Number of partial signatures required to create a combined signature under this key.
     threshold: usize,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
+    /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
+    needs_negation: bool,
 }
 
-impl FrostKey {
+impl<T: Copy + PointType> FrostKey<T> {
     /// The joint public key
-    pub fn public_key(&self) -> Point<Normal> {
+    pub fn public_key(&self) -> Point<T> {
         self.public_key
     }
 
@@ -304,6 +313,36 @@ impl FrostKey {
     /// The verification share is the image of their secret share.
     pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
         self.verification_shares.iter().map(|point| *point)
+    }
+
+    /// The threshold number of participants required in a signing coalition to produce a valid signature.
+    pub fn threshold(&self) -> usize {
+        self.threshold
+    }
+
+    /// The total number of signers in this frost multisignature.
+    pub fn n_signers(&self) -> usize {
+        self.verification_shares.len()
+    }
+}
+
+impl FrostKey<Normal> {
+    /// Convert the key into a BIP340 FrostKey.
+    ///
+    /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
+    ///
+    /// [BIP340]: https://bips.xyz/340
+    pub fn into_xonly_key(self) -> FrostKey<EvenY> {
+        let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
+        let mut tweak = self.tweak;
+        tweak.conditional_negate(needs_negation);
+        FrostKey {
+            public_key,
+            verification_shares: self.verification_shares,
+            threshold: self.threshold,
+            tweak,
+            needs_negation,
+        }
     }
 
     /// Apply a plain tweak to the frost public key.
@@ -330,79 +369,12 @@ impl FrostKey {
             verification_shares: self.verification_shares.clone(),
             threshold: self.threshold.clone(),
             tweak,
+            needs_negation: self.needs_negation,
         })
     }
-
-    /// Convert the key into a `Bip340AggKey`.
-    ///
-    /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
-    ///
-    /// [BIP340]: https://bips.xyz/340
-    pub fn into_xonly_key(self) -> XOnlyFrostKey {
-        let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
-        let mut tweak = self.tweak;
-        tweak.conditional_negate(needs_negation);
-        XOnlyFrostKey {
-            public_key,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
-            tweak,
-            needs_negation,
-        }
-    }
-
-    /// The threshold number of participants required in a signing coalition to produce a valid signature.
-    pub fn threshold(&self) -> usize {
-        self.threshold
-    }
-
-    /// The total number of signers in this frost multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
-    }
 }
 
-/// A [`FrostKey`] that has been converted into an x-only key.
-///
-/// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output and
-/// create BIP340 signatures under. Tweaks applied to a `XOnlyFrostKey` are x-only tweaks to the
-/// frost public key.
-///
-/// [BIP340]: https://bips.xyz/340
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct XOnlyFrostKey {
-    /// The BIP340 public key of the frost multisignature.
-    public_key: Point<EvenY>,
-    /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
-    verification_shares: Vec<Point<Normal, Public, Zero>>,
-    /// Number of partial signatures required to create a combined signature under this key.
-    threshold: usize,
-    /// The tweak applied to this frost key, tracks the aggregate tweak.
-    tweak: Scalar<Public, Zero>,
-    /// Whether the secret keys need to be negated during
-    needs_negation: bool,
-}
-
-impl XOnlyFrostKey {
-    /// The joint public key of the frost multisignature
-    pub fn public_key(&self) -> Point<EvenY> {
-        self.public_key
-    }
-
-    /// An iterator over the verification shares of each party in the key.
-    ///
-    /// ## Return value
-    ///
-    /// An iterator over verification share points
-    pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
-        self.verification_shares.iter().map(|point| *point)
-    }
-
+impl FrostKey<EvenY> {
     /// Applies an "XOnly" tweak to the FROST public key.
     /// This is how you embed a taproot commitment into a frost public key
     ///
@@ -425,22 +397,12 @@ impl XOnlyFrostKey {
         let needs_negation = self.needs_negation ^ needs_negation;
 
         Some(Self {
+            public_key: new_public_key,
             needs_negation,
             tweak: new_tweak,
-            public_key: new_public_key,
             verification_shares: self.verification_shares,
             threshold: self.threshold,
         })
-    }
-
-    /// The threshold number of participants required in a signing coalition to produce a valid signature.
-    pub fn threshold(&self) -> usize {
-        self.threshold
-    }
-
-    /// The total number of signers in this frost multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
     }
 }
 
@@ -473,9 +435,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Generate nonces for creating signatures shares.
     ///
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`FrostKey::gen_nonce_rng`]
+    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
+        NonceKeyPair::random(nonce_rng)
+    }
+
+    /// Generate a reusable nonce rng.
+    ///
     /// This method should be used carefully.
-    /// This calls [`NonceKeyPair::generate`] internally with the frost instance's [`NonceGen`].
-    /// See documentation for that for more usage info.
     ///
     /// When choosing a `secret` to use, if you are generating nonces prior to [`KeyGen`] completion,
     /// use the static first coefficient of your polynomial.
@@ -483,20 +450,36 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// The application should decide upon a unique `session_id`. If the `NonceGen` of this FROST
     /// instance is `Deterministic` then the `session_id` **must** be unique per signing session.
-    pub fn gen_nonce(
+    pub fn gen_nonce_rng<T: PointType, R: SeedableRng<Seed = [u8; 32]>>(
         &self,
+        frost_key: &FrostKey<T>,
         secret: &Scalar,
         session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
+        // public_key: Option<Point<impl Normalized>>,
         message: Option<Message<'_>>,
-    ) -> NonceKeyPair {
-        NonceKeyPair::generate(
-            self.schnorr.nonce_gen(),
-            secret,
-            session_id,
-            public_key,
-            message,
-        )
+    ) -> R {
+        let message = message.unwrap_or(Message::raw(b""));
+        let msg_len = (message.len() as u64).to_be_bytes();
+        let sid_len = (session_id.len() as u64).to_be_bytes();
+
+        // let mut ver_share_bytes = b"";
+        // for ver_share in frost_key.verification_shares {
+        //     ver_share_bytes = [ver_share_bytes, ver_share.to_bytes()].concat();
+        // }
+        let ver_shares_bytes: Vec<_> = frost_key
+            .verification_shares
+            .iter()
+            .map(|ver_share| ver_share.to_bytes())
+            .collect();
+        let threshold_bytes = [frost_key.threshold() as u8];
+        let pk_bytes = &ver_shares_bytes[..];
+        let rng: R = derive_nonce_rng!(
+            nonce_gen => self.schnorr.nonce_gen(),
+            secret => &secret,
+            public => [pk_bytes, threshold_bytes, msg_len, message, sid_len, session_id],
+            seedable_rng => R
+        );
+        rng
     }
 
     /// Run the key generation protocol while simulating the parties internally.
@@ -508,7 +491,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey, Vec<Scalar>) {
+    ) -> (FrostKey<Normal>, Vec<Scalar>) {
         let scalar_polys = (0..n_parties)
             .map(|_| generate_scalar_poly(threshold, rng))
             .collect::<Vec<_>>();
@@ -628,6 +611,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 public_key,
                 threshold: joint_poly.len(),
                 tweak: Scalar::zero(),
+                needs_negation: false,
             },
         })
     }
@@ -648,7 +632,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: usize,
         secret_shares: Vec<Scalar<Secret, Zero>>,
         proofs_of_possession: Vec<Signature>,
-    ) -> Result<(Scalar, FrostKey), FinishKeyGenError> {
+    ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
         assert_eq!(
             secret_shares.len(),
             keygen.frost_key.verification_shares.len()
@@ -695,7 +679,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// If the number of nonces is less than the threshold.
     pub fn start_sign_session(
         &self,
-        frost_key: &XOnlyFrostKey,
+        frost_key: &FrostKey<EvenY>,
         nonces: Vec<(usize, Nonce)>,
         message: Message,
     ) -> SignSession {
@@ -759,7 +743,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Returns a signature share
     pub fn sign(
         &self,
-        frost_key: &XOnlyFrostKey,
+        frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         my_index: usize,
         secret_share: &Scalar,
@@ -796,7 +780,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// If the `index` is is greater than the number of signers in the threshold.
     pub fn verify_signature_share(
         &self,
-        frost_key: &XOnlyFrostKey,
+        frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         index: usize,
         signature_share: Scalar<Public, Zero>,
@@ -834,7 +818,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Returns a combined schnorr [`Signature`] on the message
     pub fn combine_signature_shares(
         &self,
-        frost_key: &XOnlyFrostKey,
+        frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         signature_shares: Vec<Scalar<Public, Zero>>,
     ) -> Signature {

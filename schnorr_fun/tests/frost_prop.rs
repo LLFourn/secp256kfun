@@ -1,5 +1,7 @@
 #![cfg(feature = "alloc")]
+#![cfg(feature = "serde")]
 use rand::seq::SliceRandom;
+use rand_chacha::ChaCha20Rng;
 use schnorr_fun::{
     frost::*,
     fun::{marker::*, Scalar},
@@ -54,13 +56,18 @@ proptest! {
         let sid = b"frost-prop-test".as_slice();
         let message = Message::plain("test", b"test");
 
+        let mut nonce_rngs: Vec<ChaCha20Rng> = secret_shares.iter().map(|secret_share| {
+            proto.gen_nonce_rng(
+                &frost_key,
+                secret_share,
+                sid,
+                Some(message),
+            )
+        }).collect();
+
         let nonces: Vec<_> = signer_indexes.iter().map(|i|
             proto.gen_nonce(
-                &secret_shares[*i],
-                sid,
-                Some(frost_key.public_key()),
-                Some(message))
-            ).collect();
+                &mut nonce_rngs[*i])).collect();
 
         let mut received_nonces: Vec<_> = vec![];
         for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
