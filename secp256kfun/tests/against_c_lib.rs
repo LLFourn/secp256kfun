@@ -31,9 +31,8 @@ mod against_c_lib {
                     .normalize().non_zero()
                     .unwrap();
                 let secp_pk_2 = {
-                    let mut secp_pk_2 = secp_pk_1.clone();
-                    secp_pk_2.mul_assign(SECP, &s2).unwrap();
-                    secp_pk_2
+                    let scalar = secp256k1::Scalar::from_be_bytes(s2).unwrap();
+                    secp_pk_1.clone().mul_tweak(SECP, &scalar).unwrap()
                 };
                 prop_assert_eq!(
                     &point_2.to_bytes_uncompressed()[..],
@@ -59,8 +58,8 @@ mod against_c_lib {
             let result_secp = {
                 let H = PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&scalar_H).unwrap());
                 let x_G = PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&x).unwrap());
-                let mut y_H = H.clone();
-                y_H.mul_assign(SECP, &y).unwrap();
+                let scalar = secp256k1::Scalar::from_be_bytes(y).unwrap();
+                let y_H = H.clone().mul_tweak(SECP, &scalar).unwrap();
                 x_G.combine(&y_H).unwrap()
             };
 
@@ -100,8 +99,9 @@ mod against_c_lib {
             prop_assert_eq!(
                 &(s!(scalar_1 + scalar_2)).to_bytes()[..],
                 &{
-                    let mut res = sk_1.clone();
-                    res.add_assign(&bytes_2[..]).unwrap();
+                    let res = sk_1.clone();
+                    let scalar = secp256k1::Scalar::from_be_bytes(bytes_2).unwrap();
+                    let res = res.add_tweak(&scalar).unwrap();
                     res
                 }[..]
             );
@@ -109,18 +109,16 @@ mod against_c_lib {
             prop_assert_eq!(
                 &(s!(scalar_1 * scalar_2)).to_bytes()[..],
                 &{
-                    let mut res = sk_1.clone();
-                    res.mul_assign(&bytes_2[..]).unwrap();
-                    res
+                    let scalar = secp256k1::Scalar::from_be_bytes(bytes_2).unwrap();
+                    sk_1.clone().mul_tweak(&scalar).unwrap()
                 }[..]
             )
         }
 
         #[test]
         fn scalar_negation(bytes in any::<[u8;32]>()) {
-            let mut sk = SecretKey::from_slice(&bytes).unwrap();
+            let sk = SecretKey::from_slice(&bytes).unwrap().negate();
             let scalar = Scalar::from_bytes_mod_order(bytes.clone());
-            sk.negate_assign();
             prop_assert_eq!(&(-scalar).to_bytes()[..], &sk[..]);
         }
     }
