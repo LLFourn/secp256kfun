@@ -8,7 +8,7 @@ use sha2::Sha256;
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
-    static ref SK: Scalar<Secret,NonZero> = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();
+    static ref SK: Scalar<Secret, NonZero> = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();
     static ref schnorr: Schnorr<Sha256, Deterministic<Sha256>> = Schnorr::new(Deterministic::default());
 }
 
@@ -25,7 +25,7 @@ fn sign_schnorr(c: &mut Criterion) {
     {
         use secp256k1::{KeyPair, Message, Secp256k1};
         let secp = Secp256k1::new();
-        let kp = KeyPair::from_secret_key(&secp, SK.clone().into());
+        let kp = KeyPair::from_secret_key(&secp, &SK.clone().into());
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
         group.bench_function("secp::schnorrsig_sign_no_aux_rand", |b| {
             b.iter(|| {
@@ -57,8 +57,8 @@ fn verify_schnorr(c: &mut Criterion) {
     {
         use secp256k1::{KeyPair, Message, Secp256k1, XOnlyPublicKey};
         let secp = Secp256k1::new();
-        let kp = KeyPair::from_secret_key(&secp, SK.clone().into());
-        let pk = XOnlyPublicKey::from_keypair(&kp);
+        let kp = KeyPair::from_secret_key(&secp, &SK.clone().into());
+        let pk = XOnlyPublicKey::from_keypair(&kp).0;
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
         let sig = secp.sign_schnorr_no_aux_rand(&msg, &kp);
         group.bench_function("secp::schnorrsig_verify", |b| {
