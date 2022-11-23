@@ -13,7 +13,7 @@ extern crate std;
 mod libsecp_compat;
 
 #[cfg(feature = "serde")]
-extern crate serde_crate as serde;
+pub use fun::serde;
 
 use fun::{
     derive_nonce, g,

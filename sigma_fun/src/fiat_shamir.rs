@@ -89,11 +89,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
 /// the underlying group's Sigma protocol but this isn't implemented yet.
 ///
 /// [`FiatShamir`]: crate::FiatShamir
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_crate::Serialize, serde_crate::Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompactProof<S: Sigma> {
     /// C

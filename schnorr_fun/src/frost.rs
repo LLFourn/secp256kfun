@@ -282,14 +282,14 @@ impl std::error::Error for FinishKeyGenError {}
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
     #[serde(bound(
-        deserialize = "Point<T>: serde::de::Deserialize<'de>",
-        serialize = "Point<T>: serde::Serialize"
+        deserialize = "Point<T>: crate::serde::de::Deserialize<'de>",
+        serialize = "Point<T>: crate::serde::Serialize"
     ))]
     public_key: Point<T>,
     /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.

@@ -172,6 +172,10 @@ However this situation may improve in future versions.
 [4]: https://github.com/paritytech/libsecp256k1
 [k256]: https://docs.rs/k256/0.10.1/k256/
 
+## MSRV
+
+Minimum supported rust version is `v1.60`. Technically `rustc` only needs to be `v1.56` but we need features from `v.1.60` of cargo.
+
 ## LICENSE
 
 Code is licensed under [`0BSD`](https://opensource.org/licenses/0BSD) except for the code under `secp256kfun/src/vendor` where you will find the licenses for the vendor'd code.

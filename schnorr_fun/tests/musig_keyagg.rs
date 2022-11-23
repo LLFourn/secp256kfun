@@ -1,13 +1,12 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
     fun::{marker::*, Point, Scalar},
-    musig,
+    musig, serde,
 };
 static TEST_JSON: &'static str = include_str!("musig/key_agg_vectors.json");
-use serde_crate as serde;
 
 #[derive(serde::Deserialize, Clone, Copy, Debug)]
-#[serde(crate = "serde_crate", untagged)]
+#[serde(crate = "self::serde", untagged)]
 pub enum Maybe<T> {
     Valid(T),
     Invalid(&'static str),
@@ -21,8 +20,8 @@ impl<T> Maybe<T> {
         }
     }
 }
-#[derive(serde::Deserialize)]
-#[serde(crate = "serde_crate")]
+#[derive(crate::serde::Deserialize)]
+#[serde(crate = "self::serde")]
 pub struct TestCases {
     #[serde(bound(deserialize = "Maybe<Point>: serde::de::Deserialize<'de>"))]
     pubkeys: Vec<Maybe<Point>>,
@@ -33,8 +32,8 @@ pub struct TestCases {
     error_test_cases: Vec<TestCase>,
 }
 
-#[derive(serde::Deserialize)]
-#[serde(crate = "serde_crate")]
+#[derive(crate::serde::Deserialize)]
+#[serde(crate = "self::serde")]
 pub struct TestCase {
     key_indices: Vec<usize>,
     #[serde(default)]

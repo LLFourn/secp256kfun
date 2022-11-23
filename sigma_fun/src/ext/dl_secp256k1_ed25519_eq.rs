@@ -63,11 +63,7 @@ pub type CoreProof = And<
 const COMMITMENT_BITS: usize = 252;
 
 /// The proof the a public key on secp256k1 and ed25519 have the same 252-bit secret key.
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_crate::Serialize, serde_crate::Deserialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct CrossCurveDLEQProof {
     /// The sum of the Pedersen blindings

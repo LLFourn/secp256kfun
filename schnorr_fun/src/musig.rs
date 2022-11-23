@@ -320,8 +320,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct Ordinary;
 
@@ -330,8 +330,8 @@ pub struct Ordinary;
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct Adaptor {
     y_needs_negation: bool,
@@ -348,8 +348,8 @@ pub struct Adaptor {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct SignSession<T = Ordinary> {
     b: Scalar<Public, Zero>,

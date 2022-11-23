@@ -42,7 +42,7 @@ pub use slice::Slice;
 #[cfg(feature = "secp256k1")]
 pub extern crate secp256k1;
 #[cfg(feature = "serde")]
-pub extern crate serde_crate as serde;
+pub use serde;
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 #[cfg(any(feature = "proptest", test))]

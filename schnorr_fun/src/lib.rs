@@ -13,11 +13,11 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
-#[cfg(feature = "serde")]
-extern crate serde_crate as serde;
-
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
+
+#[cfg(feature = "serde")]
+pub use secp256kfun::serde;
 
 /// binonces for Musig and FROST
 pub mod binonce;
