@@ -420,6 +420,7 @@ macro_rules! impl_debug {
 macro_rules! impl_display_serialize {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::serde::Serialize for $type {
             fn serialize<Ser: $crate::serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
                 use $crate::serde::ser::SerializeTuple;
@@ -505,6 +506,7 @@ macro_rules! impl_fromstr_deserialize {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de, $($($tpl $(: $tcl)?),*)?> $crate::serde::Deserialize<'de> for $type  {
             fn deserialize<Deser: $crate::serde::Deserializer<'de>>(
                 deserializer: Deser,

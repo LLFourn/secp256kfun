@@ -41,13 +41,18 @@ pub use slice::Slice;
 
 #[cfg(feature = "secp256k1")]
 pub extern crate secp256k1;
+
+/// Re-export `serde`
+#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 #[cfg(feature = "serde")]
 pub use serde;
+
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 #[cfg(any(feature = "proptest", test))]
 mod proptest_impls;
 #[cfg(feature = "proptest")]
+#[cfg_attr(docsrs, doc(cfg(feature = "proptest")))]
 pub extern crate proptest;
 /// The main basepoint for secp256k1 as specified in [_SEC 2: Recommended Elliptic Curve Domain Parameters_] and used in Bitcoin.
 ///
