@@ -201,6 +201,7 @@ impl TimeSensitive for ConstantTime {
         base * scalar
     }
 
+    #[cfg(feature = "alloc")]
     fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
         points: A,
         scalars: B,

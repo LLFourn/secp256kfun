@@ -31,9 +31,10 @@ secp256kfun::impl_display_debug_serialize! {
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub(crate) struct EncryptedSignatureInternal {
     pub R: PointNonce,
     pub R_hat: Point,

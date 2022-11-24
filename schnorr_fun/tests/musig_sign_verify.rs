@@ -3,14 +3,13 @@ use schnorr_fun::{
     binonce,
     fun::{marker::*, Point, Scalar},
     musig::{self, NonceKeyPair},
-    Message,
+    serde, Message,
 };
 static TEST_JSON: &'static str = include_str!("musig/sign_verify_vectors.json");
 use secp256kfun::hex;
-use serde_crate as serde;
 
-#[derive(serde::Deserialize, Clone, Copy, Debug)]
-#[serde(crate = "serde_crate", untagged)]
+#[derive(schnorr_fun::serde::Deserialize, Clone, Copy, Debug)]
+#[serde(crate = "self::serde", untagged)]
 pub enum Maybe<T> {
     Valid(T),
     Invalid(&'static str),
@@ -25,7 +24,7 @@ impl<T> Maybe<T> {
     }
 }
 #[derive(serde::Deserialize)]
-#[serde(crate = "serde_crate")]
+#[serde(crate = "self::serde")]
 pub struct TestCases {
     sk: Scalar,
     secnonce: NonceKeyPair,
@@ -44,7 +43,7 @@ pub struct TestCases {
 }
 
 #[derive(serde::Deserialize)]
-#[serde(crate = "serde_crate")]
+#[serde(crate = "self::serde")]
 pub struct TestCase {
     #[serde(bound(deserialize = "Maybe<Scalar<Public, Zero>>: serde::de::Deserialize<'de>"))]
     sig: Option<Maybe<Scalar<Public, Zero>>>,

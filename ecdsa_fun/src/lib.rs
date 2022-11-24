@@ -2,8 +2,7 @@
 #![no_std]
 #![allow(non_snake_case)]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-#[macro_use]
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(feature = "std")]
@@ -14,7 +13,8 @@ extern crate std;
 mod libsecp_compat;
 
 #[cfg(feature = "serde")]
-extern crate serde_crate as serde;
+/// Rexport `serde`
+pub use fun::serde;
 
 use fun::{
     derive_nonce, g,
@@ -27,6 +27,7 @@ pub use secp256kfun::nonce;
 mod signature;
 pub use signature::Signature;
 #[cfg(feature = "adaptor")]
+#[cfg_attr(docsrs, doc(cfg(feature = "adaptor")))]
 pub mod adaptor;
 
 /// An instance of the ECDSA signature scheme.

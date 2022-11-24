@@ -61,7 +61,8 @@
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature, Vec};
+use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature};
+use alloc::vec::Vec;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
@@ -319,8 +320,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>>
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct Ordinary;
 
@@ -329,8 +330,8 @@ pub struct Ordinary;
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct Adaptor {
     y_needs_negation: bool,
@@ -347,8 +348,8 @@ pub struct Adaptor {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
+    derive(crate::serde::Deserialize, crate::serde::Serialize),
+    serde(crate = "crate::serde")
 )]
 pub struct SignSession<T = Ordinary> {
     b: Scalar<Public, Zero>,

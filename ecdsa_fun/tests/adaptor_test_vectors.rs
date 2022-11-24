@@ -1,33 +1,23 @@
 #![cfg(all(feature = "serde", feature = "alloc", feature = "adaptor"))]
-extern crate serde_crate as serde;
 
 static DLC_SPEC_JSON: &'static str = include_str!("./test_vectors.json");
 use ecdsa_fun::{
     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
     fun::{Point, Scalar},
-    Signature,
+    serde, Signature,
 };
 use sha2::Sha256;
 
-#[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case", crate = "self::serde")]
 enum TestVector {
     Verification(Verification),
     Recovery(Recovery),
     Serialization(Serialization),
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(crate = "self::serde")]
 struct Recovery {
     encryption_key: Point,
     signature: Signature,
@@ -35,12 +25,8 @@ struct Recovery {
     decryption_key: Option<Scalar>,
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(crate = "self::serde")]
 struct Verification {
     adaptor_sig: EncryptedSignature,
     public_signing_key: Point,
@@ -51,12 +37,8 @@ struct Verification {
     error: Option<String>,
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[serde(crate = "self::serde")]
 struct Serialization {
     adaptor_sig: String,
     error: Option<String>,

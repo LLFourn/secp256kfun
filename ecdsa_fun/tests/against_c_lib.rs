@@ -3,6 +3,7 @@ use ecdsa_fun::{
     self,
     fun::{
         hex,
+        marker::*,
         secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
         Point, Scalar,
     },
@@ -68,7 +69,8 @@ fn ecdsa_verify_high_message() {
             .unwrap();
     let c_message = Message::from_slice(&message[..]).unwrap();
     let c_signature = secp.sign_ecdsa(&c_message, &c_secret_key);
-    let signature = ecdsa_fun::Signature::from_bytes(c_signature.serialize_compact()).unwrap();
+    let signature =
+        ecdsa_fun::Signature::<Public>::from_bytes(c_signature.serialize_compact()).unwrap();
 
     assert!(ecdsa.verify(&verification_key, &message, &signature));
 }

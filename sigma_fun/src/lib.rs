@@ -21,9 +21,11 @@ extern crate std;
 extern crate alloc;
 
 #[cfg(feature = "secp256k1")]
+#[cfg_attr(docsrs, doc(cfg(feature = "secp256k1")))]
 pub mod secp256k1;
 
 #[cfg(feature = "ed25519")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 pub mod ed25519;
 
 mod and;
@@ -34,6 +36,7 @@ pub use eq::Eq;
 #[cfg(feature = "alloc")]
 mod eq_all;
 #[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub use eq_all::EqAll;
 mod or;
 pub use or::*;
@@ -41,6 +44,7 @@ pub use or::*;
 #[cfg(feature = "alloc")]
 mod all;
 #[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub use all::All;
 pub mod ext;
 mod transcript;

@@ -8,13 +8,11 @@ repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/secp256kfun"
 description = "A mid-level secp256k1 library optimized for fun!"
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.60"
 categories = ["cryptography", "cryptography::cryptocurrencies"]
 readme = "README.md"
 keywords = ["bitcoin", "secp256k1"]
 
-[package.metadata.docs.rs]
-features = ["all"]
 
 [dependencies]
 digest = "0.10"
@@ -22,7 +20,7 @@ subtle = { package = "subtle-ng", version = "2" }
 rand_core = { version = "0.6" }
 
 # optional
-serde_crate = { package = "serde", version = "1.0",  optional = true, default-features = false, features = ["derive"] }
+serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
 secp256k1 = { version = "0.24", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
 
@@ -42,14 +40,12 @@ criterion = "0.3"
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
 
-
 [features]
 default = ["std"]
-all = ["std", "serde", "libsecp_compat"]
-alloc = ["serde_crate/alloc"]
+alloc = ["serde?/alloc"]
 std = ["alloc"]
 libsecp_compat = ["secp256k1"]
-serde = [ "serde_crate" ]
+serde = [ "dep:serde", "secp256k1?/serde" ]
 
 [[bench]]
 name = "bench_ecmult"
@@ -58,3 +54,8 @@ harness = false
 [[bench]]
 name = "bench_point"
 harness = false
+
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

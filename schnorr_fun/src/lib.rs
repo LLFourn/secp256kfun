@@ -4,23 +4,20 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(feature = "alloc")]
+#[allow(unused)]
 #[macro_use]
 extern crate alloc;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-pub(crate) use alloc::vec::Vec;
 
 #[cfg(feature = "std")]
 #[macro_use]
 extern crate std;
-#[cfg(feature = "std")]
-pub(crate) use std::vec::Vec;
-
-#[cfg(feature = "serde")]
-extern crate serde_crate as serde;
 
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
+
+#[cfg(feature = "serde")]
+pub use secp256kfun::serde;
 
 /// binonces for Musig and FROST
 pub mod binonce;

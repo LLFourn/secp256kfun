@@ -36,20 +36,12 @@ pub trait Secrecy: Default + Clone + PartialEq + Copy + 'static {}
 /// Indicates that the value is secret and therefore makes core operations
 /// executed on it to use  _constant time_ versions of the operations.
 #[derive(Debug, Clone, Default, PartialEq, Copy)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
 #[derive(Debug, Clone, Default, PartialEq, Copy, Eq, Hash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize),
-    serde(crate = "serde_crate")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Public;
 
 impl Secrecy for Secret {}
