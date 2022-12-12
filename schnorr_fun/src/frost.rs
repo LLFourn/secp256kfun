@@ -122,7 +122,7 @@
 //! that should make sense in most applications:
 //!
 //! ```
-//! use schnorr_fun::{frost, fun::{ Scalar, nonce::{self, AddTag}, derive_nonce_rng }};
+//! use schnorr_fun::{frost, fun::{ Scalar, nonce, Tag, derive_nonce_rng }};
 //! use sha2::Sha256;
 //! use rand_chacha::ChaCha20Rng;
 //!
@@ -130,7 +130,7 @@
 //! # Scalar::random(&mut rand::thread_rng());
 //! let mut poly_rng = derive_nonce_rng! {
 //!     // use Deterministic nonce gen so we reproduce it later
-//!     nonce_gen => nonce::Deterministic::<Sha256>::default().add_tag("my-app-name"),
+//!     nonce_gen => nonce::Deterministic::<Sha256>::default().tag(b"my-app-name/frost/keygen"),
 //!     secret => static_secret_key,
 //!     // session id must be unique for each key generation session
 //!     public => ["forst_key_session_1053"],
@@ -144,7 +144,6 @@
 //! ```
 //!
 //! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
-#![cfg(feature = "serde")]
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature};
 use alloc::{collections::BTreeMap, vec::Vec};
@@ -152,9 +151,9 @@ use secp256kfun::{
     derive_nonce_rng,
     digest::{generic_array::typenum::U32, Digest},
     g,
-    hash::{HashAdd, Tagged},
+    hash::{HashAdd, Tag},
     marker::*,
-    nonce::{self, AddTag, NonceGen},
+    nonce::{self, NonceGen},
     rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
@@ -175,15 +174,20 @@ pub struct Frost<H, NG> {
     keygen_id_hash: H,
 }
 
-impl<H: Default + Tagged + Digest<OutputSize = U32>, NG: Default + AddTag> Default
-    for Frost<H, NG>
+impl<H, NG> Default for Frost<H, NG>
+where
+    H: Default + Tag + Digest<OutputSize = U32>,
+    NG: Default + Tag,
 {
     fn default() -> Self {
         Frost::new(Schnorr::default())
     }
 }
 
-impl<H: Tagged, NG> Frost<H, NG> {
+impl<H, NG> Frost<H, NG>
+where
+    H: Tag + Default,
+{
     /// Generate a new Frost context from a Schnorr context.
     ///
     /// # Examples
@@ -197,8 +201,8 @@ impl<H: Tagged, NG> Frost<H, NG> {
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self {
             schnorr,
-            binding_hash: H::default().tagged(b"frost/binding"),
-            keygen_id_hash: H::default().tagged(b"frost/keygenid"),
+            binding_hash: H::default().tag(b"frost/binding"),
+            keygen_id_hash: H::default().tag(b"frost/keygenid"),
         }
     }
 }
@@ -438,7 +442,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Generate nonces for creating signatures shares.
     ///
-    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`FrostKey::gen_nonce_rng`]
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::gen_nonce_rng`]
     pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
         NonceKeyPair::random(nonce_rng)
     }
@@ -891,8 +895,10 @@ fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
 /// use schnorr_fun::frost;
 /// let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
 /// ```
-pub fn new_with_deterministic_nonces<H: Tagged + Digest<OutputSize = U32>>(
-) -> Frost<H, nonce::Deterministic<H>> {
+pub fn new_with_deterministic_nonces<H>() -> Frost<H, nonce::Deterministic<H>>
+where
+    H: Tag + Digest<OutputSize = U32> + Default,
+{
     Frost::default()
 }
 
@@ -909,7 +915,7 @@ pub fn new_with_deterministic_nonces<H: Tagged + Digest<OutputSize = U32>>(
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
-    H: Tagged + Digest<OutputSize = U32>,
+    H: Tag + Digest<OutputSize = U32> + Default,
     R: RngCore + Default,
 {
     Frost::default()
@@ -918,9 +924,9 @@ where
 /// Create a Frost instance which does not handle nonce generation.
 ///
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
-pub fn new_without_nonce_generation<H>() -> Frost<H, ()>
+pub fn new_without_nonce_generation<H>() -> Frost<H, nonce::NoNonces>
 where
-    H: Tagged + Digest<OutputSize = U32>,
+    H: Tag + Digest<OutputSize = U32> + Default,
 {
     Frost::default()
 }

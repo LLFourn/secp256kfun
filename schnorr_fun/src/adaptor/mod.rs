@@ -53,8 +53,7 @@ use crate::{
         digest::{generic_array::typenum::U32, Digest},
         g,
         marker::*,
-        nonce::NonceGen,
-        s, Point, Scalar, XOnlyKeyPair, G,
+        nonce, s, Point, Scalar, XOnlyKeyPair, G,
     },
     Message, Schnorr, Signature,
 };
@@ -81,7 +80,7 @@ pub trait EncryptedSign {
 impl<NG, CH> EncryptedSign for Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
-    NG: NonceGen,
+    NG: nonce::NonceGen,
 {
     fn encrypted_sign(
         &self,
@@ -275,7 +274,7 @@ where
 mod test {
 
     use super::*;
-    use crate::nonce::{Deterministic, GlobalRng, Synthetic};
+    use crate::nonce::{GlobalRng, Synthetic};
     use rand::rngs::ThreadRng;
     use secp256kfun::proptest::prelude::*;
     use sha2::Sha256;
@@ -285,7 +284,7 @@ mod test {
     proptest! {
         #[test]
         fn signing_tests_deterministic(secret_key in any::<Scalar>(), decryption_key in any::<Scalar>()) {
-            let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
+            let schnorr = Schnorr::<Sha256, nonce::Deterministic<Sha256>>::default();
             test_it(schnorr, secret_key, decryption_key);
         }
 
@@ -297,7 +296,7 @@ mod test {
 
     }
 
-    fn test_it<NG: NonceGen>(
+    fn test_it<NG: nonce::NonceGen>(
         schnorr: Schnorr<Sha256, NG>,
         secret_key: Scalar,
         decryption_key: Scalar,

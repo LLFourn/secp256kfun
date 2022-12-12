@@ -66,9 +66,9 @@ use alloc::vec::Vec;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
-    hash::{HashAdd, Tagged},
+    hash::{HashAdd, Tag},
     marker::*,
-    nonce::{self, NonceGen},
+    nonce::{self, NoNonces, NonceGen},
     rand_core::RngCore,
     s, KeyPair, Point, Scalar, G,
 };
@@ -85,7 +85,7 @@ pub struct MuSig<H, S = ()> {
     pub schnorr: S,
 }
 
-impl<H: Tagged, S> MuSig<H, S> {
+impl<H: Tag + Default, S> MuSig<H, S> {
     /// Create a new keypair.
     ///
     /// A shorthand for [`KeyPair::new`].
@@ -95,21 +95,21 @@ impl<H: Tagged, S> MuSig<H, S> {
 
     fn _new(schnorr: S) -> Self {
         Self {
-            pk_hash: H::default().tagged(b"KeyAgg list"),
-            coeff_hash: H::default().tagged(b"KeyAgg coefficient"),
-            nonce_coeff_hash: H::default().tagged(b"MuSig/noncecoef"),
+            pk_hash: H::default().tag(b"KeyAgg list"),
+            coeff_hash: H::default().tag(b"KeyAgg coefficient"),
+            nonce_coeff_hash: H::default().tag(b"MuSig/noncecoef"),
             schnorr,
         }
     }
 }
 
-impl<H: Tagged, S: Default> Default for MuSig<H, S> {
+impl<H: Tag + Default, S: Default> Default for MuSig<H, S> {
     fn default() -> Self {
         MuSig::_new(S::default())
     }
 }
 
-impl<H: Tagged, NG> MuSig<H, Schnorr<H, NG>> {
+impl<H: Tag + Default, NG> MuSig<H, Schnorr<H, NG>> {
     /// Generate a new MuSig context from a Schnorr context.
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self::_new(schnorr)
@@ -616,8 +616,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 /// use schnorr_fun::musig;
 /// let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
 /// ```
-pub fn new_with_deterministic_nonces<H: Tagged + Digest<OutputSize = U32>>(
-) -> MuSig<H, Schnorr<H, nonce::Deterministic<H>>> {
+pub fn new_with_deterministic_nonces<H>() -> MuSig<H, Schnorr<H, nonce::Deterministic<H>>>
+where
+    H: Tag + Digest<OutputSize = U32> + Default,
+{
     MuSig::default()
 }
 
@@ -635,7 +637,7 @@ pub fn new_with_deterministic_nonces<H: Tagged + Digest<OutputSize = U32>>(
 pub fn new_with_synthetic_nonces<H, R>(
 ) -> MuSig<H, Schnorr<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>>
 where
-    H: Tagged + Digest<OutputSize = U32>,
+    H: Tag + Digest<OutputSize = U32> + Default,
     R: RngCore + Default,
 {
     MuSig::default()
@@ -644,9 +646,9 @@ where
 /// Create a MuSig instance which does not handle nonce generation.
 ///
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
-pub fn new_without_nonce_generation<H>() -> MuSig<H, Schnorr<H, ()>>
+pub fn new_without_nonce_generation<H>() -> MuSig<H, Schnorr<H, NoNonces>>
 where
-    H: Tagged + Digest<OutputSize = U32>,
+    H: Tag + Digest<OutputSize = U32> + Default,
 {
     MuSig::default()
 }
@@ -656,10 +658,7 @@ mod test {
     use crate::adaptor::Adaptor;
 
     use super::*;
-    use secp256kfun::{
-        nonce::Deterministic,
-        proptest::{option, prelude::*},
-    };
+    use secp256kfun::proptest::{option, prelude::*};
     use sha2::Sha256;
 
     proptest! {
@@ -672,7 +671,7 @@ mod test {
                         tweak1 in option::of(any::<Scalar<Public, Zero>>()),
                         tweak2 in option::of(any::<Scalar<Public, Zero>>()),
         ) {
-            let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
+            let schnorr = Schnorr::<Sha256, nonce::Deterministic<Sha256>>::default();
             let musig = MuSig::new(schnorr);
             let keypair1 = musig
                 .new_keypair(sk1);
@@ -787,7 +786,7 @@ mod test {
             sk3 in any::<Scalar>(),
             y in any::<Scalar>()
         ) {
-            let schnorr = Schnorr::<Sha256, _>::new(Deterministic::<Sha256>::default());
+            let schnorr = Schnorr::<Sha256, nonce::Deterministic<Sha256>>::default();
             let musig = MuSig::new(schnorr);
             let keypair1 = musig
             .new_keypair(sk1);

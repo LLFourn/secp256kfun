@@ -296,10 +296,10 @@ macro_rules! g {
 /// on the cryptographic scheme and is crucial to get right.
 ///
 /// ```
-/// use secp256kfun::{Scalar, derive_nonce, nonce::AddTag, nonce::{NonceGen,Deterministic}};
+/// use secp256kfun::{Scalar, derive_nonce, Tag, nonce};
 /// use sha2::Sha256;
 /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
-/// let nonce_gen = Deterministic::<Sha256>::default().add_tag("my-protocol");
+/// let nonce_gen = nonce::Deterministic::<Sha256>::default().tag(b"my-protocol");
 /// let r = derive_nonce!(
 ///     nonce_gen => nonce_gen,
 ///     secret => &secret_scalar,
@@ -331,10 +331,10 @@ macro_rules! derive_nonce {
 /// # Examples
 ///
 /// ```
-/// use secp256kfun::{Scalar, derive_nonce_rng, nonce::AddTag, nonce::{NonceGen,Deterministic}};
+/// use secp256kfun::{Scalar, derive_nonce_rng, Tag, nonce};
 /// use sha2::Sha256;
 /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
-/// let nonce_gen = Deterministic::<Sha256>::default().add_tag("my-protocol");
+/// let nonce_gen = nonce::Deterministic::<Sha256>::default().tag(b"my-protocol");
 /// let mut rng = derive_nonce_rng!(
 ///     nonce_gen => nonce_gen,
 ///     secret => &secret_scalar,

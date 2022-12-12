@@ -1,15 +1,17 @@
 //! This broken and just as a reference until we get proper bip340 benchmarks from proper rust lib
 #![allow(non_upper_case_globals)]
 use criterion::{criterion_group, criterion_main, Criterion};
-use schnorr_fun::{Message, Schnorr};
-use secp256kfun::{marker::*, nonce::Deterministic, Scalar};
+use schnorr_fun::{
+    fun::{marker::*, nonce, Scalar},
+    Message, Schnorr,
+};
 use sha2::Sha256;
 
 const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
     static ref SK: Scalar<Secret, NonZero> = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();
-    static ref schnorr: Schnorr<Sha256, Deterministic<Sha256>> = Schnorr::new(Deterministic::default());
+    static ref schnorr: Schnorr<Sha256, nonce::Deterministic<Sha256>> = Schnorr::default();
 }
 
 // note schnorr runs against grin's secp256k1 library

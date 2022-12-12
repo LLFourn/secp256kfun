@@ -15,9 +15,9 @@ keywords = ["bitcoin", "secp256k1"]
 
 
 [dependencies]
-digest = "0.10"
-subtle = { package = "subtle-ng", version = "2" }
-rand_core = { version = "0.6" }
+digest = { version = "0.10", default-features = false }
+subtle = { package = "subtle-ng", version = "2", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 
 # optional
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
@@ -42,8 +42,8 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
-alloc = ["serde?/alloc"]
-std = ["alloc"]
+alloc = ["serde?/alloc", "digest/alloc"]
+std = ["alloc", "subtle/std", "digest/std"]
 libsecp_compat = ["secp256k1"]
 serde = [ "dep:serde", "secp256k1?/serde" ]
 

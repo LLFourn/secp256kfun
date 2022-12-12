@@ -69,8 +69,8 @@ use secp256kfun::{
     digest::generic_array::typenum::U32,
     g,
     marker::*,
-    nonce::{AddTag, NonceGen},
-    s, Point, Scalar, G,
+    nonce::{NoNonces, NonceGen},
+    s, Point, Scalar, Tag, G,
 };
 pub use sigma_fun::HashTranscript;
 use sigma_fun::{secp256k1, Eq, FiatShamir, ProverTranscript, Transcript};
@@ -88,7 +88,7 @@ pub struct Adaptor<T, NonceGen> {
 
 impl<T, NG> Default for Adaptor<T, NG>
 where
-    NG: Default + AddTag,
+    NG: Default + Tag,
     T: Transcript<DLEQ> + Default,
 {
     fn default() -> Self {
@@ -96,7 +96,7 @@ where
     }
 }
 
-impl<T: Transcript<DLEQ> + Default, NG: AddTag> Adaptor<T, NG> {
+impl<T: Transcript<DLEQ> + Default, NG: Tag> Adaptor<T, NG> {
     pub fn new(nonce_gen: NG) -> Self {
         let sigma = DLEQ::default();
         Self {
@@ -106,7 +106,7 @@ impl<T: Transcript<DLEQ> + Default, NG: AddTag> Adaptor<T, NG> {
     }
 }
 
-impl<T: Transcript<DLEQ> + Default> Adaptor<T, ()> {
+impl<T: Transcript<DLEQ> + Default> Adaptor<T, NoNonces> {
     /// Create an `Adaptor` instance that can do verification only
     /// # Example
     /// ```
@@ -114,7 +114,7 @@ impl<T: Transcript<DLEQ> + Default> Adaptor<T, ()> {
     /// let adaptor = Adaptor::<HashTranscript<sha2::Sha256>, _>::verify_only();
     /// ```
     pub fn verify_only() -> Self {
-        Self::new(())
+        Self::new(NoNonces)
     }
 }
 
@@ -189,7 +189,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     /// # Example
     /// ```
     /// # use ecdsa_fun::{ adaptor::{Adaptor, HashTranscript}, fun::Scalar };
-    /// # let adaptor = Adaptor::<HashTranscript::<sha2::Sha256>,()>::default();
+    /// # let adaptor = Adaptor::<HashTranscript::<sha2::Sha256>, _>::verify_only();
     /// let secret_decryption_key = Scalar::random(&mut rand::thread_rng());
     /// let public_encryption_key = adaptor.encryption_key_for(&secret_decryption_key);
     pub fn encryption_key_for(&self, decryption_key: &Scalar) -> Point {
