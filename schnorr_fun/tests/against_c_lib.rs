@@ -7,8 +7,8 @@ use schnorr_fun::{
 use secp256k1::SECP256K1;
 use secp256kfun::{
     digest::Digest,
-    hash::{HashAdd, Tagged},
-    nonce::{AddTag, NonceGen},
+    hash::{HashAdd, Tag},
+    nonce::NonceGen,
 };
 use sha2::Sha256;
 
@@ -39,13 +39,15 @@ impl NonceGen for Bip340NoAux {
     }
 }
 
-impl AddTag for Bip340NoAux {
-    fn add_tag(self, tag: &str) -> Self {
+impl Tag for Bip340NoAux {
+    fn tag_vectored<'a>(self, tag: impl Iterator<Item = &'a [u8]> + Clone) -> Self {
         Self {
             nonce_hash: self
                 .nonce_hash
-                .tagged(&[tag.as_bytes(), b"/nonce"].concat()),
-            aux_hash: self.aux_hash.tagged(&[tag.as_bytes(), b"/aux"].concat()),
+                .tag_vectored(tag.clone().chain(core::iter::once(b"/nonce".as_slice()))),
+            aux_hash: self
+                .aux_hash
+                .tag_vectored(tag.clone().chain(core::iter::once(b"/aux".as_slice()))),
         }
     }
 }
@@ -60,7 +62,7 @@ proptest! {
         let keypair = secp256k1::KeyPair::from_secret_key(&secp, &key.clone().into());
         let secp_msg = secp256k1::Message::from_slice(&msg).unwrap();
         let sig = secp.sign_schnorr_no_aux_rand(&secp_msg, &keypair);
-        let schnorr = Schnorr::<Sha256,_>::new(Bip340NoAux::default());
+        let schnorr = Schnorr::<Sha256,Bip340NoAux>::default();
         let fun_keypair = schnorr.new_keypair(key);
         let fun_msg = Message::<Public>::raw(&msg);
         let fun_sig: secp256k1::schnorr::Signature = schnorr.sign(&fun_keypair, fun_msg).into();
@@ -83,7 +85,7 @@ proptest! {
 
 #[test]
 fn bip340_zero_mask_tagged_hash_is_correct() {
-    let no_aux = Bip340NoAux::default().add_tag("BIP0340");
+    let no_aux = Bip340NoAux::default().tag(b"BIP0340");
     let no_aux_hash = no_aux.aux_hash.clone().add(&[0u8; 32]);
     let mut zero_mask = [0u8; 32];
     zero_mask.copy_from_slice(no_aux_hash.finalize().as_ref());

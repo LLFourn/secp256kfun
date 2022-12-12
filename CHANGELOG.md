@@ -11,6 +11,7 @@
 - Remove `XOnly` in favor of `Point<EvenY>`
 - Replace `.mark` system with methods for changing each marker type.
 - Make `From<u32>` for `Scalar` regardless of secrecy
+- Merge `AddTag` and `Tagged` into one trait `Tag`
 
 ## 0.7.1
 

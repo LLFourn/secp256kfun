@@ -43,7 +43,7 @@ pub use slice::Slice;
 pub extern crate secp256k1;
 
 /// Re-export `serde`
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 #[cfg(feature = "serde")]
 pub use serde;
 
@@ -69,3 +69,6 @@ pub extern crate proptest;
 ///[`BasePoint`]: crate::marker::BasePoint
 pub static G: &'static Point<marker::BasePoint, marker::Public, marker::NonZero> =
     &Point::from_inner(backend::G_POINT, marker::BasePoint(backend::G_TABLE));
+
+// it is applied to nonce generators too so export at root
+pub use hash::Tag;

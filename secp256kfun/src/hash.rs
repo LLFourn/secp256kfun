@@ -9,41 +9,68 @@ use crate::digest::{
     generic_array::typenum::{PartialDiv, Unsigned},
     Digest,
 };
-/// Extension trait to "tag" a hash as described in [BIP-340].
+/// Extension trait for some cryptotraphic function that can be domain separated by a tag.
+/// Used for hashes and [nonce generators][`NonceGen`].
 ///
-/// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-pub trait Tagged: Default + Clone {
-    /// Returns the _tagged_ (domain separated) SHA256 instance.
-    /// This is meant be used on SHA256 state with an empty buffer.
+/// This is blanket implemented for all [`digest`] hashes where the output size divides the block
+/// size using the "tagged hash" algorithm described in `[BIP340]`.
+///
+/// [BIP340]: https://bips.xyz/340
+/// [`NonceGen`]: crate::nonce::NonceGen.
+/// [`digest`]: digest
+pub trait Tag: Sized {
+    /// Returns the _tagged_ (domain separated) instance of `self`.
+    ///
+    /// When implemented on block hashes, the hashes internal buffer should be empty before calling
+    /// it.
+    ///
     /// # Example
+    ///
     /// ```
     /// use digest::Digest;
-    /// use secp256kfun::hash::Tagged;
-    /// let mut hash = sha2::Sha256::default().tagged(b"my-domain/my-purpose");
+    /// use secp256kfun::Tag;
+    /// let mut hash = sha2::Sha256::default().tag(b"my-domain/my-purpose");
     /// hash.update(b"hello world");
     /// println!("{:?}", hash.finalize());
     /// ```
-    fn tagged(&self, tag: &[u8]) -> Self;
+    fn tag(self, tag: &[u8]) -> Self {
+        self.tag_vectored(core::iter::once(tag))
+    }
+
+    /// Takes a tag that is split up into pieces.
+    ///
+    /// ```
+    /// use digest::Digest;
+    /// use secp256kfun::Tag;
+    /// let mut hash1 = sha2::Sha256::default()
+    ///     .tag_vectored([b"my-domain".as_slice(), b"/my-purpose".as_slice()].into_iter());
+    /// let mut hash2 = sha2::Sha256::default().tag(b"my-domain/my-purpose");
+    /// hash1.update(b"hello world");
+    /// hash2.update(b"hello world");
+    /// assert_eq!(hash1.finalize(), hash2.finalize());
+    /// ```
+    fn tag_vectored<'a>(self, tag_components: impl Iterator<Item = &'a [u8]> + Clone) -> Self;
 }
 
-impl<H: BlockSizeUser + Digest + Default + Clone> Tagged for H
+impl<H: BlockSizeUser + Digest + Default + Clone> Tag for H
 where
     <H as BlockSizeUser>::BlockSize: PartialDiv<H::OutputSize>,
     <<H as BlockSizeUser>::BlockSize as PartialDiv<H::OutputSize>>::Output: Unsigned,
 {
-    fn tagged(&self, tag: &[u8]) -> Self {
+    fn tag_vectored<'a>(mut self, tag_components: impl Iterator<Item = &'a [u8]> + Clone) -> Self {
         let hashed_tag = {
             let mut hash = H::default();
-            hash.update(tag);
+            for component in tag_components {
+                hash.update(component);
+            }
             hash.finalize()
         };
-        let mut tagged_hash = self.clone();
         let fill_block =
             <<H::BlockSize as PartialDiv<H::OutputSize>>::Output as Unsigned>::to_usize();
         for _ in 0..fill_block {
-            tagged_hash.update(&hashed_tag[..]);
+            self.update(&hashed_tag[..]);
         }
-        tagged_hash
+        self
     }
 }
 

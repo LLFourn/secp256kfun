@@ -4,6 +4,7 @@ static DLC_SPEC_JSON: &'static str = include_str!("./test_vectors.json");
 use ecdsa_fun::{
     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
     fun::{Point, Scalar},
+    nonce::NoNonces,
     serde, Signature,
 };
 use sha2::Sha256;
@@ -79,7 +80,10 @@ fn run_test_vectors() {
     }
 }
 
-fn run_test_vector(ecdsa_adaptor: &Adaptor<HashTranscript<Sha256>, ()>, t: &Verification) -> bool {
+fn run_test_vector(
+    ecdsa_adaptor: &Adaptor<HashTranscript<Sha256>, NoNonces>,
+    t: &Verification,
+) -> bool {
     if !ecdsa_adaptor.verify_encrypted_signature(
         &t.public_signing_key,
         &t.encryption_key,

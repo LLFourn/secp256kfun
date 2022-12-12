@@ -121,14 +121,12 @@ pub struct GlobalRng<R> {
 ///
 /// ```
 /// use secp256kfun::{
-///     nonce::AddTag,
 ///     nonce::{Deterministic, NonceGen},
+///     Tag,
 /// };
 /// use sha2::Sha256;
-/// let nonce_gen = Deterministic::<Sha256>::default()
-///     .add_tag("BIP0340"); // To create [BIP-340] signatures.
+/// let nonce_gen = Deterministic::<Sha256>::default().tag(b"BIP0340");
 /// ```
-/// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 /// [`Synthetic`]: crate::nonce::Synthetic
 #[derive(Clone, Debug, Default)]
 pub struct Deterministic<H> {
@@ -159,26 +157,36 @@ pub trait NonceGen {
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash;
 }
 
-impl<H: Tagged + Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H> {
+impl<H: Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H> {
     type Hash = H;
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
         self.nonce_hash.clone().add(secret)
     }
 }
 
-impl<H: Tagged> AddTag for Deterministic<H> {
-    fn add_tag(self, tag: &str) -> Self {
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Default)]
+/// Convenience type that is [`Tag`] but is not a [`NonceGen`].
+pub struct NoNonces;
+
+impl<H: Tag> Tag for Deterministic<H> {
+    fn tag_vectored<'a>(self, tag: impl Iterator<Item = &'a [u8]> + Clone) -> Self {
         Self {
             nonce_hash: self
                 .nonce_hash
-                .tagged(&[tag.as_bytes(), b"/nonce"].concat()),
+                .tag_vectored(tag.chain(core::iter::once(b"/nonce".as_slice()))),
         }
+    }
+}
+
+impl Tag for NoNonces {
+    fn tag_vectored<'a>(self, _tag: impl IntoIterator<Item = &'a [u8]>) -> Self {
+        self
     }
 }
 
 impl<H, R> NonceGen for Synthetic<H, R>
 where
-    H: Tagged + Digest<OutputSize = U32> + Clone,
+    H: Tag + Digest<OutputSize = U32> + Clone,
     R: NonceRng,
 {
     type Hash = H;
@@ -200,37 +208,17 @@ where
     }
 }
 
-impl<H: Tagged, R> AddTag for Synthetic<H, R> {
-    fn add_tag(self, tag: &str) -> Self {
+impl<H: Tag, R> Tag for Synthetic<H, R> {
+    fn tag_vectored<'a>(self, tag: impl Iterator<Item = &'a [u8]> + Clone) -> Self {
         Self {
             nonce_hash: self
                 .nonce_hash
-                .tagged(&[tag.as_bytes(), b"/nonce"].concat()),
-            aux_hash: self.aux_hash.tagged(&[tag.as_bytes(), b"/aux"].concat()),
+                .tag_vectored(tag.clone().chain(core::iter::once(b"/nonce".as_slice()))),
+            aux_hash: self
+                .aux_hash
+                .tag_vectored(tag.chain(core::iter::once(b"/aux".as_slice()))),
             rng: self.rng,
         }
-    }
-}
-
-/// Trait for things that can domain separate themselves.
-pub trait AddTag {
-    /// Tells the invocant to return a new version of itself modified with the
-    /// tag. This is to ensure that a `NonceGen` does not produce the
-    /// same outputs for two different tags even if they have the same
-    /// public inputs.
-    ///
-    /// Internally, the implementations provided in this library use the scheme described in [BIP-340].
-    ///
-    /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-    fn add_tag(self, tag: &str) -> Self;
-}
-
-/// AddTag is implemented for () so you can use implement things generically for
-/// `AddTag` even for things that have some field set to () (for example
-/// `NonceGen` when you're doing verification only).
-impl AddTag for () {
-    fn add_tag(self, _tag: &str) -> Self {
-        ()
     }
 }
 
@@ -254,8 +242,8 @@ mod test {
     #[test]
     fn deterministic_tests() {
         use core::str::FromStr;
-        let nonce_gen_1 = Deterministic::<Sha256>::default().add_tag("PROTO_ONE");
-        let nonce_gen_2 = Deterministic::<Sha256>::default().add_tag("PROTO_TWO");
+        let nonce_gen_1 = Deterministic::<Sha256>::default().tag(b"PROTO_ONE");
+        let nonce_gen_2 = Deterministic::<Sha256>::default().tag(b"PROTO_TWO");
 
         let one = s!(1);
         let two = s!(2);
@@ -264,8 +252,8 @@ mod test {
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, two));
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_2, one));
 
-        let app_nonce_gen_1 = nonce_gen_1.clone().add_tag("MY_APP");
-        let app_nonce_gen_2 = nonce_gen_2.clone().add_tag("MY_APP");
+        let app_nonce_gen_1 = nonce_gen_1.clone().tag(b"MY_APP");
+        let app_nonce_gen_2 = nonce_gen_2.clone().tag(b"MY_APP");
 
         assert_ne!(
             get_nonce!(nonce_gen_1, one),
@@ -288,7 +276,7 @@ mod test {
 
     #[test]
     fn synthetic_nonce_gen_is_random() {
-        let nonce_gen_1 = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default().add_tag("PROTO_ONE");
+        let nonce_gen_1 = Synthetic::<Sha256, GlobalRng<ThreadRng>>::default().tag(b"PROTO_ONE");
 
         let one = s!(1);
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_1, one));

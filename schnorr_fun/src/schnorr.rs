@@ -1,11 +1,13 @@
+use secp256kfun::nonce::NoNonces;
+
 use crate::{
     fun::{
         derive_nonce,
         digest::{generic_array::typenum::U32, Digest},
         g,
-        hash::{HashAdd, Tagged},
+        hash::{HashAdd, Tag},
         marker::*,
-        nonce::{AddTag, NonceGen},
+        nonce::NonceGen,
         s, Point, Scalar, XOnlyKeyPair, G,
     },
     Message, Signature,
@@ -21,7 +23,7 @@ use crate::{
 /// [`NonceGen<H>`]: crate::fun::hash::NonceGen
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #[derive(Clone)]
-pub struct Schnorr<CH, NG = ()> {
+pub struct Schnorr<CH, NG = NoNonces> {
     /// The [`NonceGen`] used to generate nonces.
     ///
     /// [`NonceGen`]: crate::nonce::NonceGen
@@ -30,7 +32,7 @@ pub struct Schnorr<CH, NG = ()> {
     challenge_hash: CH,
 }
 
-impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, ()> {
+impl<H: Digest<OutputSize = U32> + Tag + Default> Schnorr<H, NoNonces> {
     /// Create a new instance that can only verify signatures.
     ///
     /// # Example
@@ -42,14 +44,14 @@ impl<H: Digest<OutputSize = U32> + Tagged> Schnorr<H, ()> {
     /// let schnorr = Schnorr::<Sha256>::verify_only();
     /// ```
     pub fn verify_only() -> Self {
-        Self::new(())
+        Self::new(NoNonces)
     }
 }
 
 impl<CH, NG> Schnorr<CH, NG>
 where
-    CH: Digest<OutputSize = U32> + Tagged,
-    NG: AddTag,
+    CH: Digest<OutputSize = U32> + Tag + Default,
+    NG: Tag,
 {
     /// Creates a instance capable of signing and verifying.
     ///
@@ -70,16 +72,17 @@ where
     /// // then go and sign/verify messages!
     /// ```
     pub fn new(nonce_gen: NG) -> Self {
-        let nonce_gen = nonce_gen.add_tag("BIP0340");
         Self {
-            nonce_gen,
-            challenge_hash: CH::default().tagged("BIP0340/challenge".as_bytes()),
+            nonce_gen: nonce_gen.tag(b"BIP0340"),
+            challenge_hash: CH::default().tag(b"BIP0340/challenge"),
         }
     }
 }
 
-impl<CH: Default + Tagged + Digest<OutputSize = U32>, NG: Default + AddTag> Default
-    for Schnorr<CH, NG>
+impl<CH, NG> Default for Schnorr<CH, NG>
+where
+    CH: Default + Tag + Digest<OutputSize = U32>,
+    NG: Default + Tag,
 {
     /// Returns a Schnorr instance tagged in the default way according to BIP340.
     ///
@@ -96,7 +99,7 @@ impl<CH: Default + Tagged + Digest<OutputSize = U32>, NG: Default + AddTag> Defa
     }
 }
 
-impl<NG, CH> Schnorr<CH, NG>
+impl<CH, NG> Schnorr<CH, NG>
 where
     CH: Digest<OutputSize = U32> + Clone,
     NG: NonceGen,
