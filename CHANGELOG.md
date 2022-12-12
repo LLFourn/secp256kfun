@@ -12,6 +12,7 @@
 - Replace `.mark` system with methods for changing each marker type.
 - Make `From<u32>` for `Scalar` regardless of secrecy
 - Merge `AddTag` and `Tagged` into one trait `Tag`
+- Add `NonceRng` impls for `RefCell` and `Mutex`
 
 ## 0.7.1
 

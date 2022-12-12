@@ -24,15 +24,19 @@ use rand_core::RngCore;
 
 /// A helper trait over RNGs that handle internal mutablility.
 ///
-/// [`RngCore`] requires `self` to be mutable which is annoying in our context.
-/// This trait requires the rng be able to create randomness without being
-/// mutable. The most strightforward way of doing this is to use transient rngs
-/// instances like [`ThreadRng`] that have a `Default` implementation. For this
-/// reason, this trait is implemented for `PhantomData<ThreadRng>` (any Rng that
-/// implements `Default`). If you want to BYO rng you have to implement this
-/// trait yourself and handle mutability internally.
+/// Used by the [`Synthetic`] nonce generator.
+///
+/// [`RngCore`] requires `self` to be mutable which is annoying in our context. This trait requires
+/// the rng be able to create randomness without being mutable. The most strightforward way of doing
+/// this is to use rngs instances like [`ThreadRng`] that have a `Default` implementation are and
+/// seeded from the system. See [`GlobalRng`].
+///
+/// If you want to BYO rng you have to either implement this trait or wrap the `RngCore` in a
+/// [`RefCell`] or [`Mutex`].
 ///
 /// [`RngCore`]: rand_core::RngCore
+/// [`RefCell`]: core::cell::RefCell
+/// [`Mutex`]: std::sync::Mutex
 /// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
 pub trait NonceRng {
     /// Fill `bytes` with random data.
@@ -43,6 +47,20 @@ pub trait NonceRng {
 impl<R: RngCore + Default> NonceRng for GlobalRng<R> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
         R::default().fill_bytes(bytes);
+    }
+}
+
+impl<R: RngCore> NonceRng for core::cell::RefCell<R> {
+    fn fill_bytes(&self, bytes: &mut [u8]) {
+        self.borrow_mut().fill_bytes(bytes)
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl<R: RngCore> NonceRng for std::sync::Mutex<R> {
+    fn fill_bytes(&self, bytes: &mut [u8]) {
+        self.lock().unwrap().fill_bytes(bytes)
     }
 }
 
