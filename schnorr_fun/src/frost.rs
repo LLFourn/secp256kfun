@@ -442,7 +442,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Generate nonces for creating signatures shares.
     ///
-    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`FrostKey::gen_nonce_rng`]
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::gen_nonce_rng`]
     pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
         NonceKeyPair::random(nonce_rng)
     }
