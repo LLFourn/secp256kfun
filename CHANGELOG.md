@@ -8,11 +8,12 @@
 - Allow `Zero` points to serialize
 - Remove requirement of `CryptoRng` everywhere
 - Rename `from_scalar_mul` to `even_y_from_scalar_mul` to be more explicit
-- Remove `XOnly` in favor of `Point<EvenY>`
+- Remove `XOnly` in favour of `Point<EvenY>`
 - Replace `.mark` system with methods for changing each marker type.
 - Make `From<u32>` for `Scalar` regardless of secrecy
 - Merge `AddTag` and `Tagged` into one trait `Tag`
 - Add `NonceRng` impls for `RefCell` and `Mutex`
+- Add `Ord` and `PartialOrd` implementations for Scalar and Point
 
 ## 0.7.1
 

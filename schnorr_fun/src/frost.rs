@@ -722,7 +722,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 .non_zero()
                 .unwrap_or_else(|| {
                     // Use the same trick as the MuSig spec
-                    G.clone().normalize()
+                    G.normalize()
                 })
                 .into_point_with_even_y();
 

@@ -1,10 +1,10 @@
 /// Something marked with Zero might be `0` i.e. the additive identity
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Zero;
 
 /// Something marked with `NonZero` is guaranteed not to be 0.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NonZero;
 
@@ -16,11 +16,13 @@ pub trait ZeroChoice:
     Default
     + Clone
     + PartialEq
+    + Eq
     + Copy
     + DecideZero<NonZero>
     + DecideZero<Zero>
-    + Eq
     + core::hash::Hash
+    + Ord
+    + PartialOrd
     + 'static
 {
     /// Returns whether the type is `Zero`

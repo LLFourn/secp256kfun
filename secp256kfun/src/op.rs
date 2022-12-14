@@ -15,7 +15,7 @@
 //! use secp256kfun::{marker::*, op, Scalar, G};
 //! let x = Scalar::random(&mut rand::thread_rng());
 //! let X1 = op::scalar_mul_point(&x, G); // fast
-//! let H = &G.clone().normalize(); // scrub `BasePoint` marker
+//! let H = &G.normalize(); // scrub `BasePoint` marker
 //! let X2 = op::scalar_mul_point(&x, &H); // slow
 //! assert_eq!(X1, X2);
 //! ```

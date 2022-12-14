@@ -49,7 +49,6 @@ use rand_core::RngCore;
 /// [`Secrecy`]: crate::marker::Secrecy
 /// [`Secret`]: crate::marker::Secret
 /// [`ZeroChoice]: crate::marker::ZeroChoice
-#[derive(Eq)]
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
 
 impl<Z> Copy for Scalar<Public, Z> {}
@@ -291,6 +290,8 @@ impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
     }
 }
 
+impl<Z, S> Eq for Scalar<Z, S> {}
+
 impl<S> From<u32> for Scalar<S, Zero> {
     fn from(int: u32) -> Self {
         Self::from_inner(backend::BackendScalar::from_u32(int))
@@ -402,6 +403,18 @@ impl<SL, SR, ZR: ZeroChoice> MulAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
 impl<SL, SR, ZR: ZeroChoice> MulAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn mul_assign(&mut self, rhs: &Scalar<SR, ZR>) {
         *self = crate::op::scalar_mul(&self, rhs).set_secrecy::<SL>();
+    }
+}
+
+impl<S1, Z1, S2, Z2> PartialOrd<Scalar<S2, Z2>> for Scalar<S1, Z1> {
+    fn partial_cmp(&self, other: &Scalar<S2, Z2>) -> Option<core::cmp::Ordering> {
+        Some(self.to_bytes().cmp(&other.to_bytes()))
+    }
+}
+
+impl<S, Z> Ord for Scalar<S, Z> {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.to_bytes().cmp(&other.to_bytes())
     }
 }
 

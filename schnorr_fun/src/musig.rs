@@ -479,7 +479,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
             .unwrap_or_else(|| {
                 // if final nonce is zero we set it to generator as in MuSig spec
                 debug_assert!(G.is_y_even());
-                G.clone().normalize()
+                G.normalize()
             })
             .into_point_with_even_y();
 

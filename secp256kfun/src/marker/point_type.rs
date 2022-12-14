@@ -8,7 +8,9 @@
 ///
 /// [`Point<T,S,Z>`]: crate::Point
 /// [`G`]: crate::G
-pub trait PointType: Sized + Clone + Copy + 'static {
+pub trait PointType:
+    Sized + Clone + Copy + PartialEq + Eq + core::hash::Hash + Ord + PartialOrd
+{
     /// The point type returned from the negation of a point of this type.
     type NegationType: Default;
 
@@ -18,7 +20,7 @@ pub trait PointType: Sized + Clone + Copy + 'static {
 
 /// A Fully Normalized Point. Internally `Normal` points are represented using
 /// _affine_ coordinates with fully normalized `x` and `y` field elements.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Normal;
 /// A Non-normalized Point. Usually, represented as three field elements three field elements:
@@ -37,7 +39,7 @@ pub struct Normal;
 ///
 /// [`normalize`]: crate::Point::normalize
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct NonNormal;
 
 /// Backwards compatibility type alias.
@@ -45,7 +47,7 @@ pub struct NonNormal;
 pub type Jacobian = NonNormal;
 
 /// A [`Normal`] point whose `y` coordinate is known to be even.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feautre = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EvenY;
 
@@ -56,21 +58,15 @@ pub struct EvenY;
 /// At the time of writing no pre-computation is done.
 ///
 /// [`G`]: crate::G
-#[derive(Clone, Copy)]
-pub struct BasePoint(pub(crate) crate::backend::BasePoint);
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct BasePoint;
 
 /// A marker trait that indicates a `PointType` uses a affine internal representation.
 pub trait Normalized: PointType {}
 
-pub(crate) trait NotBasePoint: Default {}
-
 impl Normalized for EvenY {}
 impl Normalized for Normal {}
 impl Normalized for BasePoint {}
-
-impl NotBasePoint for NonNormal {}
-impl NotBasePoint for EvenY {}
-impl NotBasePoint for Normal {}
 
 impl<N: Normalized> PointType for N {
     type NegationType = Normal;
