@@ -190,75 +190,6 @@ impl Scalar<Secret, NonZero> {
     }
 }
 
-impl Scalar<Secret, Zero> {
-    /// Converts 32 bytes into a scalar by reducing it modulo the curve order `q`.
-    /// # Example
-    /// ```
-    /// # use core::convert::TryInto;
-    /// use secp256kfun::{hex, s, Scalar};
-    /// let scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    /// let scalar_overflowed = Scalar::from_bytes_mod_order(
-    ///     hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
-    ///         .unwrap(),
-    /// );
-    /// assert_eq!(scalar_overflowed, s!(1))
-    /// ```
-    pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
-        Self::from_inner(backend::BackendScalar::from_bytes_mod_order(bytes))
-    }
-
-    /// Exactly like [`from_bytes_mod_order`] except
-    /// it operates on a 32-byte slice rather than an array.  If the slice is
-    /// not 32 bytes long then the function returns `None`.
-    ///
-    /// # Example
-    /// ```
-    /// # use secp256kfun::Scalar;
-    /// let bytes = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-    /// assert!(Scalar::from_slice_mod_order(&bytes[..31]).is_none());
-    /// assert_eq!(
-    ///     Scalar::from_slice_mod_order(&bytes[..]).unwrap(),
-    ///     Scalar::from_bytes_mod_order(*bytes)
-    /// );
-    /// ```
-    ///
-    /// [`from_bytes_mod_order`]: crate::Scalar::from_bytes_mod_order
-    pub fn from_slice_mod_order(slice: &[u8]) -> Option<Self> {
-        if slice.len() != 32 {
-            return None;
-        }
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(slice);
-        Some(Self::from_bytes_mod_order(bytes))
-    }
-
-    /// Creates a scalar from 32 big-endian encoded bytes. If the bytes
-    /// represent an integer greater than or equal to the curve order then it returns `None`.
-    ///
-    /// # Example
-    /// ```
-    /// use secp256kfun::{marker::*, Scalar};
-    /// assert!(Scalar::from_bytes([0u8; 32]).is_some());
-    /// assert!(Scalar::from_bytes([255u8; 32]).is_none());
-    /// ```
-    pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
-        backend::BackendScalar::from_bytes(bytes).map(Self::from_inner)
-    }
-
-    /// Creates a scalar from 32 big-endian encoded bytes in a slice. If the
-    /// length of the slice is not 32 or the bytes represent an integer greater
-    /// than or equal to the curve order then it returns `None`.
-    pub fn from_slice(slice: &[u8]) -> Option<Self> {
-        if slice.len() != 32 {
-            return None;
-        }
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&slice);
-        Self::from_bytes(bytes)
-    }
-}
-
 impl<S> Scalar<S, Zero> {
     /// Converts a scalar marked with `Zero` to `NonZero`.
     ///
@@ -281,6 +212,73 @@ impl<S> Scalar<S, Zero> {
     /// assert_eq!(s!(x + zero), x);
     pub fn zero() -> Self {
         Self::from_inner(backend::BackendScalar::zero())
+    }
+
+    /// Converts 32 bytes into a scalar by reducing it modulo the curve order `q`.
+    /// # Example
+    /// ```
+    /// # use core::convert::TryInto;
+    /// use secp256kfun::{hex, marker::*, s, Scalar};
+    /// let scalar = Scalar::<Secret, _>::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    /// let scalar_overflowed = Scalar::<Secret, _>::from_bytes_mod_order(
+    ///     hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+    ///         .unwrap(),
+    /// );
+    /// assert_eq!(scalar_overflowed, s!(1))
+    /// ```
+    pub fn from_bytes_mod_order(bytes: [u8; 32]) -> Self {
+        Self::from_inner(backend::BackendScalar::from_bytes_mod_order(bytes))
+    }
+
+    /// Exactly like [`from_bytes_mod_order`] except
+    /// it operates on a 32-byte slice rather than an array.  If the slice is
+    /// not 32 bytes long then the function returns `None`.
+    ///
+    /// # Example
+    /// ```
+    /// use secp256kfun::{marker::*, Scalar};
+    /// let bytes = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    /// assert!(Scalar::<Secret, _>::from_slice_mod_order(&bytes[..31]).is_none());
+    /// assert_eq!(
+    ///     Scalar::<Secret, _>::from_slice_mod_order(&bytes[..]).unwrap(),
+    ///     Scalar::<Secret, _>::from_bytes_mod_order(*bytes)
+    /// );
+    /// ```
+    ///
+    /// [`from_bytes_mod_order`]: crate::Scalar::from_bytes_mod_order
+    pub fn from_slice_mod_order(slice: &[u8]) -> Option<Self> {
+        if slice.len() != 32 {
+            return None;
+        }
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(slice);
+        Some(Self::from_bytes_mod_order(bytes))
+    }
+
+    /// Creates a scalar from 32 big-endian encoded bytes. If the bytes
+    /// represent an integer greater than or equal to the curve order then it returns `None`.
+    ///
+    /// # Example
+    /// ```
+    /// use secp256kfun::{marker::*, Scalar};
+    /// assert!(Scalar::<Secret, _>::from_bytes([0u8; 32]).is_some());
+    /// assert!(Scalar::<Secret, _>::from_bytes([255u8; 32]).is_none());
+    /// ```
+    pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
+        backend::BackendScalar::from_bytes(bytes).map(Self::from_inner)
+    }
+
+    /// Creates a scalar from 32 big-endian encoded bytes in a slice. If the
+    /// length of the slice is not 32 or the bytes represent an integer greater
+    /// than or equal to the curve order then it returns `None`.
+    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+        if slice.len() != 32 {
+            return None;
+        }
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&slice);
+        Self::from_bytes(bytes)
     }
 }
 
@@ -406,13 +404,14 @@ impl<SL, SR, ZR: ZeroChoice> MulAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     }
 }
 
-impl<S1, Z1, S2, Z2> PartialOrd<Scalar<S2, Z2>> for Scalar<S1, Z1> {
-    fn partial_cmp(&self, other: &Scalar<S2, Z2>) -> Option<core::cmp::Ordering> {
+// Doing this constant time for Secret scalars is a PITA so only public for now
+impl<Z1, Z2> PartialOrd<Scalar<Public, Z2>> for Scalar<Public, Z1> {
+    fn partial_cmp(&self, other: &Scalar<Public, Z2>) -> Option<core::cmp::Ordering> {
         Some(self.to_bytes().cmp(&other.to_bytes()))
     }
 }
 
-impl<S, Z> Ord for Scalar<S, Z> {
+impl<Z> Ord for Scalar<Public, Z> {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.to_bytes().cmp(&other.to_bytes())
     }
@@ -510,10 +509,15 @@ mod test {
 
     #[test]
     fn from_slice() {
-        assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_some());
-        assert!(Scalar::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_none());
+        assert!(
+            Scalar::<Secret, _>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_some()
+        );
+        assert!(
+            Scalar::<Secret, _>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
+                .is_none()
+        );
 
-        assert!(Scalar::from_slice(
+        assert!(Scalar::<Secret, _>::from_slice(
             hex::decode_array::<32>(
                 "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
             )
@@ -526,14 +530,14 @@ mod test {
     #[test]
     fn from_slice_mod_order() {
         assert_eq!(
-            Scalar::from_slice_mod_order(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
+            Scalar::<Secret, _>::from_slice_mod_order(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
                 .unwrap()
                 .to_bytes(),
             *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         );
 
         assert_eq!(
-            Scalar::from_slice_mod_order(
+            Scalar::<Secret, _>::from_slice_mod_order(
                 hex::decode_array::<32>(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
                 )
@@ -549,7 +553,7 @@ mod test {
     fn minus_one() {
         assert_eq!(
             Scalar::<Secret, _>::minus_one(),
-            Scalar::from_bytes_mod_order(
+            Scalar::<Secret, _>::from_bytes_mod_order(
                 hex::decode_array(
                     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"
                 )

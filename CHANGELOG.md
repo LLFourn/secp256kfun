@@ -13,7 +13,8 @@
 - Make `From<u32>` for `Scalar` regardless of secrecy
 - Merge `AddTag` and `Tagged` into one trait `Tag`
 - Add `NonceRng` impls for `RefCell` and `Mutex`
-- Add `Ord` and `PartialOrd` implementations for Scalar and Point
+- Add `Ord` and `PartialOrd` implementations for (public) Scalar and Point
+- Update to rust-secp256k1 v0.25.0
 
 ## 0.7.1
 

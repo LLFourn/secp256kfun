@@ -20,8 +20,6 @@ rand_chacha = {  version = "0.3", optional = true }  # needed for adaptor signat
 bincode = { version = "1.0", optional = true }
 
 [dev-dependencies]
-secp256k1 = { default-features = false, version = "0.24", features = ["std"] }
-secp256kfun = { path = "../secp256kfun", version = "0.7.1", default-features = false, features = ["libsecp_compat"] }
 rand = "0.8"
 criterion = "0.3"
 lazy_static = "1.4"
@@ -38,7 +36,7 @@ libsecp_compat = ["secp256kfun/libsecp_compat"]
 std = ["alloc"]
 alloc = ["secp256kfun/alloc", "sigma_fun?/alloc" ]
 serde = ["secp256kfun/serde","sigma_fun?/serde"]
-adaptor = ["dep:sigma_fun", "dep:bincode", "rand_chacha"]
+adaptor = ["dep:sigma_fun", "dep:bincode", "dep:rand_chacha"]
 proptest = ["secp256kfun/proptest"]
 
 

@@ -39,7 +39,7 @@ pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;
 
-#[cfg(feature = "secp256k1")]
+#[cfg(feature = "libsecp_compat")]
 pub extern crate secp256k1;
 
 /// Re-export `serde`

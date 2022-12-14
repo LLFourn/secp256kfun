@@ -104,7 +104,7 @@ impl Signature<Public> {
         let R = Point::from_xonly_bytes(R)?;
         Some(Signature {
             R,
-            s: Scalar::from_bytes(s)?.public(),
+            s: Scalar::from_bytes(s)?,
         })
     }
 }
