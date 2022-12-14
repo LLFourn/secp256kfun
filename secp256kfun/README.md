@@ -7,17 +7,17 @@
 [docs_badge]: https://docs.rs/secp256kfun/badge.svg
 [docs_url]: https://docs.rs/secp256kfun
 
-
 A mid-level rust secp256k1 elliptic curve cryptography library that's optimized for fun! Here, fun means:
 
 - **type safety**: Error cases you would typically have to deal with when using other APIs are ruled out at compile time using rust's type system.
 - **abstraction**: The library exposes two simple abstractions _Points_ and _Scalars_ so you can do clean textbook implementations of crypto.
 - **unoptimizable**: The most straightforward way of expressing a certain operation on the group is also the most efficient way.
+- **Documented**: We try and make working examples for each function and document them.
 
 Fun does not mean (yet -- please help!):
 
-- **well reviewed or tested**: This code is fresh and experimental and not rigorously tested.
-- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc.
+- **well reviewed**: The implemenations here have no received much review.
+- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc. Also secrets are zeroed out when their memory is freed.
 - **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
@@ -28,13 +28,13 @@ _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the res
 
 ```toml
 [dependencies]
-secp256kfun = "0.7"
+secp256kfun = "0.8"
 ```
 
 ### Should use?
 
 This library is ready for production as long what you are trying to produce is **fun and amusement!**.
-If you want to engineer something solid that a lot of people's money will depend on, this library is a very very risky choice.
+If you want to engineer something solid that a lot of people's money will depend on, this library is a risky choice.
 Here are some alternatives:
 
 1. [rust-secp256k1][2] - the rust bindings to the libsecp256k1 that Bitcoin itself uses
@@ -46,6 +46,7 @@ Here are some alternatives:
 [docs.rs/secp256kfun](https://docs.rs/secp256kfun)
 
 # Features
+
 Here's the distinguishing features of this library.
 
 ## The Zero Element
@@ -101,6 +102,10 @@ Or you can declare that you are confident that it can never be
 
 ## Variable time or Constant time?
 
+**NOTE**: As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
+arithmetic backend to [k256] which doesn't have variable time algorithms. However this situation may
+improve in future versions.
+
 If a cryptogrpahic function's execution time should be independent of its secret inputs.
 Otherwise, information about those inputs may leak to anyone that can measure its execution time.
 
@@ -150,9 +155,6 @@ let x = x.public();
 // against the original
 assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 ```
-
-As of `v0.7.0` marking things correctly does very little since we changed the arithmetic backend to [k256] (it's always going to be constant time).
-However this situation may improve in future versions.
 
 ## Features
 

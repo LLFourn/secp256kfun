@@ -12,8 +12,8 @@ Built on [secp256kfun].
 
 ``` toml
 [dependencies]
-ecdsa_fun = "0.7"
-sha2 = "0.9" # You need a hash function for nonce derivation
+ecdsa_fun = "0.8"
+sha2 = "0.10" # You need a hash function for nonce derivation
 ```
 
 ### Should use?
