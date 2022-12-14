@@ -1,10 +1,14 @@
+#![cfg(all(feature = "libsecp_compat", feature = "alloc", feature = "proptest"))]
 #![allow(non_snake_case)]
-#![cfg(feature = "proptest")]
 #[cfg(not(target_arch = "wasm32"))]
 mod against_c_lib {
     use proptest::prelude::*;
-    use secp256k1::{PublicKey, SecretKey, SECP256K1 as SECP};
+    use secp256k1::{All, PublicKey, Secp256k1, SecretKey};
     use secp256kfun::{g, marker::*, op::double_mul, s, Point, Scalar, G};
+
+    lazy_static::lazy_static! {
+        static ref SECP: Secp256k1<All> = Secp256k1::new();
+    }
 
     proptest! {
         #[test]
@@ -17,7 +21,7 @@ mod against_c_lib {
                     .unwrap();
 
                 let secp_pk_1 =
-                    PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&s1).unwrap());
+                    PublicKey::from_secret_key(&*SECP, &SecretKey::from_slice(&s1).unwrap());
 
                 prop_assert_eq!(
                     &point_1.to_bytes_uncompressed()[..],
@@ -33,7 +37,7 @@ mod against_c_lib {
                     .unwrap();
                 let secp_pk_2 = {
                     let scalar = secp256k1::Scalar::from_be_bytes(s2).unwrap();
-                    secp_pk_1.clone().mul_tweak(SECP, &scalar).unwrap()
+                    secp_pk_1.clone().mul_tweak(&*SECP, &scalar).unwrap()
                 };
                 prop_assert_eq!(
                     &point_2.to_bytes_uncompressed()[..],
@@ -57,10 +61,10 @@ mod against_c_lib {
             };
 
             let result_secp = {
-                let H = PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&scalar_H).unwrap());
-                let x_G = PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&x).unwrap());
+                let H = PublicKey::from_secret_key(&*SECP, &SecretKey::from_slice(&scalar_H).unwrap());
+                let x_G = PublicKey::from_secret_key(&*SECP, &SecretKey::from_slice(&x).unwrap());
                 let scalar = secp256k1::Scalar::from_be_bytes(y).unwrap();
-                let y_H = H.clone().mul_tweak(SECP, &scalar).unwrap();
+                let y_H = H.clone().mul_tweak(&*SECP, &scalar).unwrap();
                 x_G.combine(&y_H).unwrap()
             };
 
@@ -73,7 +77,7 @@ mod against_c_lib {
         #[test]
         fn point_addition(scalar_1 in any::<[u8;32]>()) {
             let secp_pk_1 =
-                PublicKey::from_secret_key(SECP, &SecretKey::from_slice(&scalar_1).unwrap());
+                PublicKey::from_secret_key(&*SECP, &SecretKey::from_slice(&scalar_1).unwrap());
             let point_1 = g!({ Scalar::from_bytes_mod_order(scalar_1.clone()) } * G);
 
 
