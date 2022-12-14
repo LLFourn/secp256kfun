@@ -19,6 +19,18 @@ impl From<SecretKey> for Scalar {
     }
 }
 
+impl<Z> From<Scalar<Public, Z>> for secp256k1::Scalar {
+    fn from(value: Scalar<Public, Z>) -> Self {
+        secp256k1::Scalar::from_be_bytes(value.to_bytes()).unwrap()
+    }
+}
+
+impl From<secp256k1::Scalar> for Scalar<Public, Zero> {
+    fn from(value: secp256k1::Scalar) -> Self {
+        Scalar::from_bytes(value.to_be_bytes()).unwrap()
+    }
+}
+
 impl From<PublicKey> for Point {
     fn from(pk: PublicKey) -> Self {
         Point::<Normal, Public, NonZero>::from_bytes(pk.serialize()).unwrap()

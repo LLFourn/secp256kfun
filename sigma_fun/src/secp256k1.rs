@@ -184,7 +184,7 @@ fn normalize_challenge<L: ArrayLength<u8>>(
     // secp256k1 scalar byte representation is interpreted as big-endian and to
     // be consistent we always copy the bits into the least signgificant bytes.
     challenge_bytes[(32 - challenge.len())..].copy_from_slice(challenge.as_slice());
-    Scalar::from_bytes_mod_order(challenge_bytes).public()
+    Scalar::from_bytes_mod_order(challenge_bytes)
 }
 
 impl<L> crate::Writable for DLG<L> {

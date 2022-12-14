@@ -143,7 +143,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     {
         let x = signing_key;
         let Y = encryption_key;
-        let m = Scalar::from_bytes_mod_order(message.clone()).public();
+        let m = Scalar::<Public, _>::from_bytes_mod_order(message.clone());
         let mut rng = derive_nonce_rng!(
             nonce_gen => self.ecdsa.nonce_gen,
             secret => x,
@@ -159,8 +159,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
             .dleq_proof_system
             .prove(&r, &(R_hat, (*Y, R)), Some(&mut rng));
 
-        let R_x = Scalar::from_bytes_mod_order(R.to_xonly_bytes())
-            .public()
+        let R_x = Scalar::<Public, _>::from_bytes_mod_order(R.to_xonly_bytes())
             .non_zero()
             // The point with x-coordinate = 0 mod q exists, but it will never
             // occur since r is pseudorandomly chosen for a given Y, R = r*Y
@@ -211,7 +210,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     ) -> bool {
         let X = verification_key;
         let Y = encryption_key;
-        let m = Scalar::from_bytes_mod_order(message_hash.clone());
+        let m = Scalar::<Public, _>::from_bytes_mod_order(message_hash.clone());
         let EncryptedSignature(EncryptedSignatureInternal {
             R,
             R_hat,

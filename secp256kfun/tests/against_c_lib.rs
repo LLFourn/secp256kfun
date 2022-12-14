@@ -4,7 +4,7 @@
 mod against_c_lib {
     use proptest::prelude::*;
     use secp256k1::{PublicKey, SecretKey, SECP256K1 as SECP};
-    use secp256kfun::{g, op::double_mul, s, Point, Scalar, G};
+    use secp256kfun::{g, marker::*, op::double_mul, s, Point, Scalar, G};
 
     proptest! {
         #[test]
@@ -132,10 +132,10 @@ mod against_c_lib {
         }
 
         #[test]
-        fn scalar_ord(scalar1 in any::<Scalar>(), scalar2 in any::<Scalar>()) {
+        fn scalar_ord(scalar1 in any::<Scalar<Public, Zero>>(), scalar2 in any::<Scalar<Public,Zero>>()) {
             prop_assert_eq!(
                 scalar1.cmp(&scalar2),
-                SecretKey::from(scalar1).cmp(&SecretKey::from(scalar2))
+                secp256k1::Scalar::from(scalar1).cmp(&secp256k1::Scalar::from(scalar2))
             );
         }
     }
