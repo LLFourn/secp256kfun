@@ -327,6 +327,20 @@ impl core::hash::Hash for Point<EvenY, Public, NonZero> {
     }
 }
 
+impl<T1: Normalized, S1, Z1, T2: Normalized, S2, Z2> PartialOrd<Point<T2, S2, Z2>>
+    for Point<T1, S1, Z1>
+{
+    fn partial_cmp(&self, other: &Point<T2, S2, Z2>) -> Option<core::cmp::Ordering> {
+        Some(self.to_bytes().cmp(&other.to_bytes()))
+    }
+}
+
+impl<T1: Normalized, S1, Z1> Ord for Point<T1, S1, Z1> {
+    fn cmp(&self, other: &Point<T1, S1, Z1>) -> core::cmp::Ordering {
+        self.to_bytes().cmp(&other.to_bytes())
+    }
+}
+
 impl<S, Z, T: Normalized> Point<T, S, Z> {
     /// Converts the point to its compressed encoding as specified by [_Standards for Efficient Cryptography_].
     ///

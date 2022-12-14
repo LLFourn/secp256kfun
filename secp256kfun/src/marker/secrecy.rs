@@ -31,16 +31,16 @@
 /// [`Point`]: crate::marker::Public
 /// [`Scalar`s]: crate::Scalar
 /// [`Point`s]: crate::Point
-pub trait Secrecy: Default + Clone + PartialEq + Copy + 'static {}
+pub trait Secrecy: Default + Clone + PartialEq + Eq + Copy + 'static + Ord + PartialOrd {}
 
 /// Indicates that the value is secret and therefore makes core operations
 /// executed on it to use  _constant time_ versions of the operations.
-#[derive(Debug, Clone, Default, PartialEq, Copy)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Copy, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
-#[derive(Debug, Clone, Default, PartialEq, Copy, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Copy, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Public;
 

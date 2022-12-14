@@ -1,9 +1,10 @@
 #![allow(non_snake_case)]
+#![cfg(feature = "proptest")]
 #[cfg(not(target_arch = "wasm32"))]
 mod against_c_lib {
     use proptest::prelude::*;
     use secp256k1::{PublicKey, SecretKey, SECP256K1 as SECP};
-    use secp256kfun::{g, op::double_mul, s, Scalar, G};
+    use secp256kfun::{g, op::double_mul, s, Point, Scalar, G};
 
     proptest! {
         #[test]
@@ -120,6 +121,22 @@ mod against_c_lib {
             let sk = SecretKey::from_slice(&bytes).unwrap().negate();
             let scalar = Scalar::from_bytes_mod_order(bytes.clone());
             prop_assert_eq!(&(-scalar).to_bytes()[..], &sk[..]);
+        }
+
+        #[test]
+        fn point_ord(point1 in any::<Point>(), point2 in any::<Point>()) {
+            prop_assert_eq!(
+                point1.cmp(&point2),
+                PublicKey::from(point1).cmp(&PublicKey::from(point2))
+            );
+        }
+
+        #[test]
+        fn scalar_ord(scalar1 in any::<Scalar>(), scalar2 in any::<Scalar>()) {
+            prop_assert_eq!(
+                scalar1.cmp(&scalar2),
+                SecretKey::from(scalar1).cmp(&SecretKey::from(scalar2))
+            );
         }
     }
 }

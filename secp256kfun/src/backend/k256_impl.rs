@@ -6,9 +6,9 @@ use crate::{
 use core::ops::Neg;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
-pub static G_TABLE: ProjectivePoint = ProjectivePoint::GENERATOR;
 pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
 pub type Point = ProjectivePoint;
+// We don't implement multiplication tables yet
 pub type BasePoint = ProjectivePoint;
 
 impl BackendScalar for Scalar {
