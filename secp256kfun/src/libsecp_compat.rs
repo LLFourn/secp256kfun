@@ -59,21 +59,43 @@ impl From<XOnlyPublicKey> for Point<EvenY> {
 mod test {
     use super::*;
     use core::str::FromStr;
-    use rand_core::RngCore;
-
-    #[test]
-    fn secret_key() {
-        let mut bytes = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut bytes);
-        let sk = SecretKey::from_slice(&bytes[..]).unwrap();
-        let scalar = Scalar::from(sk);
-        assert_eq!(&sk[..], scalar.to_bytes().as_ref());
-    }
+    #[cfg(feature = "proptest")]
+    use proptest::prelude::*;
 
     #[test]
     fn public_key() {
         let pk = PublicKey::from_str("0479BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8").unwrap();
         let point = Point::from(pk);
         assert_eq!(pk.serialize().as_ref(), point.to_bytes().as_ref());
+    }
+
+    #[cfg(feature = "proptest")]
+    proptest! {
+
+        #[test]
+        fn prop_public_key(first_byte in 0u8..10, x_bytes in any::<[u8;32]>()) {
+            let mut bytes = [0u8;33];
+            bytes[0] = first_byte;
+            bytes[1..33].copy_from_slice(&x_bytes[..]);
+            let pk = PublicKey::from_slice(&bytes[..]).ok();
+            let point = Point::<_,Public, >::from_bytes(bytes);
+            assert_eq!(pk.map(|pk| pk.serialize()), point.map(|point| point.to_bytes()));
+        }
+
+        #[test]
+        fn prop_secret_key(bytes in any::<[u8;32]>()) {
+            let sk = SecretKey::from_slice(&bytes[..]).unwrap();
+            let scalar = Scalar::from(sk);
+            assert_eq!(&sk[..], scalar.to_bytes().as_ref());
+        }
+
+
+
+        #[test]
+        fn scalar_roundtrip(scalar in any::<Scalar<Public, Zero>>()) {
+            let secp_scalar = secp256k1::Scalar::from(scalar);
+            let rt_scalar = Scalar::from(secp_scalar);
+            assert_eq!(rt_scalar, scalar);
+        }
     }
 }
