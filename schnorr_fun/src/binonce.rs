@@ -4,10 +4,7 @@
 //! Your public nonces are derived from scalars which must be kept secret.
 //! Derived binonces should be unique and and must not be reused for signing under any circumstances
 //! as this can leak your secret key.
-use crate::Message;
-use secp256kfun::{
-    derive_nonce, g, marker::*, nonce::NonceGen, rand_core::RngCore, Point, Scalar, G,
-};
+use secp256kfun::{g, marker::*, rand_core::RngCore, Point, Scalar, G};
 
 /// A nonce (pair of points) that each party must share with the others in the first stage of signing.
 ///
@@ -113,58 +110,6 @@ impl NonceKeyPair {
     /// Get the public portion of the nonce key pair (share this!)
     pub fn public(&self) -> Nonce<NonZero> {
         self.public
-    }
-
-    /// Generate a new `NonceKeyPair` from application data.
-    ///
-    /// Each nonce generated must only be passed to [`MuSig::sign`] once.
-    ///
-    /// You must always pass in a:
-    ///
-    /// - `nonce_gen`: [`NonceGen`] containing the underlying algorithm for generating the nonce
-    /// - `secret`: The secret scalar whose secrecy depends on the uniquness of the nonces generated.
-    /// - `session_id`: Some application defined identifier for the signing session that the resulting nonce will be used in.
-    ///
-    ///   How important the `session_id` is depends on whether you add a `message` and whether you are using randomness in your `nonce_gen`.
-    ///   If you are using a deterministic `nonce_gen` it is crucial that this is set to a unique value for each signing session.
-    ///
-    /// Optionally you may pass in:
-    ///
-    /// - `public_key`: The public key we're signing under (if we know it at nonce generation time).
-    /// - `message`: The message we're signing (if we know it at nonce generation time)
-    ///
-    /// [`MuSig::sign`]: crate::musig::MuSig::sign
-    pub fn generate(
-        nonce_gen: &impl NonceGen,
-        secret: &Scalar,
-        session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
-        message: Option<Message<'_>>,
-    ) -> Self {
-        let message = message.unwrap_or(Message::raw(b""));
-        let msg_len = (message.len() as u64).to_be_bytes();
-        let sid_len = (session_id.len() as u64).to_be_bytes();
-        let pk_bytes = public_key
-            // NOTE: the `.normalize` here is very important. Even though the public key is already
-            // normalized we want it in particular to be Normal so that it serialzes correctly
-            // regardless of whether you pass in a Normal or EvenY point.
-            .map(|public_key| {
-                let public_key: Point<Normal> = public_key.normalize();
-                public_key.to_bytes()
-            })
-            .unwrap_or([0u8; 33]);
-        let r1 = derive_nonce!(
-            nonce_gen => nonce_gen,
-            secret => secret,
-            public => [ b"r1", pk_bytes, msg_len, message, sid_len, session_id]
-        );
-        let r2 = derive_nonce!(
-            nonce_gen => nonce_gen,
-            secret => secret,
-            public => [ b"r2", pk_bytes, msg_len, message, sid_len, session_id]
-        );
-
-        Self::from_secrets([r1, r2])
     }
 
     /// Generate a nonce keypair from an rng

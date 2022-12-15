@@ -61,7 +61,6 @@ proptest! {
                 &frost_key,
                 secret_share,
                 sid,
-                Some(message),
             )
         }).collect();
 

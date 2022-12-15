@@ -3,6 +3,8 @@
 //! ## Synopsis
 //!
 //! ```
+//! # use schnorr_fun::binonce::NonceKeyPair;
+//! use rand_chacha::ChaCha20Rng;
 //! use schnorr_fun::{musig, nonce::Deterministic, Message, Schnorr};
 //! use sha2::Sha256;
 //! // use sha256 with deterministic nonce generation -- be careful!
@@ -23,11 +25,15 @@
 //!     .into_xonly_key();
 //!
 //! // create a unique nonce, and send the public nonce to other parties.
-//! let my_nonce = musig.gen_nonces(my_keypair.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! // ⚠ session_id must be different for every signing attempt
+//! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
+//! let mut nonce_rng: ChaCha20Rng =
+//!     musig.gen_nonce_rng(&agg_key, &my_keypair.secret_key(), session_id);
+//! let my_nonce = musig.gen_nonce(&mut nonce_rng);
 //! let my_public_nonce = my_nonce.public();
-//! # let p2_nonce = musig.gen_nonces(kp2.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! # let p2_nonce = NonceKeyPair::random(&mut rand::thread_rng());
 //! # let p2_public_nonce = p2_nonce.public();
-//! # let p3_nonce = musig.gen_nonces(kp3.secret_key(), b"session-id-1337", Some(agg_key.agg_public_key()), None);
+//! # let p3_nonce = NonceKeyPair::random(&mut rand::thread_rng());
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
@@ -55,8 +61,10 @@
 //! key that requires all of the corresponding secret keys to authorize a signature under the aggregate key.
 //!
 //! See [the excellent paper] for the abstract details of the protocol and security proofs.
-//! **⚠ THIS IS EXPERIMENTAL⚠** it is currently compatible with [this PR](https://github.com/jonasnick/bips/pull/37) to the specification.
 //!
+//! **⚠ THIS IS EXPERIMENTAL⚠** it is currently compatible with [this PR](https://github.com/jonasnick/bips/pull/37) to the specification.
+//! However, we go "off-spec" in a few places especially with regards to nonce generation where we provide our own APIs (that
+//! at the time of writing are subject to change).
 //!
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
@@ -69,23 +77,25 @@ use secp256kfun::{
     hash::{HashAdd, Tag},
     marker::*,
     nonce::{self, NoNonces, NonceGen},
-    rand_core::RngCore,
+    rand_core::{RngCore, SeedableRng},
     s, KeyPair, Point, Scalar, G,
 };
 
 /// The MuSig context.
-pub struct MuSig<H, S = ()> {
+pub struct MuSig<H, NG> {
     /// The hash used to compress the key list to 32 bytes.
-    pub pk_hash: H,
+    pk_hash: H,
     /// The hash used to generate each key's coefficient.
-    pub coeff_hash: H,
+    coeff_hash: H,
     /// The hash used to generate the nonce coefficients.
-    pub nonce_coeff_hash: H,
+    nonce_coeff_hash: H,
     /// The instance of the underlying Schnorr context.
-    pub schnorr: S,
+    pub schnorr: Schnorr<H, NG>,
+    /// The nonce generator used to
+    nonce_gen: NG,
 }
 
-impl<H: Tag + Default, S> MuSig<H, S> {
+impl<H, NG> MuSig<H, NG> {
     /// Create a new keypair.
     ///
     /// A shorthand for [`KeyPair::new`].
@@ -93,26 +103,45 @@ impl<H: Tag + Default, S> MuSig<H, S> {
         KeyPair::new(secret_key)
     }
 
-    fn _new(schnorr: S) -> Self {
+    /// Gets the nonce generator from the underlying Schnorr instance.
+    pub fn nonce_gen(&self) -> &NG {
+        &self.nonce_gen
+    }
+
+    /// Generate nonces for creating signatures shares.
+    ///
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`MuSig::gen_nonce_rng`]
+    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
+        NonceKeyPair::random(nonce_rng)
+    }
+}
+
+impl<H, NG> MuSig<H, NG>
+where
+    H: Tag + Default,
+    NG: Tag + Clone,
+{
+    /// Create a new MuSig instance from a [`Schnorr`] instance.
+    ///
+    /// The MuSig instnace will clone and tag the schnorr instance's `nonce_gen` for its own use.
+    pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self {
             pk_hash: H::default().tag(b"KeyAgg list"),
             coeff_hash: H::default().tag(b"KeyAgg coefficient"),
             nonce_coeff_hash: H::default().tag(b"MuSig/noncecoef"),
+            nonce_gen: schnorr.nonce_gen().clone().tag(b"MuSig"),
             schnorr,
         }
     }
 }
 
-impl<H: Tag + Default, S: Default> Default for MuSig<H, S> {
+impl<H, NG> Default for MuSig<H, NG>
+where
+    H: Tag + Default,
+    NG: Default + Clone + Tag,
+{
     fn default() -> Self {
-        MuSig::_new(S::default())
-    }
-}
-
-impl<H: Tag + Default, NG> MuSig<H, Schnorr<H, NG>> {
-    /// Generate a new MuSig context from a Schnorr context.
-    pub fn new(schnorr: Schnorr<H, NG>) -> Self {
-        Self::_new(schnorr)
+        MuSig::new(Schnorr::<H, NG>::default())
     }
 }
 
@@ -232,7 +261,7 @@ impl AggKey<EvenY> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
+impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     /// Generates a new aggregated key from a list of individual keys.
     ///
     /// Each party can be local (you know the secret key) or remote (you only know the public key).
@@ -249,7 +278,7 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     /// # let my_secret_key = Scalar::random(&mut rand::thread_rng());
     /// # let their_public_key = Point::random(&mut rand::thread_rng());
     /// use sha2::Sha256;
-    /// let musig = MuSig::<Sha256, Schnorr<Sha256, Deterministic<Sha256>>>::default();
+    /// let musig = MuSig::<Sha256, Deterministic<Sha256>>::default();
     /// let my_keypair = musig.new_keypair(my_secret_key);
     /// let my_public_key = my_keypair.public_key();
     /// // Note the keys have to come in the same order on the other side!
@@ -291,27 +320,50 @@ impl<H: Digest<OutputSize = U32> + Clone, S> MuSig<H, S> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> MuSig<H, Schnorr<H, NG>> {
-    /// Generate nonces for signing.
+impl<H, NG> MuSig<H, NG>
+where
+    H: Digest<OutputSize = U32> + Clone,
+    NG: NonceGen,
+{
+    /// Seed a random number generator to be used for MuSig nonces.
     ///
-    /// This method should be used carefully.
-    /// This calls [`NonceKeyPair::generate`] internally with the `MuSig` instance's `NonceGen`.
-    /// See documentation for that for more usage info.
+    /// ** ⚠ WARNING ⚠**: This method is unstable and easy to use incorrectly. The seed it uses for
+    /// the Rng will change without warning between minor versions of this library.
     ///
-    /// [`NonceKeyPair::generate`]: crate::binonce::NonceKeyPair::generate
-    pub fn gen_nonces(
+    /// Parameters:
+    ///
+    /// - `agg_key`: the joint public key we are signing under
+    /// - `secret`: you're secret key as part of `agg_key`. This **must be the secret key you are
+    /// going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
+    /// exactly equal to the secret key you pass to [`sign`].
+    /// - `session_id`: a string of bytes that is unique for each signing **attempt**.
+    ///
+    /// The application should decide upon a unique `session_id` per call to this function. If the
+    /// `NonceGen` of this MuSig instance is `Deterministic` then the `session_id` **must** be
+    /// unique per signing attempt -- even if the signing attempt fails to produce a signature you
+    /// must not reuse the session id, the resulting rng or anything derived from that rng again.
+    ///
+    /// 💡 Before using this function write a short justification as to why you beleive you session id
+    /// will be unique per session signing attempt. Perhaps include it as a comment next to the
+    /// call. Note **it must be unique even across signing attempts for different messages**.
+    ///
+    /// [`sign`]: MuSig::sign
+    pub fn gen_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
+        agg_key: &AggKey<impl PointType>,
         secret: &Scalar,
         session_id: &[u8],
-        public_key: Option<Point<impl Normalized>>,
-        message: Option<Message<'_>>,
-    ) -> NonceKeyPair {
-        NonceKeyPair::generate(self.nonce_gen(), secret, session_id, public_key, message)
-    }
+    ) -> R {
+        let sid_len = (session_id.len() as u64).to_be_bytes();
+        let pk_bytes = agg_key.agg_public_key().normalize().to_bytes();
 
-    /// Gets the nonce generator from the underlying Schnorr instance.
-    pub fn nonce_gen(&self) -> &NG {
-        self.schnorr.nonce_gen()
+        let rng: R = secp256kfun::derive_nonce_rng!(
+            nonce_gen => self.nonce_gen(),
+            secret => &secret,
+            public => [pk_bytes, sid_len, session_id],
+            seedable_rng => R
+        );
+        rng
     }
 }
 
@@ -360,7 +412,7 @@ pub struct SignSession<T = Ordinary> {
     signing_type: T,
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
+impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     /// Start a signing session.
     ///
     /// You must provide the public nonces for this signing session in the correct order.
@@ -609,16 +661,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, Schnorr<H, NG>> {
 
 /// Constructor for a MuSig instance using deterministic nonce generation.
 ///
-/// If you use deterministic nonce generation you will have to provide a unique session id to every signing session.
-/// The advantage is that you will be able to regenerate the same nonces at a later point from [`MuSig::gen_nonces`].
+/// If you use deterministic nonce generation you will have to provide a unique session id to every
+/// signing session. The advantage is that you will be able to regenerate the same nonces at a later
+/// point from [`MuSig::gen_nonce_rng`].
 ///
 /// ```
 /// use schnorr_fun::musig;
 /// let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
 /// ```
-pub fn new_with_deterministic_nonces<H>() -> MuSig<H, Schnorr<H, nonce::Deterministic<H>>>
+pub fn new_with_deterministic_nonces<H>() -> MuSig<H, nonce::Deterministic<H>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
+    H: Tag + Digest<OutputSize = U32> + Default + Clone,
 {
     MuSig::default()
 }
@@ -628,17 +681,16 @@ where
 /// Sythetic nonce generation mixes in external randomness into nonce generation which means you
 /// don't need a unique session id for each signing session to guarantee security. The disadvantage
 /// is that you may have to store and recall somehow the nonces generated from
-/// [`MuSig::gen_nonces`].
+/// [`MuSig::gen_nonce_rng`].
 ///
 /// ```
 /// use schnorr_fun::musig;
 /// let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
 /// ```
-pub fn new_with_synthetic_nonces<H, R>(
-) -> MuSig<H, Schnorr<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>>
+pub fn new_with_synthetic_nonces<H, R>() -> MuSig<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
-    R: RngCore + Default,
+    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    R: RngCore + Default + Clone,
 {
     MuSig::default()
 }
@@ -646,7 +698,7 @@ where
 /// Create a MuSig instance which does not handle nonce generation.
 ///
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
-pub fn new_without_nonce_generation<H>() -> MuSig<H, Schnorr<H, NoNonces>>
+pub fn new_without_nonce_generation<H>() -> MuSig<H, NoNonces>
 where
     H: Tag + Digest<OutputSize = U32> + Default,
 {
@@ -658,6 +710,7 @@ mod test {
     use crate::adaptor::Adaptor;
 
     use super::*;
+    use rand_chacha::ChaCha20Rng;
     use secp256kfun::proptest::{option, prelude::*};
     use sha2::Sha256;
 
@@ -723,9 +776,12 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test", Some(agg_key1.agg_public_key()), Some(message));
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let session_id = message.bytes.into();
+
+            let mut nonce_rng: ChaCha20Rng = musig.gen_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
+            let p1_nonce = musig.gen_nonce(&mut nonce_rng);
+            let p2_nonce = musig.gen_nonce(&mut nonce_rng);
+            let p3_nonce = musig.gen_nonce(&mut nonce_rng);
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
 
@@ -796,7 +852,7 @@ mod test {
             .new_keypair(sk3);
             let encryption_key = musig.schnorr.encryption_key_for(&y);
 
-            let agg_key = musig.new_agg_key(vec![
+            let agg_key1 = musig.new_agg_key(vec![
                 keypair1.public_key(),
                 keypair2.public_key(),
                 keypair3.public_key(),
@@ -815,14 +871,17 @@ mod test {
             let message =
                 Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
 
-            let p1_nonce = musig.gen_nonces(keypair1.secret_key(), b"test" ,Some(agg_key.agg_public_key()), Some(message));
-            let p2_nonce = musig.gen_nonces(keypair2.secret_key(), b"test", Some(agg_key2.agg_public_key()), Some(message));
-            let p3_nonce = musig.gen_nonces(keypair3.secret_key(), b"test", Some(agg_key3.agg_public_key()), Some(message));
+            let session_id = message.bytes.into();
+
+            let mut nonce_rng: ChaCha20Rng = musig.gen_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
+            let p1_nonce = musig.gen_nonce(&mut nonce_rng);
+            let p2_nonce = musig.gen_nonce(&mut nonce_rng);
+            let p3_nonce = musig.gen_nonce(&mut nonce_rng);
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
             let mut p1_session = musig
                 .start_encrypted_sign_session(
-                    &agg_key,
+                    &agg_key1,
                     nonces.clone(),
                     message,
                     &encryption_key
@@ -844,22 +903,22 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-                let p1_sig = musig.sign(&agg_key, &mut p1_session, 0, &keypair1, p1_nonce);
-                let p2_sig = musig.sign(&agg_key, &mut p2_session, 1, &keypair2, p2_nonce);
-                let p3_sig = musig.sign(&agg_key, &mut p3_session, 2, &keypair3, p3_nonce);
+                let p1_sig = musig.sign(&agg_key1, &mut p1_session, 0, &keypair1, p1_nonce);
+                let p2_sig = musig.sign(&agg_key1, &mut p2_session, 1, &keypair2, p2_nonce);
+                let p3_sig = musig.sign(&agg_key1, &mut p3_session, 2, &keypair3, p3_nonce);
 
             assert!(musig.verify_partial_signature(&agg_key2, &p2_session, 0, p1_sig));
-            assert!(musig.verify_partial_signature(&agg_key, &p1_session, 0, p1_sig));
+            assert!(musig.verify_partial_signature(&agg_key1, &p1_session, 0, p1_sig));
 
             let partial_sigs = vec![p1_sig, p2_sig, p3_sig];
-            let combined_sig_p1 = musig.combine_partial_encrypted_signatures(&agg_key, &p1_session, partial_sigs.clone());
+            let combined_sig_p1 = musig.combine_partial_encrypted_signatures(&agg_key1, &p1_session, partial_sigs.clone());
             let combined_sig_p2 = musig.combine_partial_encrypted_signatures(&agg_key2, &p2_session, partial_sigs.clone());
             let combined_sig_p3 = musig.combine_partial_encrypted_signatures(&agg_key3, &p3_session, partial_sigs);
             assert_eq!(combined_sig_p1, combined_sig_p2);
             assert_eq!(combined_sig_p1, combined_sig_p3);
             assert!(musig
                     .schnorr
-                    .verify_encrypted_signature(&agg_key.agg_public_key(), &encryption_key, message, &combined_sig_p1));
+                    .verify_encrypted_signature(&agg_key1.agg_public_key(), &encryption_key, message, &combined_sig_p1));
             assert!(musig
                     .schnorr
                     .verify_encrypted_signature(&agg_key2.agg_public_key(), &encryption_key, message, &combined_sig_p2));
