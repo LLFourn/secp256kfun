@@ -1,7 +1,7 @@
 # secp256kFUN! &emsp; [![crates_badge]][crates_url] [![actions_badge]][actions_url] [![docs_badge]][docs_url]
 
-[actions_badge]: https://github.com/llfourn/secp256kfun/workflows/Rust/badge.svg
-[actions_url]: https://github.com/llfourn/secp256kfun/actions?query=workflow%3ARust
+[actions_badge]: https://github.com/LLFourn/secp256kfun/actions/workflows/test.yml/badge.svg
+[actions_url]: https://github.com/LLFourn/secp256kfun/actions/workflows/test.yml
 [crates_badge]: https://img.shields.io/crates/v/secp256kfun.svg
 [crates_url]: https://crates.io/crates/secp256kfun
 [docs_badge]: https://docs.rs/secp256kfun/badge.svg
@@ -102,9 +102,9 @@ Or you can declare that you are confident that it can never be
 
 ## Variable time or Constant time?
 
-**NOTE**: As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
+**NOTE**: *As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
 arithmetic backend to [k256] which doesn't have variable time algorithms. However this situation may
-improve in future versions.
+improve in future versions.*
 
 If a cryptogrpahic function's execution time should be independent of its secret inputs.
 Otherwise, information about those inputs may leak to anyone that can measure its execution time.
