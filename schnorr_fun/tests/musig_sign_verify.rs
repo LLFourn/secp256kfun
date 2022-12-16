@@ -23,11 +23,38 @@ impl<T> Maybe<T> {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+struct SecNonce {
+    nonce: NonceKeyPair,
+    pk: Point,
+}
+
+impl SecNonce {
+    pub fn from_bytes(bytes: [u8; 97]) -> Option<Self> {
+        let mut nonce = [0u8; 64];
+        nonce.copy_from_slice(&bytes[..64]);
+        let nonce = binonce::NonceKeyPair::from_bytes(nonce)?;
+        Some(SecNonce {
+            nonce,
+            pk: Point::from_slice(&bytes[64..])?,
+        })
+    }
+}
+
+schnorr_fun::fun::impl_fromstr_deserialize! {
+    name => "secret nonce with 33 byte public key at the end",
+    fn from_bytes(bytes: [u8; 97]) -> Option<SecNonce> {
+        SecNonce::from_bytes(bytes)
+    }
+}
+
 #[derive(serde::Deserialize)]
 #[serde(crate = "self::serde")]
 pub struct TestCases {
     sk: Scalar,
-    secnonce: NonceKeyPair,
+    #[serde(bound(deserialize = "Maybe<SecNonce>: serde::de::Deserialize<'de>"))]
+    secnonces: Vec<Maybe<SecNonce>>,
     #[serde(bound(deserialize = "Maybe<Point>: serde::de::Deserialize<'de>"))]
     pubkeys: Vec<Maybe<Point>>,
     #[serde(bound(deserialize = "Maybe<binonce::Nonce>: serde::de::Deserialize<'de>"))]
@@ -42,12 +69,14 @@ pub struct TestCases {
     sign_error_test_cases: Vec<TestCase>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 #[serde(crate = "self::serde")]
 pub struct TestCase {
     #[serde(bound(deserialize = "Maybe<Scalar<Public, Zero>>: serde::de::Deserialize<'de>"))]
     sig: Option<Maybe<Scalar<Public, Zero>>>,
     key_indices: Vec<usize>,
+    #[serde(default)]
+    secnonce_index: usize,
     nonce_indices: Option<Vec<usize>>,
     aggnonce_index: Option<usize>,
     msg_index: usize,
@@ -85,7 +114,10 @@ fn musig_sign_verify() {
             &session,
             test_case.signer_index.unwrap(),
             &keypair,
-            test_cases.secnonce.clone(),
+            test_cases.secnonces[test_case.secnonce_index]
+                .clone()
+                .unwrap()
+                .nonce,
         );
         assert_eq!(partial_sig, test_case.expected.clone().unwrap());
         assert!(musig.verify_partial_signature(
@@ -102,10 +134,32 @@ fn musig_sign_verify() {
                 .key_indices
                 .iter()
                 .map(|i| test_cases.pubkeys[*i].unwrap())
-                .collect();
-            let _agg_key = musig.new_agg_key(pubkeys).into_xonly_key();
-            let _msg = hex::decode(&test_cases.msgs[test_case.msg_index]).unwrap();
+                .collect::<Vec<_>>();
+            let agg_key = musig.new_agg_key(pubkeys.clone()).into_xonly_key();
+            let msg = hex::decode(&test_cases.msgs[test_case.msg_index]).unwrap();
             let _aggnonce = test_cases.aggnonces[test_case.aggnonce_index.unwrap()].unwrap();
+            let secnonce = test_cases.secnonces[test_case.secnonce_index]
+                .clone()
+                .unwrap();
+
+            let pubnonces = test_case
+                .nonce_indices
+                .clone()
+                .unwrap()
+                .iter()
+                .map(|i| test_cases.pnonces[*i].unwrap())
+                .collect();
+
+            let session = musig.start_sign_session(&agg_key, pubnonces, Message::raw(&msg[..]));
+
+            let signer_index = test_case.signer_index.unwrap_or(0);
+
+            assert_eq!(
+                secnonce.pk, pubkeys[signer_index],
+                "we don't implement this check in our implementation but maybe it's tested?"
+            );
+
+            musig.sign(&agg_key, &session, signer_index, &keypair, secnonce.nonce);
         });
 
         assert!(result.is_err());

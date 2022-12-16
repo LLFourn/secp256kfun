@@ -26,13 +26,38 @@ impl<T> Maybe<T> {
         }
     }
 }
+
+struct SecNonce {
+    nonce: NonceKeyPair,
+    _pk: Point,
+}
+
+impl SecNonce {
+    pub fn from_bytes(bytes: [u8; 97]) -> Option<Self> {
+        let mut nonce = [0u8; 64];
+        nonce.copy_from_slice(&bytes[..64]);
+        let nonce = binonce::NonceKeyPair::from_bytes(nonce)?;
+        Some(SecNonce {
+            nonce,
+            _pk: Point::from_slice(&bytes[64..])?,
+        })
+    }
+}
+
+schnorr_fun::fun::impl_fromstr_deserialize! {
+    name => "secret nonce with 33 byte public key at the end",
+    fn from_bytes(bytes: [u8; 97]) -> Option<SecNonce> {
+        SecNonce::from_bytes(bytes)
+    }
+}
+
 impl<T: Copy> Copy for Maybe<T> {}
 
 #[derive(serde::Deserialize)]
 #[serde(crate = "self::serde")]
 pub struct TestCases {
     sk: Scalar,
-    secnonce: NonceKeyPair,
+    secnonce: SecNonce,
     #[serde(bound(deserialize = "Maybe<Point>: serde::de::Deserialize<'de>"))]
     pubkeys: Vec<Maybe<Point>>,
     #[serde(bound(deserialize = "Maybe<binonce::Nonce>: serde::de::Deserialize<'de>"))]
@@ -125,7 +150,7 @@ fn run_test(test_cases: &TestCases, test_case: &TestCase) {
         &session,
         test_case.signer_index.unwrap(),
         &keypair,
-        test_cases.secnonce.clone(),
+        test_cases.secnonce.nonce.clone(),
     );
 
     if let Some(expected) = test_case.expected.clone() {
