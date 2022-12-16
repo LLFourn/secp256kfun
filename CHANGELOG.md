@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.8.2
+
+- Fixed docsrs
+
 ## v0.8.0
 
 - Added WIP FROST implementation to `schnorr_fun`.
