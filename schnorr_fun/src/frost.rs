@@ -3,17 +3,17 @@
 //! ## Synopsis
 //!
 //! ```
+//! # use schnorr_fun::binonce::NonceKeyPair;
 //! use schnorr_fun::{
-//!     binonce::NonceKeyPair,
 //!     frost,
 //!     Message,
 //! };
 //! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
 //! // use sha256 to produce deterministic nonces -- be careful!
-//! let proto = frost::new_with_deterministic_nonces::<Sha256>();
+//! let frost = frost::new_with_deterministic_nonces::<Sha256>();
 //! // Use randomness from ThreadRng to create synthetic nonces -- harder to make a mistake.
-//! let proto = frost::new_with_synthetic_nonces::<Sha256, rand::rngs::ThreadRng>();
+//! let frost = frost::new_with_synthetic_nonces::<Sha256, rand::rngs::ThreadRng>();
 //! // We need an RNG for key generation -- don't use ThreadRng in practice see note below.
 //! let mut rng = rand::thread_rng();
 //! // we're doing a 2 out of 3
@@ -27,11 +27,11 @@
 //! # let public_poly3 = frost::to_point_poly(&secret_poly3);
 //! // share our public point poly, and receive the point polys from other participants
 //! let public_polys = vec![my_public_poly, public_poly2, public_poly3];
-//! let keygen = proto.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
+//! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! let (my_shares, my_pop) = proto.create_shares(&keygen, my_secret_poly);
-//! # let (shares2, pop2) = proto.create_shares(&keygen, secret_poly2);
-//! # let (shares3, pop3) = proto.create_shares(&keygen, secret_poly3);
+//! let (my_shares, my_pop) = frost.create_shares(&keygen, my_secret_poly);
+//! # let (shares2, pop2) = frost.create_shares(&keygen, secret_poly2);
+//! # let (shares3, pop3) = frost.create_shares(&keygen, secret_poly3);
 //! // for i = 0..3, Send the secret share at index i and all proofs-of-possession to the participant with index i,
 //! // and receive our shares and pops from each participant as well.
 //! let received_shares = vec![my_shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
@@ -39,7 +39,7 @@
 //! let proofs_of_possession = vec![my_pop, pop2, pop3];
 //! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
 //! // and calculate our long-lived secret share of the joint FROST key.
-//! let (my_secret_share, frost_key) = proto
+//! let (my_secret_share, frost_key) = frost
 //!     .finish_keygen(
 //!         keygen.clone(),
 //!         0,
@@ -47,7 +47,7 @@
 //!         proofs_of_possession.clone(),
 //!     )
 //!     .unwrap();
-//! # let (secret_share3, _frost_key3) = proto
+//! # let (secret_share3, _frost_key3) = frost
 //! #    .finish_keygen(
 //! #        keygen.clone(),
 //! #        2,
@@ -59,9 +59,10 @@
 //! let frost_key = frost_key.into_xonly_key();
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
-//! let session_id = b"signing-cool-message-attempt-1".as_slice(); // ⚠ must be different for every session
-//! let mut nonce_rng: ChaCha20Rng = proto.gen_nonce_rng(&frost_key, &my_secret_share, session_id, Some(message));
-//! let my_nonce = proto.gen_nonce(&mut nonce_rng);
+//! // ⚠ session_id must be different for every signing attempt
+//! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
+//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&frost_key, &my_secret_share, session_id);
+//! let my_nonce = frost.gen_nonce(&mut nonce_rng);
 //! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
@@ -69,23 +70,23 @@
 //! let nonces = vec![(0, my_nonce.public()), (2, received_nonce3)];
 //! # let nonces3 = vec![(0, my_nonce.public()), (2, received_nonce3)];
 //! // start a sign session with these nonces for a message
-//! let session = proto.start_sign_session(&frost_key, nonces, message);
-//! # let session3 = proto.start_sign_session(&frost_key, nonces3, message);
+//! let session = frost.start_sign_session(&frost_key, nonces, message);
+//! # let session3 = frost.start_sign_session(&frost_key, nonces3, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let my_sig = proto.sign(&frost_key, &session, 0, &my_secret_share, my_nonce);
-//! # let sig3 = proto.sign(&frost_key, &session3, 2, &secret_share3, nonce3);
+//! let my_sig = frost.sign(&frost_key, &session, 0, &my_secret_share, my_nonce);
+//! # let sig3 = frost.sign(&frost_key, &session3, 2, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
-//! assert!(proto.verify_signature_share(&frost_key, &session, 2, sig3));
+//! assert!(frost.verify_signature_share(&frost_key, &session, 2, sig3));
 //! // combine signature shares into a single signature that is valid under the FROST key
-//! let combined_sig = proto.combine_signature_shares(&frost_key, &session, vec![my_sig, sig3]);
-//! assert!(proto.schnorr.verify(
+//! let combined_sig = frost.combine_signature_shares(&frost_key, &session, vec![my_sig, sig3]);
+//! assert!(frost.schnorr.verify(
 //!     &frost_key.public_key(),
 //!     message,
 //!     &combined_sig
 //! ));
 //! ```
 //!
-//! # FROST
+//! # Description
 //!
 //! In FROST, multiple parties cooperatively generate a single joint public key ([`FrostKey`]) for
 //! creating Schnorr signatures. Unlike in [`musig`], only some threshold `t` of the `n` signers are
@@ -172,21 +173,41 @@ pub struct Frost<H, NG> {
     binding_hash: H,
     /// The hash used to generate the `keygen_id`
     keygen_id_hash: H,
+    /// Nonce generator.
+    /// Usually a tagged clone of the schnorr nonce generator.
+    nonce_gen: NG,
 }
 
 impl<H, NG> Default for Frost<H, NG>
 where
     H: Default + Tag + Digest<OutputSize = U32>,
-    NG: Default + Tag,
+    NG: Default + Tag + Clone,
 {
     fn default() -> Self {
         Frost::new(Schnorr::default())
     }
 }
 
+impl<H, NG> Frost<H, NG> {
+    /// Generate nonces for creating signatures shares.
+    ///
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::seed_nonce_rng`]
+    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
+        NonceKeyPair::random(nonce_rng)
+    }
+
+    /// Get the [`NonceGen`] that this frost instance is using in [`Frost::seed_nonce_rng`].
+    ///
+    /// [`NonceGen`]: secp256kfun::nonce::NonceGen
+    pub fn nonce_gen(&self) -> &NG {
+        &self.nonce_gen
+    }
+}
+
 impl<H, NG> Frost<H, NG>
 where
     H: Tag + Default,
+    NG: Tag + Clone,
 {
     /// Generate a new Frost context from a Schnorr context.
     ///
@@ -200,9 +221,10 @@ where
     /// ```
     pub fn new(schnorr: Schnorr<H, NG>) -> Self {
         Self {
-            schnorr,
             binding_hash: H::default().tag(b"frost/binding"),
             keygen_id_hash: H::default().tag(b"frost/keygenid"),
+            nonce_gen: schnorr.nonce_gen().clone().tag(b"frost"),
+            schnorr,
         }
     }
 }
@@ -299,7 +321,7 @@ pub struct FrostKey<T: PointType> {
         ))
     )]
     public_key: Point<T>,
-    /// Everyone else's point polynomial evaluated at your index, used in partial signature validation.
+    /// The image of each party's key share.
     verification_shares: Vec<Point<Normal, Public, Zero>>,
     /// Number of partial signatures required to create a combined signature under this key.
     threshold: usize,
@@ -440,50 +462,45 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         (shares, pop)
     }
 
-    /// Generate nonces for creating signatures shares.
+    /// Seed a random number generator to be used for FROST nonces.
     ///
-    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::gen_nonce_rng`]
-    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
-        NonceKeyPair::random(nonce_rng)
-    }
-
-    /// Generate a reusable nonce rng.
+    /// ** ⚠ WARNING ⚠**: This method is unstable and easy to use incorrectly. The seed it uses for
+    /// the Rng will change without warning between minor versions of this library.
     ///
-    /// This method should be used carefully.
+    /// Parameters:
     ///
-    /// When choosing a `secret` to use, if you are generating nonces prior to [`KeyGen`] completion,
-    /// use the static first coefficient of your polynomial.
-    /// Otherwise you can use your secret share of the frost key.
+    /// - `frost_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`
+    ///    It will return the same nonce regardless.
+    /// - `secret`: you're secret key share for the `frost_key`
+    /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///
-    /// The application should decide upon a unique `session_id`. If the `NonceGen` of this FROST
-    /// instance is `Deterministic` then the `session_id` **must** be unique per signing session.
-    pub fn gen_nonce_rng<T: PointType, R: SeedableRng<Seed = [u8; 32]>>(
+    /// The application should decide upon a unique `session_id` per call to this function. If the
+    /// `NonceGen` of this FROST instance is `Deterministic` then the `session_id` **must** be
+    /// unique per signing attempt -- even if the signing attempt fails to produce a signature you
+    /// must not reuse the session id, the resulting rng or anything derived from that rng again.
+    ///
+    /// 💡 Before using this function write a short justification as to why you beleive your session
+    /// id will be unique per signing attempt. Perhaps include it as a comment next to the call.
+    /// Note **it must be unique even across signing attempts for the same or different messages**.
+    ///
+    /// The rng returned can be used to create many nonces. For example, when signing a
+    /// Bitcoin transaction you may need to sign several inputs each with their own signature. It is
+    /// intended here that you call this once for the transaction and pull several nonces out of the
+    /// resulting rng.
+    pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
-        frost_key: &FrostKey<T>,
+        frost_key: &FrostKey<impl Normalized>,
         secret: &Scalar,
         session_id: &[u8],
-        // public_key: Option<Point<impl Normalized>>,
-        message: Option<Message<'_>>,
     ) -> R {
-        let message = message.unwrap_or(Message::raw(b""));
-        let msg_len = (message.len() as u64).to_be_bytes();
         let sid_len = (session_id.len() as u64).to_be_bytes();
+        let threshold_bytes = (frost_key.threshold() as u64).to_be_bytes();
+        let pk_bytes = frost_key.public_key().to_xonly_bytes();
 
-        // let mut ver_share_bytes = b"";
-        // for ver_share in frost_key.verification_shares {
-        //     ver_share_bytes = [ver_share_bytes, ver_share.to_bytes()].concat();
-        // }
-        let ver_shares_bytes: Vec<_> = frost_key
-            .verification_shares
-            .iter()
-            .map(|ver_share| ver_share.to_bytes())
-            .collect();
-        let threshold_bytes = [frost_key.threshold() as u8];
-        let pk_bytes = &ver_shares_bytes[..];
         let rng: R = derive_nonce_rng!(
-            nonce_gen => self.schnorr.nonce_gen(),
+            nonce_gen => self.nonce_gen(),
             secret => &secret,
-            public => [pk_bytes, threshold_bytes, msg_len, message, sid_len, session_id],
+            public => [pk_bytes, threshold_bytes, sid_len, session_id],
             seedable_rng => R
         );
         rng
@@ -897,7 +914,7 @@ fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
 /// ```
 pub fn new_with_deterministic_nonces<H>() -> Frost<H, nonce::Deterministic<H>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
+    H: Tag + Digest<OutputSize = U32> + Default + Clone,
 {
     Frost::default()
 }
@@ -915,8 +932,8 @@ where
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
-    R: RngCore + Default,
+    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    R: RngCore + Default + Clone,
 {
     Frost::default()
 }
@@ -926,7 +943,7 @@ where
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
 pub fn new_without_nonce_generation<H>() -> Frost<H, nonce::NoNonces>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
+    H: Tag + Digest<OutputSize = U32> + Default + Clone,
 {
     Frost::default()
 }

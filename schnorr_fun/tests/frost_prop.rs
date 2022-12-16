@@ -57,11 +57,10 @@ proptest! {
         let message = Message::plain("test", b"test");
 
         let mut nonce_rngs: Vec<ChaCha20Rng> = secret_shares.iter().map(|secret_share| {
-            proto.gen_nonce_rng(
+            proto.seed_nonce_rng(
                 &frost_key,
                 secret_share,
                 sid,
-                Some(message),
             )
         }).collect();
 

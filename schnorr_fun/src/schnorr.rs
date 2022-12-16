@@ -48,9 +48,18 @@ impl<H: Digest<OutputSize = U32> + Tag + Default> Schnorr<H, NoNonces> {
     }
 }
 
+impl<CH, NG> Schnorr<CH, NG> {
+    /// Returns the [`NonceGen`] instance being used to genreate nonces.
+    ///
+    /// [`NonceGen`]: crate::nonce::NonceGen
+    pub fn nonce_gen(&self) -> &NG {
+        &self.nonce_gen
+    }
+}
+
 impl<CH, NG> Schnorr<CH, NG>
 where
-    CH: Digest<OutputSize = U32> + Tag + Default,
+    CH: Tag + Default,
     NG: Tag,
 {
     /// Creates a instance capable of signing and verifying.
@@ -81,7 +90,7 @@ where
 
 impl<CH, NG> Default for Schnorr<CH, NG>
 where
-    CH: Default + Tag + Digest<OutputSize = U32>,
+    CH: Default + Tag,
     NG: Default + Tag,
 {
     /// Returns a Schnorr instance tagged in the default way according to BIP340.
@@ -136,13 +145,6 @@ where
         let s = s!(r + c * x).public();
 
         Signature { R, s }
-    }
-
-    /// Returns the [`NonceGen`] instance being used to genreate nonces.
-    ///
-    /// [`NonceGen`]: crate::nonce::NonceGen
-    pub fn nonce_gen(&self) -> &NG {
-        &self.nonce_gen
     }
 }
 
