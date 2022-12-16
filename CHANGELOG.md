@@ -1,8 +1,9 @@
 # CHANGELOG
 
-## Unreleased
+## v0.8.0
 
-- Added FROST implementation
+- Added WIP FROST implementation to `schnorr_fun`.
+- Update MuSig implementation to latest spec and make consistent with FROST API
 - Make Point<EvenY> serialization and hashing consistent (use 32 byte form)
 - Add `to_xonly_bytes` and `from_xonly_bytes` to `Point<EvenY>`
 - Allow `Zero` points to serialize
@@ -10,11 +11,14 @@
 - Rename `from_scalar_mul` to `even_y_from_scalar_mul` to be more explicit
 - Remove `XOnly` in favour of `Point<EvenY>`
 - Replace `.mark` system with methods for changing each marker type.
-- Make `From<u32>` for `Scalar` regardless of secrecy
+- Make `From<u32>` work for `Scalar` regardless of secrecy
 - Merge `AddTag` and `Tagged` into one trait `Tag`
 - Add `NonceRng` impls for `RefCell` and `Mutex`
 - Add `Ord` and `PartialOrd` implementations for (public) Scalar and Point
+- Add conversions for rust bitcoin's `Scalar` type to `libsecp_compat` feature
+- Change the `from_bytes` type commands to not assume secrecy in `Scalar` and `Point`.
 - Update to rust-secp256k1 v0.25.0
+
 
 ## 0.7.1
 

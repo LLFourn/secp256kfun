@@ -15,8 +15,8 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 
 ``` toml
 [dependencies]
-schnorr_fun = "0.7"
-sha2 = "0.9"
+schnorr_fun = "0.8"
+sha2 = "0.10"
 ```
 
 ### Should use?
@@ -52,9 +52,9 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 
 - BIP-340 compliant signing and verification
 - Adaptor signatures
-- compatibility with `rust-secp256k1`'s `schnorrsig` module with `libsecp_compat` feature.
-- [MuSig2] implementation compatible with [this PR](https://github.com/jonasnick/bips/pull/37) of the spec.
-- [FROST] implementation
+- compatibility with `rust-secp256k1`'s schnorr signature types with `libsecp_compat` feature.
+- [MuSig2] implementation compatible with [the spec](https://github.com/jonasnick/bips/blob/90133b00affd7d10389fbde42ada68ff08563e1e/bip-musig2.mediawiki).
+- WIP [FROST] implementation
 - Feature flags
   - `serde`: for serde implementations for signatures
   - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s Schnorr signatures.
