@@ -28,7 +28,7 @@
 //! // ⚠ session_id must be different for every signing attempt
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
 //! let mut nonce_rng: ChaCha20Rng =
-//!     musig.gen_nonce_rng(&agg_key, &my_keypair.secret_key(), session_id);
+//!     musig.seed_nonce_rng(&agg_key, &my_keypair.secret_key(), session_id);
 //! let my_nonce = musig.gen_nonce(&mut nonce_rng);
 //! let my_public_nonce = my_nonce.public();
 //! # let p2_nonce = NonceKeyPair::random(&mut rand::thread_rng());
@@ -110,7 +110,7 @@ impl<H, NG> MuSig<H, NG> {
 
     /// Generate nonces for creating signatures shares.
     ///
-    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`MuSig::gen_nonce_rng`]
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`MuSig::seed_nonce_rng`]
     pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
         NonceKeyPair::random(nonce_rng)
     }
@@ -332,30 +332,36 @@ where
     ///
     /// Parameters:
     ///
-    /// - `agg_key`: the joint public key we are signing under
+    /// - `agg_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`.
+    ///    It will return the same nonce regardless.
     /// - `secret`: you're secret key as part of `agg_key`. This **must be the secret key you are
     /// going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
-    /// exactly equal to the secret key you pass to [`sign`].
-    /// - `session_id`: a string of bytes that is unique for each signing **attempt**.
+    /// exactly equal to the secret key you pass to [`sign`] (the MuSig specification requires this).
+    /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///
     /// The application should decide upon a unique `session_id` per call to this function. If the
     /// `NonceGen` of this MuSig instance is `Deterministic` then the `session_id` **must** be
     /// unique per signing attempt -- even if the signing attempt fails to produce a signature you
     /// must not reuse the session id, the resulting rng or anything derived from that rng again.
     ///
-    /// 💡 Before using this function write a short justification as to why you beleive you session id
-    /// will be unique per session signing attempt. Perhaps include it as a comment next to the
-    /// call. Note **it must be unique even across signing attempts for different messages**.
+    /// 💡 Before using this function write a short justification as to why your beleive your session
+    /// id will be unique per signing attempt. Perhaps include it as a comment next to the call.
+    /// Note **it must be unique even across signing attempts for the same or different messages**.
+    ///
+    /// The rng returned can be used to create many nonces. For example, when signing a Bitcoin
+    /// transaction you may need to sign several inputs each with their own signature. It is
+    /// intended here that you call `seed_nonce_rng` once for the transaction and pull several nonces
+    /// out of the resulting rng.
     ///
     /// [`sign`]: MuSig::sign
-    pub fn gen_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
+    pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
-        agg_key: &AggKey<impl PointType>,
+        agg_key: &AggKey<impl Normalized>,
         secret: &Scalar,
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
-        let pk_bytes = agg_key.agg_public_key().normalize().to_bytes();
+        let pk_bytes = agg_key.agg_public_key().to_xonly_bytes();
 
         let rng: R = secp256kfun::derive_nonce_rng!(
             nonce_gen => self.nonce_gen(),
@@ -663,7 +669,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
 ///
 /// If you use deterministic nonce generation you will have to provide a unique session id to every
 /// signing session. The advantage is that you will be able to regenerate the same nonces at a later
-/// point from [`MuSig::gen_nonce_rng`].
+/// point from [`MuSig::seed_nonce_rng`].
 ///
 /// ```
 /// use schnorr_fun::musig;
@@ -681,7 +687,7 @@ where
 /// Sythetic nonce generation mixes in external randomness into nonce generation which means you
 /// don't need a unique session id for each signing session to guarantee security. The disadvantage
 /// is that you may have to store and recall somehow the nonces generated from
-/// [`MuSig::gen_nonce_rng`].
+/// [`MuSig::seed_nonce_rng`].
 ///
 /// ```
 /// use schnorr_fun::musig;
@@ -778,7 +784,7 @@ mod test {
 
             let session_id = message.bytes.into();
 
-            let mut nonce_rng: ChaCha20Rng = musig.gen_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
+            let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);
             let p2_nonce = musig.gen_nonce(&mut nonce_rng);
             let p3_nonce = musig.gen_nonce(&mut nonce_rng);
@@ -873,7 +879,7 @@ mod test {
 
             let session_id = message.bytes.into();
 
-            let mut nonce_rng: ChaCha20Rng = musig.gen_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
+            let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);
             let p2_nonce = musig.gen_nonce(&mut nonce_rng);
             let p3_nonce = musig.gen_nonce(&mut nonce_rng);

@@ -61,7 +61,7 @@
 //! // Generate nonces for this signing session.
 //! // ⚠ session_id must be different for every signing attempt
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
-//! let mut nonce_rng: ChaCha20Rng = frost.gen_nonce_rng(&frost_key, &my_secret_share, session_id);
+//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&frost_key, &my_secret_share, session_id);
 //! let my_nonce = frost.gen_nonce(&mut nonce_rng);
 //! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s)
@@ -191,12 +191,12 @@ where
 impl<H, NG> Frost<H, NG> {
     /// Generate nonces for creating signatures shares.
     ///
-    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::gen_nonce_rng`]
+    /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`Frost::seed_nonce_rng`]
     pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
         NonceKeyPair::random(nonce_rng)
     }
 
-    /// Get the [`NonceGen`] that this frost instance is using in [`Frost::gen_nonce_rng`].
+    /// Get the [`NonceGen`] that this frost instance is using in [`Frost::seed_nonce_rng`].
     ///
     /// [`NonceGen`]: secp256kfun::nonce::NonceGen
     pub fn nonce_gen(&self) -> &NG {
@@ -469,27 +469,33 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// Parameters:
     ///
-    /// - `frost_key`: the joint public key we are signing under
+    /// - `frost_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`
+    ///    It will return the same nonce regardless.
     /// - `secret`: you're secret key share for the `frost_key`
-    /// - `session_id`: a string of bytes that is unique for each signing **attempt**.
+    /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///
     /// The application should decide upon a unique `session_id` per call to this function. If the
     /// `NonceGen` of this FROST instance is `Deterministic` then the `session_id` **must** be
     /// unique per signing attempt -- even if the signing attempt fails to produce a signature you
     /// must not reuse the session id, the resulting rng or anything derived from that rng again.
     ///
-    /// 💡 Before using this function write a short justification as to why you beleive you session id
-    /// will be unique per session signing attempt. Perhaps include it as a comment next to the
-    /// call. Note **it must be unique even across signing attempts for different messages**.
-    pub fn gen_nonce_rng<T: PointType, R: SeedableRng<Seed = [u8; 32]>>(
+    /// 💡 Before using this function write a short justification as to why you beleive your session
+    /// id will be unique per signing attempt. Perhaps include it as a comment next to the call.
+    /// Note **it must be unique even across signing attempts for the same or different messages**.
+    ///
+    /// The rng returned can be used to create many nonces. For example, when signing a
+    /// Bitcoin transaction you may need to sign several inputs each with their own signature. It is
+    /// intended here that you call this once for the transaction and pull several nonces out of the
+    /// resulting rng.
+    pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
-        frost_key: &FrostKey<T>,
+        frost_key: &FrostKey<impl Normalized>,
         secret: &Scalar,
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
         let threshold_bytes = (frost_key.threshold() as u64).to_be_bytes();
-        let pk_bytes = frost_key.public_key().normalize().to_bytes();
+        let pk_bytes = frost_key.public_key().to_xonly_bytes();
 
         let rng: R = derive_nonce_rng!(
             nonce_gen => self.nonce_gen(),
