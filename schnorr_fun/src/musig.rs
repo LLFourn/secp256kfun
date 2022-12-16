@@ -60,7 +60,10 @@
 //! The MuSig2 multisignature scheme lets you aggregate multiple public keys into a single public
 //! key that requires all of the corresponding secret keys to authorize a signature under the aggregate key.
 //!
-//! See [the excellent paper] for the abstract details of the protocol and security proofs.
+//! See [the excellent paper] for the abstract details of the protocol and security proofs. **⚠ THIS
+//! IS EXPERIMENTAL⚠** it is currently compatible with [this
+//! version](https://github.com/jonasnick/bips/blob/musig2/bip-musig2.mediawiki) of the
+//! specification.
 //!
 //! **⚠ THIS IS EXPERIMENTAL⚠** it is currently compatible with [this PR](https://github.com/jonasnick/bips/pull/37) to the specification.
 //! However, we go "off-spec" in a few places especially with regards to nonce generation where we provide our own APIs (that
