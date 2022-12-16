@@ -38,3 +38,4 @@ serde = ["dep:serde", "secp256kfun/serde", "curve25519-dalek/serde", "generic-ar
 
 [package.metadata.docs.rs]
 all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

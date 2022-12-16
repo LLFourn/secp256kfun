@@ -1,5 +1,6 @@
 //!
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(non_snake_case)]
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]

@@ -1,7 +1,8 @@
 //!
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 #![allow(non_snake_case)]
-#![cfg_attr(feature = "secp256k1", doc = include_str!("../README.md"))]
+#![doc = include_str!("../README.md")]
 #![deny(missing_docs, warnings)]
 
 use core::fmt::Debug;
