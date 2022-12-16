@@ -102,9 +102,9 @@ Or you can declare that you are confident that it can never be
 
 ## Variable time or Constant time?
 
-**NOTE**: As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
+**NOTE**: *As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
 arithmetic backend to [k256] which doesn't have variable time algorithms. However this situation may
-improve in future versions.
+improve in future versions.*
 
 If a cryptogrpahic function's execution time should be independent of its secret inputs.
 Otherwise, information about those inputs may leak to anyone that can measure its execution time.
