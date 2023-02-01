@@ -15,6 +15,7 @@ keywords = ["bitcoin", "schnorr"]
 
 [dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.8",  default-features = false }
+rand = { version = "0.8" }
 
 [dev-dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.8",  features = ["proptest"] }
