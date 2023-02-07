@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use secp256kfun::{marker::*, nonce::Deterministic, secp256k1, Scalar};
 use sha2::Sha256;
 
-const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
+const MESSAGE: &[u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
     static ref SK: Scalar = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();

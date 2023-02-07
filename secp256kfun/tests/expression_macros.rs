@@ -157,7 +157,7 @@ fn g_expressions_give_correct_answers() {
     );
 
     let has_scalar = Has { has: s!(17) };
-    let has_point = Has { has: C.clone() };
+    let has_point = Has { has: C };
     let has_has_scalar = HasHas {
         has_has: has_scalar.clone(),
     };

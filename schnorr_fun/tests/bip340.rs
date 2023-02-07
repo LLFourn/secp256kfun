@@ -10,7 +10,7 @@ use schnorr_fun::{
 use secp256kfun::Point;
 use sha2::Sha256;
 
-static BIP340_CSV: &'static str = include_str!("./bip340-test-vectors.csv");
+static BIP340_CSV: &str = include_str!("./bip340-test-vectors.csv");
 
 struct AuxRng<'a>(&'a [u8]);
 
@@ -22,16 +22,17 @@ impl<'a> rand_core::RngCore for AuxRng<'a> {
         rand_core::impls::next_u64_via_fill(self)
     }
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        dest.copy_from_slice(&self.0)
+        dest.copy_from_slice(self.0)
     }
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
-        Ok(self.fill_bytes(dest))
+        self.fill_bytes(dest);
+        Ok(())
     }
 }
 
 impl<'a> NonceRng for AuxRng<'a> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
-        bytes.copy_from_slice(&self.0[..])
+        bytes.copy_from_slice(self.0)
     }
 }
 
@@ -39,7 +40,7 @@ impl<'a> NonceRng for AuxRng<'a> {
 fn signing_test_vectors() {
     use core::str::FromStr;
 
-    let lines: Vec<&str> = BIP340_CSV.split("\n").collect();
+    let lines: Vec<&str> = BIP340_CSV.split('\n').collect();
 
     for line in &lines[1..5] {
         let line: Vec<&str> = line.split(',').collect();
@@ -61,7 +62,7 @@ fn signing_test_vectors() {
 fn verification_test_vectors() {
     use core::str::FromStr;
     let bip340 = Schnorr::<Sha256>::verify_only();
-    let lines: Vec<&str> = BIP340_CSV.split("\n").collect();
+    let lines: Vec<&str> = BIP340_CSV.split('\n').collect();
     for line in &lines[5..16] {
         let line: Vec<&str> = line.split(',').collect();
 
@@ -69,7 +70,7 @@ fn verification_test_vectors() {
             Ok(public_key) => public_key,
             Err(e) => {
                 if line[6] == "TRUE" {
-                    panic!("{:?}", e);
+                    panic!("{e:?}");
                 } else {
                     continue;
                 }
@@ -80,14 +81,14 @@ fn verification_test_vectors() {
             Ok(signature) => signature,
             Err(e) => {
                 if line[6] == "TRUE" {
-                    panic!("{:?}", e)
+                    panic!("{e:?}")
                 } else {
                     continue;
                 }
             }
         };
 
-        println!("{:?}", line);
+        println!("{line:?}");
         assert!(
             bip340.verify(&public_key, Message::<Public>::raw(&message), &signature)
                 == (line[6] == "TRUE")

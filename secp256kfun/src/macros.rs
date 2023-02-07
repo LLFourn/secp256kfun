@@ -472,7 +472,6 @@ macro_rules! impl_display_debug_serialize {
 /// Implements Display, FromStr, Serialize and Deserialize for something that
 /// can be represented as a fixed length byte array
 #[macro_export]
-#[cfg_attr(rustfmt, rustfmt::skip)]
 #[doc(hidden)]
 macro_rules! impl_fromstr_deserialize {
     (

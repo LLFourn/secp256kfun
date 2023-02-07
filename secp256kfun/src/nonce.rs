@@ -271,7 +271,7 @@ mod test {
         assert_ne!(get_nonce!(nonce_gen_1, one), get_nonce!(nonce_gen_2, one));
 
         let app_nonce_gen_1 = nonce_gen_1.clone().tag(b"MY_APP");
-        let app_nonce_gen_2 = nonce_gen_2.clone().tag(b"MY_APP");
+        let app_nonce_gen_2 = nonce_gen_2.tag(b"MY_APP");
 
         assert_ne!(
             get_nonce!(nonce_gen_1, one),

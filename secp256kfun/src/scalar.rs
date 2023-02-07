@@ -55,7 +55,7 @@ impl<Z> Copy for Scalar<Public, Z> {}
 
 impl<S, Z> Clone for Scalar<S, Z> {
     fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
+        Self(self.0, self.1)
     }
 }
 
@@ -277,7 +277,7 @@ impl<S> Scalar<S, Zero> {
             return None;
         }
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&slice);
+        bytes.copy_from_slice(slice);
         Self::from_bytes(bytes)
     }
 }
@@ -334,7 +334,7 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
 
 impl<S, Z> HashInto for Scalar<S, Z> {
     fn hash_into(self, hash: &mut impl digest::Digest) {
-        hash.update(&self.to_bytes())
+        hash.update(self.to_bytes())
     }
 }
 
@@ -358,49 +358,49 @@ where
 
 impl<SL, SR, ZR> AddAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn add_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_add(&self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_add(self, &rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> AddAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn add_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_add(&self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_add(self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> SubAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn sub_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_sub(&self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_sub(self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> SubAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn sub_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_sub(&self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_sub(self, &rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR> MulAssign<Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
     fn mul_assign(&mut self, rhs: Scalar<SR, NonZero>) {
-        *self = crate::op::scalar_mul(&self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(self, &rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR> MulAssign<&Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
     fn mul_assign(&mut self, rhs: &Scalar<SR, NonZero>) {
-        *self = crate::op::scalar_mul(&self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR: ZeroChoice> MulAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn mul_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_mul(&self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(self, &rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR: ZeroChoice> MulAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn mul_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_mul(&self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(self, rhs).set_secrecy::<SL>();
     }
 }
 

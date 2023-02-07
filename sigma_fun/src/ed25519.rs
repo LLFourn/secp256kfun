@@ -246,7 +246,7 @@ pub mod test {
             x in ed25519_scalar(),
         ) {
             let G = &Scalar::random(&mut rand::thread_rng()) * &ED25519_BASEPOINT_TABLE;
-            let xG = &x * G;
+            let xG = x * G;
             let proof_system = FiatShamir::<DL<U31>, Transcript>::default();
             let proof = proof_system.prove(&x, &(G, xG), Some(&mut rand::thread_rng()));
             assert!(proof_system.verify(&(G, xG), &proof));

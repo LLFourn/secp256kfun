@@ -20,7 +20,7 @@ mod test {
         }
 
         fn to_six_bytes(&self) -> [u8; 6] {
-            self.0.clone()
+            self.0
         }
 
         #[allow(dead_code)]
@@ -56,7 +56,7 @@ mod test {
             parsed.to_six_bytes(),
             hex::decode_array("deadbeef0123").unwrap()
         );
-        assert_eq!(format!("{}", parsed).as_str(), "deadbeef0123");
+        assert_eq!(format!("{parsed}").as_str(), "deadbeef0123");
     }
 
     #[test]
@@ -129,10 +129,7 @@ mod test {
             SixBytes::<MyMarker>::from_six_bytes(hex::decode_array("deadbeef0123").unwrap())
                 .unwrap();
 
-        assert_eq!(format!("{}", six_bytes), "deadbeef0123");
-        assert_eq!(
-            format!("{:?}", six_bytes),
-            "SixBytes<MyMarker>(deadbeef0123)"
-        );
+        assert_eq!(format!("{six_bytes}"), "deadbeef0123");
+        assert_eq!(format!("{six_bytes:?}"), "SixBytes<MyMarker>(deadbeef0123)");
     }
 }

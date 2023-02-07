@@ -85,7 +85,7 @@ impl XOnlyKeyPair {
     /// [`Point`]: crate::Point
     /// [`EvenY`]: crate::marker::EvenY
     pub fn new(mut secret_key: Scalar) -> Self {
-        let pk = Point::even_y_from_scalar_mul(&G, &mut secret_key);
+        let pk = Point::even_y_from_scalar_mul(G, &mut secret_key);
         Self { sk: secret_key, pk }
     }
 

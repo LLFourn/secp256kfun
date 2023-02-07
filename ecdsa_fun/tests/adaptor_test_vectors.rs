@@ -1,6 +1,6 @@
 #![cfg(all(feature = "serde", feature = "alloc", feature = "adaptor"))]
 
-static DLC_SPEC_JSON: &'static str = include_str!("./test_vectors.json");
+static DLC_SPEC_JSON: &str = include_str!("./test_vectors.json");
 use ecdsa_fun::{
     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
     fun::{Point, Scalar},

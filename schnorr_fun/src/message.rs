@@ -12,7 +12,7 @@ pub struct Message<'a, S = Public> {
     pub app_tag: Option<&'static str>,
 }
 
-impl<'a, 'b, S: Secrecy> Message<'a, S> {
+impl<'a, S: Secrecy> Message<'a, S> {
     /// Create a raw message with no `app_tag`. The message bytes will be passed straight into the
     /// challenge hash. Usually, you only use this when signing a pre-hashed message.
     pub fn raw(bytes: &'a [u8]) -> Self {
@@ -35,6 +35,11 @@ impl<'a, 'b, S: Secrecy> Message<'a, S> {
             bytes: Slice::from(bytes),
             app_tag: Some(app_tag),
         }
+    }
+
+    /// Check if the message is empty with zero length
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Length of the message as it is hashed

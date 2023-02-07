@@ -36,7 +36,7 @@ use curve25519_dalek::{
     traits::Identity,
 };
 use generic_array::typenum::{U252, U31};
-static GQ: &'static curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
+static GQ: &curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
 /// The underlying sigma protocol we will use to prove the relationship between the two sets of commitments.
 ///
@@ -88,7 +88,7 @@ pub struct CrossCurveDLEQ<T> {
 impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
     /// Creates a new prover given the the additional point to be used inthe Pedersen commitment for each curve.
     pub fn new(HP: PointP, HQ: PointQ) -> Self {
-        let powers_of_two = core::iter::successors(Some((HP.clone(), HQ.clone())), |(H2P, H2Q)| {
+        let powers_of_two = core::iter::successors(Some((HP, HQ)), |(H2P, H2Q)| {
             // compute 2^i * H for i = 0..252 by successively adding the result of the last addition
             Some((
                 g!(H2P + H2P)
@@ -165,7 +165,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
                     .expect("computationally unreachable since zero_comit_p is random");
 
                 let zero_commit_q = rQ * GQ;
-                let one_commit_q = &zero_commit_q + H2Q;
+                let one_commit_q = zero_commit_q + H2Q;
 
                 // Make sure to do a constant time choice here
                 let bit = subtle::Choice::from(*bit as u8);
@@ -193,7 +193,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
                     true => Either::Right((rP, rQ)),
                 })
                 .collect(),
-            (secp_secret, secret.clone()),
+            (secp_secret, *secret),
         );
 
         let proof = self
@@ -226,7 +226,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
                 g!(CP - H2P).normalize().non_zero().map(|CP_sub_H2P| {
                     (
                         // represents the claim the commitment is equal to 0
-                        (CP.clone(), CQ.clone()),
+                        (*CP, *CQ),
                         // represents the claim the commitment is equal 2^i
                         (CP_sub_H2P, CQ - H2Q),
                     )
@@ -242,10 +242,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
         let unblindedP = g!(sumP - rP * GP).normalize().non_zero()?;
         let unblindedQ = sumQ - rQ * GQ;
 
-        let dleq_G_to_H = (
-            (XP.clone(), (self.HP.clone(), unblindedP)),
-            (XQ.clone(), (self.HQ, unblindedQ)),
-        );
+        let dleq_G_to_H = ((*XP, (self.HP, unblindedP)), (*XQ, (self.HQ, unblindedQ)));
 
         Some((commitment_statement, dleq_G_to_H))
     }
@@ -269,6 +266,7 @@ fn to_bits(secret_key: &ScalarQ) -> [bool; COMMITMENT_BITS] {
     let bytes = secret_key.as_bytes();
     let mut bits = [false; COMMITMENT_BITS];
     let mut index = 0;
+    #[allow(clippy::needless_range_loop)]
     for i in 0..32 {
         for j in 0..8 {
             bits[index + j] = (bytes[i] & (1 << j)) != 0;

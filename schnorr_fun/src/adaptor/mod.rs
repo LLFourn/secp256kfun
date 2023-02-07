@@ -216,7 +216,7 @@ where
         // !needs_negation => R_hat = R - Y
         let R_hat = g!(R + { Y.conditional_negate(!needs_negation) });
 
-        let c = self.challenge(R, &X, message);
+        let c = self.challenge(R, X, message);
 
         R_hat == g!(s_hat * G - c * X)
     }
@@ -317,8 +317,7 @@ mod test {
         ));
 
         let decryption_key = decryption_key.public();
-        let signature =
-            schnorr.decrypt_signature(decryption_key.clone(), encrypted_signature.clone());
+        let signature = schnorr.decrypt_signature(decryption_key, encrypted_signature.clone());
         assert!(schnorr.verify(&verification_key, message, &signature));
         let rec_decryption_key = schnorr
             .recover_decryption_key(&encryption_key, &encrypted_signature, &signature)

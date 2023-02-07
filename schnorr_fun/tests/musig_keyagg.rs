@@ -3,7 +3,7 @@ use schnorr_fun::{
     fun::{marker::*, Point, Scalar},
     musig, serde,
 };
-static TEST_JSON: &'static str = include_str!("musig/key_agg_vectors.json");
+static TEST_JSON: &str = include_str!("musig/key_agg_vectors.json");
 
 #[derive(serde::Deserialize, Clone, Copy, Debug)]
 #[serde(crate = "self::serde", untagged)]
@@ -16,7 +16,7 @@ impl<T> Maybe<T> {
     fn unwrap(self) -> T {
         match self {
             Maybe::Valid(t) => t,
-            Maybe::Invalid(string) => panic!("unwrapped an invalid Maybe: {}", string),
+            Maybe::Invalid(string) => panic!("unwrapped an invalid Maybe: {string}"),
         }
     }
 }
@@ -80,14 +80,14 @@ fn run_test(test_cases: &TestCases, test_case: &TestCase) {
 
     let mut tweak_is_xonly = test_case.is_xonly.clone();
 
-    while tweak_is_xonly.get(0) == Some(&false) {
+    while tweak_is_xonly.first() == Some(&false) {
         tweak_is_xonly.remove(0);
         agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
     }
 
     let mut agg_key = agg_key.into_xonly_key();
 
-    while tweak_is_xonly.get(0) == Some(&true) {
+    while tweak_is_xonly.first() == Some(&true) {
         tweak_is_xonly.remove(0);
         agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
     }

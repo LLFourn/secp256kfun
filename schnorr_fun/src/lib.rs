@@ -6,7 +6,7 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "alloc")]
-#[allow(unused)]
+#[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 

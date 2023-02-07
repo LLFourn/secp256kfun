@@ -86,7 +86,7 @@ pub fn scalar_eq<Z1, S1, Z2, S2>(x: &Scalar<S1, Z1>, y: &Scalar<S2, Z2>) -> bool
 /// Negate a scalar
 #[inline(always)]
 pub fn scalar_negate<Z, S>(x: &Scalar<S, Z>) -> Scalar<S, Z> {
-    let mut negated = x.0.clone();
+    let mut negated = x.0;
     ConstantTime::scalar_cond_negate(&mut negated, true);
     Scalar::from_inner(negated)
 }
@@ -151,7 +151,7 @@ where
 /// Negate a point
 #[inline(always)]
 pub fn point_negate<T: PointType, S, Z>(A: &Point<T, S, Z>) -> Point<T::NegationType, S, Z> {
-    let mut A = A.0.clone();
+    let mut A = A.0;
     ConstantTime::any_point_neg(&mut A);
     Point::from_inner(A, T::NegationType::default())
 }
@@ -162,7 +162,7 @@ pub fn point_conditional_negate<T: PointType, S, Z>(
     A: &Point<T, S, Z>,
     cond: bool,
 ) -> Point<T::NegationType, S, Z> {
-    let mut A = A.0.clone();
+    let mut A = A.0;
     ConstantTime::any_point_conditional_negate(&mut A, cond);
     Point::from_inner(A, T::NegationType::default())
 }

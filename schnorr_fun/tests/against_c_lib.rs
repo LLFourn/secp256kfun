@@ -27,7 +27,7 @@ impl NonceGen for Bip340NoAux {
     fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
         let sec_bytes = secret.to_bytes();
         let mut bytes = [0u8; 32];
-        let zero_mask = self.aux_hash.clone().add(&[0u8; 32]);
+        let zero_mask = self.aux_hash.clone().add([0u8; 32]);
         bytes.copy_from_slice(zero_mask.finalize().as_ref());
 
         // bitwise xor the zero mask with secret
@@ -47,7 +47,7 @@ impl Tag for Bip340NoAux {
                 .tag_vectored(tag.clone().chain(core::iter::once(b"/nonce".as_slice()))),
             aux_hash: self
                 .aux_hash
-                .tag_vectored(tag.clone().chain(core::iter::once(b"/aux".as_slice()))),
+                .tag_vectored(tag.chain(core::iter::once(b"/aux".as_slice()))),
         }
     }
 }
@@ -77,7 +77,7 @@ proptest! {
     #[test]
     fn verify_secp_sigs(key in any::<Scalar>(), msg in any::<[u8;32]>(), aux_rand in any::<[u8;32]>()) {
         let secp = &*SECP;
-        let keypair = secp256k1::KeyPair::from_secret_key(secp, &key.clone().into());
+        let keypair = secp256k1::KeyPair::from_secret_key(secp, &key.into());
         let fun_pk = secp256k1::XOnlyPublicKey::from_keypair(&keypair).0.into();
         let secp_msg = secp256k1::Message::from_slice(&msg).unwrap();
         let sig = secp.sign_schnorr_with_aux_rand(&secp_msg, &keypair, &aux_rand);
@@ -90,7 +90,7 @@ proptest! {
 #[test]
 fn bip340_zero_mask_tagged_hash_is_correct() {
     let no_aux = Bip340NoAux::default().tag(b"BIP0340");
-    let no_aux_hash = no_aux.aux_hash.clone().add(&[0u8; 32]);
+    let no_aux_hash = no_aux.aux_hash.add([0u8; 32]);
     let mut zero_mask = [0u8; 32];
     zero_mask.copy_from_slice(no_aux_hash.finalize().as_ref());
     assert_eq!(

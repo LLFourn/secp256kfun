@@ -5,7 +5,7 @@ use schnorr_fun::{
     musig::{self, NonceKeyPair},
     serde, Message,
 };
-static TEST_JSON: &'static str = include_str!("musig/sign_verify_vectors.json");
+static TEST_JSON: &str = include_str!("musig/sign_verify_vectors.json");
 use secp256kfun::hex;
 
 #[derive(schnorr_fun::serde::Deserialize, Clone, Copy, Debug)]
@@ -19,7 +19,7 @@ impl<T> Maybe<T> {
     fn unwrap(self) -> T {
         match self {
             Maybe::Valid(t) => t,
-            Maybe::Invalid(string) => panic!("unwrapped an invalid Maybe: {}", string),
+            Maybe::Invalid(string) => panic!("unwrapped an invalid Maybe: {string}"),
         }
     }
 }
