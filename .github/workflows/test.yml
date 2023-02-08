@@ -7,6 +7,10 @@ on:
       - master
   pull_request:
 
+# Make sure CI fails on all warnings, including Clippy lints
+env:
+    RUSTFLAGS: "-Dwarnings"
+
 jobs:
 
   fmt:
@@ -24,6 +28,14 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features
+
 
   # We want to test stable on multiple platforms with --all-features
   test:
