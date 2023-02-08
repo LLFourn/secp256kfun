@@ -33,7 +33,7 @@ impl BackendScalar for Scalar {
     }
 
     fn to_bytes(&self) -> [u8; 32] {
-        self.to_bytes().into()
+        Scalar::to_bytes(self).into()
     }
 }
 
