@@ -8,6 +8,6 @@ impl From<crate::Signature> for schnorr::Signature {
 
 impl From<schnorr::Signature> for crate::Signature {
     fn from(sig: schnorr::Signature) -> Self {
-        crate::Signature::from_bytes(sig.as_ref().clone()).unwrap()
+        crate::Signature::from_bytes(*sig.as_ref()).unwrap()
     }
 }

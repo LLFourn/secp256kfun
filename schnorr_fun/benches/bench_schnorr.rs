@@ -7,7 +7,7 @@ use schnorr_fun::{
 };
 use sha2::Sha256;
 
-const MESSAGE: &'static [u8; 32] = b"hello world you are beautiful!!!";
+const MESSAGE: &[u8; 32] = b"hello world you are beautiful!!!";
 
 lazy_static::lazy_static! {
     static ref SK: Scalar<Secret, NonZero> = Scalar::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").non_zero().unwrap();
@@ -45,13 +45,13 @@ fn verify_schnorr(c: &mut Criterion) {
         let sig = schnorr.sign(&keypair, message);
         let verification_key = &keypair.public_key();
         group.bench_function("fun::schnorr_verify", |b| {
-            b.iter(|| schnorr.verify(&verification_key, message, &sig))
+            b.iter(|| schnorr.verify(verification_key, message, &sig))
         });
 
         {
             let sig = sig.clone().set_secrecy::<Secret>();
             group.bench_function("fun::schnorr_verify_ct", |b| {
-                b.iter(|| schnorr.verify(&verification_key, message, &sig))
+                b.iter(|| schnorr.verify(verification_key, message, &sig))
             });
         }
     }

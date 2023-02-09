@@ -29,7 +29,7 @@ pub fn sign(keypair: &(Scalar, Point<EvenY>), message: &[u8]) -> Signature {
     let (x, X) = keypair;
     let mut r = Scalar::random(&mut thread_rng());
     let R = Point::even_y_from_scalar_mul(G, &mut r);
-    let c = Scalar::from_hash(BIP340_CHALLENGE.clone().add(&R).add(X).add(message));
+    let c = Scalar::from_hash(BIP340_CHALLENGE.clone().add(R).add(X).add(message));
     let s = s!(r + c * x);
 
     Signature { R, s: s.public() }

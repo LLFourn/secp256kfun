@@ -263,7 +263,7 @@ impl core::fmt::Display for NewKeyGenError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         use NewKeyGenError::*;
         match self {
-            PolyDifferentLength(i) => write!(f, "polynomial commitment from party at index {} was a different length", i),
+            PolyDifferentLength(i) => write!(f, "polynomial commitment from party at index {i} was a different length"),
             NotEnoughParties => write!(f, "the number of parties was less than the threshold"),
             ZeroFrostKey => write!(f, "The frost public key was zero. Computationally unreachable, one party is acting maliciously."),
         }
@@ -288,14 +288,12 @@ impl core::fmt::Display for FinishKeyGenError {
         match self {
             InvalidShare(i) => write!(
                 f,
-                "the secret share at index {} does not match the expected evaluation \
-                of their point polynomial at our index. Check that the order and our index is correct",
-                i
+                "the secret share at index {i} does not match the expected evaluation \
+                of their point polynomial at our index. Check that the order and our index is correct"
             ),
             &InvalidProofOfPossession(i) => write!(
                 f,
-                "the proof-of-possession provided by party at index {} was invalid, check ordering.",
-                i
+                "the proof-of-possession provided by party at index {i} was invalid, check ordering."
             ),
         }
     }
@@ -341,7 +339,7 @@ impl<T: Copy + PointType> FrostKey<T> {
     ///
     /// The verification share is the image of their secret share.
     pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
-        self.verification_shares.iter().map(|point| *point)
+        self.verification_shares.iter().copied()
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
@@ -396,7 +394,7 @@ impl FrostKey<Normal> {
         Some(FrostKey {
             public_key,
             verification_shares: self.verification_shares.clone(),
-            threshold: self.threshold.clone(),
+            threshold: self.threshold,
             tweak,
             needs_negation: self.needs_negation,
         })
@@ -743,7 +741,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 })
                 .into_point_with_even_y();
 
-        for (_, nonce) in &mut nonce_map {
+        for nonce in nonce_map.values_mut() {
             nonce.conditional_negate(nonces_need_negation);
         }
 
@@ -879,7 +877,7 @@ impl SignSession {
     ///
     /// An iterator of participant indices
     pub fn participants(&self) -> impl DoubleEndedIterator<Item = usize> + '_ {
-        self.nonces.iter().map(|(i, _)| *i)
+        self.nonces.keys().copied()
     }
 }
 
@@ -1013,7 +1011,7 @@ mod test {
         let frost = new_with_deterministic_nonces::<Sha256>();
         let (frost_key, _shares) = frost.simulate_keygen(2, 3, &mut rand::thread_rng());
         let nonce = NonceKeyPair::random(&mut rand::thread_rng()).public();
-        let mut malicious_nonce = nonce.clone();
+        let mut malicious_nonce = nonce;
         malicious_nonce.conditional_negate(true);
 
         let session = frost.start_sign_session(

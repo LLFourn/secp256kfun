@@ -44,14 +44,13 @@ impl<N: Unsigned, S: Sigma> Sigma for All<S, N> {
             .into_iter()
             .enumerate()
             .map(|(i, announce_secret)| {
-                let response = self.sigma.respond(
+                self.sigma.respond(
                     &witness[i],
                     &statement[i],
                     announce_secret,
                     &announce[i],
                     challenge,
-                );
-                response
+                )
             })
             .collect()
     }

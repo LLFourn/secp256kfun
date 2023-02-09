@@ -143,7 +143,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     {
         let x = signing_key;
         let Y = encryption_key;
-        let m = Scalar::<Public, _>::from_bytes_mod_order(message.clone());
+        let m = Scalar::<Public, _>::from_bytes_mod_order(*message);
         let mut rng = derive_nonce_rng!(
             nonce_gen => self.ecdsa.nonce_gen,
             secret => x,
@@ -210,7 +210,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     ) -> bool {
         let X = verification_key;
         let Y = encryption_key;
-        let m = Scalar::<Public, _>::from_bytes_mod_order(message_hash.clone());
+        let m = Scalar::<Public, _>::from_bytes_mod_order(*message_hash);
         let EncryptedSignature(EncryptedSignatureInternal {
             R,
             R_hat,
@@ -220,7 +220,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
 
         if !self
             .dleq_proof_system
-            .verify(&(*R_hat, (*Y, R.point)), &proof)
+            .verify(&(*R_hat, (*Y, R.point)), proof)
         {
             return false;
         }
@@ -329,7 +329,7 @@ mod test {
             let signature = ecdsa_adaptor.decrypt_signature(&decryption_key, ciphertext.clone());
             assert!(ecdsa_adaptor
                 .ecdsa
-                .verify(&verification_key, &msg, &signature));
+                .verify(&verification_key, msg, &signature));
 
             let recoverd_decryption_sk = ecdsa_adaptor
                 .recover_decryption_key(&encryption_key, &signature, &ciphertext)

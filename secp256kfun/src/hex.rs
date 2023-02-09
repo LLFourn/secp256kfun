@@ -52,7 +52,7 @@ pub fn encode(bytes: &[u8]) -> String {
     use core::fmt::Write;
     let mut hex = String::new();
     for byte in bytes {
-        write!(hex, "{:02x}", byte).unwrap()
+        write!(hex, "{byte:02x}").unwrap()
     }
     hex
 }

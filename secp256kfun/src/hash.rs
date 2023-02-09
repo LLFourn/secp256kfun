@@ -103,7 +103,7 @@ pub trait HashInto {
 
 impl HashInto for u8 {
     fn hash_into(self, hash: &mut impl digest::Digest) {
-        hash.update(&[self])
+        hash.update([self])
     }
 }
 

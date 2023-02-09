@@ -56,7 +56,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
             (Either::Left(witness), Either::Left((announce_secret, sim_response))) => (
                 (
                     self.lhs.respond(
-                        &witness,
+                        witness,
                         &statement.0,
                         announce_secret,
                         &announce.0,
@@ -69,7 +69,7 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
             (Either::Right(witness), Either::Right((sim_response, announce_secret))) => (
                 (sim_response, fake_challenge),
                 self.rhs.respond(
-                    &witness,
+                    witness,
                     &statement.1,
                     announce_secret,
                     &announce.1,
@@ -89,12 +89,12 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
             (Either::Left((ref announce_secret, ref sim_response)), sim_challenge) => (
                 self.lhs.announce(&statement.0, announce_secret),
                 self.rhs
-                    .implied_announcement(&statement.1, &sim_challenge, &sim_response)
+                    .implied_announcement(&statement.1, sim_challenge, sim_response)
                     .expect("computationally unreachable for any large language"),
             ),
             (Either::Right((ref sim_response, ref announce_secret)), sim_challenge) => (
                 self.lhs
-                    .implied_announcement(&statement.0, &sim_challenge, &sim_response)
+                    .implied_announcement(&statement.0, sim_challenge, sim_response)
                     .expect("computationally unreachable for any large language"),
                 self.rhs.announce(&statement.1, announce_secret),
             ),
@@ -146,10 +146,10 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         let rhs_challenge = lhs_challenge.zip(challenge, |byte1, byte2| byte1 ^ byte2);
 
         self.lhs
-            .implied_announcement(lhs_statement, lhs_challenge, &lhs_response)
+            .implied_announcement(lhs_statement, lhs_challenge, lhs_response)
             .and_then(|lhs_announcement| {
                 self.rhs
-                    .implied_announcement(rhs_statement, &rhs_challenge, &rhs_response)
+                    .implied_announcement(rhs_statement, &rhs_challenge, rhs_response)
                     .map(|rhs_announcement| (lhs_announcement, rhs_announcement))
             })
     }
@@ -231,7 +231,7 @@ mod test {
 
                 let statement = (statement.1, statement.0);
                 let proof_rhs = proof_system.prove(
-                    &Either::Right(x.clone()),
+                    &Either::Right(x),
                     &statement,
                     Some(&mut rand::thread_rng()),
                 );

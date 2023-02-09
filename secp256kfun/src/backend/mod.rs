@@ -29,7 +29,7 @@ pub trait TimeSensitive {
     fn point_add_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_add_norm_point(lhs: &Point, rhs: &Point) -> Point;
     fn point_sub_point(lhs: &Point, rhs: &Point) -> Point {
-        let mut rhs = rhs.clone();
+        let mut rhs = *rhs;
         Self::point_neg(&mut rhs);
         Self::point_add_point(lhs, &rhs)
     }

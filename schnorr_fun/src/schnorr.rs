@@ -140,7 +140,7 @@ where
             public => [X, message]
         );
 
-        let R = Point::even_y_from_scalar_mul(&G, &mut r);
+        let R = Point::even_y_from_scalar_mul(G, &mut r);
         let c = self.challenge(&R, &X, message);
         let s = s!(r + c * x).public();
 
@@ -195,7 +195,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         m: Message<'_, S>,
     ) -> Scalar<S, Zero> {
         let hash = self.challenge_hash.clone();
-        let challenge = Scalar::from_hash(hash.add(R).add(X).add(&m));
+        let challenge = Scalar::from_hash(hash.add(R).add(X).add(m));
 
         challenge
             // Since the challenge pre-image is adversarially controlled we

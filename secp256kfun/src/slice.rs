@@ -52,7 +52,7 @@ impl<'a, S> Slice<'a, S> {
 
     /// Gets the inner slice
     pub fn as_inner(self) -> &'a [u8] {
-        &self.inner
+        self.inner
     }
 
     /// Set the secrecy of the bytes to *public*.
@@ -87,7 +87,7 @@ impl<'a, S> HashInto for Slice<'a, S> {
 impl<S> core::fmt::Display for Slice<'_, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         for byte in self.inner.iter() {
-            write!(f, "{:02x}", byte)?
+            write!(f, "{byte:02x}")?
         }
         Ok(())
     }

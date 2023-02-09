@@ -147,6 +147,7 @@ mod test {
         ) => {{
             let statement = &$statement;
             let witness = &$witness;
+            #[allow(clippy::upper_case_acronyms)]
             type DLEQ = Eq<$mod::DLG<$len>, $mod::DL<$len>>;
 
             let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
@@ -179,7 +180,7 @@ mod test {
                 secp256k1::DLG::<U32>::default(),
                 secp256k1::DL::<U32>::default(),
             );
-            assert_eq!(&format!("{}", dleq), "eq(DLG(secp256k1),DL(secp256k1))");
+            assert_eq!(&format!("{dleq}"), "eq(DLG(secp256k1),DL(secp256k1))");
         }
 
         proptest! {
@@ -199,7 +200,7 @@ mod test {
                     challenge_length => U32,
                     statement => statement,
                     witness => x,
-                    unrelated_point => unrelated_point.clone()
+                    unrelated_point => unrelated_point
                 );
                 run_dleq!(
                     secp256k1,

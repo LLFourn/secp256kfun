@@ -120,7 +120,7 @@ impl<NG> ECDSA<NG> {
             return false;
         }
 
-        let m = Scalar::<Public, _>::from_bytes_mod_order(message.clone()).public();
+        let m = Scalar::<Public, _>::from_bytes_mod_order(*message).public();
         let s_inv = s.invert();
 
         g!((s_inv * m) * G + (s_inv * R_x) * verification_key)
@@ -162,7 +162,7 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// ```
     pub fn sign(&self, secret_key: &Scalar, message_hash: &[u8; 32]) -> Signature {
         let x = secret_key;
-        let m = Scalar::<Public, _>::from_bytes_mod_order(message_hash.clone()).public();
+        let m = Scalar::<Public, _>::from_bytes_mod_order(*message_hash).public();
         let r = derive_nonce!(
             nonce_gen => self.nonce_gen,
             secret => x,

@@ -33,7 +33,7 @@ impl BackendScalar for Scalar {
     }
 
     fn to_bytes(&self) -> [u8; 32] {
-        self.to_bytes().into()
+        Scalar::to_bytes(self).into()
     }
 }
 
@@ -133,7 +133,7 @@ impl TimeSensitive for ConstantTime {
 
     fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point {
         let lhs = norm_point_to_affine(lhs);
-        &rhs.neg() + &lhs
+        rhs.neg() + lhs
     }
 
     fn norm_point_neg(point: &mut Point) {
@@ -340,7 +340,7 @@ impl VariableTime {
         if point.is_identity().into() {
             return false;
         }
-        let mut point = point.clone();
+        let mut point = *point;
         Self::point_normalize(&mut point);
         Scalar::from_bytes_reduced(&point.x.to_bytes()).eq(scalar)
     }

@@ -55,7 +55,7 @@ pub struct Point<T = Normal, S = Public, Z = NonZero>(
 
 impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
     fn clone(&self) -> Self {
-        Point::from_inner(self.0.clone(), self.1.clone())
+        Point::from_inner(self.0, self.1.clone())
     }
 }
 
@@ -485,7 +485,7 @@ fn coords_to_bytes(x: [u8; 32], y: [u8; 32]) -> [u8; 33] {
 
 crate::impl_debug! {
     fn to_bytes<T, S,Z>(point: &Point<T, S, Z>) -> Result<[u8;33], &str> {
-        let mut p = point.0.clone();
+        let mut p = point.0;
         backend::VariableTime::point_normalize(&mut p);
         let p: Point<Normal, S, Z> = Point::from_inner(p, Normal);
         Ok(p.to_bytes())
@@ -782,9 +782,9 @@ mod test {
     #[test]
     fn fmt_debug() {
         let random_point = Point::random(&mut rand::thread_rng());
-        assert!(format!("{:?}", random_point).starts_with("Point<Normal,Public,NonZero>"));
+        assert!(format!("{random_point:?}").starts_with("Point<Normal,Public,NonZero>"));
         let mult_point = g!({ Scalar::random(&mut rand::thread_rng()) } * G);
-        assert!(format!("{:?}", mult_point).starts_with("Point<NonNormal,Public,NonZero>"));
+        assert!(format!("{mult_point:?}").starts_with("Point<NonNormal,Public,NonZero>"));
     }
 
     #[test]
@@ -792,7 +792,7 @@ mod test {
         let a_orig = Point::random(&mut rand::thread_rng())
             .mark_zero()
             .non_normal();
-        let mut a = a_orig.clone();
+        let mut a = a_orig;
         let b = Point::random(&mut rand::thread_rng());
         a += b;
         assert_eq!(a, op::point_add(&a_orig, &b));

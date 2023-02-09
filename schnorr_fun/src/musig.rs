@@ -182,7 +182,7 @@ impl<T: Copy> AggKey<T> {
 
     /// An iterator over the **public keys** of each party in the aggregate key.
     pub fn keys(&self) -> impl Iterator<Item = Point> + '_ {
-        self.keys.iter().map(|point| *point)
+        self.keys.iter().copied()
     }
 }
 
@@ -227,8 +227,8 @@ impl AggKey<Normal> {
         let tweak = s!(self.tweak + tweak).public();
 
         Some(AggKey {
-            keys: self.keys.clone(),
-            coefs: self.coefs.clone(),
+            keys: self.keys,
+            coefs: self.coefs,
             needs_negation: false,
             agg_key,
             tweak,
@@ -498,6 +498,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn _start_sign_session(
         &self,
         agg_key: &AggKey<EvenY>,
@@ -567,8 +568,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         assert_eq!(
             keypair.public_key(),
             agg_key.keys().nth(my_index).unwrap(),
-            "key at index {} didn't match",
-            my_index
+            "key at index {my_index} didn't match",
         );
         let c = session.c;
         let b = session.b;
@@ -576,7 +576,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         let mut a = agg_key.coefs[my_index];
 
         a.conditional_negate(agg_key.needs_negation);
-        let [mut r1, mut r2] = local_secret_nonce.secret.clone();
+        let [mut r1, mut r2] = local_secret_nonce.secret;
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
         s!(c * a * x_i + r1 + b * r2).public()
@@ -600,7 +600,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         let c = session.c;
         let b = session.b;
         let s_i = &partial_sig;
-        let a = agg_key.coefs[index].clone();
+        let a = agg_key.coefs[index];
 
         let X_i = agg_key
             .keys()
@@ -625,7 +625,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         session: &SignSession<Ordinary>,
         partial_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> Signature {
-        let (R, s) = self._combine_partial_signatures(agg_key, &session, partial_sigs);
+        let (R, s) = self._combine_partial_signatures(agg_key, session, partial_sigs);
         Signature { R, s }
     }
 
@@ -642,8 +642,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         session: &SignSession<Adaptor>,
         partial_encrypted_sigs: impl IntoIterator<Item = Scalar<Public, Zero>>,
     ) -> EncryptedSignature {
-        let (R, s_hat) =
-            self._combine_partial_signatures(agg_key, &session, partial_encrypted_sigs);
+        let (R, s_hat) = self._combine_partial_signatures(agg_key, session, partial_encrypted_sigs);
         EncryptedSignature {
             R,
             s_hat,
@@ -758,12 +757,10 @@ mod test {
                 keypair3.public_key(),
             ]);
 
-            for tweak in [pre_tweak1, pre_tweak2] {
-                if let Some(tweak) = tweak {
-                    agg_key1 = agg_key1.tweak(tweak).unwrap();
-                    agg_key2 = agg_key2.tweak(tweak).unwrap();
-                    agg_key3 = agg_key3.tweak(tweak).unwrap();
-                }
+            for tweak in [pre_tweak1, pre_tweak2].into_iter().flatten() {
+                agg_key1 = agg_key1.tweak(tweak).unwrap();
+                agg_key2 = agg_key2.tweak(tweak).unwrap();
+                agg_key3 = agg_key3.tweak(tweak).unwrap();
             }
 
 
@@ -771,12 +768,10 @@ mod test {
             let mut agg_key2 = agg_key2.into_xonly_key();
             let mut agg_key3 = agg_key3.into_xonly_key();
 
-            for tweak in [tweak1, tweak2] {
-                if let Some(tweak) = tweak {
-                    agg_key1 = agg_key1.tweak(tweak).unwrap();
-                    agg_key2 = agg_key2.tweak(tweak).unwrap();
-                    agg_key3 = agg_key3.tweak(tweak).unwrap();
-                }
+            for tweak in [tweak1, tweak2].into_iter().flatten() {
+                agg_key1 = agg_key1.tweak(tweak).unwrap();
+                agg_key2 = agg_key2.tweak(tweak).unwrap();
+                agg_key3 = agg_key3.tweak(tweak).unwrap();
             }
 
             assert_eq!(agg_key1.agg_public_key(), agg_key2.agg_public_key());
@@ -809,7 +804,7 @@ mod test {
             let p3_session = musig
                 .start_sign_session(
                     &agg_key3,
-                    nonces.clone(),
+                    nonces,
                     message,
                 );
 
@@ -888,7 +883,7 @@ mod test {
             let p3_nonce = musig.gen_nonce(&mut nonce_rng);
             let nonces = vec![p1_nonce.public, p2_nonce.public, p3_nonce.public];
 
-            let mut p1_session = musig
+            let p1_session = musig
                 .start_encrypted_sign_session(
                     &agg_key1,
                     nonces.clone(),
@@ -896,7 +891,7 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-            let mut p2_session = musig
+            let p2_session = musig
                 .start_encrypted_sign_session(
                     &agg_key2,
                     nonces.clone(),
@@ -904,7 +899,7 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-            let mut p3_session = musig
+            let p3_session = musig
                 .start_encrypted_sign_session(
                     &agg_key3,
                     nonces,
@@ -912,9 +907,9 @@ mod test {
                     &encryption_key
                 )
                 .unwrap();
-                let p1_sig = musig.sign(&agg_key1, &mut p1_session, 0, &keypair1, p1_nonce);
-                let p2_sig = musig.sign(&agg_key1, &mut p2_session, 1, &keypair2, p2_nonce);
-                let p3_sig = musig.sign(&agg_key1, &mut p3_session, 2, &keypair3, p3_nonce);
+                let p1_sig = musig.sign(&agg_key1, &p1_session, 0, &keypair1, p1_nonce);
+                let p2_sig = musig.sign(&agg_key1, &p2_session, 1, &keypair2, p2_nonce);
+                let p3_sig = musig.sign(&agg_key1, &p3_session, 2, &keypair3, p3_nonce);
 
             assert!(musig.verify_partial_signature(&agg_key2, &p2_session, 0, p1_sig));
             assert!(musig.verify_partial_signature(&agg_key1, &p1_session, 0, p1_sig));
