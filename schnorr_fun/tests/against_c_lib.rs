@@ -24,7 +24,7 @@ struct Bip340NoAux {
 
 impl NonceGen for Bip340NoAux {
     type Hash = Sha256;
-    fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
+    fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash {
         let sec_bytes = secret.to_bytes();
         let mut bytes = [0u8; 32];
         let zero_mask = self.aux_hash.clone().add([0u8; 32]);

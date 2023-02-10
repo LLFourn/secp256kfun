@@ -85,7 +85,7 @@ proptest! {
                 &frost_key,
                 &signing_session,
                 signer_index,
-                sig)
+                sig).is_ok()
             );
             signatures.push(sig);
         }
@@ -99,5 +99,14 @@ proptest! {
             message,
             &combined_sig
         ));
+    }
+
+    #[test]
+    fn test_core_shares_interpolation((n_parties, threshold) in (1usize..=7).prop_flat_map(|n| (Just(n), 1usize..=n))) {
+        let proto = new_with_deterministic_nonces::<Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let (frost_key, _secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
+        let interp_frost_key = FrostKey::from_core_share_images(frost_key.core_shares().clone()).expect("computationally unreachable");
+        assert_eq!(frost_key, interp_frost_key);
     }
 }

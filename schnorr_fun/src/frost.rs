@@ -99,7 +99,7 @@
 //! let my_sig_share = frost.sign(&x_only_frost_key, &session, my_index, &my_secret_share, my_nonce);
 //! # let sig_share3 = frost.sign(&x_only_frost_key, &session, party_index3, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
-//! assert!(frost.verify_signature_share(&x_only_frost_key, &session, party_index3, sig_share3));
+//! assert_eq!(frost.verify_signature_share(&x_only_frost_key, &session, party_index3, sig_share3), Ok(()));
 //! // combine signature shares into a single signature that is valid under the FROST key
 //! let combined_sig = frost.combine_signature_shares(&x_only_frost_key, &session, vec![my_sig_share, sig_share3]);
 //! assert!(frost.schnorr.verify(
@@ -364,10 +364,8 @@ pub struct FrostKey<T: PointType> {
         ))
     )]
     public_key: Point<T>,
-    /// The image of each party's key share.
-    verification_shares: BTreeMap<PartyIndex, Point<Normal, Public, Zero>>,
-    /// Number of partial signatures required to create a combined signature under this key.
-    threshold: usize,
+    /// A threshold number of share images by their party index allowing us to reconstruct the full polynomial
+    core_shares: BTreeMap<PartyIndex, Point<Normal, Public, Zero>>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
     /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
@@ -380,21 +378,25 @@ impl<T: Copy + PointType> FrostKey<T> {
         self.public_key
     }
 
-    /// The verification shares of each party in the key.
+    /// Get the verification share for a party at `index`.
     ///
-    /// The verification share is the image of their secret share.
-    pub fn verification_shares(&self) -> &BTreeMap<PartyIndex, Point<Normal, Public, Zero>> {
-        &self.verification_shares
+    /// The verification share is the image of their secret share (i.e. their public key)
+    pub fn verification_share(&self, index: PartyIndex) -> Point<NonNormal, Public, Zero> {
+        match self.core_shares.get(&index) {
+            Some(core_share) => core_share.non_normal(),
+            None => eval_point_poly_defined_by_shares(index, &self.core_shares),
+        }
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
     pub fn threshold(&self) -> usize {
-        self.threshold
+        self.core_shares.len()
     }
 
-    /// The total number of signers in this frost multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
+    /// Returns the core shares that define this key.
+    /// These are the images of the secret shares for the first `self.threshold()` parties.
+    pub fn core_shares(&self) -> &BTreeMap<PartyIndex, Point<Normal, Public, Zero>> {
+        &self.core_shares
     }
 }
 
@@ -410,8 +412,7 @@ impl FrostKey<Normal> {
         tweak.conditional_negate(needs_negation);
         FrostKey {
             public_key,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
+            core_shares: self.core_shares,
             tweak,
             needs_negation,
         }
@@ -438,10 +439,42 @@ impl FrostKey<Normal> {
 
         Some(FrostKey {
             public_key,
-            verification_shares: self.verification_shares.clone(),
-            threshold: self.threshold,
+            core_shares: self.core_shares,
             tweak,
             needs_negation: self.needs_negation,
+        })
+    }
+
+    /// Creates a new FROST key from a set of core signer share images.
+    ///
+    /// The idea is that you can define the FROST key by a threshold number of key share images non-interactively.
+    /// Each scalar pre-image of teh `core_shares` will be the secret shares for this key.
+    ///
+    /// This is an experimental API and **MUST** not be used you have convincing proof that what you
+    /// are doing is actually secure in your adversarial model.
+    ///
+    /// ⚠️ This definitely is not secure if `core_shares` has not been delinearized by a hash
+    /// function (i.e. MuSig) or you don't have a proof of possession of each share. Furthermore we
+    /// are not aware of any proof that it is secure even you do take these precautions so please
+    /// don't use this.
+    ///
+    /// ## Return value
+    ///
+    /// Returns `None` when the core shares would result in a FROST public key of `Zero`.
+    pub fn from_core_share_images(
+        core_shares: BTreeMap<PartyIndex, Point<Normal, Public, impl ZeroChoice>>,
+    ) -> Option<Self> {
+        let public_key = eval_point_poly_defined_by_shares(Scalar::zero(), &core_shares)
+            .non_zero()?
+            .normalize();
+        Some(FrostKey {
+            public_key,
+            core_shares: core_shares
+                .into_iter()
+                .map(|(party_index, share)| (party_index, share.mark_zero()))
+                .collect(),
+            tweak: Scalar::zero(),
+            needs_negation: false,
         })
     }
 }
@@ -470,10 +503,9 @@ impl FrostKey<EvenY> {
 
         Some(Self {
             public_key: new_public_key,
+            core_shares: self.core_shares,
             needs_negation,
             tweak: new_tweak,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
         })
     }
 }
@@ -541,7 +573,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
         frost_key: &FrostKey<impl Normalized>,
-        secret: &Scalar,
+        secret: &Scalar<Secret, impl ZeroChoice>,
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
@@ -566,7 +598,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar>) {
+    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar<Secret, Zero>>) {
         let scalar_polys = (0..n_parties)
             .map(|i| {
                 (
@@ -654,12 +686,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Collect all the public polynomials into a [`KeyGen`] session with a [`FrostKey`].
     ///
     /// Takes a vector of point polynomials to use for this [`FrostKey`].
-    /// Also prepares a vector of verification shares for later.
     pub fn new_keygen(
         &self,
         point_polys: BTreeMap<PartyIndex, Vec<Point>>,
     ) -> Result<KeyGen, NewKeyGenError> {
-        let len_first_poly = point_polys
+        let threshold = point_polys
             .iter()
             .next()
             .map(|(_, poly)| poly.len())
@@ -667,34 +698,30 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         {
             if let Some((i, _)) = point_polys
                 .iter()
-                .find(|(_, point_poly)| point_poly.len() != len_first_poly)
+                .find(|(_, point_poly)| point_poly.len() != threshold)
             {
                 return Err(NewKeyGenError::PolyDifferentLength(*i));
             }
 
             // Number of parties is less than the length of polynomials specifying the threshold
-            if point_polys.len() < len_first_poly {
+            if point_polys.len() < threshold {
                 return Err(NewKeyGenError::NotEnoughParties);
             }
         }
 
-        let mut joint_poly = (0..len_first_poly)
+        let mut joint_poly = (0..threshold)
             .map(|_| Point::<NonNormal, Public, _>::zero())
             .collect::<Vec<_>>();
 
         for poly in point_polys.values() {
-            for i in 0..len_first_poly {
+            for i in 0..threshold {
                 joint_poly[i] += poly[i];
             }
         }
 
-        let public_key = joint_poly[0]
-            .normalize()
-            .non_zero()
-            .ok_or(NewKeyGenError::ZeroFrostKey)?;
-
-        let verification_shares = point_polys
+        let core_shares = point_polys
             .keys()
+            .take(threshold)
             .map(|party_index| {
                 (
                     *party_index,
@@ -703,12 +730,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             })
             .collect();
 
+        let public_key = joint_poly[0]
+            .normalize()
+            .non_zero()
+            .ok_or(NewKeyGenError::ZeroFrostKey)?;
+
         Ok(KeyGen {
             point_polys,
             frost_key: FrostKey {
-                verification_shares,
+                core_shares,
                 public_key,
-                threshold: joint_poly.len(),
                 tweak: Scalar::zero(),
                 needs_negation: false,
             },
@@ -757,7 +788,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: PartyIndex,
         secret_shares: BTreeMap<PartyIndex, (Scalar<Secret, Zero>, Signature)>,
         proof_of_possession_msg: Message,
-    ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
+    ) -> Result<(Scalar<Secret, Zero>, FrostKey<Normal>), FinishKeyGenError> {
         let mut total_secret_share = s!(0);
 
         for (party_index, poly) in &keygen.point_polys {
@@ -779,10 +810,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             }
             total_secret_share += secret_share;
         }
-
-        let total_secret_share = total_secret_share.non_zero().expect(
-            "since verification shares are non-zero, the total secret share cannot be zero",
-        );
 
         Ok((total_secret_share, keygen.frost_key))
     }
@@ -860,16 +887,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Panics
     ///
     /// Panics if the `secret_nonce` does not match the previously provided public nonce in the
-    /// `session`.
+    /// `session` (or `my_index` was not even party of the session).
     pub fn sign(
         &self,
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         my_index: PartyIndex,
-        secret_share: &Scalar,
+        secret_share: &Scalar<Secret, impl ZeroChoice>,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = lagrange_lambda(
+        let mut lambda = eval_lagrange_basis_polynomial(
+            Scalar::<Public, _>::zero(),
             my_index,
             session.nonces.keys().filter(|&j| *j != my_index).copied(),
         );
@@ -892,38 +920,36 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         s!(r1 + (r2 * b) + lambda * x * c).public()
     }
 
-    /// Verify a partial signature for a participant at `index` (from zero).
-    ///
-    /// ## Return Value
-    ///
-    /// Returns `bool`, true if partial signature is valid.
+    /// Verify a partial signature for a participant at `index`
     pub fn verify_signature_share(
         &self,
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         index: PartyIndex,
         signature_share: Scalar<Public, Zero>,
-    ) -> bool {
+    ) -> Result<(), VerifyShareError> {
         let s = signature_share;
-        let mut lambda = lagrange_lambda(
+        let mut lambda = eval_lagrange_basis_polynomial(
+            Scalar::<Public, _>::zero(),
             index,
             session.nonces.keys().filter(|&j| *j != index).copied(),
         );
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = match frost_key.verification_shares().get(&index) {
-            Some(key) => key,
-            None => return false,
-        };
-        let [R1, R2] = session
+        let X = frost_key.verification_share(index);
+        let [ref R1, ref R2] = session
             .nonces
             .get(&index)
-            .expect("verifying party index that is not part of frost signing coalition")
+            .ok_or(VerifyShareError::PartyIsNotPartyOfSession)?
             .0;
         let R1 = R1.conditional_negate(session.nonces_need_negation);
         let R2 = R2.conditional_negate(session.nonces_need_negation);
-        g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
+        if g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero() {
+            Ok(())
+        } else {
+            Err(VerifyShareError::InvalidShare)
+        }
     }
 
     /// Combine a vector of signatures shares into an aggregate signature.
@@ -978,18 +1004,38 @@ impl SignSession {
     }
 }
 
-/// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
-fn lagrange_lambda(
+/// Evaluates the basis polynomial defined by `(x_j, x_ms) at `x_coord`
+fn eval_lagrange_basis_polynomial(
+    x_coord: Scalar<impl Secrecy, impl ZeroChoice>,
     x_j: Scalar<impl Secrecy>,
     x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
-) -> Scalar {
-    x_ms.fold(Scalar::one(), |acc, x_m| {
-        let denominator = s!(x_m - x_j)
+) -> Scalar<Public, Zero> {
+    x_ms.fold(Scalar::one().mark_zero(), |acc, x_m| {
+        let numerator = s!(x_coord - x_m).public();
+        let denominator = s!(x_j - x_m)
+            .public()
             .non_zero()
             .expect("removed duplicate indexes")
             .invert();
-        s!(acc * x_m * denominator)
+        s!(acc * numerator * denominator).public()
     })
+}
+
+/// Evalulates a polynomial defined by `share_images` at `x_coord`
+fn eval_point_poly_defined_by_shares(
+    x_coord: Scalar<Public, impl ZeroChoice>,
+    share_images: &BTreeMap<PartyIndex, Point<Normal, Public, impl ZeroChoice>>,
+) -> Point<NonNormal, Public, Zero> {
+    let mut output = Point::zero();
+    for (party_index, core_share) in share_images {
+        let other_indices = share_images
+            .keys()
+            .filter(|index| *index != party_index)
+            .copied();
+        let lambda = eval_lagrange_basis_polynomial(x_coord, *party_index, other_indices);
+        output += g!(lambda * core_share);
+    }
+    output
 }
 
 /// Constructor for a Frost instance using deterministic nonce generation.
@@ -1085,6 +1131,29 @@ fn point_poly_eval(
     secp256kfun::op::lincomb(&xpows, poly.iter())
 }
 
+/// Error returned from [Frost::verify_signature_share]
+#[derive(Clone, Debug, PartialEq)]
+pub enum VerifyShareError {
+    /// The signature share was invalid
+    InvalidShare,
+    /// The party index was not part of the signing session
+    PartyIsNotPartyOfSession,
+}
+
+impl core::fmt::Display for VerifyShareError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            VerifyShareError::InvalidShare => write!(f, "the signature share is invalid"),
+            VerifyShareError::PartyIsNotPartyOfSession => {
+                write!(f, "the party is not party of the signing session")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for VerifyShareError {}
+
 #[cfg(test)]
 mod test {
 
@@ -1101,7 +1170,7 @@ mod test {
         });
         assert_eq!(
             res,
-            lagrange_lambda(s!(2), [s!(1), s!(4), s!(5)].into_iter())
+            eval_lagrange_basis_polynomial(s!(0), s!(2), [s!(1), s!(4), s!(5)].into_iter())
         );
     }
 
