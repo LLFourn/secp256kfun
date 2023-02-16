@@ -29,9 +29,9 @@
 //! let public_polys = vec![my_public_poly, public_poly2, public_poly3];
 //! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! let (my_shares, my_pop) = frost.create_shares(&keygen, my_secret_poly);
-//! # let (shares2, pop2) = frost.create_shares(&keygen, secret_poly2);
-//! # let (shares3, pop3) = frost.create_shares(&keygen, secret_poly3);
+//! let (my_shares, my_pop) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
+//! # let (shares2, pop2) = frost.create_shares_and_pop(&keygen, &secret_poly2);
+//! # let (shares3, pop3) = frost.create_shares_and_pop(&keygen, &secret_poly3);
 //! // for i = 0..3, Send the secret share at index i and all proofs-of-possession to the participant with index i,
 //! // and receive our shares and pops from each participant as well.
 //! let received_shares = vec![my_shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
@@ -246,6 +246,11 @@ impl KeyGen {
     pub fn n_parties(&self) -> usize {
         self.point_polys.len()
     }
+
+    /// Return the keygen id for this session
+    pub fn keygen_id(&self) -> [u8; 32] {
+        self.keygen_id
+    }
 }
 
 /// First round keygen errors
@@ -437,27 +442,55 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// Create our secret shares and proof-of-possession to be shared with other participants.
     ///
     /// Each secret share needs to be securely communicated to the intended participant.
-    /// The proof-of-possession should be sent to all participants.
     ///
-    /// ## Return value
+    /// # Return value
     ///
-    /// Returns a vector of secret shares where the index represents the signer index and a
-    /// proof-of-possession as a `Signature`.
-    pub fn create_shares(
+    /// Returns a vector of secret shares where the index represents the signer index,
+    /// and a proof of possession.
+    pub fn create_shares_and_pop(
         &self,
         keygen: &KeyGen,
-        scalar_poly: Vec<Scalar>,
+        scalar_poly: &[Scalar],
     ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
+        (
+            self.create_shares(1..=keygen.n_parties(), scalar_poly),
+            self.create_proof_of_posessions(&keygen.keygen_id, scalar_poly),
+        )
+    }
+
+    /// Create our proof of posession to prove ownership of our scalar polynomial secret
+    ///
+    /// # Return value
+    ///
+    /// Returns a Signature of the keygen id under the first coeficient of our secret polynomial
+    pub fn create_proof_of_posessions(
+        &self,
+        keygen_id: &[u8],
+        scalar_poly: &[Scalar],
+    ) -> Signature {
         let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
         let pop = self
             .schnorr
-            .sign(&key_pair, Message::<Public>::raw(&keygen.keygen_id));
+            .sign(&key_pair, Message::<Public>::raw(keygen_id));
 
-        let shares = (1..=keygen.point_polys.len())
-            .map(|i| scalar_poly_eval(&scalar_poly, (i as u32).into()))
-            .collect();
+        pop
+    }
 
-        (shares, pop)
+    /// Create our secret shares to be shared with other participants using pre-existing indexes
+    ///
+    /// Each secret share needs to be securely communicated to the intended participant.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a vector of secret shares where the index represents the signer index
+    pub fn create_shares(
+        &self,
+        party_indexes: impl Iterator<Item = usize>,
+        scalar_poly: &[Scalar],
+    ) -> Vec<Scalar<Secret, Zero>> {
+        party_indexes
+            .map(|i| scalar_poly_eval(scalar_poly, (i as u32).into()))
+            .collect()
     }
 
     /// Seed a random number generator to be used for FROST nonces.
@@ -522,9 +555,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .map(|sp| to_point_poly(sp))
             .collect::<Vec<_>>();
         let keygen = self.new_keygen(point_polys).unwrap();
-        let (shares, proofs_of_possesion): (Vec<_>, Vec<_>) = scalar_polys
+        let (shares, proofs_of_possession): (Vec<_>, Vec<_>) = scalar_polys
             .into_iter()
-            .map(|sp| self.create_shares(&keygen, sp))
+            .map(|sp| self.create_shares_and_pop(&keygen, &sp))
             .unzip();
         // collect the received shares for each party
         let received_shares = (0..n_parties)
@@ -543,7 +576,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                         keygen.clone(),
                         party_index,
                         received_shares[party_index].clone(),
-                        proofs_of_possesion.clone(),
+                        proofs_of_possession.clone(),
                     )
                     .unwrap();
 
@@ -555,7 +588,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
+impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// Verify a proof-of-possession of a point
     ///
     /// ## Return value
@@ -566,7 +599,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
         self.schnorr.verify(
             &even_poly_point,
-            Message::<Public>::raw(&keygen.keygen_id),
+            Message::<Public>::raw(&keygen.keygen_id()),
             &pop,
         )
     }
@@ -619,7 +652,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 keygen_hash.update(point.to_bytes());
             }
         }
-        let keygen_id = keygen_hash.finalize().into();
+        let keygen_id: [u8; 32] = keygen_hash.finalize().into();
 
         let verification_shares = (1..=point_polys.len())
             .map(|i| point_poly_eval(&joint_poly, (i as u32).into()).normalize())
