@@ -202,6 +202,21 @@ impl<H, NG> Frost<H, NG> {
     pub fn nonce_gen(&self) -> &NG {
         &self.nonce_gen
     }
+
+    /// Create our secret shares to be shared with other participants using pre-existing indexes
+    ///
+    /// Each secret share needs to be securely communicated to the intended participant.
+    ///
+    /// ## Return value
+    ///
+    /// Returns a vector of secret shares where the index represents the signer index
+    pub fn create_share(
+        &self,
+        scalar_poly: &[Scalar],
+        party_index: Scalar<impl Secrecy>,
+    ) -> Scalar<Secret, Zero> {
+        scalar_poly_eval(scalar_poly, party_index)
+    }
 }
 
 impl<H, NG> Frost<H, NG>
@@ -453,8 +468,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         scalar_poly: &[Scalar],
     ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
         (
-            self.create_shares(1..=keygen.n_parties(), scalar_poly),
-            self.create_proof_of_posessions(&keygen.keygen_id, scalar_poly),
+            (1..=keygen.n_parties())
+                .map(|i| {
+                    self.create_share(
+                        scalar_poly,
+                        Scalar::<Public, Zero>::from(i as u32).non_zero().unwrap(),
+                    )
+                })
+                .collect(),
+            self.create_proof_of_posession(&keygen.keygen_id, scalar_poly),
         )
     }
 
@@ -463,34 +485,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// # Return value
     ///
     /// Returns a Signature of the keygen id under the first coeficient of our secret polynomial
-    pub fn create_proof_of_posessions(
-        &self,
-        keygen_id: &[u8],
-        scalar_poly: &[Scalar],
-    ) -> Signature {
+    pub fn create_proof_of_posession(&self, keygen_id: &[u8], scalar_poly: &[Scalar]) -> Signature {
         let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
         let pop = self
             .schnorr
             .sign(&key_pair, Message::<Public>::raw(keygen_id));
 
         pop
-    }
-
-    /// Create our secret shares to be shared with other participants using pre-existing indexes
-    ///
-    /// Each secret share needs to be securely communicated to the intended participant.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a vector of secret shares where the index represents the signer index
-    pub fn create_shares(
-        &self,
-        party_indexes: impl Iterator<Item = usize>,
-        scalar_poly: &[Scalar],
-    ) -> Vec<Scalar<Secret, Zero>> {
-        party_indexes
-            .map(|i| scalar_poly_eval(scalar_poly, (i as u32).into()))
-            .collect()
     }
 
     /// Seed a random number generator to be used for FROST nonces.
@@ -1002,7 +1003,10 @@ pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Sca
     (0..threshold).map(|_| Scalar::random(rng)).collect()
 }
 
-fn scalar_poly_eval(poly: &[Scalar], x: Scalar<Public, impl ZeroChoice>) -> Scalar<Secret, Zero> {
+fn scalar_poly_eval(
+    poly: &[Scalar],
+    x: Scalar<impl Secrecy, impl ZeroChoice>,
+) -> Scalar<Secret, Zero> {
     poly.iter()
         .fold((s!(0), s!(1).mark_zero()), |(eval, xpow), coeff| {
             (s!(eval + xpow * coeff), s!(xpow * x))
