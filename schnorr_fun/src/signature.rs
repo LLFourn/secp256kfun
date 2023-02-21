@@ -1,7 +1,7 @@
 use crate::fun::{marker::*, rand_core::RngCore, Point, Scalar};
 
 /// A Schnorr signature.
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub struct Signature<S = Public> {
     /// The signature's public nonce
     ///

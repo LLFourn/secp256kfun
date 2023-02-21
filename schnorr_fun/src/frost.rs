@@ -3,7 +3,8 @@
 //! ## Synopsis
 //!
 //! ```
-//! # use schnorr_fun::binonce::NonceKeyPair;
+//! use schnorr_fun::binonce::NonceKeyPair;
+//! use schnorr_fun::fun::s;
 //! use schnorr_fun::{
 //!     frost,
 //!     Message,
@@ -25,9 +26,17 @@
 //! # let secret_poly3 = frost::generate_scalar_poly(threshold, &mut rng);
 //! # let public_poly2 = frost::to_point_poly(&secret_poly2);
 //! # let public_poly3 = frost::to_point_poly(&secret_poly3);
+//! let device_index = s!(1).public();
+//! # let device_index2 = s!(2).public();
+//! # let device_index3 = s!(3).public();
 //! // share our public point poly, and receive the point polys from other participants
-//! let public_polys = vec![my_public_poly, public_poly2, public_poly3];
-//! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
+//! let public_polys = vec![
+//!     (device_index, my_public_poly),
+//!     (device_index2, public_poly2),
+//!     (device_index3, public_poly3),
+//! ];
+//! let keygen_id = frost.create_keygen_id(&public_polys);
+//! let keygen = frost.new_keygen(public_polys, keygen_id).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
 //! let (my_shares, my_pop) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
 //! # let (shares2, pop2) = frost.create_shares_and_pop(&keygen, &secret_poly2);
@@ -42,7 +51,7 @@
 //! let (my_secret_share, frost_key) = frost
 //!     .finish_keygen(
 //!         keygen.clone(),
-//!         0,
+//!         device_index,
 //!         received_shares,
 //!         proofs_of_possession.clone(),
 //!     )
@@ -50,7 +59,7 @@
 //! # let (secret_share3, _frost_key3) = frost
 //! #    .finish_keygen(
 //! #        keygen.clone(),
-//! #        2,
+//! #        device_index3,
 //! #        received_shares3,
 //! #        proofs_of_possession.clone(),
 //! #    )
@@ -145,6 +154,8 @@
 //! ```
 //!
 //! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
+use core::num::NonZeroU32;
+
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature};
 use alloc::{collections::BTreeMap, vec::Vec};
@@ -158,6 +169,8 @@ use secp256kfun::{
     rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
+
+type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
 ///
@@ -538,6 +551,20 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         rng
     }
 
+    /// Create a keygen id to seed a keygen
+    /// TODO
+    pub fn create_keygen_id(&self, point_polys: &Vec<(Scalar<Public>, Vec<Point>)>) -> [u8; 32] {
+        let mut keygen_hash = self.keygen_id_hash.clone();
+        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
+        for (_, poly) in point_polys {
+            for point in poly {
+                keygen_hash.update(point.to_bytes());
+            }
+        }
+        let keygen_id: [u8; 32] = keygen_hash.finalize().into();
+        keygen_id
+    }
+
     /// Run the key generation protocol while simulating the parties internally.
     ///
     /// This can be used to do generate a "trusted setup" FROST key. It returns the joint `FrostKey`
@@ -553,9 +580,19 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .collect::<Vec<_>>();
         let point_polys = scalar_polys
             .iter()
-            .map(|sp| to_point_poly(sp))
+            .enumerate()
+            .map(|(party_index, sp)| {
+                (
+                    Scalar::from_non_zero_u32(NonZeroU32::new((party_index + 1) as u32).unwrap())
+                        .public(),
+                    to_point_poly(sp),
+                )
+            })
             .collect::<Vec<_>>();
-        let keygen = self.new_keygen(point_polys).unwrap();
+
+        let keygen = self
+            .new_keygen(point_polys.clone(), self.create_keygen_id(&point_polys))
+            .unwrap();
         let (shares, proofs_of_possession): (Vec<_>, Vec<_>) = scalar_polys
             .into_iter()
             .map(|sp| self.create_shares_and_pop(&keygen, &sp))
@@ -570,13 +607,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .collect::<Vec<Vec<_>>>();
 
         // finish keygen for each party
-        let (secret_shares, mut frost_keys): (Vec<_>, Vec<_>) = (0..n_parties)
-            .map(|party_index| {
+        let (secret_shares, mut frost_keys): (Vec<_>, Vec<_>) = point_polys
+            .into_iter()
+            .enumerate()
+            .map(|(i, (party_index, _))| {
                 let (secret_share, frost_key) = self
                     .finish_keygen(
                         keygen.clone(),
                         party_index,
-                        received_shares[party_index].clone(),
+                        received_shares[i].clone(),
                         proofs_of_possession.clone(),
                     )
                     .unwrap();
@@ -589,20 +628,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
+impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Verify a proof-of-possession of a point
     ///
     /// ## Return value
     ///
     /// Returns `bool` true if the proof-of-possession matches the point
-    fn verify_pop(&self, keygen: &KeyGen, point: Point, pop: Signature) -> bool {
+    fn verify_pop(&self, keygen_id: &[u8], point: Point, pop: Signature) -> bool {
         let (even_poly_point, _) = point.into_point_with_even_y();
 
-        self.schnorr.verify(
-            &even_poly_point,
-            Message::<Public>::raw(&keygen.keygen_id()),
-            &pop,
-        )
+        self.schnorr
+            .verify(&even_poly_point, Message::<Public>::raw(&keygen_id), &pop)
     }
 
     /// Collect all the public polynomials into a [`KeyGen`] session with a [`FrostKey`].
@@ -613,13 +649,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a [`KeyGen`] containing a [`FrostKey`]
-    pub fn new_keygen(&self, point_polys: Vec<Vec<Point>>) -> Result<KeyGen, NewKeyGenError> {
-        let len_first_poly = point_polys[0].len();
+    pub fn new_keygen(
+        &self,
+        point_polys: Vec<(PartyIndex, Vec<Point>)>,
+        keygen_id: [u8; 32],
+    ) -> Result<KeyGen, NewKeyGenError> {
+        let len_first_poly = point_polys[0].1.len();
         {
             if let Some((i, _)) = point_polys
                 .iter()
                 .enumerate()
-                .find(|(_, point_poly)| point_poly.len() != len_first_poly)
+                .find(|(_, point_poly)| point_poly.1.len() != len_first_poly)
             {
                 return Err(NewKeyGenError::PolyDifferentLength(i));
             }
@@ -634,7 +674,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .map(|_| Point::<NonNormal, Public, _>::zero())
             .collect::<Vec<_>>();
 
-        for poly in &point_polys {
+        for (_, poly) in &point_polys {
             for i in 0..len_first_poly {
                 joint_poly[i] += poly[i];
             }
@@ -645,22 +685,24 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
-        let mut keygen_hash = self.keygen_id_hash.clone();
-        keygen_hash.update((len_first_poly as u32).to_be_bytes());
-        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
-        for poly in &point_polys {
-            for point in poly {
-                keygen_hash.update(point.to_bytes());
-            }
-        }
-        let keygen_id: [u8; 32] = keygen_hash.finalize().into();
+        // let mut keygen_hash = self.keygen_id_hash.clone();
+        // keygen_hash.update((len_first_poly as u32).to_be_bytes());
+        // keygen_hash.update((point_polys.len() as u32).to_be_bytes());
+        // for (_, poly) in &point_polys {
+        //     for point in poly {
+        //         keygen_hash.update(point.to_bytes());
+        //     }
+        // }
+        // let keygen_id: [u8; 32] = keygen_hash.finalize().into();
 
-        let verification_shares = (1..=point_polys.len())
-            .map(|i| point_poly_eval(&joint_poly, (i as u32).into()).normalize())
+        let verification_shares = point_polys
+            .clone()
+            .into_iter()
+            .map(|(party_index, _)| point_poly_eval(&joint_poly, party_index).normalize())
             .collect();
 
         Ok(KeyGen {
-            point_polys,
+            point_polys: point_polys.into_iter().map(|(_, poly)| poly).collect(),
             keygen_id,
             frost_key: FrostKey {
                 verification_shares,
@@ -685,7 +727,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     pub fn finish_keygen(
         &self,
         keygen: KeyGen,
-        my_index: usize,
+        my_index: PartyIndex,
         secret_shares: Vec<Scalar<Secret, Zero>>,
         proofs_of_possession: Vec<Signature>,
     ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
@@ -701,15 +743,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             .zip(proofs_of_possession)
             .enumerate()
         {
-            if !self.verify_pop(&keygen, poly[0], pop) {
+            if !self.verify_pop(&keygen.keygen_id, poly[0], pop) {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(i));
             }
         }
 
         let mut total_secret_share = s!(0);
         for (i, (secret_share, poly)) in secret_shares.iter().zip(&keygen.point_polys).enumerate() {
-            let expected_public_share =
-                point_poly_eval(poly, Scalar::<Public, Zero>::from((my_index + 1) as u32));
+            let expected_public_share = point_poly_eval(poly, my_index);
             if g!(secret_share * G) != expected_public_share {
                 return Err(FinishKeyGenError::InvalidShare(i));
             }
