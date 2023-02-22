@@ -76,16 +76,16 @@
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
 //! // receive public nonces from other signers
-//! let nonces = vec![(0, my_nonce.public()), (2, received_nonce3)];
-//! # let nonces3 = vec![(0, my_nonce.public()), (2, received_nonce3)];
+//! let nonces = vec![(device_index, my_nonce.public()), (device_index3, received_nonce3)];
+//! # let nonces3 = vec![(device_index, my_nonce.public()), (device_index3, received_nonce3)];
 //! // start a sign session with these nonces for a message
 //! let session = frost.start_sign_session(&frost_key, nonces, message);
 //! # let session3 = frost.start_sign_session(&frost_key, nonces3, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let my_sig = frost.sign(&frost_key, &session, 0, &my_secret_share, my_nonce);
-//! # let sig3 = frost.sign(&frost_key, &session3, 2, &secret_share3, nonce3);
+//! let my_sig = frost.sign(&frost_key, &session, device_index, &my_secret_share, my_nonce);
+//! # let sig3 = frost.sign(&frost_key, &session3, device_index3, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
-//! assert!(frost.verify_signature_share(&frost_key, &session, 2, sig3));
+//! assert!(frost.verify_signature_share(&frost_key, &session, device_index3, sig3));
 //! // combine signature shares into a single signature that is valid under the FROST key
 //! let combined_sig = frost.combine_signature_shares(&frost_key, &session, vec![my_sig, sig3]);
 //! assert!(frost.schnorr.verify(
@@ -353,7 +353,7 @@ pub struct FrostKey<T: PointType> {
     )]
     public_key: Point<T>,
     /// The image of each party's key share.
-    verification_shares: Vec<Point<Normal, Public, Zero>>,
+    verification_shares: BTreeMap<PartyIndex, Point<Normal, Public, Zero>>,
     /// Number of partial signatures required to create a combined signature under this key.
     threshold: usize,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
@@ -371,8 +371,8 @@ impl<T: Copy + PointType> FrostKey<T> {
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
-    pub fn verification_shares(&self) -> impl Iterator<Item = Point<Normal, Public, Zero>> + '_ {
-        self.verification_shares.iter().copied()
+    pub fn verification_shares(&self) -> &BTreeMap<PartyIndex, Point<Normal, Public, Zero>> {
+        &self.verification_shares
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
@@ -698,7 +698,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let verification_shares = point_polys
             .clone()
             .into_iter()
-            .map(|(party_index, _)| point_poly_eval(&joint_poly, party_index).normalize())
+            .map(|(party_index, _)| {
+                (
+                    party_index,
+                    point_poly_eval(&joint_poly, party_index).normalize(),
+                )
+            })
             .collect();
 
         Ok(KeyGen {
@@ -777,7 +782,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     pub fn start_sign_session(
         &self,
         frost_key: &FrostKey<EvenY>,
-        nonces: Vec<(usize, Nonce)>,
+        nonces: Vec<(PartyIndex, Nonce)>,
         message: Message,
     ) -> SignSession {
         let mut nonce_map: BTreeMap<_, _> =
@@ -842,18 +847,18 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         &self,
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
-        my_index: usize,
+        my_index: PartyIndex,
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
         let mut lambda = lagrange_lambda(
-            my_index as u32 + 1,
+            my_index,
             &session
                 .nonces
                 .iter()
-                .filter(|(j, _)| **j != my_index)
-                .map(|(j, _)| *j as u32 + 1)
-                .collect::<Vec<_>>(),
+                .filter(|(&j, _)| j != my_index)
+                .map(|(j, _)| *j)
+                .collect(),
         );
         lambda.conditional_negate(frost_key.needs_negation);
         let [mut r1, mut r2] = secret_nonce.secret;
@@ -879,23 +884,23 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         &self,
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
-        index: usize,
+        index: PartyIndex,
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
         let mut lambda = lagrange_lambda(
-            index as u32 + 1,
+            index,
             &session
                 .nonces
                 .iter()
                 .filter(|(j, _)| **j != index)
-                .map(|(j, _)| *j as u32 + 1)
+                .map(|(j, _)| *j)
                 .collect::<Vec<_>>(),
         );
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = frost_key.verification_shares().nth(index).unwrap();
+        let X = frost_key.verification_shares().get(&index).unwrap();
         let [ref R1, ref R2] = session
             .nonces
             .get(&index)
@@ -942,7 +947,7 @@ pub struct SignSession {
     nonces_need_negation: bool,
     agg_nonce: Point<EvenY>,
     challenge: Scalar<Public, Zero>,
-    nonces: BTreeMap<usize, Nonce>,
+    nonces: BTreeMap<PartyIndex, Nonce>,
 }
 
 impl SignSession {
@@ -951,29 +956,20 @@ impl SignSession {
     /// ## Return value
     ///
     /// An iterator of participant indices
-    pub fn participants(&self) -> impl DoubleEndedIterator<Item = usize> + '_ {
+    pub fn participants(&self) -> impl DoubleEndedIterator<Item = PartyIndex> + '_ {
         self.nonces.keys().copied()
     }
 }
 
 /// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
-fn lagrange_lambda(x_j: u32, x_ms: &[u32]) -> Scalar {
-    let x_j = Scalar::from(x_j)
-        .non_zero()
-        .expect("target xcoord can not be zero");
-    x_ms.iter()
-        .map(|x_m| {
-            Scalar::from(*x_m)
-                .non_zero()
-                .expect("index can not be zero")
-        })
-        .fold(Scalar::one(), |acc, x_m| {
-            let denominator = s!(x_m - x_j)
-                .non_zero()
-                .expect("removed duplicate indexes")
-                .invert();
-            s!(acc * x_m * denominator)
-        })
+fn lagrange_lambda(x_j: Scalar<impl Secrecy>, x_ms: &Vec<Scalar<impl Secrecy>>) -> Scalar {
+    x_ms.iter().fold(Scalar::one(), |acc, x_m| {
+        let denominator = s!(x_m - x_j)
+            .non_zero()
+            .expect("removed duplicate indexes")
+            .invert();
+        s!(acc * x_m * denominator)
+    })
 }
 
 /// Constructor for a Frost instance using deterministic nonce generation.
@@ -1081,7 +1077,7 @@ mod test {
                 .expect("")
                 .invert()
         });
-        assert_eq!(res, lagrange_lambda(2, &[1, 4, 5]));
+        assert_eq!(res, lagrange_lambda(s!(2), &vec![s!(1), s!(4), s!(5)]));
     }
 
     #[test]
@@ -1094,7 +1090,7 @@ mod test {
 
         let session = frost.start_sign_session(
             &frost_key.into_xonly_key(),
-            vec![(0, nonce), (1, malicious_nonce)],
+            vec![(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)],
             Message::<Public>::plain("test", b"hello"),
         );
 
