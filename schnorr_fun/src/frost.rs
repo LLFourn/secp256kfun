@@ -35,12 +35,11 @@
 //!     (device_index2, public_poly2),
 //!     (device_index3, public_poly3),
 //! ];
-//! let keygen_id = frost.create_keygen_id(&public_polys);
-//! let keygen = frost.new_keygen(public_polys, keygen_id).expect("something wrong with what was provided by other parties");
+//! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! let (my_shares, my_pop) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
-//! # let (shares2, pop2) = frost.create_shares_and_pop(&keygen, &secret_poly2);
-//! # let (shares3, pop3) = frost.create_shares_and_pop(&keygen, &secret_poly3);
+//! let (my_shares, my_pop, keygen_id) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
+//! # let (shares2, pop2, _) = frost.create_shares_and_pop(&keygen, &secret_poly2);
+//! # let (shares3, pop3, _) = frost.create_shares_and_pop(&keygen, &secret_poly3);
 //! // for i = 0..3, Send the secret share at index i and all proofs-of-possession to the participant with index i,
 //! // and receive our shares and pops from each participant as well.
 //! let received_shares = vec![my_shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
@@ -54,6 +53,7 @@
 //!         device_index,
 //!         received_shares,
 //!         proofs_of_possession.clone(),
+//!         Message::raw(&keygen_id),
 //!     )
 //!     .unwrap();
 //! # let (secret_share3, _frost_key3) = frost
@@ -62,6 +62,7 @@
 //! #        device_index3,
 //! #        received_shares3,
 //! #        proofs_of_possession.clone(),
+//! #        Message::raw(&keygen_id),
 //! #    )
 //! #    .unwrap();
 //! // We're ready to do some signing, so convert to xonly key
@@ -266,18 +267,12 @@ where
 pub struct KeyGen {
     frost_key: FrostKey<Normal>,
     point_polys: Vec<Vec<Point>>,
-    keygen_id: [u8; 32],
 }
 
 impl KeyGen {
     /// Return the number of parties in the KeyGen
     pub fn n_parties(&self) -> usize {
         self.point_polys.len()
-    }
-
-    /// Return the keygen id for this session
-    pub fn keygen_id(&self) -> [u8; 32] {
-        self.keygen_id
     }
 }
 
@@ -469,17 +464,23 @@ impl FrostKey<EvenY> {
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// Create our secret shares and proof-of-possession to be shared with other participants.
     ///
+    /// Conveniently create all the secret shares, our proof-of-possession, and the keygen_id.
+    ///
+    /// This method should be used unless you have an out-of-band way to agree upon a view of the
+    /// participant configuration out of band. If you do have such means, then you can sign an
+    /// agreed upon proof of possession message using [`Frost::create_proof_of_possession`].
+    ///
     /// Each secret share needs to be securely communicated to the intended participant.
     ///
     /// # Return value
     ///
     /// Returns a vector of secret shares where the index represents the signer index,
-    /// and a proof of possession.
+    /// a proof of possession, and the keygen_id.
     pub fn create_shares_and_pop(
         &self,
         keygen: &KeyGen,
         scalar_poly: &[Scalar],
-    ) -> (Vec<Scalar<Secret, Zero>>, Signature) {
+    ) -> (Vec<Scalar<Secret, Zero>>, Signature, [u8; 32]) {
         (
             (1..=keygen.n_parties())
                 .map(|i| {
@@ -489,21 +490,33 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                     )
                 })
                 .collect(),
-            self.create_proof_of_posession(&keygen.keygen_id, scalar_poly),
+            self.create_proof_of_possession(
+                Message::<Public>::raw(&self.keygen_id(&keygen)),
+                scalar_poly,
+            ),
+            self.keygen_id(&keygen),
         )
     }
 
-    /// Create our proof of posession to prove ownership of our scalar polynomial secret
+    /// Sign a custom proof of possession message to prove ownership of our scalar polynomial secret
+    ///
+    /// This method proves useful when wishing to share proofs of possession upfront prior to the
+    /// sharing of point polynomials.
+    ///
+    /// The message should be unique for this key generation session and agreed upon by the other
+    /// participants. The message could be chosen as a group to be blank, however this would open
+    /// risk to replay attacks.
     ///
     /// # Return value
     ///
     /// Returns a Signature of the keygen id under the first coeficient of our secret polynomial
-    pub fn create_proof_of_posession(&self, keygen_id: &[u8], scalar_poly: &[Scalar]) -> Signature {
+    pub fn create_proof_of_possession(
+        &self,
+        message: Message,
+        scalar_poly: &[Scalar],
+    ) -> Signature {
         let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
-        let pop = self
-            .schnorr
-            .sign(&key_pair, Message::<Public>::raw(keygen_id));
-
+        let pop = self.schnorr.sign(&key_pair, message);
         pop
     }
 
@@ -551,20 +564,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         rng
     }
 
-    /// Create a keygen id to seed a keygen
-    /// TODO
-    pub fn create_keygen_id(&self, point_polys: &Vec<(Scalar<Public>, Vec<Point>)>) -> [u8; 32] {
-        let mut keygen_hash = self.keygen_id_hash.clone();
-        keygen_hash.update((point_polys.len() as u32).to_be_bytes());
-        for (_, poly) in point_polys {
-            for point in poly {
-                keygen_hash.update(point.to_bytes());
-            }
-        }
-        let keygen_id: [u8; 32] = keygen_hash.finalize().into();
-        keygen_id
-    }
-
     /// Run the key generation protocol while simulating the parties internally.
     ///
     /// This can be used to do generate a "trusted setup" FROST key. It returns the joint `FrostKey`
@@ -590,12 +589,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
             })
             .collect::<Vec<_>>();
 
-        let keygen = self
-            .new_keygen(point_polys.clone(), self.create_keygen_id(&point_polys))
-            .unwrap();
+        let keygen = self.new_keygen(point_polys.clone()).unwrap();
         let (shares, proofs_of_possession): (Vec<_>, Vec<_>) = scalar_polys
             .into_iter()
-            .map(|sp| self.create_shares_and_pop(&keygen, &sp))
+            .map(|sp| {
+                let (shares, pop, _pop_msg) = self.create_shares_and_pop(&keygen, &sp);
+                (shares, pop)
+            })
             .unzip();
         // collect the received shares for each party
         let received_shares = (0..n_parties)
@@ -617,6 +617,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                         party_index,
                         received_shares[i].clone(),
                         proofs_of_possession.clone(),
+                        Message::raw(&self.keygen_id(&keygen)),
                     )
                     .unwrap();
 
@@ -629,16 +630,18 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Verify a proof-of-possession of a point
-    ///
-    /// ## Return value
-    ///
-    /// Returns `bool` true if the proof-of-possession matches the point
-    fn verify_pop(&self, keygen_id: &[u8], point: Point, pop: Signature) -> bool {
-        let (even_poly_point, _) = point.into_point_with_even_y();
-
-        self.schnorr
-            .verify(&even_poly_point, Message::<Public>::raw(&keygen_id), &pop)
+    /// Create a keygen id to seed a keygen
+    /// TODO
+    pub fn keygen_id(&self, keygen: &KeyGen) -> [u8; 32] {
+        let mut keygen_hash = self.keygen_id_hash.clone();
+        keygen_hash.update((keygen.point_polys.len() as u32).to_be_bytes());
+        for poly in &keygen.point_polys {
+            for point in poly {
+                keygen_hash.update(point.to_bytes());
+            }
+        }
+        let keygen_id: [u8; 32] = keygen_hash.finalize().into();
+        keygen_id
     }
 
     /// Collect all the public polynomials into a [`KeyGen`] session with a [`FrostKey`].
@@ -652,7 +655,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     pub fn new_keygen(
         &self,
         point_polys: Vec<(PartyIndex, Vec<Point>)>,
-        keygen_id: [u8; 32],
     ) -> Result<KeyGen, NewKeyGenError> {
         let len_first_poly = point_polys[0].1.len();
         {
@@ -685,16 +687,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
-        // let mut keygen_hash = self.keygen_id_hash.clone();
-        // keygen_hash.update((len_first_poly as u32).to_be_bytes());
-        // keygen_hash.update((point_polys.len() as u32).to_be_bytes());
-        // for (_, poly) in &point_polys {
-        //     for point in poly {
-        //         keygen_hash.update(point.to_bytes());
-        //     }
-        // }
-        // let keygen_id: [u8; 32] = keygen_hash.finalize().into();
-
         let verification_shares = point_polys
             .clone()
             .into_iter()
@@ -708,7 +700,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
         Ok(KeyGen {
             point_polys: point_polys.into_iter().map(|(_, poly)| poly).collect(),
-            keygen_id,
             frost_key: FrostKey {
                 verification_shares,
                 public_key,
@@ -726,6 +717,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// polynomial at our participant index. Each participant's proof-of-possession is verified
     /// against what they provided in the first round of key generation.
     ///
+    /// The proof-of-possession message should be the unique keygen_id unless chosen otherwise.
+    ///
     /// # Return value
     ///
     /// Your secret share and the [`FrostKey`]
@@ -735,6 +728,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: PartyIndex,
         secret_shares: Vec<Scalar<Secret, Zero>>,
         proofs_of_possession: Vec<Signature>,
+        proof_of_possession_msg: Message,
     ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
         assert_eq!(
             secret_shares.len(),
@@ -748,7 +742,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .zip(proofs_of_possession)
             .enumerate()
         {
-            if !self.verify_pop(&keygen.keygen_id, poly[0], pop) {
+            if !{
+                let (even_poly_point, _) = poly[0].into_point_with_even_y();
+                self.schnorr
+                    .verify(&even_poly_point, proof_of_possession_msg, &pop)
+            } {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(i));
             }
         }
@@ -876,10 +874,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Return Value
     ///
     /// Returns `bool`, true if partial signature is valid.
-    ///
-    /// ## Panics
-    ///
-    /// If the `index` is is greater than the number of signers in the threshold.
     pub fn verify_signature_share(
         &self,
         frost_key: &FrostKey<EvenY>,
