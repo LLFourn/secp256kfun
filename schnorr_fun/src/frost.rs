@@ -9,6 +9,8 @@
 //!     frost,
 //!     Message,
 //! };
+//! extern crate alloc;
+//! use alloc::collections::BTreeMap;
 //! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
 //! // use sha256 to produce deterministic nonces -- be careful!
@@ -30,20 +32,27 @@
 //! # let device_index2 = s!(2).public();
 //! # let device_index3 = s!(3).public();
 //! // share our public point poly, and receive the point polys from other participants
-//! let public_polys = vec![
+//! let public_polys = BTreeMap::from_iter([
 //!     (device_index, my_public_poly),
 //!     (device_index2, public_poly2),
 //!     (device_index3, public_poly3),
-//! ];
+//! ]);
 //! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! let (my_shares, my_pop, keygen_id) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
-//! # let (shares2, pop2, _) = frost.create_shares_and_pop(&keygen, &secret_poly2);
-//! # let (shares3, pop3, _) = frost.create_shares_and_pop(&keygen, &secret_poly3);
+//! let (my_shares, my_pop) = frost.create_shares_and_pop(&keygen, &my_secret_poly);
+//! # let (shares2, pop2) = frost.create_shares_and_pop(&keygen, &secret_poly2);
+//! # let (shares3, pop3) = frost.create_shares_and_pop(&keygen, &secret_poly3);
 //! // for i = 0..3, Send the secret share at index i and all proofs-of-possession to the participant with index i,
 //! // and receive our shares and pops from each participant as well.
-//! let received_shares = vec![my_shares[0].clone(), shares2[0].clone(), shares3[0].clone()];
-//! # let received_shares3 = vec![my_shares[2].clone(), shares2[2].clone(), shares3[2].clone()];
+//! let mut received_shares = BTreeMap::new();
+//! received_shares.insert(device_index, (my_shares.get(&device_index).unwrap().clone(), my_pop.clone()));
+//! received_shares.insert(device_index2, (shares2.get(&device_index).unwrap().clone(), pop2.clone()));
+//! received_shares.insert(device_index3, (shares3.get(&device_index).unwrap().clone(), pop3.clone()));
+//! # let received_shares3 = BTreeMap::from_iter([
+//!     (device_index, (my_shares.get(&device_index3).unwrap().clone(), my_pop.clone())),
+//!     (device_index2, (shares2.get(&device_index3).unwrap().clone(), pop2.clone())),
+//!     (device_index3, (shares3.get(&device_index3).unwrap().clone(), pop3.clone())),
+//! ]);
 //! let proofs_of_possession = vec![my_pop, pop2, pop3];
 //! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
 //! // and calculate our long-lived secret share of the joint FROST key.
@@ -52,8 +61,7 @@
 //!         keygen.clone(),
 //!         device_index,
 //!         received_shares,
-//!         proofs_of_possession.clone(),
-//!         Message::raw(&keygen_id),
+//!         Message::raw(&frost.keygen_id(&keygen)),
 //!     )
 //!     .unwrap();
 //! # let (secret_share3, _frost_key3) = frost
@@ -61,8 +69,7 @@
 //! #        keygen.clone(),
 //! #        device_index3,
 //! #        received_shares3,
-//! #        proofs_of_possession.clone(),
-//! #        Message::raw(&keygen_id),
+//! #        Message::raw(&frost.keygen_id(&keygen)),
 //! #    )
 //! #    .unwrap();
 //! // We're ready to do some signing, so convert to xonly key
@@ -77,8 +84,8 @@
 //! // share your public nonce with the other signing participant(s)
 //! # let received_nonce3 = nonce3.public();
 //! // receive public nonces from other signers
-//! let nonces = vec![(device_index, my_nonce.public()), (device_index3, received_nonce3)];
-//! # let nonces3 = vec![(device_index, my_nonce.public()), (device_index3, received_nonce3)];
+//! let nonces = BTreeMap::from_iter([(device_index, my_nonce.public()), (device_index3, received_nonce3)]);
+//! # let nonces3 = BTreeMap::from_iter([(device_index, my_nonce.public()), (device_index3, received_nonce3)]);
 //! // start a sign session with these nonces for a message
 //! let session = frost.start_sign_session(&frost_key, nonces, message);
 //! # let session3 = frost.start_sign_session(&frost_key, nonces3, message);
