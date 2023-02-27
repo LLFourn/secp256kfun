@@ -723,6 +723,30 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         })
     }
 
+    /// Verify a key generation without being a key-owning party
+    pub fn finish_keygen_coordinator(
+        &self,
+        keygen: KeyGen,
+        proofs_of_possession: BTreeMap<PartyIndex, Signature>,
+        proof_of_possession_msg: Message,
+    ) -> Result<FrostKey<Normal>, FinishKeyGenError> {
+        for (party_index, poly) in &keygen.point_polys {
+            let pop = proofs_of_possession
+                .get(party_index)
+                .ok_or(FinishKeyGenError::MissingShare(*party_index))?;
+            let (even_poly_point, _) = poly[0].into_point_with_even_y();
+
+            if !self
+                .schnorr
+                .verify(&even_poly_point, proof_of_possession_msg, pop)
+            {
+                return Err(FinishKeyGenError::InvalidProofOfPossession(*party_index));
+            }
+        }
+
+        Ok(keygen.frost_key)
+    }
+
     /// Combine all receieved shares into your long-lived secret share.
     ///
     /// The `secret_shares` includes your own share as well as shares from each of the other
