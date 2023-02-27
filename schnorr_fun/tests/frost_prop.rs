@@ -1,5 +1,4 @@
 #![cfg(feature = "alloc")]
-#![cfg(feature = "serde")]
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha20Rng;
 use schnorr_fun::{
@@ -14,6 +13,7 @@ use secp256kfun::proptest::{
     test_runner::{RngAlgorithm, TestRng},
 };
 use sha2::Sha256;
+use std::collections::BTreeMap;
 
 proptest! {
 
@@ -46,56 +46,44 @@ proptest! {
         // shuffle the mask for random signers
         signer_mask.shuffle(&mut rng);
 
-        let signer_indexes: Vec<_> = signer_mask
-            .iter()
-            .enumerate()
-            .filter(|(_, is_signer)| **is_signer)
-            .map(|(i,_)| i)
-            .collect();
+        let secret_shares = signer_mask.into_iter().zip(secret_shares.into_iter()).filter(|(is_signer, _)| *is_signer)
+            .map(|(_, secret_share)| secret_share).collect::<BTreeMap<_,_>>();
+
 
         let sid = b"frost-prop-test".as_slice();
         let message = Message::plain("test", b"test");
 
-        let mut nonce_rngs: Vec<ChaCha20Rng> = secret_shares.iter().map(|secret_share| {
-            proto.seed_nonce_rng(
-                &frost_key,
-                secret_share,
-                sid,
-            )
+        let mut secret_nonces: BTreeMap<_, _> = secret_shares.iter().map(|(signer_index, secret_share)| {
+            (*signer_index, proto.gen_nonce::<ChaCha20Rng>(
+                &mut proto.seed_nonce_rng(
+                    &frost_key,
+                    secret_share,
+                    sid,
+                )))
         }).collect();
 
-        let nonces: Vec<_> = signer_indexes.iter().map(|i|
-            proto.gen_nonce(
-                &mut nonce_rngs[*i])).collect();
 
-        let mut received_nonces: Vec<_> = vec![];
-        for (i, nonce) in signer_indexes.iter().zip(nonces.clone()) {
-            received_nonces.push((*i, nonce.public()));
-        }
+        let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
+        dbg!(&public_nonces);
 
         let signing_session = proto.start_sign_session(
             &frost_key,
-            received_nonces.clone(),
+            public_nonces.clone(),
             message
         );
 
         let mut signatures = vec![];
-        for i in 0..signer_indexes.len() {
-            let signer_index = signer_indexes[i];
-            let session = proto.start_sign_session(
-                &frost_key,
-                received_nonces.clone(),
-                message
-            );
+        for (signer_index, secret_share) in secret_shares  {
             let sig = proto.sign(
                 &frost_key,
-                &session, signer_index,
-                &secret_shares[signer_index],
-                nonces[i].clone()
+                &signing_session,
+                signer_index,
+                &secret_share,
+                secret_nonces.remove(&signer_index).unwrap()
             );
             assert!(proto.verify_signature_share(
                 &frost_key,
-                &session,
+                &signing_session,
                 signer_index,
                 sig)
             );

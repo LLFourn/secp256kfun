@@ -266,7 +266,7 @@ where
 #[derive(Clone, Debug)]
 pub struct KeyGen {
     frost_key: FrostKey<Normal>,
-    point_polys: Vec<Vec<Point>>,
+    point_polys: BTreeMap<PartyIndex, Vec<Point>>,
 }
 
 impl KeyGen {
@@ -280,7 +280,7 @@ impl KeyGen {
 #[derive(Debug, Clone)]
 pub enum NewKeyGenError {
     /// Received polynomial is of differing length.
-    PolyDifferentLength(usize),
+    PolyDifferentLength(PartyIndex),
     /// Number of parties is less than the length of polynomials specifying the threshold.
     NotEnoughParties,
     /// Frost key is zero. Computationally unreachable *if* all parties are honest.
@@ -304,16 +304,19 @@ impl std::error::Error for NewKeyGenError {}
 /// Second round KeyGen errors
 #[derive(Debug, Clone)]
 pub enum FinishKeyGenError {
-    /// Secret share does not match the expected. Incorrect ordering?
-    InvalidShare(usize),
+    /// Secret share and proof of possession was not provided for this party
+    MissingShare(PartyIndex),
+    /// Secret share does not match what we expected
+    InvalidShare(PartyIndex),
     /// proof-of-possession does not match the expected. Incorrect ordering?
-    InvalidProofOfPossession(usize),
+    InvalidProofOfPossession(PartyIndex),
 }
 
 impl core::fmt::Display for FinishKeyGenError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         use FinishKeyGenError::*;
         match self {
+            MissingShare(i) => write!(f, "secret share was not provided for party {i}"),
             InvalidShare(i) => write!(
                 f,
                 "the secret share at index {i} does not match the expected evaluation \
@@ -480,21 +483,19 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         &self,
         keygen: &KeyGen,
         scalar_poly: &[Scalar],
-    ) -> (Vec<Scalar<Secret, Zero>>, Signature, [u8; 32]) {
+    ) -> (BTreeMap<PartyIndex, Scalar<Secret, Zero>>, Signature) {
         (
-            (1..=keygen.n_parties())
-                .map(|i| {
-                    self.create_share(
-                        scalar_poly,
-                        Scalar::<Public, Zero>::from(i as u32).non_zero().unwrap(),
-                    )
+            keygen
+                .point_polys
+                .iter()
+                .map(|(party_index, _)| {
+                    (*party_index, self.create_share(scalar_poly, *party_index))
                 })
                 .collect(),
             self.create_proof_of_possession(
                 Message::<Public>::raw(&self.keygen_id(&keygen)),
                 scalar_poly,
             ),
-            self.keygen_id(&keygen),
         )
     }
 
@@ -573,59 +574,67 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey<Normal>, Vec<Scalar>) {
+    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar>) {
         let scalar_polys = (0..n_parties)
-            .map(|_| generate_scalar_poly(threshold, rng))
-            .collect::<Vec<_>>();
-        let point_polys = scalar_polys
-            .iter()
-            .enumerate()
-            .map(|(party_index, sp)| {
+            .map(|i| {
                 (
-                    Scalar::from_non_zero_u32(NonZeroU32::new((party_index + 1) as u32).unwrap())
-                        .public(),
-                    to_point_poly(sp),
+                    Scalar::from_non_zero_u32(NonZeroU32::new((i + 1) as u32).unwrap()).public(),
+                    generate_scalar_poly(threshold, rng),
                 )
             })
-            .collect::<Vec<_>>();
+            .collect::<BTreeMap<_, _>>();
+        let point_polys = scalar_polys
+            .iter()
+            .map(|(party_index, sp)| (*party_index, to_point_poly(sp)))
+            .collect::<BTreeMap<_, _>>();
 
         let keygen = self.new_keygen(point_polys.clone()).unwrap();
-        let (shares, proofs_of_possession): (Vec<_>, Vec<_>) = scalar_polys
+        let mut shares = scalar_polys
             .into_iter()
-            .map(|sp| {
-                let (shares, pop, _pop_msg) = self.create_shares_and_pop(&keygen, &sp);
-                (shares, pop)
-            })
-            .unzip();
+            .map(|(party_index, sp)| (party_index, self.create_shares_and_pop(&keygen, &sp)))
+            .collect::<BTreeMap<_, _>>();
         // collect the received shares for each party
-        let received_shares = (0..n_parties)
-            .map(|party_index| {
-                (0..n_parties)
-                    .map(|share_index| shares[share_index][party_index].clone())
-                    .collect()
-            })
-            .collect::<Vec<Vec<_>>>();
+        let received_shares = keygen
+            .point_polys
+            .keys()
+            .map(|receiver_party_index| {
+                let received = shares
+                    .iter_mut()
+                    .map(|(gen_party_index, (party_shares, pop))| {
+                        (
+                            *gen_party_index,
+                            (
+                                party_shares.remove(receiver_party_index).unwrap(),
+                                pop.clone(),
+                            ),
+                        )
+                    })
+                    .collect::<BTreeMap<_, _>>();
 
+                (*receiver_party_index, received)
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        let mut frost_key = None;
         // finish keygen for each party
-        let (secret_shares, mut frost_keys): (Vec<_>, Vec<_>) = point_polys
+        let secret_shares = received_shares
             .into_iter()
-            .enumerate()
-            .map(|(i, (party_index, _))| {
-                let (secret_share, frost_key) = self
+            .map(|(party_index, received_shares)| {
+                let (secret_share, _frost_key) = self
                     .finish_keygen(
                         keygen.clone(),
                         party_index,
-                        received_shares[i].clone(),
-                        proofs_of_possession.clone(),
+                        received_shares,
                         Message::raw(&self.keygen_id(&keygen)),
                     )
                     .unwrap();
 
-                (secret_share, frost_key)
+                frost_key = Some(_frost_key);
+                (party_index, secret_share)
             })
-            .unzip();
+            .collect();
 
-        (frost_keys.remove(0), secret_shares)
+        (frost_key.unwrap(), secret_shares)
     }
 }
 
@@ -635,7 +644,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     pub fn keygen_id(&self, keygen: &KeyGen) -> [u8; 32] {
         let mut keygen_hash = self.keygen_id_hash.clone();
         keygen_hash.update((keygen.point_polys.len() as u32).to_be_bytes());
-        for poly in &keygen.point_polys {
+        for (index, poly) in &keygen.point_polys {
+            keygen_hash.update(index.to_bytes());
             for point in poly {
                 keygen_hash.update(point.to_bytes());
             }
@@ -654,16 +664,19 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Returns a [`KeyGen`] containing a [`FrostKey`]
     pub fn new_keygen(
         &self,
-        point_polys: Vec<(PartyIndex, Vec<Point>)>,
+        point_polys: BTreeMap<PartyIndex, Vec<Point>>,
     ) -> Result<KeyGen, NewKeyGenError> {
-        let len_first_poly = point_polys[0].1.len();
+        let len_first_poly = point_polys
+            .iter()
+            .next()
+            .map(|(_, poly)| poly.len())
+            .ok_or(NewKeyGenError::NotEnoughParties)?;
         {
             if let Some((i, _)) = point_polys
                 .iter()
-                .enumerate()
-                .find(|(_, point_poly)| point_poly.1.len() != len_first_poly)
+                .find(|(_, point_poly)| point_poly.len() != len_first_poly)
             {
-                return Err(NewKeyGenError::PolyDifferentLength(i));
+                return Err(NewKeyGenError::PolyDifferentLength(*i));
             }
 
             // Number of parties is less than the length of polynomials specifying the threshold
@@ -699,7 +712,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .collect();
 
         Ok(KeyGen {
-            point_polys: point_polys.into_iter().map(|(_, poly)| poly).collect(),
+            point_polys,
             frost_key: FrostKey {
                 verification_shares,
                 public_key,
@@ -726,36 +739,27 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         &self,
         keygen: KeyGen,
         my_index: PartyIndex,
-        secret_shares: Vec<Scalar<Secret, Zero>>,
-        proofs_of_possession: Vec<Signature>,
+        secret_shares: BTreeMap<PartyIndex, (Scalar<Secret, Zero>, Signature)>,
         proof_of_possession_msg: Message,
     ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
-        assert_eq!(
-            secret_shares.len(),
-            keygen.frost_key.verification_shares.len()
-        );
-        assert_eq!(secret_shares.len(), proofs_of_possession.len());
-
-        for (i, (poly, pop)) in keygen
-            .point_polys
-            .iter()
-            .zip(proofs_of_possession)
-            .enumerate()
-        {
-            if !{
-                let (even_poly_point, _) = poly[0].into_point_with_even_y();
-                self.schnorr
-                    .verify(&even_poly_point, proof_of_possession_msg, &pop)
-            } {
-                return Err(FinishKeyGenError::InvalidProofOfPossession(i));
-            }
-        }
-
         let mut total_secret_share = s!(0);
-        for (i, (secret_share, poly)) in secret_shares.iter().zip(&keygen.point_polys).enumerate() {
+
+        for (party_index, poly) in &keygen.point_polys {
+            let (secret_share, pop) = secret_shares
+                .get(party_index)
+                .ok_or(FinishKeyGenError::MissingShare(*party_index))?;
+            let (even_poly_point, _) = poly[0].into_point_with_even_y();
+
+            if !self
+                .schnorr
+                .verify(&even_poly_point, proof_of_possession_msg, pop)
+            {
+                return Err(FinishKeyGenError::InvalidProofOfPossession(*party_index));
+            }
+
             let expected_public_share = point_poly_eval(poly, my_index);
             if g!(secret_share * G) != expected_public_share {
-                return Err(FinishKeyGenError::InvalidShare(i));
+                return Err(FinishKeyGenError::InvalidShare(*party_index));
             }
             total_secret_share += secret_share;
         }
@@ -780,11 +784,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     pub fn start_sign_session(
         &self,
         frost_key: &FrostKey<EvenY>,
-        nonces: Vec<(PartyIndex, Nonce)>,
+        nonces: BTreeMap<PartyIndex, Nonce>,
         message: Message,
     ) -> SignSession {
-        let mut nonce_map: BTreeMap<_, _> =
-            nonces.into_iter().map(|(i, nonce)| (i, nonce)).collect();
+        let nonce_map = nonces;
 
         if nonce_map.len() < frost_key.threshold() {
             panic!("nonces' length was less than the threshold");
@@ -819,10 +822,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 })
                 .into_point_with_even_y();
 
-        for nonce in nonce_map.values_mut() {
-            nonce.conditional_negate(nonces_need_negation);
-        }
-
         let challenge = self
             .schnorr
             .challenge(&agg_nonce, &frost_key.public_key(), message);
@@ -841,6 +840,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// ## Return value
     ///
     /// Returns a signature share
+    ///
+    /// ## Panics
+    ///
+    /// Panics if the `secret_nonce` does not match the previously provided public nonce in the
+    /// `session`.
     pub fn sign(
         &self,
         frost_key: &FrostKey<EvenY>,
@@ -857,6 +861,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 .filter(|(&j, _)| j != my_index)
                 .map(|(j, _)| *j)
                 .collect(),
+        );
+        assert_eq!(
+            *session
+                .nonces
+                .get(&my_index)
+                .expect("my_index was not in session"),
+            secret_nonce.public(),
+            "secret nonce didn't match previously provided public nonce"
         );
         lambda.conditional_negate(frost_key.needs_negation);
         let [mut r1, mut r2] = secret_nonce.secret;
@@ -895,11 +907,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let c = &session.challenge;
         let b = &session.binding_coeff;
         let X = frost_key.verification_shares().get(&index).unwrap();
-        let [ref R1, ref R2] = session
+        let [R1, R2] = session
             .nonces
             .get(&index)
             .expect("verifying party index that is not part of frost signing coalition")
             .0;
+        let R1 = R1.conditional_negate(session.nonces_need_negation);
+        let R2 = R2.conditional_negate(session.nonces_need_negation);
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
@@ -1084,7 +1098,7 @@ mod test {
 
         let session = frost.start_sign_session(
             &frost_key.into_xonly_key(),
-            vec![(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)],
+            BTreeMap::from_iter([(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)]),
             Message::<Public>::plain("test", b"hello"),
         );
 
