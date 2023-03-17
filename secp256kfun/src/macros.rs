@@ -455,8 +455,18 @@ macro_rules! impl_display_serialize {
                 Ok(())
             }
         }
-    }
 
+        #[cfg(feature = "bincode")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+        impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::Encode for $type {
+            fn encode<E: $crate::bincode::enc::Encoder>(&self, encoder: &mut E) -> Result<(), $crate::bincode::error::EncodeError> {
+                use bincode::enc::write::Writer;
+                let $self = &self;
+                let bytes = $block;
+                encoder.writer().write(bytes.as_ref())
+            }
+        }
+    }
 
 }
 
@@ -576,5 +586,38 @@ macro_rules! impl_fromstr_deserialize {
             }
         }
 
+        #[cfg(feature = "bincode")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+        impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::de::Decode for $type {
+            fn decode<D: bincode::de::Decoder>(decoder: &mut D) -> Result<Self, $crate::bincode::error::DecodeError> {
+                use bincode::de::read::Reader;
+                let mut $input = [0u8; $len];
+                decoder.reader().read(&mut $input)?;
+                let result = $block;
+                #[cfg(feature = "alloc")]
+                return result.ok_or($crate::bincode::error::DecodeError::OtherString(format!("Invalid {}-byte encoding of a {}", $len, $name)));
+                // hack to return something useful
+                #[cfg(not(feature = "alloc"))]
+                return result.ok_or($crate::bincode::error::DecodeError::UnexpectedVariant {
+                    type_name: $name,
+                    allowed: "",
+                    found: 0
+                })
+            }
+        }
+
+        #[cfg(feature = "bincode")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+        impl<'de, $($($tpl $(:$tcl)?),*)?> $crate::bincode::BorrowDecode<'de> for $type {
+            fn borrow_decode<D: $crate::bincode::de::BorrowDecoder<'de>>(
+                decoder: &mut D,
+            ) -> core::result::Result<Self, $crate::bincode::error::DecodeError> {
+                $crate::bincode::Decode::decode(decoder)
+            }
+        }
     };
+
+
+
+
 }

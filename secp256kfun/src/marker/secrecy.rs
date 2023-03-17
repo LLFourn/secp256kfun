@@ -37,11 +37,13 @@ pub trait Secrecy: Default + Clone + PartialEq + Eq + Copy + 'static + Ord + Par
 /// executed on it to use  _constant time_ versions of the operations.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Secret;
 
 /// Indicates that variable time operations may be used on the value.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Public;
 
 impl Secrecy for Secret {}

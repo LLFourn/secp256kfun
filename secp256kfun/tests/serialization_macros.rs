@@ -83,11 +83,33 @@ mod test {
     }
 
     #[test]
-    fn serialize_roundtrip() {
+    fn serde_serialize_roundtrip() {
         let six_bytes =
             &SixBytes::<()>::from_six_bytes(hex::decode_array("010203040506").unwrap()).unwrap();
-        let serialized = bincode::serialize(six_bytes).unwrap();
-        let six_bytes = bincode::deserialize::<SixBytes<()>>(&serialized).expect("valid bincode");
+        let serialized = bincode::encode_to_vec(
+            bincode::serde::Compat(six_bytes),
+            bincode::config::standard(),
+        )
+        .unwrap();
+        let six_bytes: bincode::serde::Compat<SixBytes<()>> =
+            bincode::decode_from_slice(&serialized, bincode::config::standard())
+                .expect("valid bincode")
+                .0;
+        assert_eq!(
+            six_bytes.0.to_six_bytes(),
+            hex::decode_array("010203040506").unwrap()
+        );
+    }
+
+    #[test]
+    fn bincode2_serialize_roundtrip() {
+        let six_bytes =
+            &SixBytes::<()>::from_six_bytes(hex::decode_array("010203040506").unwrap()).unwrap();
+        let serialized = bincode::encode_to_vec(six_bytes, bincode::config::standard()).unwrap();
+        let six_bytes: SixBytes<()> =
+            bincode::decode_from_slice(&serialized, bincode::config::standard())
+                .expect("valid bincode")
+                .0;
         assert_eq!(
             six_bytes.to_six_bytes(),
             hex::decode_array("010203040506").unwrap()
@@ -100,7 +122,11 @@ mod test {
     )]
     fn deserialize_invalid_bytes() {
         let bincode_bytes = hex::decode_array::<6>("000102030405").unwrap(); // starting with 00 is invalid
-        bincode::deserialize::<SixBytes<()>>(&bincode_bytes).unwrap();
+        bincode::decode_from_slice::<bincode::serde::Compat<SixBytes<()>>, _>(
+            &bincode_bytes,
+            bincode::config::standard(),
+        )
+        .unwrap();
     }
 
     #[test]
