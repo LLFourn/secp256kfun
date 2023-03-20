@@ -16,8 +16,8 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 
 Fun does not mean (yet -- please help!):
 
-- **well reviewed**: The implemenations here have no received much review.
-- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc. Also secrets are zeroed out when their memory is freed.
+- **well reviewed**: The implementations here have no received much review.
+- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc. **No** attempt is made to "zero" out secrets when memory is freed.
 - **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
@@ -97,8 +97,6 @@ match sum.normalize().non_zero() {
     None => .. // deal with the case it is Zero
 }
 ```
-
-Or you can declare that you are confident that it can never be 
 
 ## Variable time or Constant time?
 
