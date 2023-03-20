@@ -425,13 +425,22 @@ mod test {
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "bincode"))]
     #[test]
     fn scalar_serde_rountrip() {
         let original = Scalar::random(&mut rand::thread_rng());
-        let serialized = bincode::serialize(&original).unwrap();
-        let deserialized = bincode::deserialize::<Scalar>(&serialized[..]).unwrap();
-        assert_eq!(deserialized, original)
+        let serialized = bincode::encode_to_vec(
+            bincode::serde::Compat(&original),
+            bincode::config::standard(),
+        )
+        .unwrap();
+        let deserialized = bincode::decode_from_slice::<bincode::serde::Compat<Scalar>, _>(
+            &serialized[..],
+            bincode::config::standard(),
+        )
+        .unwrap()
+        .0;
+        assert_eq!(deserialized.0, original)
     }
 
     #[test]

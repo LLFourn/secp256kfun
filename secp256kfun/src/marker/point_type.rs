@@ -22,6 +22,7 @@ pub trait PointType:
 /// _affine_ coordinates with fully normalized `x` and `y` field elements.
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Normal;
 /// A Non-normalized Point. Usually, represented as three field elements three field elements:
 /// `x`,`y` and `z` rather than just two in a [`Normal`] point.
@@ -40,6 +41,8 @@ pub struct Normal;
 /// [`normalize`]: crate::Point::normalize
 
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct NonNormal;
 
 /// Backwards compatibility type alias.
@@ -49,6 +52,7 @@ pub type Jacobian = NonNormal;
 /// A [`Normal`] point whose `y` coordinate is known to be even.
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct EvenY;
 
 /// A [`Normal`] point which may have pre-computed tables for accelerating scalar

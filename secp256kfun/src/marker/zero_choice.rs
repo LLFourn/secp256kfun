@@ -1,11 +1,13 @@
 /// Something marked with Zero might be `0` i.e. the additive identity
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Zero;
 
 /// Something marked with `NonZero` is guaranteed not to be 0.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct NonZero;
 
 /// A marker trait implemented by [`Zero`] and [`NonZero`].

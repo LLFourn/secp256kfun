@@ -23,6 +23,7 @@ rand_core = { version = "0.6", default-features = false }
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
 secp256k1 = { version = "0.25", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
+bincode = { version = "2.0.0-rc.2", optional = true }
 
 [dev-dependencies]
 serde_json = "1"
@@ -30,7 +31,6 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 sha2 = "0.10"
 proptest = "1"
-bincode = "1.0"
 criterion = "0.3"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
@@ -41,7 +41,7 @@ default = ["std"]
 alloc = ["serde?/alloc", "digest/alloc", "secp256k1?/alloc"]
 std = ["alloc", "subtle/std", "digest/std"]
 libsecp_compat = ["dep:secp256k1"]
-serde = [ "dep:serde", "secp256k1?/serde" ]
+serde = [ "dep:serde", "secp256k1?/serde", "bincode?/serde" ]
 
 [[bench]]
 name = "bench_ecmult"
