@@ -159,10 +159,10 @@ assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 - Built-in type-safe "x-only" point compression and decompression.
 - Arithmetic expression macros `g!` and `s!` (used above) to clearly express group operations.
 - Nonce derivation API to help avoid messing this up.
+- `no_std` support (just don't enable the default `std` feature)
 - Feature flags:
   - `serde` serialization/deserialization for binary and hex for human-readable formats (hex decoding requires the `alloc` feature as well).
   - `bincode` implements [`bincode`](https://docs.rs/bincode/2.0.0-rc.2) `Encode`/`Decode`/`BorrowDecode` traits directly
-  - `no_std` support
   - `libsecp_compat` adds `From` implementations to and from [rust-secp256k1][2] types.
   - `proptest` implementations of core types with the `proptest` feature
 
