@@ -28,10 +28,10 @@ impl<S> Signature<S> {
 
 impl Signature<Public> {
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
-        Scalar::from_slice(&bytes[0..32])
+        Scalar::<Secret, _>::from_slice(&bytes[0..32])
             .and_then(|R_x| R_x.public().non_zero())
             .and_then(|R_x| {
-                Scalar::from_slice(&bytes[32..64])
+                Scalar::<Secret, _>::from_slice(&bytes[32..64])
                     .and_then(|s| s.public().non_zero())
                     .map(|s| Self { R_x, s })
             })

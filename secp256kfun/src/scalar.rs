@@ -299,7 +299,7 @@ impl<S> From<u32> for Scalar<S, Zero> {
 crate::impl_fromstr_deserialize! {
     name => "non-zero secp256k1 scalar",
     fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,NonZero>> {
-        Scalar::from_bytes(bytes).and_then(|scalar| scalar.set_secrecy::<S>().non_zero())
+        Scalar::<Secret, _>::from_bytes(bytes).and_then(|scalar| scalar.set_secrecy::<S>().non_zero())
     }
 }
 
@@ -312,7 +312,7 @@ crate::impl_display_debug_serialize! {
 crate::impl_fromstr_deserialize! {
     name => "secp256k1 scalar",
     fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,Zero>> {
-        Scalar::from_bytes(bytes).map(|scalar| scalar.set_secrecy::<S>())
+        Scalar::<Secret, _>::from_bytes(bytes).map(|scalar| scalar.set_secrecy::<S>())
     }
 }
 
