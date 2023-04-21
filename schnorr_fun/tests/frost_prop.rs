@@ -68,7 +68,7 @@ proptest! {
 
         let signing_session = proto.start_sign_session(
             &frost_key,
-            public_nonces.clone(),
+            public_nonces,
             message
         );
 

@@ -22,6 +22,11 @@ impl<'a, S: Secrecy> Message<'a, S> {
         }
     }
 
+    /// Create an empty zero byte message.
+    pub fn empty() -> Self {
+        Self::raw(&[])
+    }
+
     /// Signs a plain variable length message.
     ///
     /// You must provide an application tag to make sure signatures valid in one context are not
