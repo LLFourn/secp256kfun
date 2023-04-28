@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "bincode", feature = "serde"))]
 mod test {
 
     use core::{marker::PhantomData, str::FromStr};

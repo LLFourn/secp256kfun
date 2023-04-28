@@ -596,13 +596,8 @@ macro_rules! impl_fromstr_deserialize {
                 let result = $block;
                 #[cfg(feature = "alloc")]
                 return result.ok_or($crate::bincode::error::DecodeError::OtherString(format!("Invalid {}-byte encoding of a {}", $len, $name)));
-                // hack to return something useful
                 #[cfg(not(feature = "alloc"))]
-                return result.ok_or($crate::bincode::error::DecodeError::UnexpectedVariant {
-                    type_name: $name,
-                    allowed: "",
-                    found: 0
-                })
+                return result.ok_or($crate::bincode::error::DecodeError::Other(stringify!(Invalid $len-byte encoding of a $name)))
             }
         }
 
