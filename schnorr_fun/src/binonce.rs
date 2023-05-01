@@ -11,7 +11,7 @@ use secp256kfun::{g, marker::*, rand_core::RngCore, Point, Scalar, G};
 /// The type argument determines whether the nonces can be `Zero` or not. The [musig
 /// spec](https://github.com/jonasnick/bips/pull/21) specifies that the aggregate nonce is allowed
 /// to be zero to avoid having to abort the protocol in this case.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Nonce<Z = NonZero>(pub [Point<Normal, Public, Z>; 2]);
 
 impl<Z: ZeroChoice> Nonce<Z> {
