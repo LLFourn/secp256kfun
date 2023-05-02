@@ -135,3 +135,25 @@ impl From<KeyPair<Normal>> for KeyPair<EvenY> {
         Self { sk, pk }
     }
 }
+
+crate::impl_serialize! {
+    fn to_bytes<T>(kp: &KeyPair<T>) -> [u8;32] {
+        kp.secret_key().to_bytes()
+    }
+}
+
+crate::impl_fromstr_deserialize! {
+    name => "secp256k1 scalar",
+    fn from_bytes(bytes: [u8;32]) -> Option<KeyPair<Normal>> {
+        let sk = Scalar::from_bytes(bytes)?.non_zero()?;
+        Some(KeyPair::<Normal>::new(sk))
+    }
+}
+
+crate::impl_fromstr_deserialize! {
+    name => "secp256k1 scalar",
+    fn from_bytes(bytes: [u8;32]) -> Option<KeyPair<EvenY>> {
+        let sk = Scalar::from_bytes(bytes)?.non_zero()?;
+        Some(KeyPair::<EvenY>::new(sk))
+    }
+}

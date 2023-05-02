@@ -417,7 +417,26 @@ macro_rules! impl_debug {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_display_serialize {
+macro_rules! impl_display {
+    (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
+
+        impl$(<$($tpl $(:$tcl)?),*>)? core::fmt::Display for $type {
+            /// Displays as hex.
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                let $self = &self;
+                let bytes = $block;
+                for byte in bytes.iter() {
+                    write!(f, "{:02x}", byte)?
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_serialize {
     (fn to_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($self:ident : &$type:path) -> $(&)?[u8;$len:literal] $block:block) => {
         #[cfg(feature = "serde")]
         #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -444,18 +463,6 @@ macro_rules! impl_display_serialize {
             }
         }
 
-        impl$(<$($tpl $(:$tcl)?),*>)? core::fmt::Display for $type {
-            /// Displays as hex.
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                let $self = &self;
-                let bytes = $block;
-                for byte in bytes.iter() {
-                    write!(f, "{:02x}", byte)?
-                }
-                Ok(())
-            }
-        }
-
         #[cfg(feature = "bincode")]
         #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::Encode for $type {
@@ -467,7 +474,15 @@ macro_rules! impl_display_serialize {
             }
         }
     }
+}
 
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_display_serialize {
+    ($($tt:tt)+) => {
+        $crate::impl_serialize!($($tt)+);
+        $crate::impl_display!($($tt)+);
+    };
 }
 
 #[macro_export]
@@ -475,7 +490,7 @@ macro_rules! impl_display_serialize {
 macro_rules! impl_display_debug_serialize {
     ($($tt:tt)+) => {
         $crate::impl_display_serialize!($($tt)+);
-        $crate::impl_debug!($($tt)+);
+        $crate::impl_debug!($($tt)*);
     };
 }
 
@@ -484,11 +499,10 @@ macro_rules! impl_display_debug_serialize {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_fromstr_deserialize {
-    (
+        (
         name => $name:literal,
         fn from_bytes$(<$($tpl:ident  $(: $tcl:ident)?),*>)?($input:ident : [u8;$len:literal]) ->  Option<$type:path> $block:block
     ) => {
-
         impl$(<$($tpl $(:$tcl)?),*>)? core::str::FromStr for $type  {
             type Err = $crate::hex::HexError;
 
@@ -508,11 +522,13 @@ macro_rules! impl_fromstr_deserialize {
                     }
 
                     let $input = buf;
-                    let result = $block;
+                    #[allow(clippy::redundant_closure_call)]
+                    let result = (|| -> Option<$type> {$block})();
                     result.ok_or($crate::hex::HexError::InvalidEncoding)
                 }
             }
         }
+
 
         #[cfg(feature = "serde")]
         #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -572,10 +588,11 @@ macro_rules! impl_fromstr_deserialize {
                             let mut $input = [0u8; $len];
                             for i in 0..$len {
                                 $input[i] = seq.next_element()?
-                                .ok_or_else(|| $crate::serde::de::Error::invalid_length(i, &self))?;
+                                               .ok_or_else(|| $crate::serde::de::Error::invalid_length(i, &self))?;
                             }
 
-                            let result = $block;
+                            #[allow(clippy::redundant_closure_call)]
+                            let result = (|| -> Option<$type> { $block }());
                             result.ok_or($crate::serde::de::Error::custom(format_args!("invalid byte encoding, expected {}", &self as &dyn $crate::serde::de::Expected)))
                         }
                     }
@@ -593,7 +610,8 @@ macro_rules! impl_fromstr_deserialize {
                 use bincode::de::read::Reader;
                 let mut $input = [0u8; $len];
                 decoder.reader().read(&mut $input)?;
-                let result = $block;
+                #[allow(clippy::redundant_closure_call)]
+                let result = (|| -> Option<$type> { $block }());
                 #[cfg(feature = "alloc")]
                 return result.ok_or($crate::bincode::error::DecodeError::OtherString(format!("Invalid {}-byte encoding of a {}", $len, $name)));
                 #[cfg(not(feature = "alloc"))]
@@ -611,8 +629,4 @@ macro_rules! impl_fromstr_deserialize {
             }
         }
     };
-
-
-
-
 }
