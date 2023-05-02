@@ -1,14 +1,14 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
     binonce,
-    fun::{marker::*, Point, Scalar},
+    fun::{marker::*, serde, Point, Scalar},
     musig::{self, NonceKeyPair},
-    serde, Message,
+    Message,
 };
 static TEST_JSON: &str = include_str!("musig/sign_verify_vectors.json");
 use secp256kfun::hex;
 
-#[derive(schnorr_fun::serde::Deserialize, Clone, Copy, Debug)]
+#[derive(serde::Deserialize, Clone, Copy, Debug)]
 #[serde(crate = "self::serde", untagged)]
 pub enum Maybe<T> {
     Valid(T),

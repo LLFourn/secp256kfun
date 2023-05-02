@@ -383,8 +383,8 @@ where
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::serde::Deserialize, crate::serde::Serialize),
-    serde(crate = "crate::serde")
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
 )]
 pub struct Ordinary;
 
@@ -393,8 +393,8 @@ pub struct Ordinary;
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::serde::Deserialize, crate::serde::Serialize),
-    serde(crate = "crate::serde")
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
 )]
 pub struct Adaptor {
     y_needs_negation: bool,
@@ -411,8 +411,8 @@ pub struct Adaptor {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::serde::Deserialize, crate::serde::Serialize),
-    serde(crate = "crate::serde")
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
 )]
 pub struct SignSession<T = Ordinary> {
     b: Scalar<Public, Zero>,

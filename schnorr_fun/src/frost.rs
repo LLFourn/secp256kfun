@@ -351,16 +351,16 @@ impl std::error::Error for FinishKeyGenError {}
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::serde::Deserialize, crate::serde::Serialize),
-    serde(crate = "crate::serde")
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
 )]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
     #[cfg_attr(
         feature = "serde",
         serde(bound(
-            deserialize = "Point<T>: crate::serde::de::Deserialize<'de>",
-            serialize = "Point<T>: crate::serde::Serialize"
+            deserialize = "Point<T>: crate::fun::serde::de::Deserialize<'de>",
+            serialize = "Point<T>: crate::fun::serde::Serialize"
         ))
     )]
     public_key: Point<T>,
