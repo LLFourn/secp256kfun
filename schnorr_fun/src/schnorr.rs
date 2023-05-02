@@ -8,7 +8,7 @@ use crate::{
         hash::{HashAdd, Tag},
         marker::*,
         nonce::NonceGen,
-        s, Point, Scalar, XOnlyKeyPair, G,
+        s, KeyPair, Point, Scalar, G,
     },
     Message, Signature,
 };
@@ -131,7 +131,7 @@ where
     /// let signature = schnorr.sign(&keypair, message);
     /// assert!(schnorr.verify(&keypair.public_key(), message, &signature));
     /// ```
-    pub fn sign(&self, keypair: &XOnlyKeyPair, message: Message<'_, impl Secrecy>) -> Signature {
+    pub fn sign(&self, keypair: &KeyPair<EvenY>, message: Message<'_, impl Secrecy>) -> Signature {
         let (x, X) = keypair.as_tuple();
 
         let mut r = derive_nonce!(
@@ -154,11 +154,11 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
         self.challenge_hash.clone()
     }
 
-    /// Create a new signing keypair.
+    /// Convieninece method for creating a new signing [`KeyPair<EvenY>`]
     ///
-    /// Short form of [`XOnlyKeyPair::new`].
-    pub fn new_keypair(&self, sk: Scalar) -> XOnlyKeyPair {
-        XOnlyKeyPair::new(sk)
+    /// [`KeyPair<EvenY>`]: crate::fun::KeyPair
+    pub fn new_keypair(&self, sk: Scalar) -> KeyPair<EvenY> {
+        KeyPair::<EvenY>::new(sk)
     }
 
     /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by [BIP-340].

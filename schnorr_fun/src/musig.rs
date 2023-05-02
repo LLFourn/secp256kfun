@@ -102,8 +102,10 @@ impl<H, NG> MuSig<H, NG> {
     /// Create a new keypair.
     ///
     /// A shorthand for [`KeyPair::new`].
+    ///
+    /// [`KeyPair::new`]: KeyPair::<Normal>::new
     pub fn new_keypair(&self, secret_key: Scalar) -> KeyPair {
-        KeyPair::new(secret_key)
+        KeyPair::<Normal>::new(secret_key)
     }
 
     /// Gets the nonce generator from the underlying Schnorr instance.
