@@ -467,7 +467,7 @@ macro_rules! impl_serialize {
         #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::Encode for $type {
             fn encode<E: $crate::bincode::enc::Encoder>(&self, encoder: &mut E) -> Result<(), $crate::bincode::error::EncodeError> {
-                use bincode::enc::write::Writer;
+                use $crate::bincode::enc::write::Writer;
                 let $self = &self;
                 let bytes = $block;
                 encoder.writer().write(bytes.as_ref())
@@ -606,8 +606,8 @@ macro_rules! impl_fromstr_deserialize {
         #[cfg(feature = "bincode")]
         #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
         impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::de::Decode for $type {
-            fn decode<D: bincode::de::Decoder>(decoder: &mut D) -> Result<Self, $crate::bincode::error::DecodeError> {
-                use bincode::de::read::Reader;
+            fn decode<D: $crate::bincode::de::Decoder>(decoder: &mut D) -> Result<Self, $crate::bincode::error::DecodeError> {
+                use $crate::bincode::de::read::Reader;
                 let mut $input = [0u8; $len];
                 decoder.reader().read(&mut $input)?;
                 #[allow(clippy::redundant_closure_call)]

@@ -57,6 +57,7 @@ assert!(schnorr.verify(&verification_key, message, &signature));
 - WIP [FROST] implementation
 - Feature flags
   - `serde`: for serde implementations for signatures
+  - `bincode`: for `bincode` v2 `Encode`/`Decode` implementations
   - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s Schnorr signatures.
   - `proptest` to enable `secp256kfun/proptest`.
 

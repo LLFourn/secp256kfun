@@ -34,6 +34,7 @@ harness = false
 default = ["std"]
 libsecp_compat = ["secp256kfun/libsecp_compat"]
 std = ["alloc"]
+bincode = ["secp256kfun/bincode" ]
 alloc = ["secp256kfun/alloc", "sigma_fun?/alloc" ]
 serde = ["secp256kfun/serde","sigma_fun?/serde"]
 adaptor = ["dep:sigma_fun", "dep:bincode", "dep:rand_chacha"]
