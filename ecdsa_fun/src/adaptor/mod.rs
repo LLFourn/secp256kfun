@@ -274,7 +274,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
     pub fn recover_decryption_key(
         &self,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
-        signature: &Signature<impl Secrecy>,
+        signature: &Signature,
         ciphertext: &EncryptedSignature,
     ) -> Option<Scalar> {
         let EncryptedSignature(EncryptedSignatureInternal { s_hat, R, .. }) = ciphertext;
