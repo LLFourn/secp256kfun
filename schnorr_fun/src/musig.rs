@@ -540,11 +540,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         let (R, r_needs_negation) = g!({ agg_Rs.0[0] } + b * { agg_Rs.0[1] })
             .normalize()
             .non_zero()
-            .unwrap_or_else(|| {
-                // if final nonce is zero we set it to generator as in MuSig spec
-                debug_assert!(G.is_y_even());
-                G.normalize()
-            })
+            .unwrap_or(Point::generator())
             .into_point_with_even_y();
 
         for R_i in &mut Rs {

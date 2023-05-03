@@ -29,7 +29,7 @@ use rand_core::RngCore;
 /// - `S`: A [`Secrecy`] to determine whether operations on this point should be done in constant-time or not. By default points are [`Public`] so operations run in variable time.
 /// - `Z`: A [`ZeroChoice`] to keep track of whether the point might be zero (the point at infinity) or is guaranteed to be non-zero.
 ///
-/// # Serialization
+/// ## Serialization
 ///
 /// Only points that are normalized (i.e. `T` ≠ `NonNormal`) can be serialized. A Point that is
 /// `EvenY` points serialize to and from their 32-byte x-only representation.
@@ -46,12 +46,25 @@ use rand_core::RngCore;
 /// [`Public`]: crate::marker::Public
 /// [`is_zero`]: crate::Point::is_zero
 /// [_identity element_]: https://en.wikipedia.org/wiki/Identity_element
-#[derive(Default)]
 pub struct Point<T = Normal, S = Public, Z = NonZero>(
     pub(crate) backend::Point,
     pub(crate) T,
     PhantomData<(Z, S)>,
 );
+
+/// The default for `Point`<_,_,Zero>` is [`Point::zero`].
+impl<T: Default, S> Default for Point<T, S, Zero> {
+    fn default() -> Self {
+        Point::zero()
+    }
+}
+
+/// The default for `Point`<_,_,Zero>` is [`Point::generator`].
+impl<T: Default + PointType, S> Default for Point<T, S, NonZero> {
+    fn default() -> Self {
+        Point::generator()
+    }
+}
 
 impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
     fn clone(&self) -> Self {
@@ -147,7 +160,7 @@ impl<Z: ZeroChoice> Point<Normal, Public, Z> {
     }
 }
 
-impl<T: PointType, S> Point<T, S, NonZero> {
+impl<T, S> Point<T, S, NonZero> {
     /// Converts this point into the point with the same x-coordinate but with
     /// an even y-coordinate. Returns a Point marked `EvenY` with a `bool`
     /// indicating whether the point had to be negated to make its y-coordinate
@@ -159,11 +172,35 @@ impl<T: PointType, S> Point<T, S, NonZero> {
     /// let point = Point::random(&mut rand::thread_rng());
     /// let (point_with_even_y, was_odd) = point.clone().into_point_with_even_y();
     /// ```
-    pub fn into_point_with_even_y(self) -> (Point<EvenY, S, NonZero>, bool) {
+    pub fn into_point_with_even_y(self) -> (Point<EvenY, S, NonZero>, bool)
+    where
+        T: PointType,
+    {
         let normalized = self.normalize();
         let needs_negation = !normalized.is_y_even();
         let negated = normalized.conditional_negate(needs_negation);
         (Point::from_inner(negated.0, EvenY), needs_negation)
+    }
+
+    /// Returns the generator point [`G`] defined in [_Standards for Efficient Cryptography_].
+    ///
+    /// This is sometimes more useful than just using `secp256kfun::G` since it allows the compiler
+    /// to infer types.
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use secp256kfun::{marker::*, Point, G};
+    /// assert_eq!(Point::<Normal, Public, _>::generator(), *G);
+    /// ```
+    ///
+    /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
+    /// [`G`]: crate::G
+    pub fn generator() -> Self
+    where
+        T: Default,
+    {
+        Self::from_inner(backend::G_POINT, T::default())
     }
 }
 
@@ -401,7 +438,7 @@ impl<T, S> Point<T, S, Zero> {
     /// [`identity_element`]: https://en.wikipedia.org/wiki/Identity_element
     pub fn zero() -> Self
     where
-        T: PointType + Default,
+        T: Default,
     {
         Self::from_inner(backend::Point::zero(), T::default())
     }
