@@ -26,6 +26,7 @@ This library and [secp256kfun] is experimental.
 - `proptest` to enable [secp256kfun]'s proptest feature.
 - `adaptor` to spec compliant ECDSA adaptor signatures.
 - `serde` to enable hex and binary [`serde`] serialization of data types.
+- `bincode`: for `bincode` v2 `Encode`/`Decode` implementations
 
 [secp256kfun]: https://docs.rs/secp256kfun
 [rust-secp256k1]: https://github.com/rust-bitcoin/rust-secp256k1/ 

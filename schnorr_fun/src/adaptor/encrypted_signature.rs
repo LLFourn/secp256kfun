@@ -7,8 +7,8 @@ use secp256kfun::{marker::*, Point, Scalar};
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::serde::Deserialize, crate::serde::Serialize),
-    serde(crate = "crate::serde")
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
 )]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct EncryptedSignature<S = Public> {

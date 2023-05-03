@@ -3,9 +3,9 @@
 static DLC_SPEC_JSON: &str = include_str!("./test_vectors.json");
 use ecdsa_fun::{
     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
-    fun::{Point, Scalar},
+    fun::{serde, Point, Scalar},
     nonce::NoNonces,
-    serde, Signature,
+    Signature,
 };
 use sha2::Sha256;
 

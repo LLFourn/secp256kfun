@@ -1,24 +1,53 @@
 use crate::{g, marker::*, Point, Scalar, G};
 /// A secret and public key pair.
 ///
-/// The secret key is a [`Scalar`] and the public key is the [`Point`] resulting from multiplying the scalar by [`G`].
+/// ## Synopsis
 ///
 /// ```
-/// use secp256kfun::{KeyPair, Scalar};
+/// use secp256kfun::{marker::*, KeyPair, Scalar};
 /// let my_secret_key = Scalar::random(&mut rand::thread_rng());
-/// let my_keypair = KeyPair::new(my_secret_key);
+/// let my_keypair = KeyPair::<Normal>::new(my_secret_key.clone());
+/// let my_xonly_keypair = KeyPair::<EvenY>::new(my_secret_key);
+///
+/// if my_keypair.public_key().is_y_even() {
+///     assert_eq!(my_keypair, my_xonly_keypair);
+/// } else {
+///     assert_eq!(-my_keypair.public_key(), my_xonly_keypair.public_key());
+/// }
 /// ```
+///
+/// ## Description
+///
+/// The secret key is a [`Scalar`] and the public key is the [`Point`] resulting from multiplying
+/// the scalar by [`G`].
+///
+/// The type parameter `T` of `KeyPair<T>` indicates the type of the public key (a `Point<T>`). It
+/// can either be [`Normal`] or [`EvenY`]. The only difference between the two is that
+/// `KeyPair::<EvenY>::new` is defined so that the public key always has an even y-coordinate and
+/// the secret key is negated to match it (if need be).
+///
 ///
 /// [`Scalar`]: crate::Scalar
 /// [`G`]: crate::G
 /// [`Point`]: crate::Point
-#[derive(Clone, Debug, PartialEq)]
-pub struct KeyPair {
+/// [`Normal`]: crate::marker::Normal
+/// [`EvenY`]: crate::marker::EvenY
+#[derive(Clone, Debug)]
+pub struct KeyPair<T = Normal> {
     sk: Scalar,
-    pk: Point,
+    pk: Point<T>,
 }
 
-impl KeyPair {
+/// two keypairs are the same if they have the
+impl<T1: PointType, T2: PointType> PartialEq<KeyPair<T2>> for KeyPair<T1> {
+    fn eq(&self, other: &KeyPair<T2>) -> bool {
+        self.pk == other.pk
+    }
+}
+
+impl<T: PointType> Eq for KeyPair<T> {}
+
+impl KeyPair<Normal> {
     /// Create a new `KeyPair` from a `secret_key`.
     pub fn new(secret_key: Scalar) -> Self {
         Self {
@@ -26,39 +55,9 @@ impl KeyPair {
             sk: secret_key,
         }
     }
-
-    /// Returns a reference to the secret key.
-    pub fn secret_key(&self) -> &Scalar {
-        &self.sk
-    }
-
-    /// The public key
-    pub fn public_key(&self) -> Point {
-        self.pk
-    }
-
-    /// Gets a reference to the keypair as a tuple
-    ///
-    /// # Example
-    /// ```
-    /// use secp256kfun::{KeyPair, Scalar};
-    /// let keypair = KeyPair::new(Scalar::random(&mut rand::thread_rng()));
-    /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, Point) {
-        (&self.sk, self.pk)
-    }
 }
 
-/// A secret and public key pair where the public key has an even y-coordinate.
-///
-/// [`Scalar`]: crate::Scalar
-#[derive(Clone, Debug, PartialEq)]
-pub struct XOnlyKeyPair {
-    sk: Scalar,
-    pk: Point<EvenY>,
-}
-
-impl XOnlyKeyPair {
+impl KeyPair<EvenY> {
     /// Converts a non-zero scalar to a keypair by interpreting it as a secret key, generating
     /// the corresponding public key by multiplying it by [`G`] and dropping the y-coordinate.
     ///
@@ -69,10 +68,10 @@ impl XOnlyKeyPair {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{g, s, Scalar, XOnlyKeyPair, G};
+    /// use secp256kfun::{g, marker::*, s, KeyPair, Scalar, G};
     ///
     /// let original_secret_key = Scalar::random(&mut rand::thread_rng());
-    /// let keypair = XOnlyKeyPair::new(original_secret_key.clone());
+    /// let keypair = KeyPair::<EvenY>::new(original_secret_key.clone());
     ///
     /// assert!(
     ///     &original_secret_key == keypair.secret_key()
@@ -88,17 +87,19 @@ impl XOnlyKeyPair {
         let pk = Point::even_y_from_scalar_mul(G, &mut secret_key);
         Self { sk: secret_key, pk }
     }
+}
 
+impl<T> KeyPair<T> {
     /// Returns a reference to the secret key.
-    ///
-    /// The secret key will always correspond to a point with an even y-coordinate when multiplied
-    /// by [`G`] (regardless of what was passed into [`XOnlyKeyPair::new`]).
     pub fn secret_key(&self) -> &Scalar {
         &self.sk
     }
 
-    /// The public key as a point.
-    pub fn public_key(&self) -> Point<EvenY> {
+    /// The public key
+    pub fn public_key(&self) -> Point<T>
+    where
+        T: Copy,
+    {
         self.pk
     }
 
@@ -106,22 +107,19 @@ impl XOnlyKeyPair {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{XOnlyKeyPair, Scalar};
-    /// let keypair = XOnlyKeyPair::new(Scalar::random(&mut rand::thread_rng()));
+    /// use secp256kfun::{KeyPair, Scalar, marker::*};
+    /// let keypair = KeyPair::<Normal>::new(Scalar::random(&mut rand::thread_rng()));
     /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, Point<EvenY>) {
+    pub fn as_tuple(&self) -> (&Scalar, Point<T>)
+    where
+        T: Copy,
+    {
         (&self.sk, self.pk)
     }
 }
 
-impl From<XOnlyKeyPair> for (Scalar, Point<EvenY>) {
-    fn from(kp: XOnlyKeyPair) -> Self {
-        (kp.sk, kp.pk)
-    }
-}
-
-impl From<XOnlyKeyPair> for KeyPair {
-    fn from(xonly: XOnlyKeyPair) -> Self {
+impl From<KeyPair<EvenY>> for KeyPair<Normal> {
+    fn from(xonly: KeyPair<EvenY>) -> Self {
         Self {
             sk: xonly.sk,
             pk: xonly.pk.normalize(),
@@ -129,11 +127,33 @@ impl From<XOnlyKeyPair> for KeyPair {
     }
 }
 
-impl From<KeyPair> for XOnlyKeyPair {
-    fn from(kp: KeyPair) -> Self {
+impl From<KeyPair<Normal>> for KeyPair<EvenY> {
+    fn from(kp: KeyPair<Normal>) -> Self {
         let mut sk = kp.sk;
         let (pk, needs_negation) = kp.pk.into_point_with_even_y();
         sk.conditional_negate(needs_negation);
         Self { sk, pk }
+    }
+}
+
+crate::impl_serialize! {
+    fn to_bytes<T>(kp: &KeyPair<T>) -> [u8;32] {
+        kp.secret_key().to_bytes()
+    }
+}
+
+crate::impl_fromstr_deserialize! {
+    name => "secp256k1 scalar",
+    fn from_bytes(bytes: [u8;32]) -> Option<KeyPair<Normal>> {
+        let sk = Scalar::from_bytes(bytes)?.non_zero()?;
+        Some(KeyPair::<Normal>::new(sk))
+    }
+}
+
+crate::impl_fromstr_deserialize! {
+    name => "secp256k1 scalar",
+    fn from_bytes(bytes: [u8;32]) -> Option<KeyPair<EvenY>> {
+        let sk = Scalar::from_bytes(bytes)?.non_zero()?;
+        Some(KeyPair::<EvenY>::new(sk))
     }
 }

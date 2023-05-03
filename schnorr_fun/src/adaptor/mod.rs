@@ -53,7 +53,7 @@ use crate::{
         digest::{generic_array::typenum::U32, Digest},
         g,
         marker::*,
-        nonce, s, Point, Scalar, XOnlyKeyPair, G,
+        nonce, s, KeyPair, Point, Scalar, G,
     },
     Message, Schnorr, Signature,
 };
@@ -71,7 +71,7 @@ pub trait EncryptedSign {
     /// [synopsis]: crate::adaptor#synopsis
     fn encrypted_sign(
         &self,
-        signing_keypair: &XOnlyKeyPair,
+        signing_keypair: &KeyPair<EvenY>,
         encryption_key: &Point<Normal, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature;
@@ -84,7 +84,7 @@ where
 {
     fn encrypted_sign(
         &self,
-        signing_key: &XOnlyKeyPair,
+        signing_key: &KeyPair<EvenY>,
         encryption_key: &Point<Normal, impl Secrecy>,
         message: Message<'_, impl Secrecy>,
     ) -> EncryptedSignature {

@@ -13,9 +13,6 @@ extern crate std;
 #[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 
-#[cfg(feature = "serde")]
-/// Rexport `serde`
-pub use fun::serde;
 use fun::Tag;
 
 use fun::{derive_nonce, g, marker::*, nonce::NonceGen, s, Point, Scalar, G};
