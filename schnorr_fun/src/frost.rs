@@ -832,10 +832,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             g!({ agg_nonce[0] } + binding_coeff * { agg_nonce[1] })
                 .normalize()
                 .non_zero()
-                .unwrap_or_else(|| {
-                    // Use the same trick as the MuSig spec
-                    G.normalize()
-                })
+                .unwrap_or(Point::generator())
                 .into_point_with_even_y();
 
         let challenge = self
