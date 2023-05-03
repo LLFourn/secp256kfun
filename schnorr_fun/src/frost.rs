@@ -40,7 +40,7 @@
 //! ]);
 //! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! // We need pass a mesasge to sign for the proof-of-possession. We choose the keygen
+//! // We need pass a message to sign for the proof-of-possession. We choose the keygen
 //! // id here but anything works (you can even use the empty message).
 //! let keygen_id = frost.keygen_id(&keygen);
 //! let pop_message = Message::raw(&keygen_id);
@@ -62,6 +62,8 @@
 //!     (party_index2, share_and_pop_from_2),
 //!     (party_index3, share_and_pop_from_3)
 //! ]);
+//! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
+//! // and calculate our long-lived secret share of the joint FROST key.
 //! # let (secret_share3, _frost_key3) = frost
 //! #    .finish_keygen(
 //! #        keygen.clone(),
@@ -70,8 +72,6 @@
 //! #        Message::raw(&frost.keygen_id(&keygen)),
 //! #    )
 //! #    .unwrap();
-//! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
-//! // and calculate our long-lived secret share of the joint FROST key.
 //! let (my_secret_share, frost_key) = frost
 //!     .finish_keygen(
 //!         keygen,
@@ -82,28 +82,28 @@
 //!     .expect("something was wrong with the shares we received");
 //! // ⚠️ At this point you probably want to check out of band that all the other parties received their
 //! // secret shares correctly. If they all give the OK then we're ready to use the key and do some signing!
-//! let x_only_frost_key = frost_key.into_xonly_key();
+//! let xonly_frost_key = frost_key.into_xonly_key();
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
-//! // ⚠️ session_id must be different for every signing attempt
+//! // ⚠️ session_id MUST be different for every signing attempt to avoid nonce reuse
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
-//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&x_only_frost_key, &my_secret_share, session_id);
+//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&xonly_frost_key, &my_secret_share, session_id);
 //! let my_nonce = frost.gen_nonce(&mut nonce_rng);
 //! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s) receive public nonces
 //! # let received_nonce3 = nonce3.public();
 //! let nonces = BTreeMap::from_iter([(my_index, my_nonce.public()), (party_index3, received_nonce3)]);
 //! // start a sign session with these nonces for a message
-//! let session = frost.start_sign_session(&x_only_frost_key, nonces, message);
+//! let session = frost.start_sign_session(&xonly_frost_key, nonces, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let my_sig_share = frost.sign(&x_only_frost_key, &session, my_index, &my_secret_share, my_nonce);
-//! # let sig_share3 = frost.sign(&x_only_frost_key, &session, party_index3, &secret_share3, nonce3);
+//! let my_sig_share = frost.sign(&xonly_frost_key, &session, my_index, &my_secret_share, my_nonce);
+//! # let sig_share3 = frost.sign(&xonly_frost_key, &session, party_index3, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
-//! assert!(frost.verify_signature_share(&x_only_frost_key, &session, party_index3, sig_share3));
+//! assert!(frost.verify_signature_share(&xonly_frost_key, &session, party_index3, sig_share3));
 //! // combine signature shares into a single signature that is valid under the FROST key
-//! let combined_sig = frost.combine_signature_shares(&x_only_frost_key, &session, vec![my_sig_share, sig_share3]);
+//! let combined_sig = frost.combine_signature_shares(&xonly_frost_key, &session, vec![my_sig_share, sig_share3]);
 //! assert!(frost.schnorr.verify(
-//!     &x_only_frost_key.public_key(),
+//!     &xonly_frost_key.public_key(),
 //!     message,
 //!     &combined_sig
 //! ));
@@ -128,7 +128,7 @@
 //! ##  Polynomial Generation
 //!
 //! The FROST key generation protocol takes as input a *secret* polynomial of degree `threshold - 1`.
-//! We represent a polynomial as a `Vec<Scalar>` where each [`Scalar`] represents a coefficient in the polynomal.
+//! We represent a polynomial as a `Vec<Scalar>` where each [`Scalar`] represents a coefficient in the polynomial.
 //!
 //! The security of the protocol is only guaranteed if you sample your secret polynomial uniformly
 //! at random from the perspective of the other parties. You might also want to be able to
@@ -137,7 +137,7 @@
 //! library yet but plan to in the future.
 //!
 //! This implementation doesn't provide a default policy with regards to polynomial generation. Here
-//! we give an example of how to generate a deterministic RNG for the forst key generation session
+//! we give an example of how to generate a deterministic RNG for the frost key generation session
 //! that should make sense in most applications:
 //!
 //! ```
@@ -152,7 +152,7 @@
 //!     nonce_gen => nonce::Deterministic::<Sha256>::default().tag(b"my-app-name/frost/keygen"),
 //!     secret => static_secret_key,
 //!     // session id must be unique for each key generation session
-//!     public => ["forst_key_session_1053"],
+//!     public => ["frost_key_session_1053"],
 //!     seedable_rng => ChaCha20Rng
 //! };
 //!
@@ -162,7 +162,7 @@
 //! let my_secret_poly: Vec<Scalar> = frost::generate_scalar_poly(threshold, &mut poly_rng);
 //! ```
 //!
-//! Note that if a key generation sesssion fails you must always start a fresh session with a different session id.
+//! Note that if a key generation session fails you must always start a fresh session with a different session id.
 //!
 //! [FROST]: <https://eprint.iacr.org/2020/852.pdf>
 //! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
@@ -189,7 +189,7 @@ type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
 ///
-/// Type parametres:
+/// Type parameters:
 ///
 /// - `H`: hash type for challenges, keygen_id, and binding coefficient.
 /// - `NG`: nonce generator for proofs-of-possessions and FROST nonces
