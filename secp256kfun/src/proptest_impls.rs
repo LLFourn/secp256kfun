@@ -14,7 +14,7 @@ impl<S: Secrecy> Arbitrary for Scalar<S, NonZero> {
             // insert some pathological cases
             1 => Just(Scalar::<S,_>::one()),
             1 => Just(Scalar::<S,_>::minus_one()),
-            18 => any::<[u8;32]>().prop_filter_map("zero bytes not acceptable", |bytes| Some(Scalar::from_bytes_mod_order(bytes).non_zero()?.set_secrecy::<S>())),
+            18 => any::<[u8;32]>().prop_filter_map("zero bytes not acceptable", |bytes| Scalar::from_bytes_mod_order(bytes).non_zero()),
         ].boxed()
     }
 }
@@ -28,7 +28,7 @@ impl<S: Secrecy> Arbitrary for Scalar<S, Zero> {
             1 => Just(Scalar::zero()),
             1 => Just(Scalar::one().mark_zero()),
             1 => Just(Scalar::minus_one().mark_zero()),
-            27 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes).set_secrecy::<S>()),
+            27 => any::<[u8;32]>().prop_map(|bytes| Scalar::from_bytes_mod_order(bytes)),
         ]
         .boxed()
     }
