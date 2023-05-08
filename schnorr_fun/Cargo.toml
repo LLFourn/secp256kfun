@@ -32,6 +32,7 @@ wasm-bindgen-test = "0.3"
 [[bench]]
 name = "bench_schnorr"
 harness = false
+required-features = ["libsecp_compat"]
 
 
 [features]
