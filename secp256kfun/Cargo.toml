@@ -31,7 +31,7 @@ rand = { version = "0.8" }
 lazy_static = "1.4"
 sha2 = "0.10"
 proptest = "1"
-criterion = "0.3"
+criterion = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
