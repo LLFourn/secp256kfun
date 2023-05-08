@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.9.0
+
+- Improved API of FROST in `schnorr_fun`
+- Fixed `Point<_,_,NonZero>` being able to be Zero through `Default` implementation
+- Added `bincode` v2 encoding/decoding
+- Updated to `rust-secp256k1` v0.27.0
+- `XOnlyKeyPair` replaced with `KeyPair<EvenY>`
+
 ## v0.8.2
 
 - Fixed docsrs
