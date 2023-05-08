@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{marker::*, nonce::Deterministic, secp256k1, Scalar};
+use secp256kfun::{nonce::Deterministic, secp256k1, Scalar};
 use sha2::Sha256;
 
 const MESSAGE: &[u8; 32] = b"hello world you are beautiful!!!";
@@ -37,7 +37,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     });
 
     {
-        let signature = signature.clone().set_secrecy::<Secret>();
+        let signature = signature.clone();
         group.bench_function("fun::ecdsa_verify_ct", |b| {
             b.iter(|| ECDSA.verify(&pk, MESSAGE, &signature))
         });

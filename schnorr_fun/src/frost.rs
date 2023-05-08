@@ -979,13 +979,13 @@ impl SignSession {
 fn lagrange_lambda(
     x_j: Scalar<impl Secrecy>,
     x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
-) -> Scalar {
+) -> Scalar<Public> {
     x_ms.fold(Scalar::one(), |acc, x_m| {
         let denominator = s!(x_m - x_j)
             .non_zero()
             .expect("removed duplicate indexes")
             .invert();
-        s!(acc * x_m * denominator)
+        s!(acc * x_m * denominator).public()
     })
 }
 

@@ -109,7 +109,7 @@ impl Point<Normal, Public, NonZero> {
     }
 }
 
-impl<Z: ZeroChoice> Point<Normal, Public, Z> {
+impl<Z: ZeroChoice, S> Point<Normal, S, Z> {
     /// Creates a Point the compressed encoding specified in [_Standards for
     /// Efficient Cryptography_]. This is the typical encoding used in
     /// Bitcoin. The first byte must be `0x02` or `0x03` to indicate that the
@@ -388,7 +388,10 @@ impl<S, Z, T: Normalized> Point<T, S, Z> {
     /// let point = Point::random(&mut rand::thread_rng());
     /// let bytes = point.to_bytes();
     /// assert!(bytes[0] == 0x02 || bytes[0] == 0x03);
-    /// assert_eq!(Point::<_, _, NonZero>::from_bytes(bytes).unwrap(), point);
+    /// assert_eq!(
+    ///     Point::<_, Public, NonZero>::from_bytes(bytes).unwrap(),
+    ///     point
+    /// );
     /// ```
     ///
     /// [_Standards for Efficient Cryptography_]: https://www.secg.org/sec1-v2.pdf
@@ -543,15 +546,15 @@ crate::impl_display_serialize! {
 
 crate::impl_fromstr_deserialize! {
     name => "secp256k1 x-coordinate",
-    fn from_bytes<S>(bytes: [u8;32]) -> Option<Point<EvenY,S, NonZero>> {
-        Point::from_xonly_bytes(bytes).map(|p| p.set_secrecy::<S>())
+    fn from_bytes<S>(bytes: [u8;32]) -> Option<Point<EvenY, S, NonZero>> {
+        Point::from_xonly_bytes(bytes)
     }
 }
 
 crate::impl_fromstr_deserialize! {
     name => "secp256k1 point",
     fn from_bytes<S,Z: ZeroChoice>(bytes: [u8;33]) -> Option<Point<Normal,S, Z>> {
-        Point::from_bytes(bytes).map(|p| p.set_secrecy::<S>())
+        Point::from_bytes(bytes)
     }
 }
 
@@ -792,7 +795,7 @@ mod test {
 
     #[test]
     fn zero_to_and_from_bytes() {
-        let zero = Point::zero();
+        let zero = Point::<_, Public, _>::zero();
         assert_eq!(Point::<_, _, Zero>::from_bytes(zero.to_bytes()), Some(zero));
     }
 

@@ -109,7 +109,7 @@ impl<NG> ECDSA<NG> {
         &self,
         verification_key: &Point<impl PointType, Public, NonZero>,
         message: &[u8; 32],
-        signature: &Signature<impl Secrecy>,
+        signature: &Signature,
     ) -> bool {
         let (R_x, s) = signature.as_tuple();
         // This ensures that there is only one valid s value per R_x for any given message.
