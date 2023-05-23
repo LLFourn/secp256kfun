@@ -1,7 +1,7 @@
 
 [package]
 name = "schnorr_fun"
-version = "0.8.2"
+version = "0.9.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2021"
 rust-version = "1.60"
@@ -14,10 +14,10 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 keywords = ["bitcoin", "schnorr"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun", version = "0.8",  default-features = false }
+secp256kfun = { path = "../secp256kfun", version = "0.9",  default-features = false }
 
 [dev-dependencies]
-secp256kfun = { path = "../secp256kfun", version = "0.8",  features = ["proptest"] }
+secp256kfun = { path = "../secp256kfun", version = "0.9",  features = ["proptest"] }
 rand = { version = "0.8" }
 lazy_static = "1.4"
 bincode = "1.0"

@@ -12,9 +12,9 @@ A rust library for making Sigma protocols fun!
 ``` toml
 [dependencies]
 # For just the traits and combinators
-sigma_fun = {version = "0.5", no-default-features = true, features = ["alloc"]}
+sigma_fun = {version = "0.6", no-default-features = true, features = ["alloc"]}
 # To create secp256k1 non-interactive proofs and serialize them
-sigma_fun = { version = "0.5", features = ["secp256k1", "serde"] }
+sigma_fun = { version = "0.6", features = ["secp256k1", "serde", "alloc"] }
 # you need a hash function and an rng for non-interactive proofs
 rand_chacha = "0.3"
 sha2 = "0.10"
