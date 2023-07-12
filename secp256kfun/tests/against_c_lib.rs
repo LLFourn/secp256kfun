@@ -16,7 +16,7 @@ mod against_c_lib {
 
             // Multiply a generator by scalar for both libraries and test equality
             let (point_1, secp_pk_1) = {
-                let point_1 = g!({ Scalar::from_bytes_mod_order(s1) } * G)
+                let point_1 = g!({ Scalar::<Secret, Zero>::from_bytes_mod_order(s1) } * G)
                     .normalize().non_zero()
                     .unwrap();
 
@@ -32,7 +32,7 @@ mod against_c_lib {
 
             // Multiply the resulting points by another scalar and test equality
             {
-                let point_2 = g!({ Scalar::from_bytes_mod_order(s2) } * point_1)
+                let point_2 = g!({ Scalar::<Secret, Zero>::from_bytes_mod_order(s2) } * point_1)
                     .normalize().non_zero()
                     .unwrap();
                 let secp_pk_2 = {
@@ -49,11 +49,11 @@ mod against_c_lib {
         #[test]
         fn vartime_double_mul(scalar_H in any::<[u8;32]>(), y in any::<[u8;32]>(), x in any::<[u8;32]>()) {
             let result = {
-                let H = g!({ Scalar::from_bytes_mod_order(scalar_H) } * G);
+                let H = g!({ Scalar::<Secret, Zero>::from_bytes_mod_order(scalar_H) } * G);
                 double_mul(
-                    &Scalar::from_bytes_mod_order(x).public(),
+                    &Scalar::<Secret, Zero>::from_bytes_mod_order(x).public(),
                     G,
-                    &Scalar::from_bytes_mod_order(y).public(),
+                    &Scalar::<Secret, Zero>::from_bytes_mod_order(y).public(),
                     &H,
                 )
                     .normalize().non_zero()
@@ -78,7 +78,7 @@ mod against_c_lib {
         fn point_addition(scalar_1 in any::<[u8;32]>()) {
             let secp_pk_1 =
                 PublicKey::from_secret_key(&*SECP, &SecretKey::from_slice(&scalar_1).unwrap());
-            let point_1 = g!({ Scalar::from_bytes_mod_order(scalar_1) } * G);
+            let point_1 = g!({ Scalar::<Secret, Zero>::from_bytes_mod_order(scalar_1) } * G);
 
 
             prop_assert_eq!(
@@ -95,8 +95,8 @@ mod against_c_lib {
 
         #[test]
         fn scalar_ops(bytes_1 in any::<[u8;32]>(), bytes_2 in any::<[u8;32]>()) {
-            let scalar_1 = Scalar::from_bytes_mod_order(bytes_1);
-            let scalar_2 = Scalar::from_bytes_mod_order(bytes_2);
+            let scalar_1 = Scalar::<Secret, Zero>::from_bytes_mod_order(bytes_1);
+            let scalar_2 = Scalar::<Secret, Zero>::from_bytes_mod_order(bytes_2);
             let sk_1 = &SecretKey::from_slice(&bytes_1).unwrap();
 
             prop_assert_eq!(&scalar_1.to_bytes()[..], &sk_1[..]);
@@ -122,7 +122,7 @@ mod against_c_lib {
         #[test]
         fn scalar_negation(bytes in any::<[u8;32]>()) {
             let sk = SecretKey::from_slice(&bytes).unwrap().negate();
-            let scalar = Scalar::from_bytes_mod_order(bytes);
+            let scalar = Scalar::<Secret, Zero>::from_bytes_mod_order(bytes);
             prop_assert_eq!(&(-scalar).to_bytes()[..], &sk[..]);
         }
 
