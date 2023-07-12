@@ -10,6 +10,11 @@ use secp256kfun::{marker::*, Point, Scalar};
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(crate = "crate::fun::bincode")
+)]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct EncryptedSignature<S = Public> {
     /// The `R` point in the signature

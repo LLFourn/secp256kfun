@@ -34,7 +34,7 @@ default = ["alloc", "secp256k1"]
 alloc = ["serde?/alloc", "secp256kfun/alloc"]
 secp256k1 = ["secp256kfun"]
 ed25519 = ["curve25519-dalek"]
-serde = ["dep:serde", "secp256kfun/serde", "curve25519-dalek/serde", "generic-array/serde"]
+serde = ["dep:serde", "secp256kfun?/serde", "curve25519-dalek?/serde", "generic-array/serde"]
 
 [package.metadata.docs.rs]
 all-features = true
