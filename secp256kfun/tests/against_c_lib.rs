@@ -4,7 +4,7 @@
 mod against_c_lib {
     use proptest::prelude::*;
     use secp256k1::{All, PublicKey, Secp256k1, SecretKey};
-    use secp256kfun::{g, marker::*, op::double_mul, s, Point, Scalar, G};
+    use secp256kfun::{g, marker::*, op::double_mul, s, secp256k1, Point, Scalar, G};
 
     lazy_static::lazy_static! {
         static ref SECP: Secp256k1<All> = Secp256k1::new();

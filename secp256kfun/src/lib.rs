@@ -40,9 +40,12 @@ pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;
 
-#[cfg(feature = "libsecp_compat")]
+#[cfg(feature = "libsecp_compat_0_27")]
 /// Re-export `secp256k1`
-pub extern crate secp256k1;
+pub extern crate secp256k1_0_27;
+
+#[cfg(feature = "libsecp_compat")]
+pub use secp256k1_0_27 as secp256k1;
 
 /// Re-export `serde`
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -54,7 +57,6 @@ pub use serde;
 #[cfg(feature = "bincode")]
 pub use bincode;
 
-#[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 #[cfg(any(feature = "proptest", test))]
 mod proptest_impls;

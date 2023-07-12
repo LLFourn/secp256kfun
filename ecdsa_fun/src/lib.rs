@@ -10,7 +10,6 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
-#[cfg(feature = "libsecp_compat")]
 mod libsecp_compat;
 
 use fun::Tag;
