@@ -21,7 +21,7 @@ rand_core = { version = "0.6", default-features = false }
 
 # optional
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
-secp256k1 = { version = "0.27", optional = true, default-features = false }
+secp256k1_0_27 = { package = "secp256k1", version = "0.27", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
 bincode = { version = "2.0.0-rc.3", optional = true }
 
@@ -38,10 +38,11 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
-alloc = ["serde?/alloc", "digest/alloc", "secp256k1?/alloc"]
+alloc = ["serde?/alloc", "digest/alloc", "secp256k1_0_27?/alloc"]
 std = ["alloc", "subtle/std", "digest/std"]
-libsecp_compat = ["dep:secp256k1"]
-serde = [ "dep:serde", "secp256k1?/serde", "bincode?/serde" ]
+libsecp_compat_0_27 = [ "dep:secp256k1_0_27" ]
+libsecp_compat = ["libsecp_compat_0_27"]
+serde = [ "dep:serde", "secp256k1_0_27?/serde", "bincode?/serde" ]
 
 [[bench]]
 name = "bench_ecmult"
