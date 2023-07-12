@@ -354,6 +354,16 @@ impl std::error::Error for FinishKeyGenError {}
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(
+        crate = "crate::fun::bincode",
+        encode_bounds = "Point<T>: crate::fun::bincode::Encode",
+        decode_bounds = "Point<T>: crate::fun::bincode::Decode",
+        borrow_decode_bounds = "Point<T>: crate::fun::bincode::BorrowDecode<'__de>"
+    )
+)]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
     #[cfg_attr(
