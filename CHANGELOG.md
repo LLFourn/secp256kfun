@@ -1,5 +1,11 @@
 # CHANGELOG
 
+
+## v0.9.1
+
+- Added more `bincode` derives for FROST things
+- Added `libsecp_compat_0_27` feature. This allows you to keep compatibility with particular versions going forward.
+
 ## v0.9.0
 
 - Improved API of FROST in `schnorr_fun`
