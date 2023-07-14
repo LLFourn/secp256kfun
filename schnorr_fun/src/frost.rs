@@ -33,12 +33,14 @@
 //! let party_index2 = s!(2).public();
 //! let party_index3 = s!(3).public();
 //! // share our public point poly, and receive the point polys from other participants
-//! let public_polys = BTreeMap::from_iter([
+//! let public_polys_received = BTreeMap::from_iter([
 //!     (my_index, my_public_poly),
 //!     (party_index2, public_poly2),
 //!     (party_index3, public_poly3),
 //! ]);
-//! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
+//! // (optionally) construct my_polys so we don't trust what's in public_poly_received for our index (in case it has been replaced with something malicious)
+//! let my_polys = BTreeMap::from_iter([(my_index, &my_secret_poly)]);
+//! let keygen = frost.new_keygen(public_polys_receievd, my_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
 //! // We need pass a message to sign for the proof-of-possession. We choose the keygen
 //! // id here but anything works (you can even use the empty message).
@@ -586,12 +588,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                 )
             })
             .collect::<BTreeMap<_, _>>();
-        let point_polys = scalar_polys
-            .iter()
-            .map(|(party_index, sp)| (*party_index, to_point_poly(sp)))
-            .collect::<BTreeMap<_, _>>();
 
-        let keygen = self.new_keygen(point_polys).unwrap();
+        let keygen = self.new_keygen(Default::default(), &scalar_polys).unwrap();
         let mut shares = scalar_polys
             .into_iter()
             .map(|(party_index, sp)| {
@@ -661,14 +659,34 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         keygen_hash.finalize().into()
     }
 
-    /// Collect all the public polynomials into a [`KeyGen`] session with a [`FrostKey`].
+    /// Collect all the public polynomials commitments into a [`KeyGen`] to produce a [`FrostKey`].
     ///
-    /// Takes a vector of point polynomials to use for this [`FrostKey`].
-    /// Also prepares a vector of verification shares for later.
-    pub fn new_keygen(
+    /// It is crucial that at least one of these polynomials was not adversarially produced
+    /// otherwise the adversary will know the eventual secret key.
+    ///
+    /// As a safety mechanism `local_secret_polys` allows you to pass in the secret scalar
+    /// polynomials you control which will be converted into the public form internally. This way
+    /// you don't trust what's in `point_polys` for the entries that you control. This protects
+    /// against a malicious adversary who publishes a `point_polys` which replaces your entries with
+    /// polynomial commitments it creates (otherwise you have to do this check yourself).
+    ///
+    /// If an entry is in both `point_polys` and `local_secret_polys` it will be silently
+    /// overwritten with the one from `local_secret_polys`.
+    pub fn new_keygen<S>(
         &self,
-        point_polys: BTreeMap<PartyIndex, Vec<Point>>,
-    ) -> Result<KeyGen, NewKeyGenError> {
+        mut point_polys: BTreeMap<PartyIndex, Vec<Point>>,
+        local_secret_polys: &BTreeMap<PartyIndex, S>,
+    ) -> Result<KeyGen, NewKeyGenError>
+    where
+        S: AsRef<[Scalar]>,
+    {
+        for (party_id, scalar_poly) in local_secret_polys {
+            let image = to_point_poly(scalar_poly.as_ref());
+            let _existing = point_polys.insert(*party_id, image);
+            if let Some(_existing) = _existing {
+                debug_assert_eq!(_existing, to_point_poly(scalar_poly.as_ref()));
+            }
+        }
         let len_first_poly = point_polys
             .iter()
             .next()
