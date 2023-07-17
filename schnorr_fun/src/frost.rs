@@ -575,8 +575,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Run the key generation protocol while simulating the parties internally.
     ///
-    /// This can be used to do generate a "trusted setup" FROST key. It returns the joint `FrostKey`
-    /// along with the secret keys for each party.
+    /// This can be used to do generate a "trusted setup" FROST key (but it is extremely inefficient
+    /// for this purpose). It returns the joint `FrostKey` along with the secret keys for each
+    /// party.
     pub fn simulate_keygen(
         &self,
         threshold: usize,
@@ -672,10 +673,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// polynomials you control which will be converted into the public form internally. This way
     /// you don't trust what's in `point_polys` for the entries that you control. This protects
     /// against a malicious adversary who publishes a `point_polys` which replaces your entries with
-    /// polynomial commitments it creates (otherwise you have to do this check yourself).
+    /// polynomial commitments it creates. If you don't use `local_secret_polys` you have to do
+    /// protect against this in your application.
     ///
-    /// If an entry is in both `point_polys` and `local_secret_polys` it will be silently
-    /// overwritten with the one from `local_secret_polys`.
+    /// Note that in any sensibly designed key generation `local_secret_polys` will only have one
+    /// entry as there is no security benefit of one party controlling multiple key generation
+    /// polynomials. If an entry is in both `point_polys` and `local_secret_polys` it will be
+    /// silently overwritten with the one from `local_secret_polys`.
     pub fn new_keygen<S>(
         &self,
         mut point_polys: BTreeMap<PartyIndex, Vec<Point>>,
