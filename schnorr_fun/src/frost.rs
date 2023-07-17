@@ -33,12 +33,14 @@
 //! let party_index2 = s!(2).public();
 //! let party_index3 = s!(3).public();
 //! // share our public point poly, and receive the point polys from other participants
-//! let public_polys = BTreeMap::from_iter([
+//! let public_polys_received = BTreeMap::from_iter([
 //!     (my_index, my_public_poly),
 //!     (party_index2, public_poly2),
 //!     (party_index3, public_poly3),
 //! ]);
-//! let keygen = frost.new_keygen(public_polys).expect("something wrong with what was provided by other parties");
+//! // (optionally) construct my_polys so we don't trust what's in public_poly_received for our index (in case it has been replaced with something malicious)
+//! let my_polys = BTreeMap::from_iter([(my_index, &my_secret_poly)]);
+//! let keygen = frost.new_keygen(public_polys_received, &my_polys).expect("something wrong with what was provided by other parties");
 //! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
 //! // We need pass a message to sign for the proof-of-possession. We choose the keygen
 //! // id here but anything works (you can even use the empty message).
@@ -80,12 +82,13 @@
 //!         pop_message,
 //!     )
 //!     .expect("something was wrong with the shares we received");
-//! // ⚠️ At this point you probably want to check out of band that all the other parties received their
-//! // secret shares correctly. If they all give the OK then we're ready to use the key and do some signing!
+//! // ⚠️ At this point you probably want to check out of band that all the other parties
+//! // received their secret shares correctly and have the same view of the protocol
+//! // (e.g same keygen_id). If they all give the OK then we're ready to use the key and do some signing!
 //! let xonly_frost_key = frost_key.into_xonly_key();
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session.
-//! // ⚠️ session_id MUST be different for every signing attempt to avoid nonce reuse
+//! // ⚠️ session_id MUST be different for every signing attempt to avoid nonce reuse (if using deterministic nonces).
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
 //! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&xonly_frost_key, &my_secret_share, session_id);
 //! let my_nonce = frost.gen_nonce(&mut nonce_rng);
@@ -131,14 +134,15 @@
 //! We represent a polynomial as a `Vec<Scalar>` where each [`Scalar`] represents a coefficient in the polynomial.
 //!
 //! The security of the protocol is only guaranteed if you sample your secret polynomial uniformly
-//! at random from the perspective of the other parties. You might also want to be able to
-//! deterministically re-generate the polynomial from some secret data so that you may restore the
-//! polynomial later from the secret. We don't have tools to use the restored polynomial in this
-//! library yet but plan to in the future.
+//! at random from the perspective of the other parties. There is little advantage to using
+//! deterministic randomness for this except to be able to reproduce the key generation with every
+//! party's long term static secret key. In theory a more compelling answer to reproducing shares is
+//! to use simple MPC protocol to produce a share for any party given a threshold number of parties.
+//! This protocol isn't implemented here yet.
 //!
-//! This implementation doesn't provide a default policy with regards to polynomial generation. Here
-//! we give an example of how to generate a deterministic RNG for the frost key generation session
-//! that should make sense in most applications:
+//! This library doesn't provide a default policy with regards to polynomial generation but here we
+//! give an example of a robust way to generate your secret scalar polynomial that should make sense
+//! in most applications:
 //!
 //! ```
 //! use schnorr_fun::{frost, fun::{ Scalar, nonce, Tag, derive_nonce_rng }};
@@ -147,22 +151,23 @@
 //!
 //! let static_secret_key = /* from local storage */
 //! # Scalar::random(&mut rand::thread_rng());
+//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<rand::rngs::ThreadRng>>::default().tag(b"my-app-name/frost/keygen");
 //! let mut poly_rng = derive_nonce_rng! {
-//!     // use Deterministic nonce gen so we reproduce it later
-//!     nonce_gen => nonce::Deterministic::<Sha256>::default().tag(b"my-app-name/frost/keygen"),
+//!     // use synthetic nonces that add system randomness in
+//!     nonce_gen => nonce_gen,
+//!     // Use your static secret key to add further protectoin
 //!     secret => static_secret_key,
-//!     // session id must be unique for each key generation session
+//!     // session id should be unique for each key generation session
 //!     public => ["frost_key_session_1053"],
 //!     seedable_rng => ChaCha20Rng
 //! };
 //!
-//! let threshold = 2;
-//! // we can always reproduce my_secret_poly knowing `static_secret_key`,
-//! // the threshold and the session id
+//! let threshold = 3;
 //! let my_secret_poly: Vec<Scalar> = frost::generate_scalar_poly(threshold, &mut poly_rng);
 //! ```
 //!
-//! Note that if a key generation session fails you must always start a fresh session with a different session id.
+//! Note that if a key generation session fails you should always start a fresh session with a
+//! different session id (but you can use the same nonce_gen).
 //!
 //! [FROST]: <https://eprint.iacr.org/2020/852.pdf>
 //! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
@@ -540,9 +545,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// unique per signing attempt -- even if the signing attempt fails to produce a signature you
     /// must not reuse the session id, the resulting rng or anything derived from that rng again.
     ///
-    /// 💡 Before using this function write a short justification as to why you beleive your session
-    /// id will be unique per signing attempt. Perhaps include it as a comment next to the call.
-    /// Note **it must be unique even across signing attempts for the same or different messages**.
+    /// 💡 Before using this function with a deterministic rng write a short justification as to why
+    /// you beleive your session id will be unique per signing attempt. Perhaps include it as a
+    /// comment next to the call. Note **it must be unique even across signing attempts for the same
+    /// or different messages**.
     ///
     /// The rng returned can be used to create many nonces. For example, when signing a
     /// Bitcoin transaction you may need to sign several inputs each with their own signature. It is
@@ -569,8 +575,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 
     /// Run the key generation protocol while simulating the parties internally.
     ///
-    /// This can be used to do generate a "trusted setup" FROST key. It returns the joint `FrostKey`
-    /// along with the secret keys for each party.
+    /// This can be used to do generate a "trusted setup" FROST key (but it is extremely inefficient
+    /// for this purpose). It returns the joint `FrostKey` along with the secret keys for each
+    /// party.
     pub fn simulate_keygen(
         &self,
         threshold: usize,
@@ -586,12 +593,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                 )
             })
             .collect::<BTreeMap<_, _>>();
-        let point_polys = scalar_polys
-            .iter()
-            .map(|(party_index, sp)| (*party_index, to_point_poly(sp)))
-            .collect::<BTreeMap<_, _>>();
 
-        let keygen = self.new_keygen(point_polys).unwrap();
+        let keygen = self.new_keygen(Default::default(), &scalar_polys).unwrap();
         let mut shares = scalar_polys
             .into_iter()
             .map(|(party_index, sp)| {
@@ -661,14 +664,37 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         keygen_hash.finalize().into()
     }
 
-    /// Collect all the public polynomials into a [`KeyGen`] session with a [`FrostKey`].
+    /// Collect all the public polynomials commitments into a [`KeyGen`] to produce a [`FrostKey`].
     ///
-    /// Takes a vector of point polynomials to use for this [`FrostKey`].
-    /// Also prepares a vector of verification shares for later.
-    pub fn new_keygen(
+    /// It is crucial that at least one of these polynomials was not adversarially produced
+    /// otherwise the adversary will know the eventual secret key.
+    ///
+    /// As a safety mechanism `local_secret_polys` allows you to pass in the secret scalar
+    /// polynomials you control which will be converted into the public form internally. This way
+    /// you don't trust what's in `point_polys` for the entries that you control. This protects
+    /// against a malicious adversary who publishes a `point_polys` which replaces your entries with
+    /// polynomial commitments it creates. If you don't use `local_secret_polys` you have to do
+    /// protect against this in your application.
+    ///
+    /// Note that in any sensibly designed key generation `local_secret_polys` will only have one
+    /// entry as there is no security benefit of one party controlling multiple key generation
+    /// polynomials. If an entry is in both `point_polys` and `local_secret_polys` it will be
+    /// silently overwritten with the one from `local_secret_polys`.
+    pub fn new_keygen<S>(
         &self,
-        point_polys: BTreeMap<PartyIndex, Vec<Point>>,
-    ) -> Result<KeyGen, NewKeyGenError> {
+        mut point_polys: BTreeMap<PartyIndex, Vec<Point>>,
+        local_secret_polys: &BTreeMap<PartyIndex, S>,
+    ) -> Result<KeyGen, NewKeyGenError>
+    where
+        S: AsRef<[Scalar]>,
+    {
+        for (party_id, scalar_poly) in local_secret_polys {
+            let image = to_point_poly(scalar_poly.as_ref());
+            let _existing = point_polys.insert(*party_id, image);
+            if let Some(_existing) = _existing {
+                debug_assert_eq!(_existing, to_point_poly(scalar_poly.as_ref()));
+            }
+        }
         let len_first_poly = point_polys
             .iter()
             .next()
