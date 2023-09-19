@@ -63,7 +63,7 @@ proptest! {
         msg in any::<[u8;32]>(),
     ) {
         let secp = &*SECP;
-        let keypair = secp256k1::KeyPair::from_secret_key(secp, &key.clone().into());
+        let keypair = secp256k1::KeyPair::from_secret_key(secp, &key.into());
         let secp_msg = secp256k1::Message::from_slice(&msg).unwrap();
         let sig = secp.sign_schnorr_no_aux_rand(&secp_msg, &keypair);
         let schnorr = Schnorr::<Sha256,Bip340NoAux>::default();

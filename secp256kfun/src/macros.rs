@@ -1,221 +1,42 @@
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _s {
-    (@dot [$($a:tt)*] [$($aa:ident).+] . $attr:ident $($t:tt)*) => {
-        $crate::_s!(@dot [$($a)*] [$($aa).+.$attr] $($t)*)
-    };
-    (@dot [$($a:tt)*] [$($aa:ident).+] $($t:tt)*) => {
-        // no more dots to process to join them all together
-        $crate::_s!(@next [{$($aa).+.borrow()} $($a)*] $($t)*)
-    };
-    (@scalar [$($a:tt)*] & $($t:tt)+) => {
-        core::compile_error!("Do not use ‘&’ in s!(...) expression");
-    };
-    (@scalar [$($a:tt)*] - $($t:tt)+) => {
-        $crate::_s!(@scalar [neg $($a)*] $($t)+)
-    };
-    (@scalar [$($a:tt)*] $scalar:ident $($t:tt)*) => {
-        $crate::_s!(@dot [$($a)*] [$scalar] $($t)*)
-    };
-    (@scalar [$($a:tt)*] 0 $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::Scalar::<$crate::marker::Secret,_>::zero()} $($a)*] $($t)*)
-    };
-    (@scalar [$($a:tt)*] $num:literal $($t:tt)*) => {
-        $crate::_s!(@next [{{
-        // hack to check at compile time the thing is non-zero
-        let _ = [(); (($num as u32).count_ones() as usize) - 1];
-        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
-            unsafe { core::num::NonZeroU32::new_unchecked($num) },
-        )
-    }} $($a)*] $($t)*)
-    };
-    (@scalar [$($a:tt)*] $block:block $($t:tt)*) => {
-        $crate::_s!(@next [$block $($a)*] $($t)*)
-    };
-    (@scalar [$($a:tt)*] ($($subexpr:tt)+) $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::_s!(@scalar [] $($subexpr)+)} $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block neg $($a:tt)*] $($t:tt)*) => {
-        $crate::_s!(@next [{core::ops::Neg::neg($stack0)} $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block $stack1:block mul $($a:tt)*] $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::op::scalar_mul($stack1.borrow(), $stack0.borrow())} $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block $($a:tt)*] * $($t:tt)+) => {
-        $crate::_s!(@scalar [$stack0 mul $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block $stack1:block sub $($a:tt)*] $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::op::scalar_sub($stack1.borrow(), $stack0.borrow())} $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block $stack1:block add $($a:tt)*] $($t:tt)*) => {
-        $crate::_s!(@next [{$crate::op::scalar_add($stack1.borrow(), $stack0.borrow())} $($a)*] $($t)*)
-    };
-
-    (@next [$stack0:block $($a:tt)*] - $($t:tt)+) => {
-        $crate::_s!(@scalar [$stack0 sub $($a)*] $($t)+)
-    };
-
-    (@next [$stack0:block $($a:tt)*] + $($t:tt)+) => {
-        $crate::_s!(@scalar [$stack0 add $($a)*] $($t)+)
-    };
-
-    (@next [$scalar:block]) => {
-        $scalar
-    };
-
-    (@next [$scalar:block stringify]) => {
-        stringify!($scalar)
-    };
-}
-
 /// Scalar expression macro.
+///
+/// Like [`g!`] except that the output of the expression is a [`Scalar`] rather than a [`Point`].
+///
+/// [`Scalar`]: crate::Scalar
+/// [`Point`]: crate::Point
+/// [`g!`]: crate::g
 #[macro_export]
 macro_rules! s {
-    (DEBUG $($t:tt)*) => {{
-        #[allow(unused_imports)]
-        use core::borrow::Borrow;
-        $crate::_s!(@scalar [stringify] $($t)*)
-    }};
     ($($t:tt)*) => {{
-        #[allow(unused_imports)]
-        use core::borrow::Borrow;
-        $crate::_s!(@scalar [] $($t)*)
+        $crate::arithmetic_macros::gen_s!($crate $($t)*)
     }}
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _g {
-    (@scalar [$($a:tt)*] & $($t:tt)+) => {
-        core::compile_error!("Do not use ‘&’ in g!(...) expression");
-    };
-    (@scalar [$($a:tt)*] - $($t:tt)+) => {
-        $crate::_g!(@scalar [neg $($a)*] $($t)+)
-    };
-    (@scalar [$($a:tt)*] ($($expr:tt)+) * $($t:tt)+) => {
-        $crate::_g!(@point [s {$crate::_s!(@scalar [] $($expr)+)}  $($a)*] $($t)+)
-    };
-    (@scalar [$($a:tt)*] $ident:ident $($t:tt)*) => {
-        // We've got an identifier "foo" go and try to match foo.bar
-        // we don't know if this is a scalar yet.
-        $crate::_g!(@dot [$($a)*] [$ident] $($t)*)
-    };
-    (@scalar [$($a:tt)*] $block:block * $($t:tt)*) => {
-        $crate::_g!(@point [s $block $($a)*] $($t)*)
-    };
-    (@scalar [$($a:tt)*] 0 * $($t:tt)+) => {
-        $crate::_g!(@point [s {$crate::Scalar::<$crate::marker::Secret,_>::zero()} $($a)*] $($t)+)
-    };
-    (@scalar [$($a:tt)*] $num:literal * $($t:tt)+) => {
-        $crate::_g!(@point [s {{
-        // hack to check at compile time the thing is non-zero
-        let _ = [(); (($num as u32).count_ones() as usize) - 1];
-        $crate::Scalar::<$crate::marker::Secret, $crate::marker::NonZero>::from_non_zero_u32(
-            unsafe { core::num::NonZeroU32::new_unchecked($num) },
-        )
-    }} $($a)*] $($t)+)
-    };
-    (@scalar [$($a:tt)*] $($t:tt)+) => {
-        // failed to find scalar look for point instead
-        $crate::_g!(@point [$($a)*] $($t)+)
-    };
-    (@dot [$($a:tt)*] [$($aa:ident).+] . $attr:ident $($t:tt)*) => {
-        $crate::_g!(@dot [$($a)*] [$($aa).+.$attr] $($t)*)
-    };
-    (@dot [$($a:tt)*] [$($aa:ident).+] * $($t:tt)*) => {
-        // no more dots to process and we seem to have a scalar.
-        // Join them together and look for a point.
-        $crate::_g!(@point [s {$($aa).+.borrow()} $($a)*] $($t)*)
-    };
-    (@dot [$($a:tt)*] [$($aa:ident).+] $($t:tt)*) => {
-        // no more dots to process and it looks like this was a point
-        // so go onto the next operator
-        $crate::_g!(@next [{$($aa).+.borrow()} $($a)*] $($t)*)
-    };
-    (@point [$($a:tt)*] $point:ident $($t:tt)*) => {
-        $crate::_g!(@dot [$($a)*] [$point] $($t)*)
-    };
-    (@point [$($a:tt)*] $block:block $($t:tt)*) => {
-        $crate::_g!(@next [$block $($a)*] $($t)*)
-    };
-    (@point [$($a:tt)*] ($($expr:tt)+) $($t:tt)*) => {
-        $crate::_g!(@next [{ $crate::_g!(@scalar [] $($expr)+) } $($a)*] $($t)*)
-    };
-    (@next [$point0:block s $scalar0:block neg $($a:tt)*] $($t:tt)*) => {
-        $crate::_g!(@next [$point0 s {core::ops::Neg::neg($scalar0.borrow())} $($a)*] $($t)*)
-    };
-    (@next [$point0:block neg $($a:tt)*] $($t:tt)*) => {
-        $crate::_g!(@next [{core::ops::Neg::neg($point0)} $($a)*] $($t)*)
-    };
-    (@next [$point0:block s $scalar0:block $point1:block s $scalar1:block add $($a:tt)*] $($t:tt)*) => {
-
-        $crate::_g!(@next [{
-            $crate::op::double_mul(
-                $scalar0.borrow(),
-                $point0.borrow(),
-                $scalar1.borrow(),
-                $point1.borrow()
-            )} $($a)*]  $($t)*)
-    };
-    (@next [$point0:block s $scalar0:block $point1:block s $scalar1:block sub $($a:tt)*] $($t:tt)*) => {
-        $crate::_g!(@next [{
-            $crate::op::double_mul(
-                &core::ops::Neg::neg($scalar0),
-                $point0.borrow(),
-                $scalar1.borrow(),
-                $point1.borrow()
-            )} $($a)*]  $($t)*)
-    };
-    (@next [$point0:block $(s $scalar0:block)? $point1:block $(s $scalar1:block)? add $($a:tt)*] $($t:tt)*) => {
-        $crate::_g!(@next [
-            {$crate::op::point_add(
-                $crate::_g!(@next [$point1 $(s $scalar1)?]).borrow(),
-                $crate::_g!(@next [$point0 $(s $scalar0)?]).borrow()
-            )} $($a)*] $($t)*)
-    };
-    (@next [$point0:block $(s $scalar0:block)? $point1:block $(s $scalar1:block)? sub $($a:tt)*] $($t:tt)*) => {
-        $crate::_g!(@next [
-            {$crate::op::point_sub(
-                $crate::_g!(@next [$point1 $(s $scalar1)?]).borrow(),
-                $crate::_g!(@next [$point0 $(s $scalar0)?]).borrow()
-            )}
-            $($a)*] $($t)*)
-    };
-    (@next [$point0:block s $scalar0:block $($a:tt)*] + $($t:tt)*) => {
-        $crate::_g!(@scalar [$point0 s $scalar0 add $($a)*] $($t)*)
-    };
-    (@next [$point0:block $($a:tt)*] + $($t:tt)+) => {
-        $crate::_g!(@scalar [$point0 add $($a)*] $($t)+)
-    };
-    (@next [$point0:block s $scalar0:block $($a:tt)*] - $($t:tt)+) => {
-        $crate::_g!(@scalar [$point0 s $scalar0 sub $($a)*] $($t)+)
-    };
-    (@next [$point0:block $($a:tt)*] - $($t:tt)+) => {
-        $crate::_g!(@scalar [$point0 sub $($a)*] $($t)+)
-    };
-    (@next [$point0:block s $scalar0:block]) => {
-        $crate::op::scalar_mul_point($scalar0.borrow(), $point0.borrow())
-    };
-    (@next [$point0:block]) => {
-        $point0
-    }
 }
 
 /// Group operation expression macro.
 ///
-/// The `g!` macro lets you express a set of scalar multiplications and group
-/// additions/substraction. This compiles down to operations from the [`op`]
-/// module. Apart from being far more readable, the idea is that `g!` will (or
-/// may in the future) compile to more efficient operations than if you were to
-/// manually call the functions from `op` yourself.
+/// The `g!` macro lets you express scalar multiplications and group operations conveniently
+/// following standard [order of operations]. This compiles down to operations from the [`op`]
+/// module. Apart from being far more readable, the idea is that `g!` will (or may in the future)
+/// compile to more efficient operations than if you were to manually call the functions from [`op`]
+/// yourself.
 ///
-/// As a bonus, you don't need to put reference `&` makers on terms in `g!` this
-/// is done automatically if necessary.
+/// Note you can but often don't need to put a `&` in front of the terms in the expression.
+///
+/// # Syntax and operations
+///
+/// The expression supports the following operations:
+///
+/// - `<scalar> * <point>` multiplies the `point` by `scalar`
+/// - `<point> + <point>` adds two points
+/// - `<point> - <point>` subtracts one point from another
+/// - `<scalar_iter> .* <point_iter>` does a [dot product](https://en.wikipedia.org/wiki/Dot_product)
+/// between a list of points and scalars. If one list is shorter than the other then the excess
+/// points or scalars will be multiplied by 0. See [`op::point_scalar_dot_product`].
+///
+/// The terms of the expression can be any variable followed by simple method calls, attribute
+/// access etc. If your term involves more expressions (anything involving specifying types using
+/// `::`) then you can use `{..}` to surround arbitrary expressions. You can also use `(..)` to
+/// group arithmetic expressions to override the usual operation order.
 ///
 /// # Examples
 ///
@@ -234,11 +55,11 @@ macro_rules! _g {
 /// let H = Point::random(&mut rand::thread_rng());
 /// let minus = g!(x * G - y * H);
 /// let plus = g!(x * G + y * H);
-/// // note the parenthesis around the scalar sub expression
-/// assert_eq!(g!(plus + minus), g!((2 * x) * G));
+/// assert_eq!(g!(plus + minus), g!(2 * x * G)); // this will do 2 * x first
+/// assert_eq!(g!(42 * (G + H)), g!((42 * G + 42 * H)));
 /// ```
 ///
-/// You may access attributes:
+/// You may access attributes and call methods:
 ///
 /// ```
 /// # use secp256kfun::{g, Point, Scalar, G};
@@ -253,28 +74,27 @@ macro_rules! _g {
 /// };
 ///
 /// let result = g!(mul.scalar * mul.point);
+/// assert_eq!(g!(mul.scalar.invert() * result), mul.point);
 /// ```
 ///
 /// You can put an arbitrary expressions inside `{...}`
 ///
 /// ```
 /// # use secp256kfun::{g, Point, Scalar, G};
-/// let x = Scalar::random(&mut rand::thread_rng());
-/// let Xinv = g!({ x.invert() } * G);
-/// assert_eq!(g!(x * Xinv), *G);
+/// let random_point = g!({ Scalar::random(&mut rand::thread_rng()) } * G);
 /// ```
 ///
 /// [`double_mul`]: crate::op::double_mul
 /// [`G`]: crate::G
 /// [`Point`]: crate::Point
 /// [`op`]: crate::op
-
+/// [order of operations]: https://en.wikipedia.org/wiki/Order_of_operations
+/// [`op::point_scalar_dot_product`]: crate::op::point_scalar_dot_product
 #[macro_export]
 macro_rules! g {
-    ($($t:tt)+) => {{
-        #[allow(unused_imports)]
-        use core::borrow::Borrow;
-        $crate::_g!(@scalar [] $($t)+) }};
+    ($($t:tt)*) => {{
+        $crate::arithmetic_macros::gen_g!($crate $($t)*)
+    }}
 }
 
 /// Macro to make nonce derivation clear and explicit.
@@ -315,6 +135,7 @@ macro_rules! derive_nonce {
         public => [$($public:expr),+]$(,)?
     ) => {{
         use $crate::hash::HashAdd;
+        #[allow(unused_imports)]
         use core::borrow::Borrow;
         use $crate::nonce::NonceGen;
         Scalar::from_hash(

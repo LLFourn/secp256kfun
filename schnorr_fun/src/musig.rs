@@ -312,7 +312,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
             })
             .collect::<Vec<_>>();
 
-        let agg_key = crate::fun::op::lincomb(coefs.iter(), keys.iter())
+        let agg_key = g!(&coefs .* &keys)
             .non_zero().expect("computationally unreachable: linear combination of hash randomised points cannot add to zero");
 
         AggKey {
@@ -531,13 +531,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     ) {
         let mut Rs = nonces;
         let agg_Rs = Rs.iter().fold([Point::zero(); 2], |acc, nonce| {
-            [
-                g!({ acc[0] } + { nonce.0[0] }),
-                g!({ acc[1] } + { nonce.0[1] }),
-            ]
+            [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
         });
         let agg_Rs = Nonce::<Zero>([
-            g!({ agg_Rs[0] } + encryption_key).normalize(),
+            g!(agg_Rs[0] + encryption_key).normalize(),
             agg_Rs[1].normalize(),
         ]);
 
@@ -552,7 +549,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         .public()
         .mark_zero();
 
-        let (R, r_needs_negation) = g!({ agg_Rs.0[0] } + b * { agg_Rs.0[1] })
+        let (R, r_needs_negation) = g!(agg_Rs.0[0] + b * agg_Rs.0[1])
             .normalize()
             .non_zero()
             .unwrap_or(Point::generator())

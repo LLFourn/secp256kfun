@@ -411,9 +411,9 @@ impl MulAssign<&Scalar> for ProjectivePoint {
 
 /// Calculates a linear combination `sum(x[i] * k[i])`, `i = 0..N`
 #[cfg(feature = "alloc")]
-pub fn lincomb_iter<'a, 'b>(
-    xs: impl Iterator<Item = &'a ProjectivePoint>,
-    ks: impl Iterator<Item = &'b Scalar>,
+pub fn lincomb_iter<S: AsRef<Scalar>, P: AsRef<ProjectivePoint>>(
+    xs: impl Iterator<Item = P>,
+    ks: impl Iterator<Item = S>,
 ) -> ProjectivePoint {
     use alloc::vec::Vec;
     use subtle::ConditionallyNegatable;
@@ -424,8 +424,9 @@ pub fn lincomb_iter<'a, 'b>(
     let mut tables2 = Vec::with_capacity(size);
     let mut n = 0;
 
-    for (k, mut x) in ks.zip(xs.cloned()) {
-        let (mut r1, mut r2) = decompose_scalar(&k);
+    for (k, x) in ks.zip(xs) {
+        let mut x = x.as_ref().clone();
+        let (mut r1, mut r2) = decompose_scalar(k.as_ref());
         let mut x_beta = x.endomorphism();
         let r1_is_high = r1.is_high();
         let r2_is_high = r2.is_high();

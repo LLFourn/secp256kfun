@@ -214,14 +214,14 @@ mod test {
                 let proof_system = crate::FiatShamir::<OrDL, HashTranscript<Sha256,ChaCha20Rng>>::default();
 
                 let proof_lhs = proof_system.prove(
-                    &Either::Left(x.clone()),
+                    &Either::Left(x),
                     &statement,
                     Some(&mut rand::thread_rng()),
                 );
                 assert!(proof_system.verify(&statement, &proof_lhs));
 
                 let wrong_proof_lhs = proof_system.prove(
-                    &Either::Right(x.clone()),
+                    &Either::Right(x),
                     &statement,
                     Some(&mut rand::thread_rng()),
                 );

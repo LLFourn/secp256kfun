@@ -51,10 +51,10 @@ mod against_c_lib {
             let result = {
                 let H = g!({ Scalar::<Secret, Zero>::from_bytes_mod_order(scalar_H) } * G);
                 double_mul(
-                    &Scalar::<Secret, Zero>::from_bytes_mod_order(x).public(),
+                    Scalar::<Secret, Zero>::from_bytes_mod_order(x).public(),
                     G,
-                    &Scalar::<Secret, Zero>::from_bytes_mod_order(y).public(),
-                    &H,
+                    Scalar::<Secret, Zero>::from_bytes_mod_order(y).public(),
+                    H,
                 )
                     .normalize().non_zero()
                     .unwrap()

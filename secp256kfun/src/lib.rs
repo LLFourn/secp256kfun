@@ -57,6 +57,10 @@ pub use serde;
 #[cfg(feature = "bincode")]
 pub use bincode;
 
+#[doc(hidden)]
+/// these are helpers so we hide them. Actual g! macro is defined in macros.rs
+pub use secp256kfun_arithmetic_macros as arithmetic_macros;
+
 mod libsecp_compat;
 #[cfg(any(feature = "proptest", test))]
 mod proptest_impls;

@@ -153,7 +153,7 @@ fn multi_mul(c: &mut Criterion) {
                     ],
                 )
             },
-            |(scalars, points)| op::lincomb(scalars.iter(), points.iter()),
+            |(scalars, points)| op::point_scalar_dot_product(scalars.iter(), points.iter()),
             BatchSize::SmallInput,
         )
     });

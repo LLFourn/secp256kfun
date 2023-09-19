@@ -18,7 +18,7 @@ lazy_static::lazy_static! {
 fn sign_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_sign");
     {
-        let keypair = schnorr.new_keypair(SK.clone());
+        let keypair = schnorr.new_keypair(*SK);
         group.bench_function("fun::schnorr_sign", |b| {
             b.iter(|| schnorr.sign(&keypair, Message::<Public>::raw(MESSAGE)))
         });
@@ -27,7 +27,7 @@ fn sign_schnorr(c: &mut Criterion) {
     {
         use secp256k1::{KeyPair, Message, Secp256k1};
         let secp = Secp256k1::new();
-        let kp = KeyPair::from_secret_key(&secp, &SK.clone().into());
+        let kp = KeyPair::from_secret_key(&secp, &(*SK).into());
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
         group.bench_function("secp::schnorrsig_sign_no_aux_rand", |b| {
             b.iter(|| {
@@ -39,7 +39,7 @@ fn sign_schnorr(c: &mut Criterion) {
 
 fn verify_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_verify");
-    let keypair = schnorr.new_keypair(SK.clone());
+    let keypair = schnorr.new_keypair(*SK);
     {
         let message = Message::<Public>::raw(MESSAGE);
         let sig = schnorr.sign(&keypair, message);
@@ -59,7 +59,7 @@ fn verify_schnorr(c: &mut Criterion) {
     {
         use secp256k1::{KeyPair, Message, Secp256k1, XOnlyPublicKey};
         let secp = Secp256k1::new();
-        let kp = KeyPair::from_secret_key(&secp, &SK.clone().into());
+        let kp = KeyPair::from_secret_key(&secp, &(*SK).into());
         let pk = XOnlyPublicKey::from_keypair(&kp).0;
         let msg = Message::from_slice(&MESSAGE[..]).unwrap();
         let sig = secp.sign_schnorr_no_aux_rand(&msg, &kp);

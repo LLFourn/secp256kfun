@@ -166,7 +166,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
             // will also be uniform.
             .expect("computationally unreachable");
 
-        let s_hat = s!({ r.invert() } * (m + R_x * x))
+        let s_hat = s!(r.invert() * (m + R_x * x))
             .public()
             .non_zero()
             .expect("computationally unreachable");
@@ -286,7 +286,7 @@ impl<T: Transcript<DLEQ>, NG> Adaptor<T, NG> {
             return None;
         }
         let s = &signature.s;
-        let y = s!({ s.invert() } * s_hat);
+        let y = s!(s.invert() * s_hat);
         let Y = g!(y * G);
 
         if Y == *encryption_key {

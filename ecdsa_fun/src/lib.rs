@@ -177,17 +177,18 @@ impl<NG: NonceGen> ECDSA<NG> {
             .non_zero()
             .expect("computationally unreachable");
 
-        let mut s = s!({ r.invert() } * (m + R_x * x))
+        let mut s = s!((m + R_x * x) / r)
             // Given R_x is determined by x and m through a hash, reaching
             // (m + R_x * x) = 0 is intractable.
             .non_zero()
-            .expect("computationally unreachable");
+            .expect("computationally unreachable")
+            .public();
 
         // s values must be low (less than half group order), otherwise signatures
         // would be malleable i.e. (R,s) and (R,-s) would both be valid signatures.
         s.conditional_negate(s.is_high());
 
-        Signature { R_x, s: s.public() }
+        Signature { R_x, s }
     }
 }
 

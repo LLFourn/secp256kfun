@@ -202,11 +202,17 @@ impl TimeSensitive for ConstantTime {
     }
 
     #[cfg(feature = "alloc")]
-    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+    #[inline(always)]
+    fn lincomb_iter<
+        A: Iterator<Item = AT>,
+        B: Iterator<Item = BT>,
+        AT: AsRef<Point>,
+        BT: AsRef<Scalar>,
+    >(
         points: A,
         scalars: B,
     ) -> Point {
-        mul::lincomb_iter(points, scalars)
+        mul::lincomb_iter(points.map(|p| *p.as_ref()), scalars)
     }
 }
 
@@ -327,7 +333,12 @@ impl TimeSensitive for VariableTime {
     }
 
     #[cfg(feature = "alloc")]
-    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+    fn lincomb_iter<
+        A: Iterator<Item = AT>,
+        B: Iterator<Item = BT>,
+        AT: AsRef<Point>,
+        BT: AsRef<Scalar>,
+    >(
         points: A,
         scalars: B,
     ) -> Point {
