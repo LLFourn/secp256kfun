@@ -149,6 +149,39 @@ impl<S> Scalar<S, NonZero> {
     pub fn minus_one() -> Self {
         Self::from_inner(backend::BackendScalar::minus_one())
     }
+
+    /// Marks a scalar non-zero scalar as having the zero choice `Z` (rather than `NonZero`).
+    ///
+    /// Useful when writing code that preserves the zero choice of the caller.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{marker::*, s, Scalar};
+    ///
+    /// /// Returns an iterator of 1, x, x², x³ ...
+    /// fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
+    ///     core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
+    ///         Some(s!(xpow * x).set_secrecy())
+    ///     })
+    /// }
+    ///
+    /// assert_eq!(powers(s!(2)).take(4).collect::<Vec<_>>(), vec![
+    ///     s!(1),
+    ///     s!(2),
+    ///     s!(4),
+    ///     s!(8)
+    /// ]);
+    /// assert_eq!(powers(s!(0)).take(4).collect::<Vec<_>>(), vec![
+    ///     s!(1).mark_zero(),
+    ///     s!(0),
+    ///     s!(0),
+    ///     s!(0)
+    /// ]);
+    /// ```
+    pub fn mark_zero_choice<Z: ZeroChoice>(self) -> Scalar<S, Z> {
+        Scalar::from_inner(self.0)
+    }
 }
 
 impl Scalar<Secret, NonZero> {

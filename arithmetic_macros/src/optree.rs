@@ -230,11 +230,6 @@ fn rule_postfix(input: &mut Input) -> Result<Vec<TokenTree>, Error> {
                         Some(following_period) => match &following_period {
                             TokenTree::Ident(_) => {
                                 tokens.push(following_period);
-                                if let Some(TokenTree::Group(group)) = input.peek() {
-                                    if group.delimiter() == Delimiter::Parenthesis {
-                                        tokens.push(input.next().unwrap())
-                                    }
-                                }
                             }
                             TokenTree::Literal(lit) if lit.to_string().parse::<f32>().is_ok() => {
                                 tokens.push(following_period);
@@ -246,6 +241,9 @@ fn rule_postfix(input: &mut Input) -> Result<Vec<TokenTree>, Error> {
                 } else {
                     break;
                 }
+            }
+            Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis => {
+                tokens.push(input.next().unwrap());
             }
             Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Bracket => {
                 tokens.push(input.next().unwrap());
@@ -553,9 +551,15 @@ mod test {
         assert!(
             matches!(ot, OpTree::Term(call) if call.to_string().replace(' ', "") == "term[1..10]")
         );
-        let ot = parse!("term[1].7.a_method()[2]");
+    }
+
+    #[test]
+    fn lots_of_junk_added() {
+        let ot = parse!("term(arg1, arg2)[1].7.a_method()[2] + what.a.long.1[6].tail(of, things)");
         assert!(
-            matches!(ot, OpTree::Term(call) if call.to_string().replace(' ', "") == "term[1].7.a_method()[2]")
+            matches!(ot, OpTree::Infix( Infix { lhs, rhs, kind: InfixKind::Add }) if
+                     matches!(&*lhs.tree, OpTree::Term(call) if call.to_string().replace(' ', "") == "term(arg1,arg2)[1].7.a_method()[2]") &&
+                     matches!(&*rhs.tree, OpTree::Term(call) if call.to_string().replace(' ', "") == "what.a.long.1[6].tail(of,things)"))
         );
     }
 

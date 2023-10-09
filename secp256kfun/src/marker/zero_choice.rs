@@ -22,6 +22,7 @@ pub trait ZeroChoice:
     + Copy
     + DecideZero<NonZero>
     + DecideZero<Zero>
+    + DecideZero<Self, Out = Self>
     + core::hash::Hash
     + Ord
     + PartialOrd

@@ -1095,23 +1095,21 @@ fn scalar_poly_eval(
     poly: &[Scalar],
     x: Scalar<impl Secrecy, impl ZeroChoice>,
 ) -> Scalar<Secret, Zero> {
-    let xpows = core::iter::successors(Some(s!(1).public().mark_zero()), |xpow| {
-        Some(s!(xpow * x).public())
-    })
-    .take(poly.len());
-
-    s!(xpows .* poly)
+    s!(powers(x) .* poly)
 }
 
 fn point_poly_eval(
     poly: &[Point<impl PointType, Public, impl ZeroChoice>],
     x: Scalar<Public, impl ZeroChoice>,
 ) -> Point<NonNormal, Public, Zero> {
-    let xpows = core::iter::successors(Some(s!(1).public().mark_zero()), |xpow| {
-        Some(s!(xpow * x).public())
+    g!(powers(x) .* poly)
+}
+
+/// Returns an iterator of 1, x, x², x³ ...
+fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
+    core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
+        Some(s!(xpow * x).set_secrecy())
     })
-    .take(poly.len());
-    g!(xpows .* poly)
 }
 
 #[cfg(test)]
