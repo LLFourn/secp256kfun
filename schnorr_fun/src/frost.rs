@@ -1008,7 +1008,7 @@ impl SignSession {
 }
 
 /// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
-fn lagrange_lambda(
+pub fn lagrange_lambda(
     x_j: Scalar<impl Secrecy>,
     x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
 ) -> Scalar<Public> {
