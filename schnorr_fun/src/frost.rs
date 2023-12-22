@@ -1015,7 +1015,7 @@ pub fn lagrange_lambda(
     x_ms.fold(Scalar::one(), |acc, x_m| {
         let denominator = s!(x_m - x_j)
             .non_zero()
-            .expect("removed duplicate indexes")
+            .expect("indexes must be unique")
             .invert();
         s!(acc * x_m * denominator).public()
     })
@@ -1091,14 +1091,20 @@ pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Sca
     (0..threshold).map(|_| Scalar::random(rng)).collect()
 }
 
-fn scalar_poly_eval(
+/// Evaluate a scalar polynomial defined by coefficients, at some scalar index.
+///
+/// The polynomial coefficients begin with the smallest degree term first (the constant).
+pub fn scalar_poly_eval(
     poly: &[Scalar],
     x: Scalar<impl Secrecy, impl ZeroChoice>,
 ) -> Scalar<Secret, Zero> {
     s!(powers(x) .* poly)
 }
 
-fn point_poly_eval(
+/// Evaluate a point polynomial defined by coefficients, at some index.
+///
+/// The polynomial coefficients begin with the smallest degree term first (the constant).
+pub fn point_poly_eval(
     poly: &[Point<impl PointType, Public, impl ZeroChoice>],
     x: Scalar<Public, impl ZeroChoice>,
 ) -> Point<NonNormal, Public, Zero> {
