@@ -4,7 +4,7 @@
 //!
 //! ```
 //! use schnorr_fun::binonce::NonceKeyPair;
-//! use schnorr_fun::fun::s;
+//! use schnorr_fun::fun::{s, poly};
 //! use schnorr_fun::{
 //!     frost,
 //!     Message,
@@ -21,12 +21,12 @@
 //! // we're doing a 2 out of 3
 //! let threshold = 2;
 //! // Generate our secret scalar polynomial we'll use in the key generation protocol
-//! let my_secret_poly = frost::generate_scalar_poly(threshold, &mut rng);
-//! let my_public_poly = frost::to_point_poly(&my_secret_poly);
-//! # let secret_poly2 = frost::generate_scalar_poly(threshold, &mut rng);
-//! # let secret_poly3 = frost::generate_scalar_poly(threshold, &mut rng);
-//! # let public_poly2 = frost::to_point_poly(&secret_poly2);
-//! # let public_poly3 = frost::to_point_poly(&secret_poly3);
+//! let my_secret_poly = poly::generate_scalar_poly(threshold, &mut rng);
+//! let my_public_poly = poly::to_point_poly(&my_secret_poly);
+//! # let secret_poly2 = poly::generate_scalar_poly(threshold, &mut rng);
+//! # let secret_poly3 = poly::generate_scalar_poly(threshold, &mut rng);
+//! # let public_poly2 = poly::to_point_poly(&secret_poly2);
+//! # let public_poly3 = poly::to_point_poly(&secret_poly3);
 //!
 //! // Party indexes can be any non-zero scalar
 //! let my_index = s!(1).public();
@@ -145,7 +145,7 @@
 //! in most applications:
 //!
 //! ```
-//! use schnorr_fun::{frost, fun::{ Scalar, nonce, Tag, derive_nonce_rng }};
+//! use schnorr_fun::{frost, fun::{ Scalar, poly, nonce, Tag, derive_nonce_rng }};
 //! use sha2::Sha256;
 //! use rand_chacha::ChaCha20Rng;
 //!
@@ -163,7 +163,7 @@
 //! };
 //!
 //! let threshold = 3;
-//! let my_secret_poly: Vec<Scalar> = frost::generate_scalar_poly(threshold, &mut poly_rng);
+//! let my_secret_poly: Vec<Scalar> = poly::generate_scalar_poly(threshold, &mut poly_rng);
 //! ```
 //!
 //! Note that if a key generation session fails you should always start a fresh session with a
@@ -186,6 +186,7 @@ use secp256kfun::{
     hash::{HashAdd, Tag},
     marker::*,
     nonce::{self, NonceGen},
+    poly,
     rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
@@ -248,7 +249,7 @@ impl<H, NG> Frost<H, NG> {
         scalar_poly: &[Scalar],
         party_index: Scalar<impl Secrecy>,
     ) -> Scalar<Secret, Zero> {
-        scalar_poly_eval(scalar_poly, party_index)
+        poly::scalar_poly_eval(scalar_poly, party_index)
     }
 }
 
@@ -589,7 +590,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                 (
                     Scalar::from_non_zero_u32(NonZeroU32::new((i + 1) as u32).expect("we added 1"))
                         .public(),
-                    generate_scalar_poly(threshold, rng),
+                    poly::generate_scalar_poly(threshold, rng),
                 )
             })
             .collect::<BTreeMap<_, _>>();
@@ -689,10 +690,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         S: AsRef<[Scalar]>,
     {
         for (party_id, scalar_poly) in local_secret_polys {
-            let image = to_point_poly(scalar_poly.as_ref());
+            let image = poly::to_point_poly(scalar_poly.as_ref());
             let _existing = point_polys.insert(*party_id, image);
             if let Some(_existing) = _existing {
-                debug_assert_eq!(_existing, to_point_poly(scalar_poly.as_ref()));
+                debug_assert_eq!(_existing, poly::to_point_poly(scalar_poly.as_ref()));
             }
         }
         let len_first_poly = point_polys
@@ -734,7 +735,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .map(|party_index| {
                 (
                     *party_index,
-                    point_poly_eval(&joint_poly, *party_index).normalize(),
+                    poly::point_poly_eval(&joint_poly, *party_index).normalize(),
                 )
             })
             .collect();
@@ -809,7 +810,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(*party_index));
             }
 
-            let expected_public_share = point_poly_eval(poly, my_index);
+            let expected_public_share = poly::point_poly_eval(poly, my_index);
             if g!(secret_share * G) != expected_public_share {
                 return Err(FinishKeyGenError::InvalidShare(*party_index));
             }
@@ -898,7 +899,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = lagrange_lambda(
+        let mut lambda = poly::lagrange_lambda(
             my_index,
             session.nonces.keys().filter(|&j| *j != my_index).copied(),
         );
@@ -934,7 +935,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = lagrange_lambda(
+        let mut lambda = poly::lagrange_lambda(
             index,
             session.nonces.keys().filter(|&j| *j != index).copied(),
         );
@@ -1007,20 +1008,6 @@ impl SignSession {
     }
 }
 
-/// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
-pub fn lagrange_lambda(
-    x_j: Scalar<impl Secrecy>,
-    x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
-) -> Scalar<Public> {
-    x_ms.fold(Scalar::one(), |acc, x_m| {
-        let denominator = s!(x_m - x_j)
-            .non_zero()
-            .expect("indexes must be unique")
-            .invert();
-        s!(acc * x_m * denominator).public()
-    })
-}
-
 /// Constructor for a Frost instance using deterministic nonce generation.
 ///
 /// If you use deterministic nonce generation you will have to provide a unique session id to every signing session.
@@ -1066,77 +1053,11 @@ where
     Frost::default()
 }
 
-/// Create a vector of points by multiplying each scalar by `G`.
-///
-/// # Example
-///
-/// ```
-/// use schnorr_fun::{
-///     frost,
-///     fun::{g, s, Scalar, G},
-/// };
-/// let secret_poly = (0..5)
-///     .map(|_| Scalar::random(&mut rand::thread_rng()))
-///     .collect::<Vec<_>>();
-/// let point_poly = frost::to_point_poly(&secret_poly);
-/// ```
-pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
-    scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
-}
-
-/// Generate a [`Scalar`] polynomial for key generation
-///
-/// [`Scalar`]: secp256kfun::Scalar
-pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
-    (0..threshold).map(|_| Scalar::random(rng)).collect()
-}
-
-/// Evaluate a scalar polynomial defined by coefficients, at some scalar index.
-///
-/// The polynomial coefficients begin with the smallest degree term first (the constant).
-pub fn scalar_poly_eval(
-    poly: &[Scalar],
-    x: Scalar<impl Secrecy, impl ZeroChoice>,
-) -> Scalar<Secret, Zero> {
-    s!(powers(x) .* poly)
-}
-
-/// Evaluate a point polynomial defined by coefficients, at some index.
-///
-/// The polynomial coefficients begin with the smallest degree term first (the constant).
-pub fn point_poly_eval(
-    poly: &[Point<impl PointType, Public, impl ZeroChoice>],
-    x: Scalar<Public, impl ZeroChoice>,
-) -> Point<NonNormal, Public, Zero> {
-    g!(powers(x) .* poly)
-}
-
-/// Returns an iterator of 1, x, x², x³ ...
-fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
-    core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
-        Some(s!(xpow * x).set_secrecy())
-    })
-}
-
 #[cfg(test)]
 mod test {
 
     use super::*;
     use sha2::Sha256;
-
-    #[test]
-    fn test_lagrange_lambda() {
-        let res = s!((1 * 4 * 5) * {
-            s!((1 - 2) * (4 - 2) * (5 - 2))
-                .non_zero()
-                .expect("")
-                .invert()
-        });
-        assert_eq!(
-            res,
-            lagrange_lambda(s!(2), [s!(1), s!(4), s!(5)].into_iter())
-        );
-    }
 
     #[test]
     fn zero_agg_nonce_results_in_G() {

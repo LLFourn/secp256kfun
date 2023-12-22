@@ -26,9 +26,9 @@ pub mod musig;
 #[cfg(feature = "alloc")]
 pub mod frost;
 
-/// bech32m backup scheme for frost
-#[cfg(feature = "frost_backup")]
-pub mod frost_backup;
+/// bech32m secret share backup scheme
+#[cfg(feature = "share_backup")]
+pub mod share_backup;
 
 mod signature;
 pub use signature::Signature;
