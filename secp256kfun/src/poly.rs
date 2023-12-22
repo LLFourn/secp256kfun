@@ -82,6 +82,8 @@ pub fn lagrange_lambda(
 /// Find the coefficients of the polynomial that interpolates a set of points at unique indexes.
 ///
 /// Panics if the indexes are not unique.
+///
+/// A vector with a tail of zero coefficients means the interpolation was overdetermined.
 pub fn interpolate_point_polynomial(
     indexes: Vec<Scalar<impl Secrecy, impl ZeroChoice>>,
     points: Vec<Point>,

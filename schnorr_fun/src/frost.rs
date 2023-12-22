@@ -380,10 +380,8 @@ pub struct FrostKey<T: PointType> {
         ))
     )]
     public_key: Point<T>,
-    /// The image of each party's key share.
-    verification_shares: BTreeMap<PartyIndex, Point<Normal, Public, Zero>>,
-    /// Number of partial signatures required to create a combined signature under this key.
-    threshold: usize,
+    // The public point polynomial that defines this FROST key.
+    point_polynomial: Vec<Point>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
     /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
@@ -399,18 +397,13 @@ impl<T: Copy + PointType> FrostKey<T> {
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
-    pub fn verification_shares(&self) -> &BTreeMap<PartyIndex, Point<Normal, Public, Zero>> {
-        &self.verification_shares
+    pub fn verification_share(&self, index: &PartyIndex) -> Point<Normal, Public, Zero> {
+        poly::point_poly_eval(&self.point_polynomial, *index).normalize()
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
     pub fn threshold(&self) -> usize {
-        self.threshold
-    }
-
-    /// The total number of signers in this frost multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
+        self.point_polynomial.len()
     }
 }
 
@@ -421,13 +414,12 @@ impl FrostKey<Normal> {
     ///
     /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> FrostKey<EvenY> {
-        let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
+        let (public_key, needs_negation) = self.public_key().into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
         FrostKey {
             public_key,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
+            point_polynomial: self.point_polynomial,
             tweak,
             needs_negation,
         }
@@ -454,8 +446,7 @@ impl FrostKey<Normal> {
 
         Some(FrostKey {
             public_key,
-            verification_shares: self.verification_shares.clone(),
-            threshold: self.threshold,
+            point_polynomial: self.point_polynomial,
             tweak,
             needs_negation: self.needs_negation,
         })
@@ -486,10 +477,9 @@ impl FrostKey<EvenY> {
 
         Some(Self {
             public_key: new_public_key,
+            point_polynomial: self.point_polynomial,
             needs_negation,
             tweak: new_tweak,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
         })
     }
 }
@@ -730,22 +720,18 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
-        let verification_shares = point_polys
-            .keys()
-            .map(|party_index| {
-                (
-                    *party_index,
-                    poly::point_poly_eval(&joint_poly, *party_index).normalize(),
-                )
-            })
-            .collect();
-
         Ok(KeyGen {
             point_polys,
             frost_key: FrostKey {
-                verification_shares,
                 public_key,
-                threshold: joint_poly.len(),
+                point_polynomial: joint_poly
+                    .into_iter()
+                    .map(|coef| {
+                        coef.non_zero()
+                            .expect("polynomial coefficients should be random")
+                            .normalize()
+                    })
+                    .collect(),
                 tweak: Scalar::zero(),
                 needs_negation: false,
             },
@@ -942,10 +928,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = match frost_key.verification_shares().get(&index) {
-            Some(key) => key,
-            None => return false,
-        };
+        let X = frost_key.verification_share(&index);
         let [R1, R2] = session
             .nonces
             .get(&index)
