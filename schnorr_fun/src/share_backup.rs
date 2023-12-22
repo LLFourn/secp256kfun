@@ -134,7 +134,7 @@ pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
         0
     };
 
-    bech32::encode("fr", &data[..(data.len() - n_unused_bytes)], Bech32m)
+    bech32::encode("frost", &data[..(data.len() - n_unused_bytes)], Bech32m)
         .expect("hrp must be valid")
 }
 
@@ -145,7 +145,7 @@ pub fn decode_backup(
     let (hrp, data, variant) =
         bech32::decode(&encoded).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
 
-    if hrp != "fr" {
+    if hrp != "frost" {
         return Err(FrostBackupDecodeError::InvalidHumanReadablePrefix);
     }
 
