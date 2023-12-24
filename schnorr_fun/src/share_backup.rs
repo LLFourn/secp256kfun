@@ -94,7 +94,7 @@ pub fn polynomial_identifier<H: Default + Digest<OutputSize = U32>>(
 pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
     polynomial: &Vec<Point>,
     secret_share: &Scalar,
-    share_index: &Scalar,
+    share_index: &Scalar<Public>,
 ) -> String {
     let threshold = polynomial.len();
     let mut data = [u5::default(); 1 + 4 + 52 + 52];

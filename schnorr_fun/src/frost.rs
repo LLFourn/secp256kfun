@@ -405,6 +405,11 @@ impl<T: Copy + PointType> FrostKey<T> {
     pub fn threshold(&self) -> usize {
         self.point_polynomial.len()
     }
+
+    /// The public image of the key's polynomial on the elliptic curve.
+    pub fn point_polynomial(&self) -> Vec<Point> {
+        self.point_polynomial.clone()
+    }
 }
 
 impl FrostKey<Normal> {
