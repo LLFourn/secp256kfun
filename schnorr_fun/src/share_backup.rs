@@ -51,10 +51,8 @@ use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::num::NonZeroU32;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
-    g,
     hash::HashAdd,
-    marker::{PointType, Public, Secrecy, Zero, ZeroChoice},
-    poly, s, Point, Scalar,
+    Point, Scalar,
 };
 
 /// An error encountered when encoding a Frostsnap backup.

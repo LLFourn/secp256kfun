@@ -1,7 +1,7 @@
 #![cfg(feature = "share_backup")]
 use core::str::FromStr;
 use schnorr_fun::share_backup::{decode_backup, encode_backup, polynomial_identifier};
-use secp256kfun::{g, marker::Secret, poly, s, Scalar, G};
+use secp256kfun::{g, marker::Secret, s, Scalar, G};
 
 #[test]
 fn share_backup_short() {
