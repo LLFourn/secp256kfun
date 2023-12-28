@@ -46,7 +46,7 @@
 //! By leaving this data piece at the end, we can use the length of the remaining data to
 //! easily decode a single bech32 char into integer, or 32 chars into a scalar.
 
-use alloc::{string::String, vec::Vec};
+use alloc::{fmt, string::String, vec::Vec};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::num::NonZeroU32;
 use secp256kfun::{
@@ -72,6 +72,43 @@ pub enum FrostBackupDecodeError {
     InvalidShareIndexScalar,
     /// Decoded share index is zero
     ShareIndexIsZero,
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for FrostBackupDecodeError {}
+
+impl fmt::Display for FrostBackupDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            FrostBackupDecodeError::Bech32DecodeError(e) => {
+                write!(f, "Failed to decode bech32m string: {e}")
+            }
+            FrostBackupDecodeError::WrongBech32Variant(e) => {
+                write!(f, "Expected bech32m but decoded {e:?}")
+            }
+            FrostBackupDecodeError::InvalidSecretShareScalar => {
+                write!(
+                    f,
+                    "Invalid secret share scalar value, not on secp256k1 curve."
+                )
+            }
+            FrostBackupDecodeError::InvalidHumanReadablePrefix => {
+                write!(f, "Expected human readable prefix `frost`",)
+            }
+            FrostBackupDecodeError::UnknownShareIndexLength => {
+                write!(f, "Expected share index of 1 character or 52 characters.",)
+            }
+            FrostBackupDecodeError::InvalidShareIndexScalar => {
+                write!(f, "Share index scalar was not a valid secp256k1 scalar.",)
+            }
+            FrostBackupDecodeError::ShareIndexIsZero => {
+                write!(
+                    f,
+                    "Can not have a share index of zero since this immediately implies the secret.",
+                )
+            }
+        }
+    }
 }
 
 /// Create an identifier that's used to determine compatibility of shamir secret shares.

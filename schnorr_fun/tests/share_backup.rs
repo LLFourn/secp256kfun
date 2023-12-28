@@ -11,7 +11,7 @@ fn share_backup_short() {
         "1234123412341234123412341234123412341234123412341234123412341234",
     )
     .unwrap();
-    let share_index = s!(7);
+    let share_index = s!(7).public();
 
     let share_backup = encode_backup::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
     dbg!(&share_backup);
@@ -43,7 +43,8 @@ fn share_backup_long() {
     let share_index = Scalar::<Secret>::from_str(
         "34f7ce653cfa8454b3463726a599ef2925736442d2d06455974d6feae9450d90",
     )
-    .unwrap();
+    .unwrap()
+    .public();
 
     let share_backup = encode_backup::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
     dbg!(&share_backup);
