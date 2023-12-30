@@ -191,7 +191,15 @@ use secp256kfun::{
     s, Point, Scalar, G,
 };
 
-type PartyIndex = Scalar<Public, NonZero>;
+/// The index of a party's secret share.
+///
+/// This index and its secret share define a point on the joint secret polynomial.
+/// It is used in interpolation and computation of the shared secret.
+///
+/// This index can be any non-zero [`Scalar`], but must be unique between parties.
+/// In most cases it will make sense to use simple indexes `s!(1), s!(2), ...` for smaller backups.
+/// Other applications may desire to use indexes corresponding to pre-existing keys or identifiers.
+pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
 ///
@@ -1021,7 +1029,7 @@ where
 ///
 /// ```
 /// use schnorr_fun::frost;
-/// let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
+/// let frost = frost::new_with_synthetic_nonces::<sha2::Sha256>();
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
