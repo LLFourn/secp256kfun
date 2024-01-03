@@ -72,7 +72,13 @@ impl<Z, S, T: Clone> Clone for Point<T, S, Z> {
     }
 }
 
-impl<T: Copy, Z> Copy for Point<T, Public, Z> {}
+impl<T, S, Z> AsRef<backend::Point> for Point<T, S, Z> {
+    fn as_ref(&self) -> &backend::Point {
+        &self.0
+    }
+}
+
+impl<T: Copy, S, Z> Copy for Point<T, S, Z> {}
 
 impl Point<Normal, Public, NonZero> {
     /// Samples a point uniformly from the group.
@@ -222,7 +228,7 @@ impl Point<EvenY, Public, NonZero> {
         base: &Point<impl PointType, impl Secrecy>,
         scalar: &mut Scalar<impl Secrecy>,
     ) -> Self {
-        let point = crate::op::scalar_mul_point(scalar, base);
+        let point = crate::op::scalar_mul_point(*scalar, base);
         let (point, needs_negation) = point.into_point_with_even_y();
         scalar.conditional_negate(needs_negation);
         point
@@ -256,7 +262,7 @@ impl<T, S, Z> Point<T, S, Z> {
     where
         T: PointType,
     {
-        op::point_conditional_negate(&self.clone(), cond)
+        op::point_conditional_negate(*self, cond)
     }
 
     /// Set the [`Secrecy`] of the point.
@@ -329,7 +335,7 @@ impl<Z, T> Point<T, Public, Z> {
 impl<T: PointType, S, Z> core::ops::Neg for Point<T, S, Z> {
     type Output = Point<T::NegationType, S, Z>;
     fn neg(self) -> Self::Output {
-        op::point_negate(&self)
+        op::point_negate(self)
     }
 }
 
@@ -560,25 +566,25 @@ crate::impl_fromstr_deserialize! {
 
 impl<TR, SL, SR, ZR> AddAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn add_assign(&mut self, rhs: Point<TR, SR, ZR>) {
-        *self = crate::op::point_add(self, &rhs).set_secrecy::<SL>()
+        *self = crate::op::point_add(*self, &rhs).set_secrecy::<SL>()
     }
 }
 
 impl<TR, SL, SR, ZR> AddAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn add_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
-        *self = crate::op::point_add(self, rhs).set_secrecy::<SL>()
+        *self = crate::op::point_add(*self, rhs).set_secrecy::<SL>()
     }
 }
 
 impl<TR, SL, SR, ZR> SubAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn sub_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
-        *self = crate::op::point_sub(self, rhs).set_secrecy::<SL>()
+        *self = crate::op::point_sub(*self, rhs).set_secrecy::<SL>()
     }
 }
 
 impl<TR, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn sub_assign(&mut self, rhs: Point<TR, SR, ZR>) {
-        *self = crate::op::point_sub(self, &rhs).set_secrecy::<SL>()
+        *self = crate::op::point_sub(*self, &rhs).set_secrecy::<SL>()
     }
 }
 
@@ -835,7 +841,7 @@ mod test {
         let mut a = a_orig;
         let b = Point::random(&mut rand::thread_rng());
         a += b;
-        assert_eq!(a, op::point_add(&a_orig, &b));
+        assert_eq!(a, op::point_add(a_orig, b));
         a -= b;
         assert_eq!(a, a_orig);
     }

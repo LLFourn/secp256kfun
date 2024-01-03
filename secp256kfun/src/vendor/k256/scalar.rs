@@ -429,3 +429,9 @@ impl From<&Scalar> for FieldBytes {
         scalar.to_bytes()
     }
 }
+
+impl AsRef<Scalar> for Scalar {
+    fn as_ref(&self) -> &Scalar {
+        self
+    }
+}

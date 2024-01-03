@@ -490,3 +490,9 @@ impl<'a> Neg for &'a ProjectivePoint {
         ProjectivePoint::neg(self)
     }
 }
+
+impl AsRef<ProjectivePoint> for ProjectivePoint {
+    fn as_ref(&self) -> &ProjectivePoint {
+        self
+    }
+}

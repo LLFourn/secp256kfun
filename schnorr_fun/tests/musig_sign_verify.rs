@@ -90,7 +90,7 @@ pub struct TestCase {
 fn musig_sign_verify() {
     let test_cases = serde_json::from_str::<TestCases>(TEST_JSON).unwrap();
     let musig = musig::new_without_nonce_generation::<sha2::Sha256>();
-    let keypair = musig.new_keypair(test_cases.sk.clone());
+    let keypair = musig.new_keypair(test_cases.sk);
 
     for test_case in &test_cases.valid_test_cases {
         let pubkeys = test_case
@@ -119,7 +119,7 @@ fn musig_sign_verify() {
                 .unwrap()
                 .nonce,
         );
-        assert_eq!(partial_sig, test_case.expected.clone().unwrap());
+        assert_eq!(partial_sig, test_case.expected.unwrap());
         assert!(musig.verify_partial_signature(
             &agg_key,
             &session,

@@ -1,5 +1,6 @@
 //! These traits are for accounting for what methods each backend actually needs.
 mod k256_impl;
+
 pub use k256_impl::*;
 
 pub trait BackendScalar: Sized {
@@ -59,12 +60,30 @@ pub trait TimeSensitive {
     fn scalar_mul(lhs: &Scalar, rhs: &Scalar) -> Scalar;
     fn scalar_invert(scalar: &Scalar) -> Scalar;
     fn scalar_mul_basepoint(scalar: &Scalar, base: &BasePoint) -> Point;
-    fn lincomb_iter<'a, 'b, A: Iterator<Item = &'a Point>, B: Iterator<Item = &'b Scalar>>(
+    fn lincomb_iter<
+        A: Iterator<Item = AT>,
+        B: Iterator<Item = BT>,
+        AT: AsRef<Point>,
+        BT: AsRef<Scalar>,
+    >(
         points: A,
         scalars: B,
     ) -> Point {
         points.zip(scalars).fold(Point::zero(), |acc, (X, k)| {
-            Self::point_add_point(&acc, &Self::scalar_mul_point(k, X))
+            Self::point_add_point(&acc, &Self::scalar_mul_point(k.as_ref(), X.as_ref()))
+        })
+    }
+    fn scalar_lincomb_iter<
+        A: Iterator<Item = AT>,
+        B: Iterator<Item = BT>,
+        AT: AsRef<Scalar>,
+        BT: AsRef<Scalar>,
+    >(
+        scalars1: A,
+        scalars2: B,
+    ) -> Scalar {
+        scalars1.zip(scalars2).fold(Scalar::zero(), |acc, (a, b)| {
+            Self::scalar_add(&acc, &Self::scalar_mul(a.as_ref(), b.as_ref()))
         })
     }
 }

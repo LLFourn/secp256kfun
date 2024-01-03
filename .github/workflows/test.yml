@@ -10,6 +10,7 @@ on:
 # Make sure CI fails on all warnings, including Clippy lints
 env:
     RUSTFLAGS: "-Dwarnings"
+    RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
 
@@ -17,25 +18,33 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
           components: rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
 
   clippy_check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Clippy
-        run: cargo clippy --all-targets --all-features
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets --all-features --tests
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.60.0
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo update -p proptest --precise "1.2.0"
+          cargo update -p tempfile --precise "3.3.0"
+      - run: cargo tree --all-features # to debug deps issues
+      - run: cargo build --release --all-features
 
   # We want to test stable on multiple platforms with --all-features
   test:
@@ -45,11 +54,11 @@ jobs:
       matrix:
         target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.60.0
+          toolchain: stable
           target: ${{ matrix.target }}
           override: true
       - uses: Swatinem/rust-cache@v2.0.0
@@ -65,18 +74,10 @@ jobs:
   test-nightly:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          target: "x86_64-unknown-linux-gnu"
-          override: true
-      - uses: Swatinem/rust-cache@v2.0.0
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release --all-features
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --release --all-features
 
   # test without default features
   test-minimal:
@@ -85,18 +86,10 @@ jobs:
       matrix:
         package: [ "secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun" ]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: "x86_64-unknown-linux-gnu"
-          override: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.0.0
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release --no-default-features -p ${{ matrix.package }}
+      - run: cargo test --release --no-default-features -p ${{ matrix.package }}
 
 
   # test with alloc feature only
@@ -106,30 +99,16 @@ jobs:
       matrix:
         package: [ "secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun" ]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: "x86_64-unknown-linux-gnu"
-          override: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.0.0
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release --no-default-features --features alloc -p ${{ matrix.package }}
+      - run: cargo test --release --no-default-features --features alloc -p ${{ matrix.package }}
 
 
   doc-build:
      name: doc-build
      runs-on: ubuntu-latest
      steps:
-       - uses: actions/checkout@v2
-       - uses: actions-rs/toolchain@v1
-         with:
-           profile: minimal
-           toolchain: nightly
-           override: true
-       - name: build-doc
-         # convoluted way to make it fail on warnings
-         run: "cargo doc --no-deps --workspace 2>&1 | tee /dev/fd/2 | grep -iEq '^(warning|error)' && exit 1 || exit 0"
+       - uses: actions/checkout@v4
+       - uses: dtolnay/rust-toolchain@stable
+       - run:  cargo doc --no-deps --workspace

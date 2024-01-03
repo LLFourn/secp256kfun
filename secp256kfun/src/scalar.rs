@@ -51,11 +51,17 @@ use rand_core::RngCore;
 /// [`ZeroChoice]: crate::marker::ZeroChoice
 pub struct Scalar<S = Secret, Z = NonZero>(pub(crate) backend::Scalar, PhantomData<(Z, S)>);
 
-impl<Z> Copy for Scalar<Public, Z> {}
+impl<Z, S> Copy for Scalar<S, Z> {}
+
+impl<S, Z> AsRef<backend::Scalar> for Scalar<S, Z> {
+    fn as_ref(&self) -> &backend::Scalar {
+        &self.0
+    }
+}
 
 impl<S, Z> Clone for Scalar<S, Z> {
     fn clone(&self) -> Self {
-        Self(self.0, self.1)
+        *self
     }
 }
 
@@ -142,6 +148,39 @@ impl<S> Scalar<S, NonZero> {
     /// Returns the integer -1 (modulo the curve order) as a `Scalar`.
     pub fn minus_one() -> Self {
         Self::from_inner(backend::BackendScalar::minus_one())
+    }
+
+    /// Marks a scalar non-zero scalar as having the zero choice `Z` (rather than `NonZero`).
+    ///
+    /// Useful when writing code that preserves the zero choice of the caller.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use secp256kfun::{marker::*, s, Scalar};
+    ///
+    /// /// Returns an iterator of 1, x, x², x³ ...
+    /// fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
+    ///     core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
+    ///         Some(s!(xpow * x).set_secrecy())
+    ///     })
+    /// }
+    ///
+    /// assert_eq!(powers(s!(2)).take(4).collect::<Vec<_>>(), vec![
+    ///     s!(1),
+    ///     s!(2),
+    ///     s!(4),
+    ///     s!(8)
+    /// ]);
+    /// assert_eq!(powers(s!(0)).take(4).collect::<Vec<_>>(), vec![
+    ///     s!(1).mark_zero(),
+    ///     s!(0),
+    ///     s!(0),
+    ///     s!(0)
+    /// ]);
+    /// ```
+    pub fn mark_zero_choice<Z: ZeroChoice>(self) -> Scalar<S, Z> {
+        Scalar::from_inner(self.0)
     }
 }
 
@@ -320,7 +359,7 @@ impl<S, Z> core::ops::Neg for Scalar<S, Z> {
     type Output = Scalar<S, Z>;
 
     fn neg(self) -> Self::Output {
-        crate::op::scalar_negate(&self)
+        crate::op::scalar_negate(self)
     }
 }
 
@@ -358,49 +397,49 @@ where
 
 impl<SL, SR, ZR> AddAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn add_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_add(self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_add(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> AddAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn add_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_add(self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_add(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> SubAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn sub_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_sub(self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_sub(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR> SubAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn sub_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_sub(self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_sub(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR> MulAssign<Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
     fn mul_assign(&mut self, rhs: Scalar<SR, NonZero>) {
-        *self = crate::op::scalar_mul(self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR> MulAssign<&Scalar<SR, NonZero>> for Scalar<SL, NonZero> {
     fn mul_assign(&mut self, rhs: &Scalar<SR, NonZero>) {
-        *self = crate::op::scalar_mul(self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR: ZeroChoice> MulAssign<Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn mul_assign(&mut self, rhs: Scalar<SR, ZR>) {
-        *self = crate::op::scalar_mul(self, &rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(*self, rhs).set_secrecy::<SL>();
     }
 }
 
 impl<SL, SR, ZR: ZeroChoice> MulAssign<&Scalar<SR, ZR>> for Scalar<SL, Zero> {
     fn mul_assign(&mut self, rhs: &Scalar<SR, ZR>) {
-        *self = crate::op::scalar_mul(self, rhs).set_secrecy::<SL>();
+        *self = crate::op::scalar_mul(*self, rhs).set_secrecy::<SL>();
     }
 }
 
@@ -506,7 +545,7 @@ mod test {
             -Scalar::<Secret, NonZero>::one()
         );
         assert_eq!(
-            op::scalar_mul(&s!(3), &Scalar::<Secret, NonZero>::minus_one()),
+            op::scalar_mul(s!(3), Scalar::<Secret, NonZero>::minus_one()),
             -s!(3)
         );
     }

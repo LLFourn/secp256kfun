@@ -102,5 +102,5 @@ fn run_test_vector(
     let decryption_key =
         ecdsa_adaptor.recover_decryption_key(&t.encryption_key, &t.signature, &t.adaptor_sig);
 
-    decryption_key == Some(t.decryption_key.clone())
+    decryption_key == Some(t.decryption_key)
 }

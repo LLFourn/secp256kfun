@@ -524,7 +524,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         scalar_poly: &[Scalar],
         message: Message,
     ) -> Signature {
-        let key_pair = self.schnorr.new_keypair(scalar_poly[0].clone());
+        let key_pair = self.schnorr.new_keypair(scalar_poly[0]);
         self.schnorr.sign(&key_pair, message)
     }
 
@@ -848,10 +848,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         let agg_nonce = nonce_map
             .iter()
             .fold([Point::zero(); 2], |acc, (_, nonce)| {
-                [
-                    g!({ acc[0] } + { nonce.0[0] }),
-                    g!({ acc[1] } + { nonce.0[1] }),
-                ]
+                [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
             });
 
         let agg_nonce = [agg_nonce[0].normalize(), agg_nonce[1].normalize()];
@@ -864,12 +861,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 .add(frost_key.public_key())
                 .add(message),
         );
-        let (agg_nonce, nonces_need_negation) =
-            g!({ agg_nonce[0] } + binding_coeff * { agg_nonce[1] })
-                .normalize()
-                .non_zero()
-                .unwrap_or(Point::generator())
-                .into_point_with_even_y();
+        let (agg_nonce, nonces_need_negation) = g!(agg_nonce[0] + binding_coeff * agg_nonce[1])
+            .normalize()
+            .non_zero()
+            .unwrap_or(Point::generator())
+            .into_point_with_even_y();
 
         let challenge = self
             .schnorr
@@ -1099,23 +1095,21 @@ fn scalar_poly_eval(
     poly: &[Scalar],
     x: Scalar<impl Secrecy, impl ZeroChoice>,
 ) -> Scalar<Secret, Zero> {
-    poly.iter()
-        .fold((s!(0), s!(1).mark_zero()), |(eval, xpow), coeff| {
-            (s!(eval + xpow * coeff), s!(xpow * x))
-        })
-        .0
+    s!(powers(x) .* poly)
 }
 
 fn point_poly_eval(
     poly: &[Point<impl PointType, Public, impl ZeroChoice>],
     x: Scalar<Public, impl ZeroChoice>,
 ) -> Point<NonNormal, Public, Zero> {
-    let xpows = core::iter::successors(Some(s!(1).public().mark_zero()), |xpow| {
-        Some(s!(xpow * x).public())
+    g!(powers(x) .* poly)
+}
+
+/// Returns an iterator of 1, x, x², x³ ...
+fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
+    core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
+        Some(s!(xpow * x).set_secrecy())
     })
-    .take(poly.len())
-    .collect::<Vec<_>>();
-    secp256kfun::op::lincomb(&xpows, poly.iter())
 }
 
 #[cfg(test)]

@@ -77,8 +77,8 @@ impl KeyPair<EvenY> {
     ///     &original_secret_key == keypair.secret_key()
     ///         || &-original_secret_key == keypair.secret_key()
     /// );
-    /// assert!(g!({ keypair.secret_key() } * G).normalize().is_y_even());
-    /// assert_eq!(g!({ keypair.secret_key() } * G), keypair.public_key());
+    /// assert!(g!(keypair.secret_key() * G).normalize().is_y_even());
+    /// assert_eq!(g!(keypair.secret_key() * G), keypair.public_key());
     /// ```
     ///
     /// [`Point`]: crate::Point

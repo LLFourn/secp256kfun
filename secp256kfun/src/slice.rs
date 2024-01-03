@@ -26,10 +26,7 @@ pub struct Slice<'a, S = Public> {
 
 impl<'a, S> Clone for Slice<'a, S> {
     fn clone(&self) -> Self {
-        Self {
-            inner: self.inner,
-            secrecy: PhantomData,
-        }
+        *self
     }
 }
 
