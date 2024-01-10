@@ -20,14 +20,11 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use schnorr_fun::{
-///     frost,
-///     fun::{g, s, Scalar, G},
-/// };
+/// use secp256kfun::{g, poly, s, Scalar, G};
 /// let secret_poly = (0..5)
 ///     .map(|_| Scalar::random(&mut rand::thread_rng()))
 ///     .collect::<Vec<_>>();
-/// let point_poly = frost::to_point_poly(&secret_poly);
+/// let point_poly = poly::to_point_poly(&secret_poly);
 /// ```
 pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
     scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
@@ -151,7 +148,7 @@ pub fn interpolate_point_polynomial(
     point_polynomial
 }
 
-/// Multiply a scalar polynomial by a point
+/// Multiply each coefficient in a scalar polynomial by a point.
 pub fn point_mul(
     poly: &[Scalar<impl Secrecy, impl ZeroChoice>],
     point: &Point,
@@ -161,7 +158,9 @@ pub fn point_mul(
         .collect::<Vec<_>>()
 }
 
-/// Add two point polynomials
+/// Add the coefficients of two point polynomials.
+///
+/// Handles mismatched polynomial lengths.
 pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
     poly1: &[Point<T, S, Z>],
     poly2: &[Point<T, S, Z>],
@@ -184,7 +183,7 @@ pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
         .collect()
 }
 
-/// Interpolate a set of shamir secret shares to find the joint secret
+/// Interpolate a set of shamir secret shares to find the joint secret.
 ///
 /// Each shamir secret share is associated with a participant index (index, share).
 ///

@@ -1031,7 +1031,7 @@ where
 ///
 /// ```
 /// use schnorr_fun::frost;
-/// let frost = frost::new_with_synthetic_nonces::<sha2::Sha256>();
+/// let frost = frost::new_with_synthetic_nonces::<sha2::Sha256, rand::rngs::ThreadRng>();
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
