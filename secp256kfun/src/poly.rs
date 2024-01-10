@@ -184,11 +184,13 @@ pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
 
 /// Interpolate a set of shamir secret shares to find the joint secret
 ///
+/// Each shamir secret share is associated with a participant index (index, share).
+///
 /// Panics if the indexes are not unique.
 pub fn reconstruct_shared_secret(
-    indexes: Vec<Scalar>,
-    secrets: Vec<Scalar<impl Secrecy, impl ZeroChoice>>,
+    secrets_at_indices: Vec<(Scalar, Scalar<impl Secrecy, impl ZeroChoice>)>,
 ) -> Scalar {
+    let (indexes, secrets): (Vec<_>, Vec<_>) = secrets_at_index.into_iter().unzip();
     let coefficients: Vec<_> = indexes
         .iter()
         .map(|my_index| {
@@ -315,10 +317,10 @@ mod test {
         let secret_shares: Vec<_> = indexes
             .clone()
             .into_iter()
-            .map(|index| scalar_poly_eval(&scalar_poly, index))
+            .map(|index| (index, scalar_poly_eval(&scalar_poly, index)))
             .collect();
 
-        let reconstructed_secret = reconstruct_shared_secret(indexes, secret_shares);
+        let reconstructed_secret = reconstruct_shared_secret(secret_shares);
         assert_eq!(scalar_poly[0], reconstructed_secret);
     }
 }
