@@ -387,7 +387,7 @@ pub struct FrostKey<T: PointType> {
             serialize = "Point<T>: crate::fun::serde::Serialize"
         ))
     )]
-    public_key: Point<T>,
+    tweaked_public_key: Point<T>,
     // The public point polynomial that defines this FROST key.
     point_polynomial: Vec<Point>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
@@ -397,9 +397,9 @@ pub struct FrostKey<T: PointType> {
 }
 
 impl<T: Copy + PointType> FrostKey<T> {
-    /// The joint public key
+    /// The public key with all tweaks applied
     pub fn public_key(&self) -> Point<T> {
-        self.public_key
+        self.tweaked_public_key
     }
 
     /// The verification shares of each party in the key.
@@ -427,11 +427,11 @@ impl FrostKey<Normal> {
     ///
     /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> FrostKey<EvenY> {
-        let (public_key, needs_negation) = self.public_key().into_point_with_even_y();
+        let (tweaked_public_key, needs_negation) = self.public_key().into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
         FrostKey {
-            public_key,
+            tweaked_public_key,
             point_polynomial: self.point_polynomial,
             tweak,
             needs_negation,
@@ -454,11 +454,13 @@ impl FrostKey<Normal> {
     ///
     /// [BIP32]: https://bips.xyz/32
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let public_key = g!(self.public_key + tweak * G).normalize().non_zero()?;
+        let tweaked_public_key = g!(self.tweaked_public_key + tweak * G)
+            .normalize()
+            .non_zero()?;
         let tweak = s!(self.tweak + tweak).public();
 
         Some(FrostKey {
-            public_key,
+            tweaked_public_key,
             point_polynomial: self.point_polynomial,
             tweak,
             needs_negation: self.needs_negation,
@@ -480,7 +482,7 @@ impl FrostKey<EvenY> {
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let (new_public_key, needs_negation) = g!(self.public_key + tweak * G)
+        let (new_public_key, needs_negation) = g!(self.tweaked_public_key + tweak * G)
             .normalize()
             .non_zero()?
             .into_point_with_even_y();
@@ -489,7 +491,7 @@ impl FrostKey<EvenY> {
         let needs_negation = self.needs_negation ^ needs_negation;
 
         Some(Self {
-            public_key: new_public_key,
+            tweaked_public_key: new_public_key,
             point_polynomial: self.point_polynomial,
             needs_negation,
             tweak: new_tweak,
@@ -736,7 +738,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         Ok(KeyGen {
             point_polys,
             frost_key: FrostKey {
-                public_key,
+                tweaked_public_key: public_key,
                 point_polynomial: joint_poly
                     .into_iter()
                     .map(|coef| {
