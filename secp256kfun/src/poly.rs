@@ -67,31 +67,33 @@ fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Sc
     })
 }
 
-/// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
+/// Calculate the lagrange coefficient for participant with index x_j and other signers indicies x_ms
 pub fn lagrange_lambda(
     x_j: Scalar<impl Secrecy>,
     x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
 ) -> Scalar<Public> {
     x_ms.fold(Scalar::one(), |acc, x_m| {
-        let denominator = s!(x_m - x_j).non_zero().expect("indexes must be unique");
+        let denominator = s!(x_m - x_j).non_zero().expect("indicies must be unique");
         s!(acc * x_m / denominator).public()
     })
 }
 /// Get each lagrange basis polynomial a set of scalar indices.
 ///
 /// The nth polynomial at the nth index takes on the value of 1 (unit).
-fn unit_basis_polys(indexes: &[Scalar<Public, impl ZeroChoice>]) -> Vec<Vec<Scalar<Public, Zero>>> {
+fn unit_basis_polys(
+    indicies: &[Scalar<Public, impl ZeroChoice>],
+) -> Vec<Vec<Scalar<Public, Zero>>> {
     // Calculated from the product of these indices coefficients:
     //      l_j(x) = Product[ (x-x_m)/(x_j-x_m), j!=m ]
     // Or
     //      l_j(x) = Product[ a_m*x + b_m, j!=m], where a_m = 1/(x_j-x_m) and b_m = -x_m*a_m.
-    indexes
+    indicies
         .clone()
         .into_iter()
         .enumerate()
         .map(|(j, x_j)| {
             let mut coefficients: Vec<_> = vec![];
-            for (_, x_m) in indexes.iter().enumerate().filter(|(m, _)| *m != j) {
+            for (_, x_m) in indicies.iter().enumerate().filter(|(m, _)| *m != j) {
                 let a_m = s!(x_j - x_m)
                     .non_zero()
                     .expect("points must lie at unique indicies to interpolate")
@@ -125,15 +127,15 @@ fn unit_basis_polys(indexes: &[Scalar<Public, impl ZeroChoice>]) -> Vec<Vec<Scal
 
 /// Find the coefficients of the polynomial that interpolates a set of points (index, point).
 ///
-/// Panics if the indexes are not unique.
+/// Panics if the indicies are not unique.
 ///
 /// A vector with a tail of zero coefficients means the interpolation was overdetermined.
 pub fn interpolate_point_polynomial(
-    points_at_index: Vec<(Scalar<Public, impl ZeroChoice>, Point)>,
+    points_at_indicies: Vec<(Scalar<Public, impl ZeroChoice>, Point)>,
 ) -> Vec<Point<impl PointType, Public, Zero>> {
-    let (indicies, points): (Vec<_>, Vec<_>) = points_at_index.into_iter().unzip();
+    let (indicies, points): (Vec<_>, Vec<_>) = points_at_indicies.into_iter().unzip();
 
-    let basis_polynomials: Vec<_> = unit_basis_polys(&indicies);
+    let basis_polynomials: Vec<_> = unit_basis_polys(indicies.as_slice());
 
     let interpolating_basis: Vec<_> = basis_polynomials
         .iter()
@@ -186,17 +188,17 @@ pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
 ///
 /// Each shamir secret share is associated with a participant index (index, share).
 ///
-/// Panics if the indexes are not unique.
+/// Panics if the indicies are not unique.
 pub fn reconstruct_shared_secret(
     secrets_at_indices: Vec<(Scalar, Scalar<impl Secrecy, impl ZeroChoice>)>,
 ) -> Scalar {
-    let (indexes, secrets): (Vec<_>, Vec<_>) = secrets_at_index.into_iter().unzip();
-    let coefficients: Vec<_> = indexes
+    let (indicies, secrets): (Vec<_>, Vec<_>) = secrets_at_indices.into_iter().unzip();
+    let coefficients: Vec<_> = indicies
         .iter()
         .map(|my_index| {
             lagrange_lambda(
                 my_index.clone(),
-                indexes.clone().into_iter().filter(|j| j != my_index),
+                indicies.clone().into_iter().filter(|j| j != my_index),
             )
         })
         .collect();
@@ -250,8 +252,8 @@ mod test {
     #[test]
     fn test_recover_public_poly() {
         let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-        let indexes = vec![s!(1).public(), s!(3).public(), s!(2).public()];
-        let points = indexes
+        let indicies = vec![s!(1).public(), s!(3).public(), s!(2).public()];
+        let points = indicies
             .clone()
             .into_iter()
             .map(|index| {
@@ -272,14 +274,14 @@ mod test {
     #[test]
     fn test_recover_overdetermined_poly() {
         let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-        let indexes = vec![
+        let indicies = vec![
             s!(1).public(),
             s!(2).public(),
             s!(3).public(),
             s!(4).public(),
             s!(5).public(),
         ];
-        let points = indexes
+        let points = indicies
             .clone()
             .into_iter()
             .map(|index| {
@@ -298,7 +300,7 @@ mod test {
         dbg!(&poly);
         dbg!(&interpolation);
         let (interpolated_coeffs, zero_coeffs) = interpolation.split_at(poly.len());
-        let n_extra_points = indexes.len() - poly.len();
+        let n_extra_points = indicies.len() - poly.len();
         assert_eq!(
             (0..n_extra_points)
                 .into_iter()
@@ -312,9 +314,9 @@ mod test {
     #[test]
     fn test_reconstruct_shared_secret() {
         let scalar_poly = vec![s!(42), s!(53), s!(64)];
-        let indexes = vec![s!(1), s!(2), s!(3)];
+        let indicies = vec![s!(1), s!(2), s!(3)];
 
-        let secret_shares: Vec<_> = indexes
+        let secret_shares: Vec<_> = indicies
             .clone()
             .into_iter()
             .map(|index| (index, scalar_poly_eval(&scalar_poly, index)))

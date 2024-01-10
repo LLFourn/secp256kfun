@@ -28,7 +28,7 @@
 //! # let public_poly2 = poly::to_point_poly(&secret_poly2);
 //! # let public_poly3 = poly::to_point_poly(&secret_poly3);
 //!
-//! // Party indexes can be any non-zero scalar
+//! // Party indicies can be any non-zero scalar
 //! let my_index = s!(1).public();
 //! let party_index2 = s!(2).public();
 //! let party_index3 = s!(3).public();
@@ -197,8 +197,8 @@ use secp256kfun::{
 /// It is used in interpolation and computation of the shared secret.
 ///
 /// This index can be any non-zero [`Scalar`], but must be unique between parties.
-/// In most cases it will make sense to use simple indexes `s!(1), s!(2), ...` for smaller backups.
-/// Other applications may desire to use indexes corresponding to pre-existing keys or identifiers.
+/// In most cases it will make sense to use simple indicies `s!(1), s!(2), ...` for smaller backups.
+/// Other applications may desire to use indicies corresponding to pre-existing keys or identifiers.
 pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
@@ -245,7 +245,7 @@ impl<H, NG> Frost<H, NG> {
         &self.nonce_gen
     }
 
-    /// Create our secret shares to be shared with other participants using pre-existing indexes
+    /// Create our secret shares to be shared with other participants using pre-existing indicies
     ///
     /// Each secret share needs to be securely communicated to the intended participant.
     ///
