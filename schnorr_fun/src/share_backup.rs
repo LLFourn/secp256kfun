@@ -52,6 +52,7 @@ use core::num::NonZeroU32;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     hash::HashAdd,
+    marker::Public,
     Point, Scalar,
 };
 

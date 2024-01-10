@@ -3,6 +3,8 @@
 //! A polynomial f(x) of degree k is defined by its coefficients
 //!
 //! `f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_k * x^k`
+use core::iter;
+
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use rand_core::RngCore;
@@ -85,9 +87,9 @@ pub fn lagrange_lambda(
 ///
 /// A vector with a tail of zero coefficients means the interpolation was overdetermined.
 pub fn interpolate_point_polynomial(
-    indexes: Vec<Scalar<impl Secrecy, impl ZeroChoice>>,
-    points: Vec<Point>,
+    points_at_indexes: Vec<(Scalar<impl Secrecy, impl ZeroChoice>, Point)>,
 ) -> Vec<Point<impl PointType, Public, Zero>> {
+    let (indexes, points): (Vec<_>, Vec<_>) = points_at_indexes.into_iter().unzip();
     // Get each lagrange basis polynomial from the product of coefficients:
     //      l_j(x) = Product[ (x-x_m)/(x_j-x_m), j!=m]
     // Or
@@ -132,22 +134,42 @@ pub fn interpolate_point_polynomial(
     let interpolating_basis: Vec<_> = basis_polynomials
         .iter()
         .zip(points)
-        .map(|(basis_poly, y_value)| {
-            basis_poly
-                .iter()
-                .map(|coeff| g!(coeff * y_value))
-                .collect::<Vec<_>>()
-        })
+        .map(|(basis_poly, y_value)| point_mul(basis_poly, &y_value))
         .collect();
 
-    let mut point_polynomial = interpolating_basis[0].clone();
-    for poly in &interpolating_basis[1..] {
-        for (i, point) in poly.iter().enumerate() {
-            point_polynomial[i] = g!({ point_polynomial[i] } + point);
-        }
-    }
+    let point_polynomial = interpolating_basis.into_iter().fold(
+        Vec::with_capacity(basis_polynomials[0].len()),
+        |acc, poly| add(&acc, &poly),
+    );
 
     point_polynomial
+}
+
+/// Multiply a scalar polynomial by a point
+pub fn point_mul(
+    poly: &Vec<Scalar<impl Secrecy, impl ZeroChoice>>,
+    point: &Point,
+) -> Vec<Point<NonNormal, Public, Zero>> {
+    poly.iter()
+        .map(|coeff| g!(coeff * point).mark_zero())
+        .collect::<Vec<_>>()
+}
+
+/// Add two point polynomials
+pub fn add<T: PointType + Default, S: Secrecy>(
+    poly1: &[Point<T, S, Zero>],
+    poly2: &[Point<T, S, Zero>],
+) -> Vec<Point<NonNormal, Public, Zero>> {
+    let (long, short) = if poly1.len() >= poly2.len() {
+        (poly1, poly2)
+    } else {
+        (poly2, poly1)
+    };
+
+    long.into_iter()
+        .zip(short.into_iter().chain(iter::repeat(&Point::zero())))
+        .map(|(c1, c2)| g!(c1 + c2))
+        .collect()
 }
 
 /// Interpolate a set of shamir secret shares to find the joint secret
@@ -200,18 +222,21 @@ mod test {
     fn test_recover_public_poly() {
         let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
         let indexes = vec![s!(1), s!(3), s!(2)];
-        let evaluations = indexes
+        let points = indexes
             .clone()
             .into_iter()
             .map(|index| {
-                point_poly_eval(&poly, index.public())
-                    .normalize()
-                    .non_zero()
-                    .unwrap()
+                (
+                    index.clone(),
+                    point_poly_eval(&poly, index.public())
+                        .normalize()
+                        .non_zero()
+                        .unwrap(),
+                )
             })
             .collect::<Vec<_>>();
 
-        let interpolation = interpolate_point_polynomial(indexes, evaluations);
+        let interpolation = interpolate_point_polynomial(points);
         assert_eq!(interpolation, poly)
     }
 
@@ -219,18 +244,21 @@ mod test {
     fn test_recover_overdetermined_poly() {
         let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
         let indexes = vec![s!(1), s!(2), s!(3), s!(4), s!(5)];
-        let evaluations = indexes
+        let points = indexes
             .clone()
             .into_iter()
             .map(|index| {
-                point_poly_eval(&poly, index.public())
-                    .normalize()
-                    .non_zero()
-                    .unwrap()
+                (
+                    index.clone(),
+                    point_poly_eval(&poly, index.public())
+                        .normalize()
+                        .non_zero()
+                        .unwrap(),
+                )
             })
             .collect::<Vec<_>>();
 
-        let interpolation = interpolate_point_polynomial(indexes.clone(), evaluations);
+        let interpolation = interpolate_point_polynomial(points);
 
         let (interpolated_coeffs, zero_coeffs) = interpolation.split_at(poly.len());
         let n_extra_points = indexes.len() - poly.len();
