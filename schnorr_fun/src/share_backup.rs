@@ -50,9 +50,10 @@ use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::num::NonZeroU32;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
+    g,
     hash::HashAdd,
     marker::Public,
-    Point, Scalar,
+    poly, Point, Scalar, G,
 };
 
 /// An error encountered when encoding a Frostsnap backup.
@@ -133,6 +134,10 @@ pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
     secret_share: &Scalar,
     share_index: &Scalar<Public>,
 ) -> String {
+    if poly::point_poly_eval(polynomial, *share_index) != g!(secret_share * G) {
+        panic!("Secret share is not valid with respect to the polynomial!")
+    }
+
     let threshold = polynomial.len();
     let mut data = [u5::default(); 2 + 4 + 52 + 52];
 
