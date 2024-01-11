@@ -32,7 +32,7 @@ pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
 
 /// Generate a [`Scalar`] polynomial for key generation
 ///
-/// [`Scalar`]: secp256kfun::Scalar
+/// [`Scalar`]: crate::Scalar
 pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
     (0..threshold).map(|_| Scalar::random(rng)).collect()
 }
@@ -85,8 +85,7 @@ fn unit_basis_polys(
     // Or
     //      l_j(x) = Product[ a_m*x + b_m, j!=m], where a_m = 1/(x_j-x_m) and b_m = -x_m*a_m.
     indicies
-        .clone()
-        .into_iter()
+        .iter()
         .enumerate()
         .map(|(j, x_j)| {
             let mut coefficients: Vec<_> = vec![];
@@ -140,12 +139,10 @@ pub fn interpolate_point_polynomial(
         .map(|(basis_poly, y_value)| point_mul(basis_poly, &y_value))
         .collect();
 
-    let point_polynomial = interpolating_basis.into_iter().fold(
+    interpolating_basis.into_iter().fold(
         Vec::with_capacity(basis_polynomials[0].len()),
         |acc, poly| add(&acc, &poly),
-    );
-
-    point_polynomial
+    )
 }
 
 /// Multiply each coefficient in a scalar polynomial by a point.
@@ -171,11 +168,11 @@ pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
         (poly2, poly1)
     };
 
-    long.into_iter()
+    long.iter()
         .map(|c| c.mark_zero())
         .zip(
             short
-                .into_iter()
+                .iter()
                 .map(|c| c.mark_zero())
                 .chain(iter::repeat(Point::zero())),
         )
@@ -196,7 +193,7 @@ pub fn reconstruct_shared_secret(
         .iter()
         .map(|my_index| {
             lagrange_lambda(
-                my_index.clone(),
+                *my_index,
                 indicies.clone().into_iter().filter(|j| j != my_index),
             )
         })
@@ -257,7 +254,7 @@ mod test {
             .into_iter()
             .map(|index| {
                 (
-                    index.clone(),
+                    index,
                     point_poly_eval(&poly, index.public())
                         .normalize()
                         .non_zero()
@@ -285,7 +282,7 @@ mod test {
             .into_iter()
             .map(|index| {
                 (
-                    index.clone(),
+                    index,
                     point_poly_eval(&poly, index.public())
                         .normalize()
                         .non_zero()
@@ -302,7 +299,6 @@ mod test {
         let n_extra_points = indicies.len() - poly.len();
         assert_eq!(
             (0..n_extra_points)
-                .into_iter()
                 .map(|_| Point::<Normal, Public, Zero>::zero().public().normalize())
                 .collect::<Vec<_>>(),
             zero_coeffs.to_vec()
