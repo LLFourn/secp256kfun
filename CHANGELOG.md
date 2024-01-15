@@ -1,6 +1,10 @@
 # CHANGELOG
 
 
+## v0.9.2
+
+- Added bincode derive on FROST SignSession
+
 ## v0.9.1
 
 - Added more `bincode` derives for FROST things
