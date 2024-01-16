@@ -2,7 +2,7 @@
 //!
 //! # Description
 //!
-//! Based on https://bips.xyz/93
+//! Based on <https://bips.xyz/93>
 //!
 //! ## Backup format (bech32 chars)
 //!
@@ -134,7 +134,7 @@ pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
     secret_share: &Scalar,
     share_index: &Scalar<Public>,
 ) -> String {
-    if poly::point_poly_eval(polynomial, *share_index) != g!(secret_share * G) {
+    if poly::point::eval(polynomial, *share_index) != g!(secret_share * G) {
         panic!("Secret share is not valid with respect to the polynomial!")
     }
 

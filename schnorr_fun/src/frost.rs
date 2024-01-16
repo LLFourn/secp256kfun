@@ -21,12 +21,12 @@
 //! // we're doing a 2 out of 3
 //! let threshold = 2;
 //! // Generate our secret scalar polynomial we'll use in the key generation protocol
-//! let my_secret_poly = poly::generate_scalar_poly(threshold, &mut rng);
-//! let my_public_poly = poly::to_point_poly(&my_secret_poly);
-//! # let secret_poly2 = poly::generate_scalar_poly(threshold, &mut rng);
-//! # let secret_poly3 = poly::generate_scalar_poly(threshold, &mut rng);
-//! # let public_poly2 = poly::to_point_poly(&secret_poly2);
-//! # let public_poly3 = poly::to_point_poly(&secret_poly3);
+//! let my_secret_poly = poly::scalar::generate(threshold, &mut rng);
+//! let my_public_poly = poly::scalar::to_point_poly(&my_secret_poly);
+//! # let secret_poly2 = poly::scalar::generate(threshold, &mut rng);
+//! # let secret_poly3 = poly::scalar::generate(threshold, &mut rng);
+//! # let public_poly2 = poly::scalar::to_point_poly(&secret_poly2);
+//! # let public_poly3 = poly::scalar::to_point_poly(&secret_poly3);
 //!
 //! // Party indicies can be any non-zero scalar
 //! let my_index = s!(1).public();
@@ -163,7 +163,7 @@
 //! };
 //!
 //! let threshold = 3;
-//! let my_secret_poly: Vec<Scalar> = poly::generate_scalar_poly(threshold, &mut poly_rng);
+//! let my_secret_poly: Vec<Scalar> = poly::scalar::generate(threshold, &mut poly_rng);
 //! ```
 //!
 //! Note that if a key generation session fails you should always start a fresh session with a
@@ -199,6 +199,9 @@ use secp256kfun::{
 /// This index can be any non-zero [`Scalar`], but must be unique between parties.
 /// In most cases it will make sense to use simple indicies `s!(1), s!(2), ...` for smaller backups.
 /// Other applications may desire to use indicies corresponding to pre-existing keys or identifiers.
+/// See [`share_backup`] for backup sizes.
+///
+/// [`share_backup`]: crate::share_backup
 pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
@@ -257,7 +260,7 @@ impl<H, NG> Frost<H, NG> {
         scalar_poly: &[Scalar],
         party_index: Scalar<impl Secrecy>,
     ) -> Scalar<Secret, Zero> {
-        poly::scalar_poly_eval(scalar_poly, party_index)
+        poly::scalar::eval(scalar_poly, party_index)
     }
 }
 
@@ -380,6 +383,9 @@ impl std::error::Error for FinishKeyGenError {}
 )]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
+    ///
+    /// This public key will change as you add tweaks or convert [`into_xonly_key`].
+    /// Only initially will the public key match the first coefficient of the public polynomial.
     #[cfg_attr(
         feature = "serde",
         serde(bound(
@@ -388,7 +394,7 @@ pub struct FrostKey<T: PointType> {
         ))
     )]
     tweaked_public_key: Point<T>,
-    // The public point polynomial that defines this FROST key.
+    /// The public point polynomial that defines the access structure to the FROST key.
     point_polynomial: Vec<Point>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
@@ -405,8 +411,8 @@ impl<T: Copy + PointType> FrostKey<T> {
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
-    pub fn verification_share(&self, index: &PartyIndex) -> Point<Normal, Public, Zero> {
-        poly::point_poly_eval(&self.point_polynomial, *index).normalize()
+    pub fn verification_share(&self, index: &PartyIndex) -> Point<NonNormal, Public, Zero> {
+        poly::point::eval(&self.point_polynomial, *index)
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
@@ -595,7 +601,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                 (
                     Scalar::from_non_zero_u32(NonZeroU32::new((i + 1) as u32).expect("we added 1"))
                         .public(),
-                    poly::generate_scalar_poly(threshold, rng),
+                    poly::scalar::generate(threshold, rng),
                 )
             })
             .collect::<BTreeMap<_, _>>();
@@ -695,10 +701,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         S: AsRef<[Scalar]>,
     {
         for (party_id, scalar_poly) in local_secret_polys {
-            let image = poly::to_point_poly(scalar_poly.as_ref());
+            let image = poly::scalar::to_point_poly(scalar_poly.as_ref());
             let _existing = point_polys.insert(*party_id, image);
             if let Some(_existing) = _existing {
-                debug_assert_eq!(_existing, poly::to_point_poly(scalar_poly.as_ref()));
+                debug_assert_eq!(_existing, poly::scalar::to_point_poly(scalar_poly.as_ref()));
             }
         }
         let len_first_poly = point_polys
@@ -811,7 +817,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(*party_index));
             }
 
-            let expected_public_share = poly::point_poly_eval(poly, my_index);
+            let expected_public_share = poly::point::eval(poly, my_index);
             if g!(secret_share * G) != expected_public_share {
                 return Err(FinishKeyGenError::InvalidShare(*party_index));
             }
@@ -900,7 +906,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = poly::lagrange_lambda(
+        let mut lambda = poly::eval_basis_poly_at_0(
             my_index,
             session.nonces.keys().filter(|&j| *j != my_index).copied(),
         );
@@ -936,7 +942,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = poly::lagrange_lambda(
+        let mut lambda = poly::eval_basis_poly_at_0(
             index,
             session.nonces.keys().filter(|&j| *j != index).copied(),
         );

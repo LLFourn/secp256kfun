@@ -9,7 +9,7 @@ fn share_backup_short() {
     let polynomial: Vec<_> = secret_poly.iter().map(|c| g!(c * G).normalize()).collect(); // some polynomial coefficients
     let threshold = polynomial.len();
     let share_index = s!(12).public();
-    let secret_share = poly::scalar_poly_eval(&secret_poly, share_index)
+    let secret_share = poly::scalar::eval(&secret_poly, share_index)
         .non_zero()
         .unwrap();
 
@@ -39,7 +39,7 @@ fn share_backup_long() {
     )
     .unwrap()
     .public();
-    let secret_share = poly::scalar_poly_eval(&secret_poly, share_index)
+    let secret_share = poly::scalar::eval(&secret_poly, share_index)
         .non_zero()
         .unwrap();
 
