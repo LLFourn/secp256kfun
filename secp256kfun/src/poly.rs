@@ -289,8 +289,6 @@ mod test {
 
         let interpolation = poly::point::interpolate(points);
 
-        dbg!(&poly);
-        dbg!(&interpolation);
         let (interpolated_coeffs, zero_coeffs) = interpolation.split_at(poly.len());
         let n_extra_points = indicies.len() - poly.len();
         assert_eq!(

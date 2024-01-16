@@ -196,9 +196,12 @@ pub fn decode_backup(
 
     let mut threshold_bytes =
         Vec::<u8>::from_base32(&data[..2]).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
-    threshold_bytes.extend(vec![0; 8 - threshold_bytes.len()]);
-    let threshold =
-        1 + usize::from_le_bytes(threshold_bytes.try_into().expect("8 bytes must fit u8"));
+    threshold_bytes.resize((usize::BITS / 8) as usize, 0);
+    let threshold = 1 + usize::from_le_bytes(
+        threshold_bytes
+            .try_into()
+            .expect("(usize::BITS / 8) bytes must fit usize"),
+    );
 
     let identifier: [u5; 4] = data[2..(2 + 4)].try_into().expect("4 bytes has to fit");
 
