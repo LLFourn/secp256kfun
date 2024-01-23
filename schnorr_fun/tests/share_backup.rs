@@ -1,6 +1,6 @@
 #![cfg(feature = "share_backup")]
 use core::str::FromStr;
-use schnorr_fun::share_backup::{decode_backup, encode_backup, polynomial_identifier};
+use schnorr_fun::share_backup::{decode_backup, polynomial_identifier, ShareBackup};
 use secp256kfun::{g, marker::Secret, poly, s, Scalar, G};
 
 #[test]
@@ -13,20 +13,19 @@ fn share_backup_short() {
         .non_zero()
         .unwrap();
 
-    dbg!(&secret_share);
-    let share_backup = encode_backup::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
-    dbg!(&share_backup);
+    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    let share_backup_bech32 = format!("{}", share_backup);
+    dbg!(&share_backup_bech32);
 
-    let (decoded_threshold, decoded_identifier, decoded_secret_share, decoded_share_index) =
-        decode_backup(share_backup).unwrap();
+    let decoded_share_backup = decode_backup(share_backup_bech32).unwrap();
 
-    assert_eq!(threshold, decoded_threshold);
+    assert_eq!(threshold, decoded_share_backup.threshold);
     assert_eq!(
         polynomial_identifier::<sha2::Sha256>(polynomial),
-        decoded_identifier
+        decoded_share_backup.identifier
     );
-    assert_eq!(secret_share, decoded_secret_share);
-    assert_eq!(share_index, decoded_share_index);
+    assert_eq!(secret_share, decoded_share_backup.secret_share);
+    assert_eq!(share_index, decoded_share_backup.share_index);
 }
 
 #[test]
@@ -43,17 +42,17 @@ fn share_backup_long() {
         .non_zero()
         .unwrap();
 
-    let share_backup = encode_backup::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
-    dbg!(&share_backup);
+    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    let share_backup_bech32 = format!("{}", share_backup);
+    dbg!(&share_backup_bech32);
 
-    let (decoded_threshold, decoded_identifier, decoded_secret_share, decoded_share_index) =
-        decode_backup(share_backup).unwrap();
+    let decoded_share_backup = decode_backup(share_backup_bech32).unwrap();
 
-    assert_eq!(threshold, decoded_threshold);
+    assert_eq!(threshold, decoded_share_backup.threshold);
     assert_eq!(
         polynomial_identifier::<sha2::Sha256>(polynomial),
-        decoded_identifier
+        decoded_share_backup.identifier
     );
-    assert_eq!(secret_share, decoded_secret_share);
-    assert_eq!(share_index, decoded_share_index);
+    assert_eq!(secret_share, decoded_share_backup.secret_share);
+    assert_eq!(share_index, decoded_share_backup.share_index);
 }
