@@ -138,7 +138,7 @@ pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
         panic!("Secret share is not valid with respect to the polynomial!")
     }
 
-    let threshold = polynomial.len();
+    let threshold = polynomial.len() as u16;
     let mut data = [u5::default(); 2 + 4 + 52 + 52];
 
     if threshold > 1024 {
@@ -182,7 +182,7 @@ pub fn encode_backup<H: Default + Digest<OutputSize = U32>>(
 /// Decode a bech32m secret share backup
 pub fn decode_backup(
     encoded: String,
-) -> Result<(usize, [u5; 4], Scalar, Scalar), FrostBackupDecodeError> {
+) -> Result<(u16, [u5; 4], Scalar, Scalar), FrostBackupDecodeError> {
     let (hrp, data, variant) =
         bech32::decode(&encoded).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
 
@@ -196,11 +196,11 @@ pub fn decode_backup(
 
     let mut threshold_bytes =
         Vec::<u8>::from_base32(&data[..2]).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
-    threshold_bytes.resize((usize::BITS / 8) as usize, 0);
-    let threshold = 1 + usize::from_le_bytes(
+    threshold_bytes.resize((u16::BITS / 8) as usize, 0);
+    let threshold = 1 + u16::from_le_bytes(
         threshold_bytes
             .try_into()
-            .expect("(usize::BITS / 8) bytes must fit usize"),
+            .expect("(u16::BITS / 8) bytes must fit u16"),
     );
 
     let identifier: [u5; 4] = data[2..(2 + 4)].try_into().expect("4 bytes has to fit");
