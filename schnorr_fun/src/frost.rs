@@ -364,35 +364,13 @@ impl core::fmt::Display for FinishKeyGenError {
 #[cfg(feature = "std")]
 impl std::error::Error for FinishKeyGenError {}
 
-/// A joint FROST key
+/// A FROST key
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
-    serde(crate = "crate::fun::serde")
-)]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(
-        crate = "crate::fun::bincode",
-        encode_bounds = "Point<T>: crate::fun::bincode::Encode",
-        decode_bounds = "Point<T>: crate::fun::bincode::Decode",
-        borrow_decode_bounds = "Point<T>: crate::fun::bincode::BorrowDecode<'__de>"
-    )
-)]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
     ///
     /// This public key will change as you add tweaks or convert [`into_xonly_key`].
     /// Only initially will the public key match the first coefficient of the public polynomial.
-    #[cfg_attr(
-        feature = "serde",
-        serde(bound(
-            deserialize = "Point<T>: crate::fun::serde::de::Deserialize<'de>",
-            serialize = "Point<T>: crate::fun::serde::Serialize"
-        ))
-    )]
     tweaked_public_key: Point<T>,
     /// The public point polynomial that defines the access structure to the FROST key.
     point_polynomial: Vec<Point<Normal, Public, Zero>>,
@@ -1045,6 +1023,47 @@ where
     H: Tag + Digest<OutputSize = U32> + Default + Clone,
 {
     Frost::default()
+}
+
+/// An encoded FROST key
+///
+/// This encoding only stores the joint public polynomial, which is enough to store a raw FROST key
+/// that has no tweaks.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
+)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(crate = "crate::fun::bincode",)
+)]
+pub struct EncodedFrostKey {
+    /// The public point polynomial that defines the access structure to the FROST key.
+    point_polynomial: Vec<Point<Normal, Public, Zero>>,
+}
+
+impl From<EncodedFrostKey> for FrostKey<Normal> {
+    fn from(from: EncodedFrostKey) -> Self {
+        FrostKey {
+            tweaked_public_key: from.point_polynomial[0]
+                .non_zero()
+                .expect("the frost public key can not be zero"),
+            point_polynomial: from.point_polynomial,
+            tweak: Scalar::zero(),
+            needs_negation: false,
+        }
+    }
+}
+
+impl<T: PointType> From<FrostKey<T>> for EncodedFrostKey {
+    fn from(from: FrostKey<T>) -> Self {
+        EncodedFrostKey {
+            point_polynomial: from.point_polynomial,
+        }
+    }
 }
 
 #[cfg(test)]
