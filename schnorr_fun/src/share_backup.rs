@@ -14,23 +14,24 @@
 //! share_index:    u5 or [u5; 52], // (1 or 52)
 //! checksum:       [u5; 6],        // (6)
 //!
-//! The total length of the backup is 71 characters if using 'small' share indicies (1, 2, ...),
+//! The total length of the backup is 71 characters if using 'small' share indicies (1, 2, ..., 32),
 //! or bech32m characters if using general scalars for participant indicies.
 //!
-//! ## Justification
+//! ## Rationale
 //!
 //! ### Human Readable - (4 bech32 characters)
-//! frost1 looks cool.
+//! `frost` looks cool.
 //! Most of the time we will be using this backup scheme for FROST related shamir secret shares.
 //!
 //! ### Threshold - (2)
 //! A threshold integer between 1 and 1024.
 //! Note: a threshold of zero is considered invalid.
-//! The threshold is encoded as the value minus one.
+//! The threshold is encoded as the value minus one so that 0 cannot be represented which is not a
+//! valid threshold.
 //!
 //! ### Polynomial Identifier - (4)
-//! Hash of the polynomial coefficients and take the first 4 bech32 characters.
-//! This identifier will allow determination of secret share compatibility.
+//! The first 4 bech32 characters from the SHA256 hash of the polynomial coefficients.
+//! This identifier allows determination of secret share compatibility.
 //!
 //! It is possible to have two different polynomials that interpolate the same joint-secret,
 //! but shares on these different polynomials will not be compatible with one another.
@@ -42,13 +43,17 @@
 //! This is 32 * 8 / 5 = 51.2 -> 52 bech32 characters
 //!
 //! ### Share Index - (1 or 52)
-//! The share index can be be scalar, but will often be small for simplicity and smaller backups.
+//! Can be any scalar, but will often be a small integer for simplicity and smaller backups.
 //! By leaving this data piece at the end, we can use the length of the remaining data to
-//! easily decode a single bech32 char into integer, or 32 chars into a scalar.
+//! easily decode either a single bech32 char into integer, or 52 chars into a 32 byte scalar.
 
-use alloc::{fmt, string::String, vec::Vec};
+use alloc::{
+    fmt,
+    string::{String, ToString},
+    vec::Vec,
+};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
-use core::num::NonZeroU32;
+use core::{num::NonZeroU32, str::FromStr};
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
@@ -61,10 +66,10 @@ use secp256kfun::{
 /// The first 4 bech32 chars from a hash of the polynomial coefficients.
 /// Collision expected once in (32)^4 = 2^20.
 pub fn polynomial_identifier<H: Default + Digest<OutputSize = U32>>(
-    polynomial: Vec<Point>,
+    polynomial: &[Point],
 ) -> [u5; 4] {
     let hash = H::default();
-    hash.add(&polynomial[..]).finalize().to_base32()[0..4]
+    hash.add(polynomial).finalize().to_base32()[0..4]
         .try_into()
         .expect("4 bech32 chars must fit 4 character arry")
 }
@@ -73,7 +78,7 @@ pub fn polynomial_identifier<H: Default + Digest<OutputSize = U32>>(
 ///
 /// Can be encoded and displayed as bech32m characters.
 ///
-/// If using 'small' share indices (1, 2, ...) the encoded backup will be 71 bech32 characters.
+/// If using 'small' share indices (1, 2, ..., 32) the encoded backup will be 71 bech32 characters.
 /// If using general scalar participant indicies, the encoded backup will be 122 bech32 characters.
 ///
 /// Encoding requires that the threshold is no greater than 1024.
@@ -85,22 +90,28 @@ pub struct ShareBackup {
     pub identifier: [u5; 4],
     /// The Shamir Secret Share that is being backed up.
     pub secret_share: Scalar,
-    /// The scalar index for this secret share, generally a simple participant index (1, 2, ...).
+    /// The scalar index for this secret share, generally a simple participant index (1, 2, ..., 32).
     pub share_index: Scalar<Public>,
 }
 
 impl ShareBackup {
     /// Create a new share backup.
     ///
-    /// The threshold must be less than 1024, and the secret share is checked against the polynomial.
+    /// ## Panics
+    ///
+    /// The threshold must be greater than 0 and less than 1024.
+    /// The secret share is checked to confirm that its image lies on the public point polynomial.
     pub fn new<H: Default + Digest<OutputSize = U32>>(
         polynomial: &Vec<Point>,
         secret_share: &Scalar,
         share_index: &Scalar<Public>,
     ) -> Self {
         let threshold = polynomial.len() as u16;
-        let identifier = polynomial_identifier::<H>(polynomial.clone());
+        let identifier = polynomial_identifier::<H>(polynomial);
 
+        if threshold == 0 {
+            panic!("Polynomial threshold can not be zero");
+        }
         if threshold > 1024 {
             panic!("Polynomial has too high of a threshold, {threshold} > 1024");
         }
@@ -120,17 +131,44 @@ impl ShareBackup {
 
 impl fmt::Display for ShareBackup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let bech32_str = encode_backup(
-            self.threshold,
-            self.identifier,
-            self.secret_share,
-            self.share_index,
-        );
-        write!(f, "{}", bech32_str)
+        let mut data = [u5::default(); 2 + 4 + 52 + 52];
+
+        let threshold_u5 = (self.threshold - 1).to_le_bytes().to_vec().to_base32();
+        for (i, byte) in threshold_u5.into_iter().take(2).enumerate() {
+            data[i] = byte;
+        }
+
+        for (i, byte) in self.identifier.into_iter().enumerate() {
+            data[2 + i] = byte;
+        }
+
+        let secret_share_u5 = self.secret_share.to_bytes().to_vec().to_base32();
+        for (i, byte) in secret_share_u5.into_iter().enumerate() {
+            data[2 + 4 + i] = byte;
+        }
+
+        let is_small = self.share_index.to_bytes()[0..31].iter().all(|b| *b == 0)
+            && self.share_index.to_bytes()[31] < 32;
+
+        let n_unused_bytes = if is_small {
+            let share_index_u5 =
+                u5::try_from_u8(self.share_index.to_bytes()[31]).expect("must be less than 32");
+            data[2 + 4 + 52] = share_index_u5;
+            52 - 1
+        } else {
+            let share_index_u5 = self.share_index.to_bytes().to_base32();
+            for (i, byte) in share_index_u5.iter().enumerate() {
+                data[2 + 4 + 52 + i] = *byte;
+            }
+            0
+        };
+
+        bech32::encode_to_fmt(f, "frost", &data[..(data.len() - n_unused_bytes)], Bech32m)
+            .expect("hrp is valid and is standard")
     }
 }
 
-/// Encode a share backup into a bech32m string
+/// Encode a share backup into base32
 ///
 /// Use [`ShareBackup`] to securely create secret share backups that are valid w.r.t the polynomial.
 pub fn encode_backup(
@@ -139,106 +177,89 @@ pub fn encode_backup(
     secret_share: Scalar,
     share_index: Scalar<Public>,
 ) -> String {
+    if threshold == 0 {
+        panic!("Polynomial threshold can not be zero");
+    }
     if threshold > 1024 {
         panic!("Polynomial has too high of a threshold, {threshold} > 1024");
     }
 
-    let mut data = [u5::default(); 2 + 4 + 52 + 52];
-
-    let threshold_u5 = (threshold - 1).to_le_bytes().to_vec().to_base32();
-    for (i, byte) in threshold_u5.into_iter().take(2).enumerate() {
-        data[i] = byte;
-    }
-
-    for (i, byte) in identifier.into_iter().enumerate() {
-        data[2 + i] = byte;
-    }
-
-    let secret_share_u5 = secret_share.to_bytes().to_vec().to_base32();
-    for (i, byte) in secret_share_u5.into_iter().enumerate() {
-        data[2 + 4 + i] = byte;
-    }
-
-    let is_small =
-        share_index.to_bytes()[0..31].iter().all(|b| *b == 0) && share_index.to_bytes()[31] < 32;
-
-    let n_unused_bytes = if is_small {
-        let share_index_u5 =
-            u5::try_from_u8(share_index.to_bytes()[31]).expect("must be less than 32");
-        data[2 + 4 + 52] = share_index_u5;
-        52 - 1
-    } else {
-        let share_index_u5 = share_index.to_bytes().to_base32();
-        for (i, byte) in share_index_u5.iter().enumerate() {
-            data[2 + 4 + 52 + i] = *byte;
-        }
-        0
-    };
-
-    bech32::encode("frost", &data[..(data.len() - n_unused_bytes)], Bech32m)
-        .expect("hrp must be valid")
-}
-
-/// Decode a bech32m secret share backup
-pub fn decode_backup(encoded: String) -> Result<ShareBackup, FrostBackupDecodeError> {
-    let (hrp, data, variant) =
-        bech32::decode(&encoded).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
-
-    if hrp != "frost" {
-        return Err(FrostBackupDecodeError::InvalidHumanReadablePrefix);
-    }
-
-    if !matches!(variant, bech32::Variant::Bech32m) {
-        return Err(FrostBackupDecodeError::WrongBech32Variant(variant));
-    }
-
-    let mut threshold_bytes =
-        Vec::<u8>::from_base32(&data[..2]).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
-    threshold_bytes.resize((u16::BITS / 8) as usize, 0);
-    let threshold = 1 + u16::from_le_bytes(
-        threshold_bytes
-            .try_into()
-            .expect("(u16::BITS / 8) bytes must fit u16"),
-    );
-
-    let identifier: [u5; 4] = data[2..(2 + 4)].try_into().expect("4 bytes has to fit");
-
-    let secret_share: Scalar = Scalar::from_bytes(
-        Vec::<u8>::from_base32(&data[(2 + 4)..(2 + 4 + 52)])
-            .map_err(FrostBackupDecodeError::Bech32DecodeError)?
-            .try_into()
-            .expect("52 bech32 chars corresponds to 32 bytes"),
-    )
-    .ok_or(FrostBackupDecodeError::InvalidSecretShareScalar)?
-    .non_zero()
-    .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?;
-
-    let share_index = if data[(2 + 4 + 52)..].len() == 52 {
-        Scalar::from_bytes(
-            Vec::<u8>::from_base32(&data[(2 + 4 + 52)..])
-                .map_err(FrostBackupDecodeError::Bech32DecodeError)?
-                .try_into()
-                .expect("remaining 52 bech32 chars corresponds to 32 bytes"),
-        )
-        .ok_or(FrostBackupDecodeError::InvalidShareIndexScalar)?
-        .non_zero()
-        .expect("secret share can not be zero")
-    } else if data[(2 + 4 + 52)..].len() == 1 {
-        Scalar::from_non_zero_u32(
-            NonZeroU32::new(data[2 + 4 + 52].to_u8() as u32)
-                .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?,
-        )
-        .public()
-    } else {
-        return Err(FrostBackupDecodeError::UnknownShareIndexLength);
-    };
-
-    Ok(ShareBackup {
+    let share_backup = ShareBackup {
         threshold,
         identifier,
         secret_share,
         share_index,
-    })
+    };
+    share_backup.to_string()
+}
+
+impl FromStr for ShareBackup {
+    type Err = FrostBackupDecodeError;
+    fn from_str(encoded: &str) -> Result<Self, Self::Err> {
+        let (hrp, data, variant) =
+            bech32::decode(encoded).map_err(FrostBackupDecodeError::Bech32DecodeError)?;
+
+        if hrp != "frost" {
+            return Err(FrostBackupDecodeError::InvalidHumanReadablePrefix);
+        }
+
+        if !matches!(variant, bech32::Variant::Bech32m) {
+            return Err(FrostBackupDecodeError::WrongBech32Variant(variant));
+        }
+
+        let mut threshold_bytes = Vec::<u8>::from_base32(&data[..2])
+            .map_err(FrostBackupDecodeError::Bech32DecodeError)?;
+        threshold_bytes.resize((u16::BITS / 8) as usize, 0);
+        let threshold = 1 + u16::from_le_bytes(
+            threshold_bytes
+                .try_into()
+                .expect("(u16::BITS / 8) bytes must fit u16"),
+        );
+
+        let identifier: [u5; 4] = data[2..(2 + 4)].try_into().expect("4 bytes has to fit");
+
+        let secret_share: Scalar = Scalar::from_bytes(
+            Vec::<u8>::from_base32(&data[(2 + 4)..(2 + 4 + 52)])
+                .map_err(FrostBackupDecodeError::Bech32DecodeError)?
+                .try_into()
+                .expect("52 bech32 chars corresponds to 32 bytes"),
+        )
+        .ok_or(FrostBackupDecodeError::InvalidSecretShareScalar)?
+        .non_zero()
+        .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?;
+
+        let share_index = if data[(2 + 4 + 52)..].len() == 52 {
+            Scalar::from_bytes(
+                Vec::<u8>::from_base32(&data[(2 + 4 + 52)..])
+                    .map_err(FrostBackupDecodeError::Bech32DecodeError)?
+                    .try_into()
+                    .expect("remaining 52 bech32 chars corresponds to 32 bytes"),
+            )
+            .ok_or(FrostBackupDecodeError::InvalidShareIndexScalar)?
+            .non_zero()
+            .expect("secret share can not be zero")
+        } else if data[(2 + 4 + 52)..].len() == 1 {
+            Scalar::from_non_zero_u32(
+                NonZeroU32::new(data[2 + 4 + 52].to_u8() as u32)
+                    .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?,
+            )
+            .public()
+        } else {
+            return Err(FrostBackupDecodeError::UnknownShareIndexLength);
+        };
+
+        Ok(ShareBackup {
+            threshold,
+            identifier,
+            secret_share,
+            share_index,
+        })
+    }
+}
+
+/// Decode a bech32m secret share backup
+pub fn decode_backup(encoded: String) -> Result<ShareBackup, FrostBackupDecodeError> {
+    ShareBackup::from_str(&encoded)
 }
 
 /// An error encountered when encoding a Frostsnap backup.

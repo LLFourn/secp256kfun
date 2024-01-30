@@ -395,7 +395,7 @@ pub struct FrostKey<T: PointType> {
     )]
     tweaked_public_key: Point<T>,
     /// The public point polynomial that defines the access structure to the FROST key.
-    point_polynomial: Vec<Point>,
+    point_polynomial: Vec<Point<Normal, Public, Zero>>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
     /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
@@ -421,7 +421,7 @@ impl<T: Copy + PointType> FrostKey<T> {
     }
 
     /// The public image of the key's polynomial on the elliptic curve.
-    pub fn point_polynomial(&self) -> Vec<Point> {
+    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
         self.point_polynomial.clone()
     }
 }
@@ -747,11 +747,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 tweaked_public_key: public_key,
                 point_polynomial: joint_poly
                     .into_iter()
-                    .map(|coef| {
-                        coef.non_zero()
-                            .expect("polynomial coefficients should be random")
-                            .normalize()
-                    })
+                    .map(|coef| coef.normalize())
                     .collect(),
                 tweak: Scalar::zero(),
                 needs_negation: false,
@@ -906,10 +902,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = poly::eval_basis_poly_at_0(
-            my_index,
-            session.nonces.keys().filter(|&j| *j != my_index).copied(),
-        );
+        let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys());
         assert_eq!(
             *session
                 .nonces
@@ -942,10 +935,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = poly::eval_basis_poly_at_0(
-            index,
-            session.nonces.keys().filter(|&j| *j != index).copied(),
-        );
+        let mut lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys());
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;

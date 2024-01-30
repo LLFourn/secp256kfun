@@ -1,21 +1,22 @@
 //! Utilities for working with polynomials on the secp256k1 elliptic curve.
 //!
-//! A polynomial f(x) of degree k is defined by its coefficients
+//! A polynomial defined by its coefficients a_0, ... a_k. The coefficients can be [`Scalars`] or [`Points`].
 //!
 //! `f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_k * x^k`
-
+//!
+//! [`Scalars`]: crate::Scalar
+//! [`Points`]: crate::Point
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 use crate::{
-    marker::{Public, Secrecy, Secret, Zero, ZeroChoice},
+    marker::{Public, Secrecy, ZeroChoice},
     s, Scalar,
 };
 
 /// Functions for dealing with scalar polynomials
 pub mod scalar {
-    #[cfg(feature = "alloc")]
-    use alloc::vec::Vec;
+    use super::*;
     use rand_core::RngCore;
 
     use crate::{
@@ -53,14 +54,33 @@ pub mod scalar {
     pub fn generate(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
         (0..threshold).map(|_| Scalar::random(rng)).collect()
     }
+
+    /// Interpolate a set of points and evaluate the polynomial at zero.
+    ///
+    /// This is useful for interpolating a set of Sharmir Secret Shares to find the joint secret.
+    /// Each shamir secret share is associated with a participant index (index, share).
+    ///
+    /// ## Panics
+    ///
+    /// Panics if the indicies are not unique.
+    pub fn interpolate_and_eval_poly_at_0(
+        secrets_at_indices: Vec<(Scalar<Public>, Scalar<Secret, impl ZeroChoice>)>,
+    ) -> Scalar<Secret, Zero> {
+        let indicies: Vec<_> = secrets_at_indices.iter().map(|(index, _)| *index).collect();
+        secrets_at_indices
+            .into_iter()
+            .map(|(index, secret)| {
+                let lambda = eval_basis_poly_at_0(index, indicies.iter());
+                s!(secret * lambda)
+            })
+            .fold(s!(0), |acc, contribution| s!(acc + contribution))
+    }
 }
 
 /// Functions for dealing with point polynomials
 pub mod point {
+    use super::*;
     use core::iter;
-
-    #[cfg(feature = "alloc")]
-    use alloc::vec::Vec;
 
     use crate::{
         g,
@@ -174,39 +194,26 @@ fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Sc
 ///
 /// Described as the lagrange coefficient in FROST. Useful when interpolating a sharmir shared
 /// secret which usually lies at the value of the polynomial evaluated at 0.
-pub fn eval_basis_poly_at_0(
+pub fn eval_basis_poly_at_0<'a>(
     x_j: Scalar<impl Secrecy>,
-    x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
+    x_ms: impl Iterator<Item = &'a Scalar<impl Secrecy>>,
 ) -> Scalar<Public> {
-    x_ms.fold(Scalar::one(), |acc, x_m| {
-        let denominator = s!(x_m - x_j).non_zero().expect("indicies must be unique");
-        s!(acc * x_m / denominator).public()
-    })
-}
-
-/// Interpolate a set of shamir secret shares to find the joint secret.
-///
-/// Each shamir secret share is associated with a participant index (index, share).
-///
-/// Panics if the indicies are not unique.
-pub fn reconstruct_shared_secret(
-    secrets_at_indices: Vec<(Scalar, Scalar<Secret, impl ZeroChoice>)>,
-) -> Scalar<Secret, Zero> {
-    let (indicies, secrets): (Vec<_>, Vec<_>) = secrets_at_indices.into_iter().unzip();
-    indicies
-        .iter()
-        .zip(secrets)
-        .map(|(index, secret)| {
-            let lambda =
-                eval_basis_poly_at_0(*index, indicies.clone().into_iter().filter(|j| j != index));
-            s!(secret * lambda)
+    x_ms.filter(|x_m| *x_m != &x_j)
+        .fold(Scalar::one(), |acc, x_m| {
+            let denominator = s!(x_m - x_j)
+                .non_zero()
+                .expect("we filtered duplicate indicies");
+            s!(acc * x_m / denominator).public()
         })
-        .fold(s!(0), |acc, contribution| s!(acc + contribution))
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{g, marker::Normal, poly, Point, G};
+    use crate::{
+        g,
+        marker::{Normal, Zero},
+        poly, Point, G,
+    };
 
     use super::*;
 
@@ -215,7 +222,7 @@ mod test {
         let res = s!((1 * 4 * 5) / { s!((1 - 2) * (4 - 2) * (5 - 2)).non_zero().unwrap() });
         assert_eq!(
             res,
-            eval_basis_poly_at_0(s!(2), [s!(1), s!(4), s!(5)].into_iter())
+            eval_basis_poly_at_0(s!(2), [s!(1), s!(4), s!(5)].iter())
         );
     }
 
@@ -302,8 +309,8 @@ mod test {
 
     #[test]
     fn test_reconstruct_shared_secret() {
+        let indicies = vec![s!(1).public(), s!(2).public(), s!(3).public()];
         let scalar_poly = vec![s!(42), s!(53), s!(64)];
-        let indicies = vec![s!(1), s!(2), s!(3)];
 
         let secret_shares: Vec<_> = indicies
             .clone()
@@ -311,7 +318,7 @@ mod test {
             .map(|index| (index, poly::scalar::eval(&scalar_poly, index)))
             .collect();
 
-        let reconstructed_secret = reconstruct_shared_secret(secret_shares);
+        let reconstructed_secret = poly::scalar::interpolate_and_eval_poly_at_0(secret_shares);
         assert_eq!(scalar_poly[0], reconstructed_secret);
     }
 }
