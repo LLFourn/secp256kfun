@@ -47,11 +47,7 @@
 //! By leaving this data piece at the end, we can use the length of the remaining data to
 //! easily decode either a single bech32 char into integer, or 52 chars into a 32 byte scalar.
 
-use alloc::{
-    fmt,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{fmt, string::String, vec::Vec};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::{num::NonZeroU32, str::FromStr};
 use secp256kfun::{
@@ -109,16 +105,14 @@ impl ShareBackup {
         let threshold = polynomial.len() as u16;
         let identifier = polynomial_identifier::<H>(polynomial);
 
-        if threshold == 0 {
-            panic!("Polynomial threshold can not be zero");
-        }
-        if threshold > 1024 {
-            panic!("Polynomial has too high of a threshold, {threshold} > 1024");
-        }
+        assert_ne!(threshold, 0, "Polynomial threshold can not be zero");
+        assert!(threshold <= 1024, "PPolynomial has too high of a threshold");
 
-        if poly::point::eval(polynomial, *share_index) != g!(secret_share * G) {
-            panic!("Secret share is not valid with respect to the polynomial!")
-        }
+        assert_eq!(
+            poly::point::eval(polynomial, *share_index),
+            g!(secret_share * G),
+            "Secret share is not valid with respect to the polynomial!"
+        );
 
         Self {
             threshold,
@@ -166,31 +160,6 @@ impl fmt::Display for ShareBackup {
         bech32::encode_to_fmt(f, "frost", &data[..(data.len() - n_unused_bytes)], Bech32m)
             .expect("hrp is valid and is standard")
     }
-}
-
-/// Encode a share backup into base32
-///
-/// Use [`ShareBackup`] to securely create secret share backups that are valid w.r.t the polynomial.
-pub fn encode_backup(
-    threshold: u16,
-    identifier: [u5; 4],
-    secret_share: Scalar,
-    share_index: Scalar<Public>,
-) -> String {
-    if threshold == 0 {
-        panic!("Polynomial threshold can not be zero");
-    }
-    if threshold > 1024 {
-        panic!("Polynomial has too high of a threshold, {threshold} > 1024");
-    }
-
-    let share_backup = ShareBackup {
-        threshold,
-        identifier,
-        secret_share,
-        share_index,
-    };
-    share_backup.to_string()
 }
 
 impl FromStr for ShareBackup {
