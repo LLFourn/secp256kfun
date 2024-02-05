@@ -4,7 +4,7 @@
 //!
 //! ```
 //! use schnorr_fun::binonce::NonceKeyPair;
-//! use schnorr_fun::fun::s;
+//! use schnorr_fun::fun::{s, poly};
 //! use schnorr_fun::{
 //!     frost,
 //!     Message,
@@ -21,14 +21,14 @@
 //! // we're doing a 2 out of 3
 //! let threshold = 2;
 //! // Generate our secret scalar polynomial we'll use in the key generation protocol
-//! let my_secret_poly = frost::generate_scalar_poly(threshold, &mut rng);
-//! let my_public_poly = frost::to_point_poly(&my_secret_poly);
-//! # let secret_poly2 = frost::generate_scalar_poly(threshold, &mut rng);
-//! # let secret_poly3 = frost::generate_scalar_poly(threshold, &mut rng);
-//! # let public_poly2 = frost::to_point_poly(&secret_poly2);
-//! # let public_poly3 = frost::to_point_poly(&secret_poly3);
+//! let my_secret_poly = poly::scalar::generate(threshold, &mut rng);
+//! let my_public_poly = poly::scalar::to_point_poly(&my_secret_poly);
+//! # let secret_poly2 = poly::scalar::generate(threshold, &mut rng);
+//! # let secret_poly3 = poly::scalar::generate(threshold, &mut rng);
+//! # let public_poly2 = poly::scalar::to_point_poly(&secret_poly2);
+//! # let public_poly3 = poly::scalar::to_point_poly(&secret_poly3);
 //!
-//! // Party indexes can be any non-zero scalar
+//! // Party indicies can be any non-zero scalar
 //! let my_index = s!(1).public();
 //! let party_index2 = s!(2).public();
 //! let party_index3 = s!(3).public();
@@ -145,7 +145,7 @@
 //! in most applications:
 //!
 //! ```
-//! use schnorr_fun::{frost, fun::{ Scalar, nonce, Tag, derive_nonce_rng }};
+//! use schnorr_fun::{frost, fun::{ Scalar, poly, nonce, Tag, derive_nonce_rng }};
 //! use sha2::Sha256;
 //! use rand_chacha::ChaCha20Rng;
 //!
@@ -163,7 +163,7 @@
 //! };
 //!
 //! let threshold = 3;
-//! let my_secret_poly: Vec<Scalar> = frost::generate_scalar_poly(threshold, &mut poly_rng);
+//! let my_secret_poly: Vec<Scalar> = poly::scalar::generate(threshold, &mut poly_rng);
 //! ```
 //!
 //! Note that if a key generation session fails you should always start a fresh session with a
@@ -186,11 +186,23 @@ use secp256kfun::{
     hash::{HashAdd, Tag},
     marker::*,
     nonce::{self, NonceGen},
+    poly,
     rand_core::{RngCore, SeedableRng},
     s, Point, Scalar, G,
 };
 
-type PartyIndex = Scalar<Public, NonZero>;
+/// The index of a party's secret share.
+///
+/// This index and its secret share define a point on the joint secret polynomial.
+/// It is used in interpolation and computation of the shared secret.
+///
+/// This index can be any non-zero [`Scalar`], but must be unique between parties.
+/// In most cases it will make sense to use simple indicies `s!(1), s!(2), ...` for smaller backups.
+/// Other applications may desire to use indicies corresponding to pre-existing keys or identifiers.
+/// See [`share_backup`] for backup sizes.
+///
+/// [`share_backup`]: crate::share_backup
+pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
 ///
@@ -236,7 +248,7 @@ impl<H, NG> Frost<H, NG> {
         &self.nonce_gen
     }
 
-    /// Create our secret shares to be shared with other participants using pre-existing indexes
+    /// Create our secret shares to be shared with other participants using pre-existing indicies
     ///
     /// Each secret share needs to be securely communicated to the intended participant.
     ///
@@ -248,7 +260,7 @@ impl<H, NG> Frost<H, NG> {
         scalar_poly: &[Scalar],
         party_index: Scalar<impl Secrecy>,
     ) -> Scalar<Secret, Zero> {
-        scalar_poly_eval(scalar_poly, party_index)
+        poly::scalar::eval(scalar_poly, party_index)
     }
 }
 
@@ -352,37 +364,16 @@ impl core::fmt::Display for FinishKeyGenError {
 #[cfg(feature = "std")]
 impl std::error::Error for FinishKeyGenError {}
 
-/// A joint FROST key
+/// A FROST key
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
-    serde(crate = "crate::fun::serde")
-)]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(
-        crate = "crate::fun::bincode",
-        encode_bounds = "Point<T>: crate::fun::bincode::Encode",
-        decode_bounds = "Point<T>: crate::fun::bincode::Decode",
-        borrow_decode_bounds = "Point<T>: crate::fun::bincode::BorrowDecode<'__de>"
-    )
-)]
 pub struct FrostKey<T: PointType> {
     /// The joint public key of the frost multisignature.
-    #[cfg_attr(
-        feature = "serde",
-        serde(bound(
-            deserialize = "Point<T>: crate::fun::serde::de::Deserialize<'de>",
-            serialize = "Point<T>: crate::fun::serde::Serialize"
-        ))
-    )]
-    public_key: Point<T>,
-    /// The image of each party's key share.
-    verification_shares: BTreeMap<PartyIndex, Point<Normal, Public, Zero>>,
-    /// Number of partial signatures required to create a combined signature under this key.
-    threshold: usize,
+    ///
+    /// This public key will change as you add tweaks or convert [`into_xonly_key`].
+    /// Only initially will the public key match the first coefficient of the public polynomial.
+    tweaked_public_key: Point<T>,
+    /// The public point polynomial that defines the access structure to the FROST key.
+    point_polynomial: Vec<Point<Normal, Public, Zero>>,
     /// The tweak applied to this frost key, tracks the aggregate tweak.
     tweak: Scalar<Public, Zero>,
     /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
@@ -390,26 +381,29 @@ pub struct FrostKey<T: PointType> {
 }
 
 impl<T: Copy + PointType> FrostKey<T> {
-    /// The joint public key
+    /// The public key with all tweaks applied
     pub fn public_key(&self) -> Point<T> {
-        self.public_key
+        self.tweaked_public_key
     }
 
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
-    pub fn verification_shares(&self) -> &BTreeMap<PartyIndex, Point<Normal, Public, Zero>> {
-        &self.verification_shares
+    pub fn verification_share(&self, index: &PartyIndex) -> Point<NonNormal, Public, Zero> {
+        poly::point::eval(&self.point_polynomial, *index)
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
     pub fn threshold(&self) -> usize {
-        self.threshold
+        self.point_polynomial.len()
     }
 
-    /// The total number of signers in this frost multisignature.
-    pub fn n_signers(&self) -> usize {
-        self.verification_shares.len()
+    /// The public image of the key's polynomial on the elliptic curve.
+    ///
+    /// Note: the first coefficient (index `0`) is guaranteed to be non-zero but the coefficients
+    /// may be.
+    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
+        self.point_polynomial.clone()
     }
 }
 
@@ -420,13 +414,12 @@ impl FrostKey<Normal> {
     ///
     /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> FrostKey<EvenY> {
-        let (public_key, needs_negation) = self.public_key.into_point_with_even_y();
+        let (tweaked_public_key, needs_negation) = self.public_key().into_point_with_even_y();
         let mut tweak = self.tweak;
         tweak.conditional_negate(needs_negation);
         FrostKey {
-            public_key,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
+            tweaked_public_key,
+            point_polynomial: self.point_polynomial,
             tweak,
             needs_negation,
         }
@@ -448,16 +441,32 @@ impl FrostKey<Normal> {
     ///
     /// [BIP32]: https://bips.xyz/32
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let public_key = g!(self.public_key + tweak * G).normalize().non_zero()?;
+        let tweaked_public_key = g!(self.tweaked_public_key + tweak * G)
+            .normalize()
+            .non_zero()?;
         let tweak = s!(self.tweak + tweak).public();
 
         Some(FrostKey {
-            public_key,
-            verification_shares: self.verification_shares.clone(),
-            threshold: self.threshold,
+            tweaked_public_key,
+            point_polynomial: self.point_polynomial,
             tweak,
             needs_negation: self.needs_negation,
         })
+    }
+
+    /// Put the `FrostKey` into a form that can be encoded/decode.
+    ///
+    /// Note this encoding **ignores the tweaks that have been applied to the `FrostKey`**. To
+    /// restore tweaks you must reapply them after it's been [`decode`]d.
+    ///
+    /// [`decode`]: Self::decode
+    pub fn encode(&self) -> EncodedFrostKey {
+        EncodedFrostKey::from(self.clone())
+    }
+
+    /// Decode the `FrostKey` from an `EncodedFrostKey`.
+    pub fn decode(encoded_frost_key: EncodedFrostKey) -> Self {
+        Self::from(encoded_frost_key)
     }
 }
 
@@ -475,7 +484,7 @@ impl FrostKey<EvenY> {
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let (new_public_key, needs_negation) = g!(self.public_key + tweak * G)
+        let (new_public_key, needs_negation) = g!(self.tweaked_public_key + tweak * G)
             .normalize()
             .non_zero()?
             .into_point_with_even_y();
@@ -484,11 +493,10 @@ impl FrostKey<EvenY> {
         let needs_negation = self.needs_negation ^ needs_negation;
 
         Some(Self {
-            public_key: new_public_key,
+            tweaked_public_key: new_public_key,
+            point_polynomial: self.point_polynomial,
             needs_negation,
             tweak: new_tweak,
-            verification_shares: self.verification_shares,
-            threshold: self.threshold,
         })
     }
 }
@@ -589,7 +597,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                 (
                     Scalar::from_non_zero_u32(NonZeroU32::new((i + 1) as u32).expect("we added 1"))
                         .public(),
-                    generate_scalar_poly(threshold, rng),
+                    poly::scalar::generate(threshold, rng),
                 )
             })
             .collect::<BTreeMap<_, _>>();
@@ -689,10 +697,10 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         S: AsRef<[Scalar]>,
     {
         for (party_id, scalar_poly) in local_secret_polys {
-            let image = to_point_poly(scalar_poly.as_ref());
+            let image = poly::scalar::to_point_poly(scalar_poly.as_ref());
             let _existing = point_polys.insert(*party_id, image);
             if let Some(_existing) = _existing {
-                debug_assert_eq!(_existing, to_point_poly(scalar_poly.as_ref()));
+                debug_assert_eq!(_existing, poly::scalar::to_point_poly(scalar_poly.as_ref()));
             }
         }
         let len_first_poly = point_polys
@@ -729,22 +737,14 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             .non_zero()
             .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
-        let verification_shares = point_polys
-            .keys()
-            .map(|party_index| {
-                (
-                    *party_index,
-                    point_poly_eval(&joint_poly, *party_index).normalize(),
-                )
-            })
-            .collect();
-
         Ok(KeyGen {
             point_polys,
             frost_key: FrostKey {
-                verification_shares,
-                public_key,
-                threshold: joint_poly.len(),
+                tweaked_public_key: public_key,
+                point_polynomial: joint_poly
+                    .into_iter()
+                    .map(|coef| coef.normalize())
+                    .collect(),
                 tweak: Scalar::zero(),
                 needs_negation: false,
             },
@@ -809,7 +809,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 return Err(FinishKeyGenError::InvalidProofOfPossession(*party_index));
             }
 
-            let expected_public_share = point_poly_eval(poly, my_index);
+            let expected_public_share = poly::point::eval(poly, my_index);
             if g!(secret_share * G) != expected_public_share {
                 return Err(FinishKeyGenError::InvalidShare(*party_index));
             }
@@ -898,10 +898,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = lagrange_lambda(
-            my_index,
-            session.nonces.keys().filter(|&j| *j != my_index).copied(),
-        );
+        let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys());
         assert_eq!(
             *session
                 .nonces
@@ -934,17 +931,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = lagrange_lambda(
-            index,
-            session.nonces.keys().filter(|&j| *j != index).copied(),
-        );
+        let mut lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys());
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = match frost_key.verification_shares().get(&index) {
-            Some(key) => key,
-            None => return false,
-        };
+        let X = frost_key.verification_share(&index);
         let [R1, R2] = session
             .nonces
             .get(&index)
@@ -1007,20 +998,6 @@ impl SignSession {
     }
 }
 
-/// Calculate the lagrange coefficient for participant with index x_j and other signers indexes x_ms
-fn lagrange_lambda(
-    x_j: Scalar<impl Secrecy>,
-    x_ms: impl Iterator<Item = Scalar<impl Secrecy>>,
-) -> Scalar<Public> {
-    x_ms.fold(Scalar::one(), |acc, x_m| {
-        let denominator = s!(x_m - x_j)
-            .non_zero()
-            .expect("removed duplicate indexes")
-            .invert();
-        s!(acc * x_m * denominator).public()
-    })
-}
-
 /// Constructor for a Frost instance using deterministic nonce generation.
 ///
 /// If you use deterministic nonce generation you will have to provide a unique session id to every signing session.
@@ -1046,7 +1023,7 @@ where
 ///
 /// ```
 /// use schnorr_fun::frost;
-/// let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
+/// let frost = frost::new_with_synthetic_nonces::<sha2::Sha256, rand::rngs::ThreadRng>();
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
@@ -1066,50 +1043,84 @@ where
     Frost::default()
 }
 
-/// Create a vector of points by multiplying each scalar by `G`.
+/// An encoded FROST key
 ///
-/// # Example
-///
-/// ```
-/// use schnorr_fun::{
-///     frost,
-///     fun::{g, s, Scalar, G},
-/// };
-/// let secret_poly = (0..5)
-///     .map(|_| Scalar::random(&mut rand::thread_rng()))
-///     .collect::<Vec<_>>();
-/// let point_poly = frost::to_point_poly(&secret_poly);
-/// ```
-pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
-    scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
+/// This encodes only stores the joint public polynomial. **It does not encode tweaks applied to the
+/// `FrostKey`**.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
+)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode),
+    bincode(crate = "crate::fun::bincode",)
+)]
+pub struct EncodedFrostKey {
+    /// The public point polynomial that defines the access structure to the FROST key.
+    point_polynomial: Vec<Point<Normal, Public, Zero>>,
 }
 
-/// Generate a [`Scalar`] polynomial for key generation
-///
-/// [`Scalar`]: secp256kfun::Scalar
-pub fn generate_scalar_poly(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
-    (0..threshold).map(|_| Scalar::random(rng)).collect()
+#[cfg(feature = "bincode")]
+impl crate::fun::bincode::Decode for EncodedFrostKey {
+    fn decode<D: secp256kfun::bincode::de::Decoder>(
+        decoder: &mut D,
+    ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
+        let poly = Vec::<Point<Normal, Public, Zero>>::decode(decoder)?;
+
+        if poly[0].is_zero() {
+            return Err(secp256kfun::bincode::error::DecodeError::Other(
+                "first coefficient of a frost polynomial can't be zero",
+            ));
+        }
+
+        Ok(EncodedFrostKey {
+            point_polynomial: poly,
+        })
+    }
 }
 
-fn scalar_poly_eval(
-    poly: &[Scalar],
-    x: Scalar<impl Secrecy, impl ZeroChoice>,
-) -> Scalar<Secret, Zero> {
-    s!(powers(x) .* poly)
+#[cfg(feature = "serde")]
+impl<'de> crate::fun::serde::Deserialize<'de> for EncodedFrostKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: secp256kfun::serde::Deserializer<'de>,
+    {
+        let poly = Vec::<Point<Normal, Public, Zero>>::deserialize(deserializer)?;
+
+        if poly[0].is_zero() {
+            return Err(crate::fun::serde::de::Error::custom(
+                "first coefficient of a frost polynomial can't be zero",
+            ));
+        }
+
+        Ok(EncodedFrostKey {
+            point_polynomial: poly,
+        })
+    }
 }
 
-fn point_poly_eval(
-    poly: &[Point<impl PointType, Public, impl ZeroChoice>],
-    x: Scalar<Public, impl ZeroChoice>,
-) -> Point<NonNormal, Public, Zero> {
-    g!(powers(x) .* poly)
+impl From<EncodedFrostKey> for FrostKey<Normal> {
+    fn from(from: EncodedFrostKey) -> Self {
+        FrostKey {
+            tweaked_public_key: from.point_polynomial[0]
+                .non_zero()
+                .expect("the frost public key can not be zero"),
+            point_polynomial: from.point_polynomial,
+            tweak: Scalar::zero(),
+            needs_negation: false,
+        }
+    }
 }
 
-/// Returns an iterator of 1, x, x², x³ ...
-fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
-    core::iter::successors(Some(Scalar::one().mark_zero_choice::<Z>()), move |xpow| {
-        Some(s!(xpow * x).set_secrecy())
-    })
+impl<T: PointType> From<FrostKey<T>> for EncodedFrostKey {
+    fn from(from: FrostKey<T>) -> Self {
+        EncodedFrostKey {
+            point_polynomial: from.point_polynomial,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1117,20 +1128,6 @@ mod test {
 
     use super::*;
     use sha2::Sha256;
-
-    #[test]
-    fn test_lagrange_lambda() {
-        let res = s!((1 * 4 * 5) * {
-            s!((1 - 2) * (4 - 2) * (5 - 2))
-                .non_zero()
-                .expect("")
-                .invert()
-        });
-        assert_eq!(
-            res,
-            lagrange_lambda(s!(2), [s!(1), s!(4), s!(5)].into_iter())
-        );
-    }
 
     #[test]
     fn zero_agg_nonce_results_in_G() {

@@ -18,6 +18,9 @@ pub mod hash;
 pub mod hex;
 pub mod nonce;
 
+#[cfg(feature = "alloc")]
+pub mod poly;
+
 pub use digest;
 pub use rand_core;
 pub use subtle;

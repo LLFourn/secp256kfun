@@ -44,6 +44,12 @@ serde = ["secp256kfun/serde"]
 libsecp_compat = ["secp256kfun/libsecp_compat", "libsecp_compat_0_27"]
 libsecp_compat_0_27 = ["secp256kfun/libsecp_compat_0_27"]
 proptest = ["secp256kfun/proptest"]
+share_backup = ["bech32"]
+
+[dependencies.bech32]
+version = "0.9"
+optional = true
+default-features = false
 
 [package.metadata.docs.rs]
 all-features = true
