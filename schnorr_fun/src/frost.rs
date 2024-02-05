@@ -399,6 +399,9 @@ impl<T: Copy + PointType> FrostKey<T> {
     }
 
     /// The public image of the key's polynomial on the elliptic curve.
+    ///
+    /// Note: the first coefficient (index `0`) is guaranteed to be non-zero but the coefficients
+    /// may be.
     pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
         self.point_polynomial.clone()
     }
@@ -449,6 +452,21 @@ impl FrostKey<Normal> {
             tweak,
             needs_negation: self.needs_negation,
         })
+    }
+
+    /// Put the `FrostKey` into a form that can be encoded/decode.
+    ///
+    /// Note this encoding **ignores the tweaks that have been applied to the `FrostKey`**. To
+    /// restore tweaks you must reapply them after it's been [`decode`]d.
+    ///
+    /// [`decode`]: Self::decode
+    pub fn encode(&self) -> EncodedFrostKey {
+        EncodedFrostKey::from(self.clone())
+    }
+
+    /// Decode the `FrostKey` from an `EncodedFrostKey`.
+    pub fn decode(encoded_frost_key: EncodedFrostKey) -> Self {
+        Self::from(encoded_frost_key)
     }
 }
 
@@ -1027,22 +1045,61 @@ where
 
 /// An encoded FROST key
 ///
-/// This encoding only stores the joint public polynomial, which is enough to store a raw FROST key
-/// that has no tweaks.
+/// This encodes only stores the joint public polynomial. **It does not encode tweaks applied to the
+/// `FrostKey`**.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
-    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    derive(crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
 #[cfg_attr(
     feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    derive(crate::fun::bincode::Encode),
     bincode(crate = "crate::fun::bincode",)
 )]
 pub struct EncodedFrostKey {
     /// The public point polynomial that defines the access structure to the FROST key.
     point_polynomial: Vec<Point<Normal, Public, Zero>>,
+}
+
+#[cfg(feature = "bincode")]
+impl crate::fun::bincode::Decode for EncodedFrostKey {
+    fn decode<D: secp256kfun::bincode::de::Decoder>(
+        decoder: &mut D,
+    ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
+        let poly = Vec::<Point<Normal, Public, Zero>>::decode(decoder)?;
+
+        if poly[0].is_zero() {
+            return Err(secp256kfun::bincode::error::DecodeError::Other(
+                "first coefficient of a frost polynomial can't be zero",
+            ));
+        }
+
+        Ok(EncodedFrostKey {
+            point_polynomial: poly,
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> crate::fun::serde::Deserialize<'de> for EncodedFrostKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: secp256kfun::serde::Deserializer<'de>,
+    {
+        let poly = Vec::<Point<Normal, Public, Zero>>::deserialize(deserializer)?;
+
+        if poly[0].is_zero() {
+            return Err(crate::fun::serde::de::Error::custom(
+                "first coefficient of a frost polynomial can't be zero",
+            ));
+        }
+
+        Ok(EncodedFrostKey {
+            point_polynomial: poly,
+        })
+    }
 }
 
 impl From<EncodedFrostKey> for FrostKey<Normal> {
