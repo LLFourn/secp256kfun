@@ -979,6 +979,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 ///
 /// [`Frost::start_sign_session`]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(crate = "crate::fun::bincode")
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
+)]
 pub struct SignSession {
     binding_coeff: Scalar,
     nonces_need_negation: bool,
