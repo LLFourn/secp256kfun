@@ -6,7 +6,7 @@ use secp256kfun::{marker::Secret, poly, s, Scalar};
 #[test]
 fn short_backup() {
     let secret_poly = vec![s!(6), s!(1), s!(9)];
-    let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly); // some polynomial coefficients
+    let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly);
     let threshold = polynomial.len() as u16;
     let share_index = s!(12).public();
     let secret_share = poly::scalar::eval(&secret_poly, share_index)

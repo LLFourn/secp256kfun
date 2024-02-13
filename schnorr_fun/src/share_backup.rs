@@ -50,11 +50,12 @@
 use alloc::{fmt, string::String, vec::Vec};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::{num::NonZeroU32, str::FromStr};
+use secp256kfun::marker::ZeroChoice;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::HashAdd,
-    marker::Public,
+    marker::{Normal, Public},
     poly, Point, Scalar, G,
 };
 
@@ -62,7 +63,7 @@ use secp256kfun::{
 /// The first 4 bech32 chars from a hash of the polynomial coefficients.
 /// Collision expected once in (32)^4 = 2^20.
 pub fn polynomial_identifier<H: Default + Digest<OutputSize = U32>>(
-    polynomial: &[Point],
+    polynomial: &[Point<Normal, Public, impl ZeroChoice>],
 ) -> [u5; 4] {
     let hash = H::default();
     hash.add(polynomial).finalize().to_base32()[0..4]
@@ -98,7 +99,7 @@ impl ShareBackup {
     /// The threshold must be greater than 0 and less than 1024.
     /// The secret share is checked to confirm that its image lies on the public point polynomial.
     pub fn new<H: Default + Digest<OutputSize = U32>>(
-        polynomial: &Vec<Point>,
+        polynomial: &[Point<Normal, Public, impl ZeroChoice>],
         secret_share: &Scalar,
         share_index: &Scalar<Public>,
     ) -> Self {
