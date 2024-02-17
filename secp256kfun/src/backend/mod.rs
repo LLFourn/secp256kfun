@@ -46,6 +46,7 @@ pub trait TimeSensitive {
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool;
     fn norm_point_is_y_even(point: &Point) -> bool;
     fn norm_point_conditional_negate(point: &mut Point, cond: bool);
+    #[allow(dead_code)] // we are not using basepoints acceleration for now
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Point) -> Point;
     fn point_double_mul(x: &Scalar, A: &Point, y: &Scalar, B: &Point) -> Point {
         let xA = Self::scalar_mul_point(x, A);
