@@ -50,12 +50,11 @@
 use alloc::{fmt, string::String, vec::Vec};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
 use core::{num::NonZeroU32, str::FromStr};
-use secp256kfun::marker::ZeroChoice;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
     hash::HashAdd,
-    marker::{Normal, Public},
+    marker::*,
     poly, Point, Scalar, G,
 };
 

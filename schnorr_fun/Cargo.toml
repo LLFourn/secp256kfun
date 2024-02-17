@@ -4,7 +4,7 @@ name = "schnorr_fun"
 version = "0.9.1"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.63"
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/schnorr_fun"
 repository = "https://github.com/LLFourn/secp256kfun"
@@ -15,6 +15,7 @@ keywords = ["bitcoin", "schnorr"]
 
 [dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.9",  default-features = false }
+bech32 = { version = "0.9", optional = true, default-features = false }
 
 [dev-dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.9",  features = ["proptest"] }
@@ -44,12 +45,7 @@ serde = ["secp256kfun/serde"]
 libsecp_compat = ["secp256kfun/libsecp_compat", "libsecp_compat_0_27"]
 libsecp_compat_0_27 = ["secp256kfun/libsecp_compat_0_27"]
 proptest = ["secp256kfun/proptest"]
-share_backup = ["bech32"]
-
-[dependencies.bech32]
-version = "0.9"
-optional = true
-default-features = false
+share_backup = ["dep:bech32"]
 
 [package.metadata.docs.rs]
 all-features = true

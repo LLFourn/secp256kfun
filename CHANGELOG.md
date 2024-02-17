@@ -3,6 +3,8 @@
 
 ## Unreleased
 
+- Bumped MSRV to 1.63.0 to reduce friction
+- Added `share_backup` module in `schnorr_fun`
 - Added `arithmetic_macros` to make `g!` and `s!` macros into procedural macros
 - Made even `Secret` things `Copy`. See discussion [here](https://github.com/LLFourn/secp256kfun/issues/6#issuecomment-1363752651).
 

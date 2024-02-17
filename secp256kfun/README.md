@@ -175,7 +175,7 @@ assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 
 ## MSRV
 
-Minimum supported rust version is `v1.60`. Technically `rustc` only needs to be `v1.56` but we need features from `v.1.60` of cargo.
+Minimum supported rust version is `v1.63`. 
 
 ## LICENSE
 
