@@ -20,16 +20,19 @@
 //! ## Rationale
 //!
 //! ### Human Readable - (4 bech32 characters)
+//!
 //! `frost` looks cool.
 //! Most of the time we will be using this backup scheme for FROST related shamir secret shares.
 //!
 //! ### Threshold - (2)
+//!
 //! A threshold integer between 1 and 1024.
 //! Note: a threshold of zero is considered invalid.
 //! The threshold is encoded as the value minus one so that 0 cannot be represented which is not a
 //! valid threshold.
 //!
 //! ### Polynomial Identifier - (4)
+//!
 //! The first 4 bech32 characters from the SHA256 hash of the polynomial coefficients.
 //! This identifier allows determination of secret share compatibility.
 //!
@@ -39,17 +42,19 @@
 //! The probability of two polynomials having the same identifier is 1/32^4, about one in a million.
 //!
 //! ### Secret Share - (52)
+//!
 //! A secret share scalar is fixed length scalar of 32 bytes.
 //! This is 32 * 8 / 5 = 51.2 -> 52 bech32 characters
 //!
 //! ### Share Index - (1 or 52)
+//!
 //! Can be any scalar, but will often be a small integer for simplicity and smaller backups.
 //! By leaving this data piece at the end, we can use the length of the remaining data to
 //! easily decode either a single bech32 char into integer, or 52 chars into a 32 byte scalar.
 
 use alloc::{fmt, string::String, vec::Vec};
 use bech32::{u5, FromBase32, ToBase32, Variant::Bech32m};
-use core::{num::NonZeroU32, str::FromStr};
+use core::str::FromStr;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
     g,
@@ -85,7 +90,7 @@ pub struct ShareBackup {
     /// A unique polynomial identifier that signifies compatibility with other shares.
     pub identifier: [u5; 4],
     /// The Shamir Secret Share that is being backed up.
-    pub secret_share: Scalar,
+    pub secret_share: Scalar<Secret, Zero>,
     /// The scalar index for this secret share, generally a simple participant index (1, 2, ..., 32).
     pub share_index: Scalar<Public>,
 }
@@ -99,8 +104,8 @@ impl ShareBackup {
     /// The secret share is checked to confirm that its image lies on the public point polynomial.
     pub fn new<H: Default + Digest<OutputSize = U32>>(
         polynomial: &[Point<Normal, Public, impl ZeroChoice>],
-        secret_share: &Scalar,
-        share_index: &Scalar<Public>,
+        secret_share: Scalar<Secret, Zero>,
+        share_index: Scalar<Public>,
     ) -> Self {
         let threshold = polynomial.len() as u16;
         let identifier = polynomial_identifier::<H>(polynomial);
@@ -109,7 +114,7 @@ impl ShareBackup {
         assert!(threshold <= 1024, "PPolynomial has too high of a threshold");
 
         assert_eq!(
-            poly::point::eval(polynomial, *share_index),
+            poly::point::eval(polynomial, share_index),
             g!(secret_share * G),
             "Secret share is not valid with respect to the polynomial!"
         );
@@ -117,8 +122,8 @@ impl ShareBackup {
         Self {
             threshold,
             identifier,
-            secret_share: *secret_share,
-            share_index: *share_index,
+            secret_share,
+            share_index,
         }
     }
 }
@@ -187,15 +192,13 @@ impl FromStr for ShareBackup {
 
         let identifier: [u5; 4] = data[2..(2 + 4)].try_into().expect("4 bytes has to fit");
 
-        let secret_share: Scalar = Scalar::from_bytes(
+        let secret_share = Scalar::from_bytes(
             Vec::<u8>::from_base32(&data[(2 + 4)..(2 + 4 + 52)])
                 .map_err(FrostBackupDecodeError::Bech32DecodeError)?
                 .try_into()
                 .expect("52 bech32 chars corresponds to 32 bytes"),
         )
-        .ok_or(FrostBackupDecodeError::InvalidSecretShareScalar)?
-        .non_zero()
-        .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?;
+        .ok_or(FrostBackupDecodeError::InvalidSecretShareScalar)?;
 
         let share_index = if data[(2 + 4 + 52)..].len() == 52 {
             Scalar::from_bytes(
@@ -206,10 +209,10 @@ impl FromStr for ShareBackup {
             )
             .ok_or(FrostBackupDecodeError::InvalidShareIndexScalar)?
             .non_zero()
-            .expect("secret share can not be zero")
+            .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?
         } else if data[(2 + 4 + 52)..].len() == 1 {
             Scalar::from_non_zero_u32(
-                NonZeroU32::new(data[2 + 4 + 52].to_u8() as u32)
+                core::num::NonZeroU32::new(data[2 + 4 + 52].to_u8() as u32)
                     .ok_or(FrostBackupDecodeError::ShareIndexIsZero)?,
             )
             .public()
