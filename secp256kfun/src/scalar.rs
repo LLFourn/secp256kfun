@@ -354,22 +354,15 @@ impl<S> From<u32> for Scalar<S, Zero> {
 }
 
 crate::impl_fromstr_deserialize! {
-    name => "non-zero secp256k1 scalar",
-    fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,NonZero>> {
-        Scalar::from_bytes(bytes)?.non_zero()
+    name => "secp256k1 scalar",
+    fn from_bytes<S, Z: ZeroChoice>(bytes: [u8;32]) -> Option<Scalar<S,Z>> {
+        Scalar::from_bytes(bytes)
     }
 }
 
 crate::impl_display_debug_serialize! {
     fn to_bytes<Z,S>(scalar: &Scalar<S,Z>) -> [u8;32] {
         scalar.to_bytes()
-    }
-}
-
-crate::impl_fromstr_deserialize! {
-    name => "secp256k1 scalar",
-    fn from_bytes<S>(bytes: [u8;32]) -> Option<Scalar<S,Zero>> {
-        Scalar::from_bytes(bytes)
     }
 }
 
