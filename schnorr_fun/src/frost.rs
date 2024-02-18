@@ -1073,6 +1073,18 @@ pub struct EncodedFrostKey {
     point_polynomial: Vec<Point<Normal, Public, Zero>>,
 }
 
+impl EncodedFrostKey {
+    /// Traverse back to a FROST key to be used in signing
+    pub fn into_frost_key(&self) -> FrostKey<Normal> {
+        self.clone().into()
+    }
+
+    /// The threshold number of participants required in a signing coalition to produce a valid signature.
+    pub fn threshold(&self) -> usize {
+        self.point_polynomial.len()
+    }
+}
+
 #[cfg(feature = "bincode")]
 impl crate::fun::bincode::Decode for EncodedFrostKey {
     fn decode<D: secp256kfun::bincode::de::Decoder>(
@@ -1091,6 +1103,9 @@ impl crate::fun::bincode::Decode for EncodedFrostKey {
         })
     }
 }
+
+#[cfg(feature = "bincode")]
+crate::fun::bincode::impl_borrow_decode!(EncodedFrostKey);
 
 #[cfg(feature = "serde")]
 impl<'de> crate::fun::serde::Deserialize<'de> for EncodedFrostKey {

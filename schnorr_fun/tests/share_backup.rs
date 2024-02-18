@@ -1,21 +1,18 @@
 #![cfg(feature = "share_backup")]
 use core::str::FromStr;
 use schnorr_fun::share_backup::{decode_backup, polynomial_identifier, ShareBackup};
-use secp256kfun::{marker::Secret, poly, s, Scalar};
+use secp256kfun::{marker::*, poly, s, Scalar};
 
 #[test]
 fn short_backup() {
     let secret_poly = vec![s!(6), s!(1), s!(9)];
-    let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly); // some polynomial coefficients
+    let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly);
     let threshold = polynomial.len() as u16;
     let share_index = s!(12).public();
-    let secret_share = poly::scalar::eval(&secret_poly, share_index)
-        .non_zero()
-        .unwrap();
+    let secret_share = poly::scalar::eval(&secret_poly, share_index);
 
-    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
     let share_backup_bech32 = format!("{}", share_backup);
-    dbg!(&share_backup_bech32);
 
     let decoded_share_backup = decode_backup(share_backup_bech32).unwrap();
 
@@ -38,11 +35,9 @@ fn long_backup() {
     )
     .unwrap()
     .public();
-    let secret_share = poly::scalar::eval(&secret_poly, share_index)
-        .non_zero()
-        .unwrap();
+    let secret_share = poly::scalar::eval(&secret_poly, share_index);
 
-    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
     let share_backup_bech32 = format!("{}", share_backup);
     dbg!(&share_backup_bech32);
 
@@ -67,10 +62,8 @@ fn threshold_too_high() {
     )
     .unwrap()
     .public();
-    let secret_share = poly::scalar::eval(&secret_poly, share_index)
-        .non_zero()
-        .unwrap();
-    ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    let secret_share = poly::scalar::eval(&secret_poly, share_index);
+    ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
 }
 
 #[test]
@@ -83,12 +76,12 @@ fn threshold_zero() {
     )
     .unwrap()
     .public();
-    let secret_share = Scalar::<Secret>::from_str(
+    let secret_share = Scalar::<Secret, Zero>::from_str(
         "00000000000000000000000000656C656374726F6E696320707972616D696473",
     )
     .unwrap();
 
-    ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
 }
 
 #[test]
@@ -101,10 +94,10 @@ fn share_not_on_poly() {
     )
     .unwrap()
     .public();
-    let secret_share = Scalar::<Secret>::from_str(
+    let secret_share = Scalar::<Secret, Zero>::from_str(
         "0000000000000000626974636F696E2068616C76696E6720746F6F2066617374",
     )
     .unwrap();
 
-    ShareBackup::new::<sha2::Sha256>(&polynomial, &secret_share, &share_index);
+    ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
 }
