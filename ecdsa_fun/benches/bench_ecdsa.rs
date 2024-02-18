@@ -20,7 +20,12 @@ fn sign_ecdsa(c: &mut Criterion) {
         let secret_key = SecretKey::from_slice(&SK.to_bytes()[..]).unwrap();
         {
             group.bench_function("secp256k1::ecdsa_sign", |b| {
-                b.iter(|| secp.sign_ecdsa(&Message::from_slice(&MESSAGE[..]).unwrap(), &secret_key))
+                b.iter(|| {
+                    secp.sign_ecdsa(
+                        &Message::from_digest_slice(&MESSAGE[..]).unwrap(),
+                        &secret_key,
+                    )
+                })
             });
         }
     }
@@ -53,7 +58,7 @@ fn verify_ecdsa(c: &mut Criterion) {
             group.bench_function("secp256k1::ecdsa_verify", |b| {
                 b.iter(|| {
                     secp.verify_ecdsa(
-                        &Message::from_slice(&MESSAGE[..]).unwrap(),
+                        &Message::from_digest_slice(&MESSAGE[..]).unwrap(),
                         &sig,
                         &public_key,
                     )

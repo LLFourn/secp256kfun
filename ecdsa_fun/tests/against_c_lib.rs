@@ -28,7 +28,7 @@ fn ecdsa_sign() {
         let c_public_key = PublicKey::from(public_key);
         let message = rand_32_bytes();
         let signature = ecdsa.sign(&secret_key, &message);
-        let c_message = Message::from_slice(&message[..]).unwrap();
+        let c_message = Message::from_digest_slice(&message[..]).unwrap();
         let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
         assert!(secp
             .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
@@ -48,7 +48,7 @@ fn ecdsa_verify() {
         let c_public_key = PublicKey::from_secret_key(&secp, &c_secret_key);
         let public_key = Point::from(c_public_key);
         let message = rand_32_bytes();
-        let c_message = Message::from_slice(&message[..]).unwrap();
+        let c_message = Message::from_digest_slice(&message[..]).unwrap();
         let c_signature = secp.sign_ecdsa(&c_message, &c_secret_key);
         let signature = ecdsa_fun::Signature::from(c_signature);
         assert!(ecdsa.verify(&public_key, &message, &signature));
@@ -66,7 +66,7 @@ fn ecdsa_verify_high_message() {
     let message =
         hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
             .unwrap();
-    let c_message = Message::from_slice(&message[..]).unwrap();
+    let c_message = Message::from_digest_slice(&message[..]).unwrap();
     let c_signature = secp.sign_ecdsa(&c_message, &c_secret_key);
     let signature = ecdsa_fun::Signature::from_bytes(c_signature.serialize_compact()).unwrap();
 
@@ -86,7 +86,7 @@ fn ecdsa_sign_high_message() {
         hex::decode_array("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
             .unwrap();
     let signature = ecdsa.sign(&secret_key, &message);
-    let c_message = Message::from_slice(&message[..]).unwrap();
+    let c_message = Message::from_digest_slice(&message[..]).unwrap();
     let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
     assert!(secp
         .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
