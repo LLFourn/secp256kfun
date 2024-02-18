@@ -22,9 +22,12 @@ secp256kfun_arithmetic_macros = { version = "0.9.0", path = "../arithmetic_macro
 
 # optional
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
-secp256k1_0_27 = { package = "secp256k1", version = "0.27", optional = true, default-features = false }
 proptest = { version = "1", optional = true }
 bincode = { version = "2.0.0-rc.3", optional = true, default-features = false, features = ["derive"] }
+
+secp256k1_0_27 = { package = "secp256k1", version = "0.27", optional = true, default-features = false }
+secp256k1_0_28 = { package = "secp256k1", version = "0.28", optional = true, default-features = false }
+
 
 [dev-dependencies]
 serde_json = "1"
@@ -39,11 +42,25 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
+libsecp_compat = ["libsecp_compat_0_28"]
+alloc = [
+"serde?/alloc",
+"digest/alloc",
+"bincode?/alloc",
+"secp256k1_0_27?/alloc",
+"secp256k1_0_28?/alloc",
+]
+std = ["alloc", "subtle/std", "digest/std", "bincode?/std", "secp256k1_0_27?/std", "secp256k1_0_28?/std"]
+serde = [
+"dep:serde",
+"bincode?/serde",
+"secp256k1_0_27?/serde",
+"secp256k1_0_28?/serde",
+]
+
 libsecp_compat_0_27 = [ "dep:secp256k1_0_27" ]
-libsecp_compat = ["libsecp_compat_0_27"]
-alloc = ["serde?/alloc", "digest/alloc", "secp256k1_0_27?/alloc", "bincode?/alloc"]
-std = ["alloc", "subtle/std", "digest/std", "bincode?/std", "secp256k1_0_27?/std"]
-serde = [ "dep:serde", "secp256k1_0_27?/serde", "bincode?/serde" ]
+libsecp_compat_0_28 = [ "dep:secp256k1_0_28" ]
+
 
 [[bench]]
 name = "bench_ecmult"

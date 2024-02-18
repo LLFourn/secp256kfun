@@ -43,13 +43,6 @@ pub use point::Point;
 pub use scalar::Scalar;
 pub use slice::Slice;
 
-#[cfg(feature = "libsecp_compat_0_27")]
-/// Re-export `secp256k1`
-pub extern crate secp256k1_0_27;
-
-#[cfg(feature = "libsecp_compat")]
-pub use secp256k1_0_27 as secp256k1;
-
 /// Re-export `serde`
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 #[cfg(feature = "serde")]
@@ -89,3 +82,14 @@ pub static G: &Point<marker::BasePoint, marker::Public, marker::NonZero> =
 
 // it is applied to nonce generators too so export at root
 pub use hash::Tag;
+
+#[cfg(feature = "libsecp_compat_0_27")]
+/// Re-export `secp256k1`
+pub extern crate secp256k1_0_27;
+
+#[cfg(feature = "libsecp_compat_0_28")]
+/// Re-export `secp256k1`
+pub extern crate secp256k1_0_28;
+
+#[cfg(feature = "libsecp_compat")]
+pub use secp256k1_0_28 as secp256k1;
