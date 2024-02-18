@@ -77,6 +77,48 @@ impl<Z, S> Scalar<S, Z> {
         backend::BackendScalar::to_bytes(&self.0)
     }
 
+    /// Creates a scalar from 32 big-endian encoded bytes. If the bytes represent an integer greater
+    /// than or equal to the curve order then it returns `None`. If the scalar is marked `NonZero`
+    /// then it will also return `None` it it's the zero scalar.
+    ///
+    /// # Example
+    /// ```
+    /// use secp256kfun::{marker::*, Scalar};
+    /// assert!(Scalar::<Secret, Zero>::from_bytes([0u8; 32]).is_some());
+    /// // NonZero scalar's can't be zero
+    /// assert!(Scalar::<Secret, NonZero>::from_bytes([0u8; 32]).is_none());
+    /// // >= curve order
+    /// assert!(Scalar::<Secret, Zero>::from_bytes([255u8; 32]).is_none());
+    /// ```
+    pub fn from_bytes(bytes: [u8; 32]) -> Option<Self>
+    where
+        Z: ZeroChoice,
+    {
+        let bscalar: backend::Scalar = backend::BackendScalar::from_bytes(bytes)?;
+        let scalar = Self::from_inner(bscalar);
+        if op::scalar_is_zero(&scalar) && !Z::is_zero() {
+            return None;
+        }
+        Some(scalar)
+    }
+
+    /// Decode a 32 byte long slice to a scalar.
+    ///
+    /// Essentially [`from_bytes`] but checks that the slice is `32` bytes long first.
+    ///
+    /// [`from_bytes`]: Self::from_bytes
+    pub fn from_slice(slice: &[u8]) -> Option<Self>
+    where
+        Z: ZeroChoice,
+    {
+        if slice.len() != 32 {
+            return None;
+        }
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(slice);
+        Self::from_bytes(bytes)
+    }
+
     /// Negates the scalar in-place if `cond` is true.
     pub fn conditional_negate(&mut self, cond: bool) {
         op::scalar_conditional_negate(self, cond)
@@ -292,32 +334,8 @@ impl<S> Scalar<S, Zero> {
         }
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(slice);
+
         Some(Self::from_bytes_mod_order(bytes))
-    }
-
-    /// Creates a scalar from 32 big-endian encoded bytes. If the bytes
-    /// represent an integer greater than or equal to the curve order then it returns `None`.
-    ///
-    /// # Example
-    /// ```
-    /// use secp256kfun::{marker::*, Scalar};
-    /// assert!(Scalar::<Secret, _>::from_bytes([0u8; 32]).is_some());
-    /// assert!(Scalar::<Secret, _>::from_bytes([255u8; 32]).is_none());
-    /// ```
-    pub fn from_bytes(bytes: [u8; 32]) -> Option<Self> {
-        backend::BackendScalar::from_bytes(bytes).map(Self::from_inner)
-    }
-
-    /// Creates a scalar from 32 big-endian encoded bytes in a slice. If the
-    /// length of the slice is not 32 or the bytes represent an integer greater
-    /// than or equal to the curve order then it returns `None`.
-    pub fn from_slice(slice: &[u8]) -> Option<Self> {
-        if slice.len() != 32 {
-            return None;
-        }
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(slice);
-        Self::from_bytes(bytes)
     }
 }
 
@@ -557,15 +575,16 @@ mod test {
 
     #[test]
     fn from_slice() {
-        assert!(
-            Scalar::<Secret, _>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()).is_some()
-        );
-        assert!(
-            Scalar::<Secret, _>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
-                .is_none()
-        );
+        assert!(Scalar::<Secret, NonZero>::from_slice(
+            b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()
+        )
+        .is_some());
+        assert!(Scalar::<Secret, NonZero>::from_slice(
+            b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()
+        )
+        .is_none());
 
-        assert!(Scalar::<Secret, _>::from_slice(
+        assert!(Scalar::<Secret, NonZero>::from_slice(
             hex::decode_array::<32>(
                 "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
             )

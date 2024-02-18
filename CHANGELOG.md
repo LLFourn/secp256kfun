@@ -3,6 +3,7 @@
 
 ## Unreleased
 
+- Change `Scalar::from_bytes` to work for `Scalar<_, NonZero>` as well.
 - Bumped MSRV to 1.63.0 to reduce friction
 - Added `share_backup` module in `schnorr_fun`
 - Added `arithmetic_macros` to make `g!` and `s!` macros into procedural macros
