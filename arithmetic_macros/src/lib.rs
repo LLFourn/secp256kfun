@@ -1,3 +1,9 @@
+//!
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![allow(non_snake_case)]
+#![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
+
 mod optree;
 use optree::{Infix, InfixKind, Node, OpTree};
 use proc_macro::TokenStream;
@@ -7,6 +13,7 @@ use std::iter::Peekable;
 type Input = Peekable<proc_macro2::token_stream::IntoIter>;
 
 #[proc_macro]
+/// Helper to generate the `s!` macro
 pub fn gen_s(input: TokenStream) -> TokenStream {
     let input: proc_macro2::TokenStream = input.into();
     let mut iter = input.into_iter().peekable();
@@ -76,6 +83,7 @@ fn compile_s(path: &Ident, node: Node) -> proc_macro2::TokenStream {
 }
 
 #[proc_macro]
+/// Helper to generate the `g!` macro
 pub fn gen_g(input: TokenStream) -> TokenStream {
     let input: proc_macro2::TokenStream = input.into();
     let mut iter = input.into_iter().peekable();
