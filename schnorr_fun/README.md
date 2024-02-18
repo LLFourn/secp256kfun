@@ -15,7 +15,7 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 
 ``` toml
 [dependencies]
-schnorr_fun = "0.9"
+schnorr_fun = "0.10"
 sha2 = "0.10"
 ```
 
