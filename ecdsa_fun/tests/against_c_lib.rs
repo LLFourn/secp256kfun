@@ -1,11 +1,8 @@
 #![cfg(feature = "libsecp_compat")]
-use ecdsa_fun::{
-    self,
-    fun::{
-        hex,
-        secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
-        Point, Scalar,
-    },
+use ecdsa_fun::fun::{
+    hex,
+    secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
+    Point, Scalar,
 };
 
 const TEST_SOUNDNESS: usize = 20;

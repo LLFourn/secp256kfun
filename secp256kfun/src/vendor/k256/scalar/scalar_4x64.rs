@@ -5,7 +5,6 @@ use super::super::{
     util::{adc64, sbb64},
     FieldBytes,
 };
-use core::convert::TryInto;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 /// Constant representing the modulus

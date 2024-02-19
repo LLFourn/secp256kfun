@@ -206,7 +206,6 @@ pub mod test {
     use super::*;
     use crate::FiatShamir;
     use ::proptest::prelude::*;
-    use generic_array::typenum::U31;
     use sha2::Sha256;
 
     prop_compose! {

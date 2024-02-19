@@ -470,7 +470,7 @@ impl<Z> Ord for Scalar<Public, Z> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{hex, op, s};
+    use crate::{hex, s};
     use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
