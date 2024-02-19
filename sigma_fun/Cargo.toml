@@ -1,6 +1,6 @@
 [package]
 name = "sigma_fun"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2021"
 rust-version = "1.63"
