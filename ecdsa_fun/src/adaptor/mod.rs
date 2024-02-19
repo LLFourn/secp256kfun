@@ -306,7 +306,6 @@ mod test {
     use rand::rngs::ThreadRng;
     use rand_chacha::ChaCha20Rng;
     use sha2::Sha256;
-    use sigma_fun::HashTranscript;
 
     #[test]
     fn end_to_end() {

@@ -15,7 +15,7 @@ This implementation is based on the [BIP-340] specification, but is flexible eno
 
 ``` toml
 [dependencies]
-schnorr_fun = "0.9"
+schnorr_fun = "0.10"
 sha2 = "0.10"
 ```
 
@@ -60,6 +60,7 @@ assert!(schnorr.verify(&verification_key, message, &signature));
   - `bincode`: for `bincode` v2 `Encode`/`Decode` implementations
   - `libsecp_compat`: for `From` implementations between `rust-secp256k1`'s Schnorr signatures.
   - `proptest` to enable `secp256kfun/proptest`.
+  - `share_backup` to enable bech32 backups of FROST secret shares
 
 [1]: https://d-nb.info/1156214580/34
 [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki

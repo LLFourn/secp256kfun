@@ -261,7 +261,7 @@ pub fn point_is_y_even<T: Normalized, S>(A: &Point<T, S, NonZero>) -> bool {
 
 #[cfg(test)]
 mod test {
-    use crate::{g, marker::*, Point, Scalar, G};
+    use crate::{marker::*, Point, Scalar, G};
     use core::str::FromStr;
 
     #[test]

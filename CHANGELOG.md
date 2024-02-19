@@ -1,7 +1,7 @@
 # CHANGELOG
 
 
-## Unreleased
+## v0.10.0
 
 - Change `Scalar::from_bytes` to work for `Scalar<_, NonZero>` as well.
 - Updated compatibility to `rust-secp256k1` v0.28.0
