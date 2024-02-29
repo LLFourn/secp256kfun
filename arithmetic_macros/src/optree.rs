@@ -268,7 +268,7 @@ fn rule_opchain(input: &mut Input) -> Result<Node, Error> {
     let mut top_node = Node::new(OpTree::Infix(Infix { lhs, rhs, kind }), span);
     let mut cursor = &mut top_node;
 
-    while let OpTree::Infix(infix) = *cursor.tree.clone() {
+    while let OpTree::Infix(infix) = &*cursor.tree {
         match &*infix.rhs.tree {
             OpTree::Infix(rhs_infix) if infix.kind.precedence() >= rhs_infix.kind.precedence() => {
                 let fixed = Node::new(
@@ -286,7 +286,7 @@ fn rule_opchain(input: &mut Input) -> Result<Node, Error> {
                     }),
                     infix.rhs.span,
                 );
-                *cursor = fixed.clone();
+                *cursor = fixed;
                 cursor = match &mut *cursor.tree {
                     OpTree::Infix(infix) => &mut infix.lhs,
                     _ => unreachable!(),
