@@ -1,26 +1,25 @@
 #![cfg(feature = "share_backup")]
 use core::str::FromStr;
-use schnorr_fun::share_backup::{decode_backup, polynomial_identifier, ShareBackup};
+use schnorr_fun::share_backup::{decode_backup, ShareBackup};
 use secp256kfun::{marker::*, poly, s, Scalar};
+use std::dbg;
 
 #[test]
 fn short_backup() {
-    let secret_poly = vec![s!(6), s!(1), s!(9)];
+    let secret_poly = vec![Scalar::<Secret>::from_str(
+        "91dbab9f62660e95258480d2f2cff6dcfdb513f28a85fa4fb55ee993a5b46809",
+    )
+    .unwrap()];
     let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly);
-    let threshold = polynomial.len() as u16;
     let share_index = s!(12).public();
     let secret_share = poly::scalar::eval(&secret_poly, share_index);
 
     let share_backup = ShareBackup::new::<sha2::Sha256>(&polynomial, secret_share, share_index);
     let share_backup_bech32 = format!("{}", share_backup);
 
+    dbg!(&share_backup_bech32);
     let decoded_share_backup = decode_backup(share_backup_bech32).unwrap();
 
-    assert_eq!(threshold, decoded_share_backup.threshold);
-    assert_eq!(
-        polynomial_identifier::<sha2::Sha256>(&polynomial),
-        decoded_share_backup.identifier
-    );
     assert_eq!(secret_share, decoded_share_backup.secret_share);
     assert_eq!(share_index, decoded_share_backup.share_index);
 }
@@ -29,7 +28,6 @@ fn short_backup() {
 fn long_backup() {
     let secret_poly = vec![s!(1), s!(2), s!(3)];
     let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly);
-    let threshold = polynomial.len() as u16;
     let share_index = Scalar::<Secret>::from_str(
         "34f7ce653cfa8454b3463726a599ef2925736442d2d06455974d6feae9450d90",
     )
@@ -43,11 +41,6 @@ fn long_backup() {
 
     let decoded_share_backup = decode_backup(share_backup_bech32).unwrap();
 
-    assert_eq!(threshold, decoded_share_backup.threshold);
-    assert_eq!(
-        polynomial_identifier::<sha2::Sha256>(&polynomial),
-        decoded_share_backup.identifier
-    );
     assert_eq!(secret_share, decoded_share_backup.secret_share);
     assert_eq!(share_index, decoded_share_backup.share_index);
 }
@@ -55,7 +48,7 @@ fn long_backup() {
 #[test]
 #[should_panic(expected = "too high of a threshold")]
 fn threshold_too_high() {
-    let secret_poly: Vec<Scalar> = (0..1025).map(|_| s!(1)).collect();
+    let secret_poly: Vec<Scalar> = (0..33).map(|_| s!(1)).collect();
     let polynomial: Vec<_> = poly::scalar::to_point_poly(&secret_poly);
     let share_index = Scalar::<Secret>::from_str(
         "91dbab9f62660e95258480d2f2cff6dcfdb513f28a85fa4fb55ee993a5b46809",
