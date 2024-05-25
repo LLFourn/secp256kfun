@@ -49,11 +49,11 @@ use secp256kfun::{
 /// Collision expected once in (32)^4 = 2^20.
 pub fn polynomial_identifier<H: Default + Digest<OutputSize = U32>>(
     polynomial: &[Point<Normal, Public, impl ZeroChoice>],
-) -> [u5; 4] {
+) -> [u8; 4] {
     let hash = H::default();
-    hash.add(polynomial).finalize().to_base32()[0..4]
+    hash.add(polynomial).finalize()[0..4]
         .try_into()
-        .expect("4 bech32 chars must fit 4 character arry")
+        .expect("4 chars must fit 4 character arry")
 }
 
 /// A Shamir Share Backup
