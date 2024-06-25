@@ -121,24 +121,27 @@ pub fn scalar_is_zero<S, Z>(x: &Scalar<S, Z>) -> bool {
 
 /// Subtracts one point from another
 #[inline(always)]
-pub fn point_sub<Z1, S1, T1, Z2, S2, T2>(
+pub fn point_sub<Z1, S1, T1: PointType, Z2, S2, T2: PointType>(
     A: impl Borrow<Point<T1, S1, Z1>>,
     B: impl Borrow<Point<T2, S2, Z2>>,
 ) -> Point<NonNormal, Public, Zero> {
-    Point::from_inner(
-        ConstantTime::point_sub_point(&A.borrow().0, &B.borrow().0),
-        NonNormal,
-    )
+    point_add(A, point_negate(B))
 }
 
 /// Adds two points together
 #[inline(always)]
-pub fn point_add<Z1, Z2, S1, S2, T1, T2>(
+pub fn point_add<Z1, Z2, S1, S2, T1: PointType, T2: PointType>(
     A: impl Borrow<Point<T1, S1, Z1>>,
     B: impl Borrow<Point<T2, S2, Z2>>,
 ) -> Point<NonNormal, Public, Zero> {
     Point::from_inner(
-        ConstantTime::point_add_point(&A.borrow().0, &B.borrow().0),
+        if T1::is_normalized() {
+            ConstantTime::point_add_norm_point(&B.borrow().0, &A.borrow().0)
+        } else if T2::is_normalized() {
+            ConstantTime::point_add_norm_point(&A.borrow().0, &B.borrow().0)
+        } else {
+            ConstantTime::point_add_point(&A.borrow().0, &B.borrow().0)
+        },
         NonNormal,
     )
 }
@@ -164,7 +167,12 @@ pub fn point_negate<T: PointType, S, Z>(
     A: impl Borrow<Point<T, S, Z>>,
 ) -> Point<T::NegationType, S, Z> {
     let mut A = A.borrow().0;
-    ConstantTime::any_point_neg(&mut A);
+    if T::is_normalized() {
+        ConstantTime::norm_point_neg(&mut A);
+    } else {
+        ConstantTime::point_neg(&mut A);
+    }
+
     Point::from_inner(A, T::NegationType::default())
 }
 
@@ -175,7 +183,13 @@ pub fn point_conditional_negate<T: PointType, S, Z>(
     cond: bool,
 ) -> Point<T::NegationType, S, Z> {
     let mut A = A.borrow().0;
-    ConstantTime::any_point_conditional_negate(&mut A, cond);
+
+    if T::is_normalized() {
+        ConstantTime::norm_point_conditional_negate(&mut A, cond);
+    } else {
+        ConstantTime::point_conditional_negate(&mut A, cond);
+    }
+
     Point::from_inner(A, T::NegationType::default())
 }
 

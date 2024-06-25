@@ -22,7 +22,7 @@ fn point_add(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    g!({ Scalar::random(&mut rand::thread_rng()) } * G),
+                    Point::random(&mut rand::thread_rng()).non_normal(),
                     Point::random(&mut rand::thread_rng()),
                 )
             },
@@ -35,8 +35,8 @@ fn point_add(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    g!({ Scalar::random(&mut rand::thread_rng()) } * G),
-                    g!({ Scalar::random(&mut rand::thread_rng()) } * G),
+                    Point::random(&mut rand::thread_rng()).non_normal(),
+                    Point::random(&mut rand::thread_rng()).non_normal(),
                 )
             },
             |(lhs, rhs)| g!(lhs + rhs),

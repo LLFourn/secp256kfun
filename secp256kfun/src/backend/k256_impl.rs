@@ -3,7 +3,6 @@ use crate::{
     backend::{BackendPoint, BackendScalar, TimeSensitive},
     vendor::k256::{mul, AffinePoint, FieldBytes, FieldElement, ProjectivePoint},
 };
-use core::ops::Neg;
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
 pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
@@ -109,35 +108,17 @@ impl TimeSensitive for ConstantTime {
         lhs + &rhs
     }
 
-    fn any_point_neg(point: &mut Point) {
-        point.y = point.y.negate(1).normalize()
-    }
-
-    fn any_point_conditional_negate(point: &mut Point, cond: bool) {
-        point.conditional_negate(Choice::from(cond as u8));
-        point.y = point.y.normalize()
-    }
-
     fn point_neg(point: &mut Point) {
         point.y = point.y.negate(1).normalize_weak()
     }
 
-    fn point_sub_norm_point(lhs: &Point, rhs: &Point) -> Point {
-        let rhs = norm_point_to_affine(rhs);
-        lhs + &rhs.neg()
-    }
-
     fn point_conditional_negate(point: &mut Point, cond: bool) {
-        Self::any_point_conditional_negate(point, cond)
-    }
-
-    fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point {
-        let lhs = norm_point_to_affine(lhs);
-        rhs.neg() + lhs
+        point.conditional_negate(Choice::from(cond as u8));
+        point.y = point.y.normalize()
     }
 
     fn norm_point_neg(point: &mut Point) {
-        Self::any_point_neg(point)
+        point.y = point.y.negate(1).normalize();
     }
 
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
@@ -150,7 +131,8 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn norm_point_conditional_negate(point: &mut Point, cond: bool) {
-        Self::any_point_conditional_negate(point, cond)
+        point.conditional_negate(Choice::from(cond as u8));
+        point.y = point.y.normalize()
     }
 
     fn basepoint_double_mul(x: &Scalar, A: &BasePoint, y: &Scalar, B: &Point) -> Point {
@@ -252,28 +234,12 @@ impl TimeSensitive for VariableTime {
         ConstantTime::point_add_norm_point(lhs, rhs)
     }
 
-    fn any_point_neg(point: &mut Point) {
-        ConstantTime::any_point_neg(point)
-    }
-
-    fn any_point_conditional_negate(point: &mut Point, cond: bool) {
-        ConstantTime::any_point_conditional_negate(point, cond)
-    }
-
     fn point_neg(point: &mut Point) {
         ConstantTime::point_neg(point)
     }
 
-    fn point_sub_norm_point(lhs: &Point, rhs: &Point) -> Point {
-        ConstantTime::point_sub_norm_point(lhs, rhs)
-    }
-
     fn point_conditional_negate(point: &mut Point, cond: bool) {
         ConstantTime::point_conditional_negate(point, cond)
-    }
-
-    fn norm_point_sub_point(lhs: &Point, rhs: &Point) -> Point {
-        ConstantTime::norm_point_sub_point(lhs, rhs)
     }
 
     fn norm_point_neg(point: &mut Point) {
