@@ -12,7 +12,7 @@ pub trait PointType:
     Sized + Clone + Copy + PartialEq + Eq + core::hash::Hash + Ord + PartialOrd
 {
     /// The point type returned from the negation of a point of this type.
-    type NegationType: Default;
+    type NegationType: Default + PointType;
 
     /// Whether the point type is normalized or not (i.e. not [`NonNormal`])
     fn is_normalized() -> bool;

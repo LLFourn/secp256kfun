@@ -564,27 +564,27 @@ crate::impl_fromstr_deserialize! {
     }
 }
 
-impl<TR, SL, SR, ZR> AddAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+impl<TR: PointType, SL, SR, ZR> AddAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn add_assign(&mut self, rhs: Point<TR, SR, ZR>) {
-        *self = crate::op::point_add(*self, &rhs).set_secrecy::<SL>()
+        *self = crate::op::point_add(*self, rhs).set_secrecy::<SL>()
     }
 }
 
-impl<TR, SL, SR, ZR> AddAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+impl<TR: PointType, SL, SR, ZR> AddAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn add_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
         *self = crate::op::point_add(*self, rhs).set_secrecy::<SL>()
     }
 }
 
-impl<TR, SL, SR, ZR> SubAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+impl<TR: PointType, SL, SR, ZR> SubAssign<&Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn sub_assign(&mut self, rhs: &Point<TR, SR, ZR>) {
         *self = crate::op::point_sub(*self, rhs).set_secrecy::<SL>()
     }
 }
 
-impl<TR, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
+impl<TR: PointType, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal, SL, Zero> {
     fn sub_assign(&mut self, rhs: Point<TR, SR, ZR>) {
-        *self = crate::op::point_sub(*self, &rhs).set_secrecy::<SL>()
+        *self = crate::op::point_sub(*self, rhs).set_secrecy::<SL>()
     }
 }
 
@@ -839,10 +839,11 @@ mod test {
             .mark_zero()
             .non_normal();
         let mut a = a_orig;
-        let b = Point::random(&mut rand::thread_rng());
-        a += b;
-        assert_eq!(a, op::point_add(a_orig, b));
-        a -= b;
+        a += G;
+        assert_eq!(a, op::point_add(a_orig, G));
+        assert_ne!(a, a_orig);
+        assert_ne!(a, *G);
+        a -= G;
         assert_eq!(a, a_orig);
     }
 }
