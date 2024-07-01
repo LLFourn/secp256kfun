@@ -1083,6 +1083,11 @@ impl EncodedFrostKey {
     pub fn threshold(&self) -> usize {
         self.point_polynomial.len()
     }
+
+    /// The public polynomial that defines the access structure to the FROST key.
+    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
+        self.point_polynomial.clone()
+    }
 }
 
 #[cfg(feature = "bincode")]
