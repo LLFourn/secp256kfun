@@ -633,4 +633,12 @@ mod test {
         a *= b;
         assert_eq!(a, Scalar::<Secret, _>::from(42 * 1337));
     }
+
+    #[test]
+    fn scalar_ord() {
+        assert!(Scalar::<Public, _>::from(1337) > Scalar::<Public, _>::from(42));
+        assert!(Scalar::<Public, _>::from(42) < Scalar::<Public, _>::from(1337));
+        assert!(Scalar::<Public, _>::from(41) < Scalar::<Public, _>::from(42));
+        assert!(Scalar::<Public, _>::from(42) <= Scalar::<Public, _>::from(42));
+    }
 }
