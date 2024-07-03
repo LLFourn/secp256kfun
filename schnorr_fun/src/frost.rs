@@ -90,7 +90,7 @@
 //! // Generate nonces for this signing session.
 //! // ⚠️ session_id MUST be different for every signing attempt to avoid nonce reuse (if using deterministic nonces).
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
-//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&xonly_frost_key, &my_secret_share, session_id);
+//! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(&xonly_frost_key, &my_secret_share.secret, session_id);
 //! let my_nonce = frost.gen_nonce(&mut nonce_rng);
 //! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s) receive public nonces
@@ -99,8 +99,8 @@
 //! // start a sign session with these nonces for a message
 //! let session = frost.start_sign_session(&xonly_frost_key, nonces, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let my_sig_share = frost.sign(&xonly_frost_key, &session, my_index, &my_secret_share, my_nonce);
-//! # let sig_share3 = frost.sign(&xonly_frost_key, &session, party_index3, &secret_share3, nonce3);
+//! let my_sig_share = frost.sign(&xonly_frost_key, &session, &my_secret_share, my_nonce);
+//! # let sig_share3 = frost.sign(&xonly_frost_key, &session, &secret_share3, nonce3);
 //! // receive the partial signature(s) from the other participant(s) and verify
 //! assert!(frost.verify_signature_share(&xonly_frost_key, &session, party_index3, sig_share3));
 //! // combine signature shares into a single signature that is valid under the FROST key
@@ -174,11 +174,14 @@
 //! [Security of Multi- and Threshold Signatures]: <https://eprint.iacr.org/2021/1375.pdf>
 //! [`musig`]: crate::musig
 //! [`Scalar`]: crate::fun::Scalar
-use core::num::NonZeroU32;
+
+mod share;
+pub use share::*;
 
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{Message, Schnorr, Signature};
 use alloc::{collections::BTreeMap, vec::Vec};
+use core::num::NonZeroU32;
 use secp256kfun::{
     derive_nonce_rng,
     digest::{generic_array::typenum::U32, Digest},
@@ -199,9 +202,6 @@ use secp256kfun::{
 /// This index can be any non-zero [`Scalar`], but must be unique between parties.
 /// In most cases it will make sense to use simple indicies `s!(1), s!(2), ...` for smaller backups.
 /// Other applications may desire to use indicies corresponding to pre-existing keys or identifiers.
-/// See [`share_backup`] for backup sizes.
-///
-/// [`share_backup`]: crate::share_backup
 pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
@@ -591,7 +591,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar<Secret, Zero>>) {
+    ) -> (FrostKey<Normal>, Vec<SecretShare>) {
         let scalar_polys = (0..n_parties)
             .map(|i| {
                 (
@@ -649,7 +649,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                     .unwrap();
 
                 frost_key = Some(_frost_key);
-                (party_index, secret_share)
+                secret_share
             })
             .collect();
 
@@ -793,7 +793,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: PartyIndex,
         secret_shares: BTreeMap<PartyIndex, (Scalar<Secret, Zero>, Signature)>,
         proof_of_possession_msg: Message,
-    ) -> Result<(Scalar<Secret, Zero>, FrostKey<Normal>), FinishKeyGenError> {
+    ) -> Result<(SecretShare, FrostKey<Normal>), FinishKeyGenError> {
         let mut total_secret_share = s!(0);
 
         for (party_index, poly) in &keygen.point_polys {
@@ -816,7 +816,13 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             total_secret_share += secret_share;
         }
 
-        Ok((total_secret_share, keygen.frost_key))
+        Ok((
+            SecretShare {
+                index: my_index,
+                secret: total_secret_share,
+            },
+            keygen.frost_key,
+        ))
     }
 
     /// Start a FROST signing session.
@@ -890,15 +896,15 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         &self,
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
-        my_index: PartyIndex,
-        secret_share: &Scalar<Secret, Zero>,
+        secret_share: &SecretShare,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys().cloned());
+        let mut lambda =
+            poly::eval_basis_poly_at_0(secret_share.index, session.nonces.keys().cloned());
         assert_eq!(
             *session
                 .nonces
-                .get(&my_index)
+                .get(&secret_share.index)
                 .expect("my_index was not in session"),
             secret_nonce.public(),
             "secret nonce didn't match previously provided public nonce"
@@ -909,7 +915,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         r2.conditional_negate(session.nonces_need_negation);
 
         let b = &session.binding_coeff;
-        let x = secret_share;
+        let x = &secret_share.secret;
         let c = &session.challenge;
         s!(r1 + (r2 * b) + lambda * x * c).public()
     }
