@@ -565,7 +565,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
         frost_key: &FrostKey<impl Normalized>,
-        secret: &Scalar,
+        secret: &Scalar<Secret, impl ZeroChoice>,
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
@@ -591,7 +591,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar>) {
+    ) -> (FrostKey<Normal>, BTreeMap<PartyIndex, Scalar<Secret, Zero>>) {
         let scalar_polys = (0..n_parties)
             .map(|i| {
                 (
@@ -793,7 +793,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: PartyIndex,
         secret_shares: BTreeMap<PartyIndex, (Scalar<Secret, Zero>, Signature)>,
         proof_of_possession_msg: Message,
-    ) -> Result<(Scalar, FrostKey<Normal>), FinishKeyGenError> {
+    ) -> Result<(Scalar<Secret, Zero>, FrostKey<Normal>), FinishKeyGenError> {
         let mut total_secret_share = s!(0);
 
         for (party_index, poly) in &keygen.point_polys {
@@ -815,10 +815,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             }
             total_secret_share += secret_share;
         }
-
-        let total_secret_share = total_secret_share.non_zero().expect(
-            "since verification shares are non-zero, the total secret share cannot be zero",
-        );
 
         Ok((total_secret_share, keygen.frost_key))
     }
@@ -895,7 +891,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         frost_key: &FrostKey<EvenY>,
         session: &SignSession,
         my_index: PartyIndex,
-        secret_share: &Scalar,
+        secret_share: &Scalar<Secret, Zero>,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
         let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys().cloned());

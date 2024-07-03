@@ -17,7 +17,7 @@
 //!
 //! [`NonceGen`]: crate::nonce::NonceGen
 //! [`derive_nonce!`]: crate::derive_nonce!
-use crate::{hash::*, Scalar};
+use crate::{hash::*, marker::*, Scalar};
 use core::marker::PhantomData;
 use digest::{generic_array::typenum::U32, Digest};
 use rand_core::RngCore;
@@ -172,12 +172,12 @@ pub trait NonceGen {
     /// Takes a secret [`Scalar`] and outputs a hash. Before turining this hash into the nonce, you
     /// must add a secret input and all the public inputs from the scheme into the hash. So for a
     /// signature scheme for example you would add your secret key, the message and the public key.
-    fn begin_derivation(&self, secret: &Scalar) -> Self::Hash;
+    fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash;
 }
 
 impl<H: Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H> {
     type Hash = H;
-    fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
+    fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash {
         self.nonce_hash.clone().add(secret)
     }
 }
@@ -208,7 +208,7 @@ where
     R: NonceRng,
 {
     type Hash = H;
-    fn begin_derivation(&self, secret: &Scalar) -> Self::Hash {
+    fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash {
         let sec_bytes = secret.to_bytes();
         let mut aux_bytes = [0u8; 32];
         self.rng.fill_bytes(&mut aux_bytes[..]);
