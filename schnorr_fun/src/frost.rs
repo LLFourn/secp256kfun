@@ -898,7 +898,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &Scalar,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys());
+        let mut lambda = poly::eval_basis_poly_at_0(my_index, session.nonces.keys().cloned());
         assert_eq!(
             *session
                 .nonces
@@ -931,7 +931,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys());
+        let mut lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys().cloned());
         lambda.conditional_negate(frost_key.needs_negation);
         let c = &session.challenge;
         let b = &session.binding_coeff;
