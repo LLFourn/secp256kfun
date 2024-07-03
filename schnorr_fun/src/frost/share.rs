@@ -2,11 +2,11 @@ use secp256kfun::{marker::*, poly, Scalar};
 /// A *[Shamir secret share]*.
 ///
 /// Each share is an `(x,y)` pair where `y = p(x)` for some polynomial `p`. With a sufficient
-/// number of unique pairs you can recontruct `p` as a vector of `Scalar`s where each `Scalar` is a
+/// number of unique pairs you can reconstruct `p` as a vector of `Scalar`s where each `Scalar` is a
 /// coefficient `p`. This structure is useful for hiding a secret `y*` by having `p(0) = y*` until a
-/// sufficient number of shares come together to resconstruct `y*`.
+/// sufficient number of shares come together to reconstruct `y*`.
 ///
-/// Signing keys in FROST are also shamir secert shares which is why this is here.
+/// Signing keys in FROST are also shamir secret shares which is why this is here.
 ///
 /// ## Backup format (bech32 chars)
 ///
@@ -15,10 +15,10 @@ use secp256kfun::{marker::*, poly, Scalar};
 /// the payload.
 ///
 /// We optionally have the index in the human readable part since users can more easily identify
-/// shares that way. Share identification can help for keeping track of them and distinguishing them
-/// there are only a small numbner of shares.
+/// shares that way. Share identification can help for keeping track of them and distinguishing shares
+/// when there are only a small number of them.
 ///
-/// The backuip format is enabled with the `share_backup` feature and accessed with the `FromStr`
+/// The backup format is enabled with the `share_backup` feature and accessed with the `FromStr`
 /// and `Display`.
 ///
 /// ### Index in human readable part
@@ -30,7 +30,7 @@ use secp256kfun::{marker::*, poly, Scalar};
 ///
 /// The payload consists of:
 ///
-/// - `secret_share` (`[u8;32]`): the 32 bytes that reperesents the secret share scalar in big-endian encoding
+/// - `secret_share` (`[u8;32]`): the 32 bytes that represents the secret share scalar in big-endian encoding
 ///
 /// ### Index in payload
 ///
@@ -42,7 +42,7 @@ use secp256kfun::{marker::*, poly, Scalar};
 /// The payload consists of:
 ///
 /// - `secret_share` (`[u8;32]`): the 32 bytes that reperesents the secret share scalar in big-endian encoding
-/// - `share_index`: [u8;1..32] which is the index where the polynomial was evalulated to create the share. This is also a big-endian scalar except that the leading zero bytes are dropped so the smaller the index the smaller the encoding.
+/// - `share_index`: [u8;1..32] which is the index where the polynomial was evaluated to create the share. This is also a big-endian scalar except that the leading zero bytes are dropped so the smaller the index the smaller the encoding.
 ///
 /// [Shamir secret share]: https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing
 /// [`bech32m`]: https://bips.xyz/350
@@ -282,10 +282,11 @@ mod test {
     };
     proptest! {
         #[test]
-        fn recover_secret(parties in 1usize..10, threshold in 1usize..5) {
+        fn recover_secret(
+            (parties, threshold) in (1usize..=10).prop_flat_map(|n| (Just(n), 1usize..=n)),
+        ) {
             use rand::seq::SliceRandom;
             let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
-            let parties = parties.max(threshold);
 
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
             let (frost_key, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
