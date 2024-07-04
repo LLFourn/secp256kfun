@@ -47,17 +47,17 @@ proptest! {
         signer_mask.shuffle(&mut rng);
 
         let secret_shares = signer_mask.into_iter().zip(secret_shares.into_iter()).filter(|(is_signer, _)| *is_signer)
-            .map(|(_, secret_share)| secret_share).collect::<BTreeMap<_,_>>();
+            .map(|(_, secret_share)| secret_share).collect::<Vec<_>>();
 
 
         let sid = b"frost-prop-test".as_slice();
         let message = Message::plain("test", b"test");
 
-        let mut secret_nonces: BTreeMap<_, _> = secret_shares.iter().map(|(signer_index, secret_share)| {
-            (*signer_index, proto.gen_nonce::<ChaCha20Rng>(
+        let mut secret_nonces: BTreeMap<_, _> = secret_shares.iter().map(|secret_share| {
+            (secret_share.index, proto.gen_nonce::<ChaCha20Rng>(
                 &mut proto.seed_nonce_rng(
                     &frost_key,
-                    secret_share,
+                    &secret_share.secret,
                     sid,
                 )))
         }).collect();
@@ -73,18 +73,17 @@ proptest! {
         );
 
         let mut signatures = vec![];
-        for (signer_index, secret_share) in secret_shares  {
+        for secret_share in secret_shares  {
             let sig = proto.sign(
                 &frost_key,
                 &signing_session,
-                signer_index,
                 &secret_share,
-                secret_nonces.remove(&signer_index).unwrap()
+                secret_nonces.remove(&secret_share.index).unwrap()
             );
             assert!(proto.verify_signature_share(
                 &frost_key,
                 &signing_session,
-                signer_index,
+                secret_share.index,
                 sig)
             );
             signatures.push(sig);

@@ -7,9 +7,7 @@
 //! [`Scalars`]: crate::Scalar
 //! [`Points`]: crate::Point
 use crate::{g, marker::*, s, Point, Scalar, G};
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use core::iter;
 use rand_core::RngCore;
 
 /// Functions for dealing with scalar polynomials
@@ -19,7 +17,10 @@ pub mod scalar {
     /// Evaluate a scalar polynomial defined by coefficients, at some scalar index.
     ///
     /// The polynomial coefficients begin with the smallest degree term first (the constant).
-    pub fn eval(poly: &[Scalar], x: Scalar<impl Secrecy, impl ZeroChoice>) -> Scalar<Secret, Zero> {
+    pub fn eval(
+        poly: &[Scalar<impl Secrecy, impl ZeroChoice>],
+        x: Scalar<impl Secrecy, impl ZeroChoice>,
+    ) -> Scalar<Secret, Zero> {
         s!(powers(x) .* poly)
     }
 
@@ -28,7 +29,7 @@ pub mod scalar {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{g, poly, s, Scalar, G};
+    /// use secp256kfun::{poly, Scalar};
     /// let secret_poly = (0..5)
     ///     .map(|_| Scalar::random(&mut rand::thread_rng()))
     ///     .collect::<Vec<_>>();
@@ -45,25 +46,92 @@ pub mod scalar {
         (0..threshold).map(|_| Scalar::random(rng)).collect()
     }
 
-    /// Interpolate a set of points and evaluate the polynomial at zero.
+    /// Evalulate the polynomial that passes through the points in `x_and_y` at `0`.
     ///
-    /// This is useful for interpolating a set of Sharmir Secret Shares to find the joint secret.
-    /// Each shamir secret share is associated with a participant index (index, share).
-    ///
-    /// ## Panics
-    ///
-    /// Panics if the indicies are not unique.
+    /// This is useful for recovering a secret from a set of Sharmir Secret Shares. Each shamir
+    /// secret share is associated with a participant index (index, share).
     pub fn interpolate_and_eval_poly_at_0(
-        secrets_at_indices: Vec<(Scalar<Public>, Scalar<Secret, impl ZeroChoice>)>,
+        x_and_y: &[(Scalar<Public>, Scalar<impl Secrecy, impl ZeroChoice>)],
     ) -> Scalar<Secret, Zero> {
-        let indicies: Vec<_> = secrets_at_indices.iter().map(|(index, _)| *index).collect();
-        secrets_at_indices
-            .into_iter()
+        let indicies = x_and_y.iter().map(|(index, _)| *index);
+        x_and_y
+            .iter()
             .map(|(index, secret)| {
-                let lambda = eval_basis_poly_at_0(index, indicies.iter());
+                let lambda = eval_basis_poly_at_0(*index, indicies.clone());
                 s!(secret * lambda)
             })
-            .fold(s!(0), |acc, contribution| s!(acc + contribution))
+            .fold(s!(0), |interpolated_poly, scaled_basis_poly| {
+                s!(interpolated_poly + scaled_basis_poly)
+            })
+    }
+
+    /// Interpolate a polynomial that runs through a list of `(x, y)` coordinate points represented
+    /// as scalars. In most protocols the `x` is usually known to everyone in the protocol while the
+    /// `y` is the party's signing key.
+    pub fn interpolate<S: Secrecy>(
+        x_and_y: &[(Scalar<Public>, Scalar<S, impl ZeroChoice>)],
+    ) -> Vec<Scalar<S, Zero>> {
+        let x_ms = x_and_y.iter().map(|(index, _)| *index);
+        let mut interpolating_polynomial: Vec<Scalar<S, Zero>> = vec![];
+        for (x_j, y_j) in x_and_y {
+            let basis_poly = super::lagrange_basis_poly(*x_j, x_ms.clone());
+            let scaled_basis_poly = basis_poly
+                .iter()
+                .map(|coeff| s!(coeff * y_j))
+                .collect::<Vec<_>>();
+            self::add_in_place(&mut interpolating_polynomial, scaled_basis_poly);
+        }
+
+        interpolating_polynomial
+    }
+
+    /// Multiplies two polynomials of the same [`Secrecy`].
+    ///
+    /// The secrecy of the result will be the [`Secrecy`] of the inputs.
+    pub fn mul<S: Secrecy>(
+        a: &[Scalar<S, impl ZeroChoice>],
+        b: &[Scalar<S, impl ZeroChoice>],
+    ) -> Vec<Scalar<S, Zero>> {
+        let mut result = vec![Scalar::zero(); a.len() + b.len() - 1];
+        for (i, &coeff_a) in a.iter().enumerate() {
+            for (j, &coeff_b) in b.iter().enumerate() {
+                result[i + j] = s!(result[i + j] + coeff_a.mark_zero() * coeff_b.mark_zero())
+                    .set_secrecy::<S>();
+            }
+        }
+
+        result
+    }
+
+    /// Adds two scalar polynomials together where `apoly` is mutated to form the result.
+    pub fn add_in_place<SA: Secrecy>(
+        apoly: &mut Vec<Scalar<SA, Zero>>,
+        bpoly: impl IntoIterator<Item = Scalar<impl Secrecy, impl ZeroChoice>>,
+    ) {
+        let b = bpoly.into_iter();
+        for (i, b) in b.enumerate() {
+            if i == apoly.len() {
+                apoly.push(b.set_secrecy::<SA>().mark_zero());
+            } else {
+                apoly[i] += b;
+            }
+        }
+    }
+
+    /// Adds two scalar polynomials.
+    pub fn add(
+        apoly: impl IntoIterator<Item = Scalar<impl Secrecy, impl ZeroChoice>>,
+        bpoly: impl IntoIterator<Item = Scalar<impl Secrecy, impl ZeroChoice>>,
+    ) -> impl Iterator<Item = Scalar<Secret, Zero>> {
+        let mut a = apoly.into_iter();
+        let mut b = bpoly.into_iter();
+
+        core::iter::from_fn(move || match (a.next(), b.next()) {
+            (Some(a), Some(b)) => Some(s!(a + b)),
+            (Some(a), None) => Some(a.mark_zero().secret()),
+            (None, Some(b)) => Some(b.mark_zero().secret()),
+            _ => None,
+        })
     }
 }
 
@@ -81,29 +149,35 @@ pub mod point {
         g!(powers(x) .* poly)
     }
 
-    /// Add the coefficients of two point polynomials.
-    ///
-    /// Handles mismatched polynomial lengths.
-    pub fn add<T: PointType + Default, S: Secrecy, Z: ZeroChoice>(
-        poly1: &[Point<T, S, Z>],
-        poly2: &[Point<T, S, Z>],
-    ) -> Vec<Point<NonNormal, Public, Zero>> {
-        let (long, short) = if poly1.len() >= poly2.len() {
-            (poly1, poly2)
-        } else {
-            (poly2, poly1)
-        };
+    /// Adds two point polynomials together where `apoly` is mutated to form the result.
+    pub fn add_in_place<SA: Secrecy>(
+        apoly: &mut Vec<Point<NonNormal, SA, Zero>>,
+        bpoly: impl IntoIterator<Item = Point<impl PointType, impl Secrecy, impl ZeroChoice>>,
+    ) {
+        let b = bpoly.into_iter();
+        for (i, b) in b.enumerate() {
+            if i == apoly.len() {
+                apoly.push(b.set_secrecy::<SA>().mark_zero().non_normal());
+            } else {
+                apoly[i] += b;
+            }
+        }
+    }
 
-        long.iter()
-            .map(|c| c.mark_zero())
-            .zip(
-                short
-                    .iter()
-                    .map(|c| c.mark_zero())
-                    .chain(iter::repeat(Point::zero())),
-            )
-            .map(|(c1, c2)| g!(c1 + c2))
-            .collect()
+    /// Adds two point polynomails.
+    pub fn add(
+        poly1: impl IntoIterator<Item = Point<impl PointType, impl Secrecy, impl ZeroChoice>>,
+        poly2: impl IntoIterator<Item = Point<impl PointType, impl Secrecy, impl ZeroChoice>>,
+    ) -> impl Iterator<Item = Point<NonNormal, Public, Zero>> {
+        let mut poly1 = poly1.into_iter();
+        let mut poly2 = poly2.into_iter();
+
+        core::iter::from_fn(move || match (poly1.next(), poly2.next()) {
+            (Some(a), Some(b)) => Some(g!(a + b)),
+            (Some(a), None) => Some(a.mark_zero().public().non_normal()),
+            (None, Some(b)) => Some(b.mark_zero().public().non_normal()),
+            _ => None,
+        })
     }
 
     /// Find the coefficients of the polynomial that interpolates a set of points (index, point).
@@ -112,54 +186,17 @@ pub mod point {
     ///
     /// A vector with a tail of zero coefficients means the interpolation was overdetermined.
     pub fn interpolate(
-        points_at_indicies: Vec<(Scalar<Public, impl ZeroChoice>, Point)>,
-    ) -> Vec<Point<impl PointType, Public, Zero>> {
-        // let (indicies, points): (Vec<_>, Vec<_>) = points_at_indicies.into_iter().unzip();
-
-        let mut interpolating_polynomial = Vec::with_capacity(points_at_indicies.len());
-        for (j, (x_j, y_j)) in points_at_indicies.iter().enumerate() {
-            // Basis polynomial calculated from the product of these indices coefficients:
-            //      l_j(x) = Product[ (x-x_m)/(x_j-x_m), j!=m ]
-            // Or
-            //      l_j(x) = Product[ a_m*x + b_m, j!=m], where a_m = 1/(x_j-x_m) and b_m = -x_m*a_m.
-            let mut basis_polynomial: Vec<_> = vec![];
-            for (_, x_m) in points_at_indicies
+        index_and_point: &[(Scalar<Public, impl ZeroChoice>, Point)],
+    ) -> Vec<Point<NonNormal, Public, Zero>> {
+        let x_ms = index_and_point.iter().map(|(index, _)| *index);
+        let mut interpolating_polynomial: Vec<Point<NonNormal, Public, Zero>> = vec![];
+        for (x_j, y_j) in index_and_point {
+            let basis_poly = super::lagrange_basis_poly(*x_j, x_ms.clone());
+            let point_scaled_basis_poly = basis_poly
                 .iter()
-                .map(|(x_m, _)| x_m)
-                .enumerate()
-                .filter(|(m, _)| *m != j)
-            {
-                let a_m = s!(x_j - x_m)
-                    .non_zero()
-                    .expect("points must lie at unique indicies to interpolate")
-                    .invert();
-                let b_m = s!(-x_m * a_m).mark_zero();
-
-                // Multiply out the product. Beginning with the first two coefficients
-                // we then take the next set (b_1, a_1), multiply through, and collect terms.
-                if basis_polynomial.is_empty() {
-                    basis_polynomial.extend([b_m.mark_zero().public(), a_m.mark_zero().public()])
-                } else {
-                    let mut prev_coeff = s!(0).public();
-                    for coeff in basis_polynomial.iter_mut() {
-                        let bumping_up_degree = s!(prev_coeff * a_m);
-                        prev_coeff = *coeff;
-
-                        let same_degree = s!(prev_coeff * b_m);
-                        *coeff = s!(same_degree + bumping_up_degree).public();
-                    }
-                    let higher_degree = s!(prev_coeff * a_m);
-                    basis_polynomial.push(higher_degree.public());
-                }
-            }
-
-            let point_scaled_basis_polynomial = basis_polynomial
-                .iter()
-                .map(|coeff| g!(coeff * y_j).mark_zero())
+                .map(|coeff| g!(coeff * y_j))
                 .collect::<Vec<_>>();
-
-            interpolating_polynomial =
-                self::add(&interpolating_polynomial, &point_scaled_basis_polynomial)
+            self::add_in_place(&mut interpolating_polynomial, point_scaled_basis_poly);
         }
 
         interpolating_polynomial
@@ -172,19 +209,59 @@ fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Sc
     })
 }
 
-/// Evaluate the lagrange basis polynomial for the x coordinate x_j interpolated with the nodes x_ms at 0.
+/// Evaluate the lagrange basis polynomial for the x coordinate `x_j` interpolated with the nodes `x_ms` at 0.
 ///
 /// Described as the lagrange coefficient in FROST. Useful when interpolating a sharmir shared
 /// secret which usually lies at the value of the polynomial evaluated at 0.
-pub fn eval_basis_poly_at_0<'a>(
+pub fn eval_basis_poly_at_0(
     x_j: Scalar<impl Secrecy>,
-    x_ms: impl Iterator<Item = &'a Scalar<impl Secrecy>>,
+    x_ms: impl IntoIterator<Item = Scalar<impl Secrecy>>,
 ) -> Scalar<Public> {
-    x_ms.filter(|x_m| *x_m != &x_j)
-        .fold(Scalar::one(), |acc, x_m| {
-            let denominator = s!(x_m - x_j)
-                .non_zero()
-                .expect("we filtered duplicate indicies");
-            s!(acc * x_m / denominator).public()
-        })
+    // NOTE: we don't compute the whole basis poly to do this because it's faster and simpler to do
+    // it this way
+    let (num, denom) = x_ms.into_iter().filter(|x_m| *x_m != x_j).fold(
+        (Scalar::<Public, _>::one(), Scalar::<Public, _>::one()),
+        |(mut numerator, mut denominator), x_m| {
+            numerator *= x_m;
+            denominator *= s!(x_m - x_j).non_zero().expect("x_m != x_j");
+            (numerator, denominator)
+        },
+    );
+
+    // do the division at the end for efficiency's sake
+    s!(num / denom).public()
+}
+
+/// Computes the (unscaled) lagrange basis polynomial given the index `x_j` you want the basis poly
+/// for and the other x-coordinates in the interpolation `x_ms`. If `x_j` is also in `x_ms` it will
+/// be ignored.
+pub fn lagrange_basis_poly(
+    x_j: Scalar<Public, impl ZeroChoice>,
+    x_ms: impl IntoIterator<Item = Scalar<Public, impl ZeroChoice>>,
+) -> Vec<Scalar<Public, Zero>> {
+    // the identity polynomial
+    let mut result = vec![s!(1).public().mark_zero()];
+    for x_m in x_ms.into_iter() {
+        if x_m == x_j {
+            continue;
+        }
+        // Basis polynomial calculated from the product of these indices coefficients:
+        //  l_j(x) = Product[ (x-x_m)/(x_j-x_m), j!=m ]
+        //  l_j(x) = Product[ a_m*x + b_m, j!=m], where a_m = 1/(x_j-x_m) and b_m = -x_m*a_m.
+
+        // coefficient of x
+        let a_m = s!(x_j - x_m)
+            .non_zero()
+            .expect("x_m == x_j excluded")
+            .invert()
+            .mark_zero()
+            .public();
+        // coefficient of 1
+        let b_m = s!(-x_m * a_m).mark_zero().public();
+
+        // we want to figure out (a_m * x + b_m) * result
+        result = scalar::mul(&result[..], &[b_m, a_m]);
+    }
+
+    result
 }

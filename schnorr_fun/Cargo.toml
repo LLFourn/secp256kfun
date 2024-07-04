@@ -15,7 +15,7 @@ keywords = ["bitcoin", "schnorr"]
 
 [dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.10",  default-features = false }
-bech32 = { version = "0.9", optional = true, default-features = false }
+bech32 = { version = "0.11", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.10",  features = ["proptest"] }
