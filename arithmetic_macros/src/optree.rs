@@ -376,7 +376,6 @@ mod test {
     #[test]
     fn add_mul3() {
         let ot = parse!("a * A + b * B + c * C");
-        dbg!(&ot);
         assert!(
             matches!(ot, OpTree::Infix(Infix { lhs, rhs, kind: InfixKind::Add }) if
                 matches!(&*lhs.tree, OpTree::Infix(Infix { lhs, rhs, kind: InfixKind::Add })

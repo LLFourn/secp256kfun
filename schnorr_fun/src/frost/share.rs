@@ -125,7 +125,6 @@ mod share_backup {
                 .ok_or(ShareDecodeError::InvalidHumanReadablePrefix)?;
 
             let has_parenthetical = !tail.is_empty();
-            dbg!(has_parenthetical);
             let hr_index = if has_parenthetical {
                 let tail = tail
                     .strip_prefix('[')
