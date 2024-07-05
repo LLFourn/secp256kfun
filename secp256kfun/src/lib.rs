@@ -91,5 +91,9 @@ pub extern crate secp256k1_0_27;
 /// Re-export `secp256k1`
 pub extern crate secp256k1_0_28;
 
+#[cfg(feature = "libsecp_compat_0_29")]
+/// Re-export `secp256k1`
+pub extern crate secp256k1_0_29;
+
 #[cfg(feature = "libsecp_compat")]
-pub use secp256k1_0_28 as secp256k1;
+pub use secp256k1_0_29 as secp256k1;

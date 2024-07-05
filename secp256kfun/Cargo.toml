@@ -27,6 +27,7 @@ bincode = { version = "2.0.0-rc.3", optional = true, default-features = false, f
 
 secp256k1_0_27 = { package = "secp256k1", version = "0.27", optional = true, default-features = false }
 secp256k1_0_28 = { package = "secp256k1", version = "0.28", optional = true, default-features = false }
+secp256k1_0_29 = { package = "secp256k1", version = "0.29", optional = true, default-features = false }
 
 
 [dev-dependencies]
@@ -42,13 +43,14 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = ["std"]
-libsecp_compat = ["libsecp_compat_0_28"]
+libsecp_compat = ["libsecp_compat_0_29"]
 alloc = [
 "serde?/alloc",
 "digest/alloc",
 "bincode?/alloc",
 "secp256k1_0_27?/alloc",
 "secp256k1_0_28?/alloc",
+"secp256k1_0_29?/alloc",
 ]
 std = ["alloc", "subtle/std", "digest/std", "bincode?/std", "secp256k1_0_27?/std", "secp256k1_0_28?/std"]
 serde = [
@@ -56,10 +58,12 @@ serde = [
 "bincode?/serde",
 "secp256k1_0_27?/serde",
 "secp256k1_0_28?/serde",
+"secp256k1_0_29?/serde",
 ]
 
 libsecp_compat_0_27 = [ "dep:secp256k1_0_27" ]
 libsecp_compat_0_28 = [ "dep:secp256k1_0_28" ]
+libsecp_compat_0_29 = [ "dep:secp256k1_0_29" ]
 
 
 [[bench]]
