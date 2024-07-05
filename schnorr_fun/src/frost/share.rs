@@ -10,6 +10,8 @@ use secp256kfun::{marker::*, poly, Scalar};
 ///
 /// ## Backup format (bech32 chars)
 ///
+/// *ℹ enabled with `share_backup` feature*
+///
 /// We decided to encode each share as a [`bech32m`] string in order to back them up. There are two
 /// forms, one where the share index goes in the human readable part and one where that goes into
 /// the payload.
@@ -47,7 +49,7 @@ use secp256kfun::{marker::*, poly, Scalar};
 /// [Shamir secret share]: https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing
 /// [`bech32m`]: https://bips.xyz/350
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct SecretShare {
     /// The scalar index for this secret share, usually this is a small number but it can take any
     /// value (other than 0).
@@ -66,6 +68,37 @@ impl SecretShare {
 
         poly::scalar::interpolate_and_eval_poly_at_0(&index_and_secret[..])
     }
+
+    /// Encodes the secret share to 64 bytes. The first 32 is the index and the second 32 is the
+    /// secret.
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut bytes = [0u8; 64];
+        bytes[..32].copy_from_slice(self.index.to_bytes().as_ref());
+        bytes[32..].copy_from_slice(self.secret.to_bytes().as_ref());
+        bytes
+    }
+
+    /// Encodes the secret share from 64 bytes. The first 32 is the index and the second 32 is the
+    /// secret.
+    pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
+        Some(Self {
+            index: Scalar::from_slice(&bytes[..32])?,
+            secret: Scalar::from_slice(&bytes[32..])?,
+        })
+    }
+}
+
+secp256kfun::impl_fromstr_deserialize! {
+    name => "secp256k1 FROST share",
+    fn from_bytes(bytes: [u8;64]) -> Option<SecretShare> {
+        SecretShare::from_bytes(bytes)
+    }
+}
+
+secp256kfun::impl_display_debug_serialize! {
+    fn to_bytes(share: &SecretShare) -> [u8;64] {
+        share.to_bytes()
+    }
 }
 
 #[cfg(feature = "share_backup")]
@@ -77,8 +110,18 @@ mod share_backup {
     /// the threshold under which we encode the share index in the human readable section.
     const HUMAN_READABLE_THRESHOLD: u32 = 1000;
 
-    impl fmt::Display for SecretShare {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl SecretShare {
+        /// Generate a bech32 backup string. See [`SecretShare`] for documentation on the format.
+        #[cfg_attr(docsrs, doc(cfg(feature = "share_backup")))]
+        pub fn to_bech32_backup(&self) -> alloc::string::String {
+            let mut string = alloc::string::String::new();
+            self.write_bech32_backup(&mut string).expect("infallible");
+            string
+        }
+
+        /// Write the bech32 backup. See [`SecretShare`] for documentation on the format.
+        #[cfg_attr(docsrs, doc(cfg(feature = "share_backup")))]
+        pub fn write_bech32_backup(&self, f: &mut impl fmt::Write) -> fmt::Result {
             let mut share_index_bytes = None;
             let hrp = if self.index < Scalar::<Public, _>::from(HUMAN_READABLE_THRESHOLD) {
                 let bytes = self.index.to_bytes();
@@ -110,30 +153,30 @@ mod share_backup {
             }
             Ok(())
         }
-    }
 
-    impl FromStr for SecretShare {
-        type Err = ShareDecodeError;
-        fn from_str(encoded: &str) -> Result<Self, Self::Err> {
-            let checked_hrpstring = &CheckedHrpstring::new::<Bech32m>(encoded)
-                .map_err(ShareDecodeError::Bech32DecodeError)?;
+        /// Load a `SecretShare` from a backup string. See [`SecretShare`] for documentation on the
+        /// format.
+        #[cfg_attr(docsrs, doc(cfg(feature = "share_backup")))]
+        pub fn from_bech32_backup(backup: &str) -> Result<Self, BackupDecodeError> {
+            let checked_hrpstring = &CheckedHrpstring::new::<Bech32m>(backup)
+                .map_err(BackupDecodeError::Bech32DecodeError)?;
             let hrp = checked_hrpstring.hrp();
 
             let tail = hrp
                 .as_str()
                 .strip_prefix("frost")
-                .ok_or(ShareDecodeError::InvalidHumanReadablePrefix)?;
+                .ok_or(BackupDecodeError::InvalidHumanReadablePrefix)?;
 
             let has_parenthetical = !tail.is_empty();
             let hr_index = if has_parenthetical {
                 let tail = tail
                     .strip_prefix('[')
-                    .ok_or(ShareDecodeError::InvalidHumanReadablePrefix)?;
+                    .ok_or(BackupDecodeError::InvalidHumanReadablePrefix)?;
                 let tail = tail
                     .strip_suffix(']')
-                    .ok_or(ShareDecodeError::InvalidHumanReadablePrefix)?;
+                    .ok_or(BackupDecodeError::InvalidHumanReadablePrefix)?;
                 let u32_scalar = u32::from_str(tail)
-                    .map_err(|_| ShareDecodeError::InvalidHumanReadablePrefix)?;
+                    .map_err(|_| BackupDecodeError::InvalidHumanReadablePrefix)?;
 
                 Some(Scalar::<Public, Zero>::from(u32_scalar))
             } else {
@@ -145,11 +188,11 @@ mod share_backup {
             for byte in &mut secret_share {
                 *byte = byte_iter
                     .next()
-                    .ok_or(ShareDecodeError::InvalidSecretShareScalar)?;
+                    .ok_or(BackupDecodeError::InvalidSecretShareScalar)?;
             }
 
             let secret_share = Scalar::from_bytes(secret_share)
-                .ok_or(ShareDecodeError::InvalidSecretShareScalar)?;
+                .ok_or(BackupDecodeError::InvalidSecretShareScalar)?;
 
             let share_index = match hr_index {
                 Some(share_index) => share_index,
@@ -158,25 +201,25 @@ mod share_backup {
                     let mut i = 0;
                     for byte in byte_iter {
                         if i >= 32 {
-                            return Err(ShareDecodeError::InvalidShareIndexScalar);
+                            return Err(BackupDecodeError::InvalidShareIndexScalar);
                         }
                         share_index[i] = byte;
                         i += 1;
                     }
 
                     if i == 0 {
-                        return Err(ShareDecodeError::InvalidShareIndexScalar)?;
+                        return Err(BackupDecodeError::InvalidShareIndexScalar)?;
                     }
                     share_index.rotate_right(32 - i);
                     Scalar::<Public, Zero>::from_bytes(share_index)
-                        .ok_or(ShareDecodeError::InvalidShareIndexScalar)?
+                        .ok_or(BackupDecodeError::InvalidShareIndexScalar)?
                 }
             };
 
             let share_index = share_index
                 .public()
                 .non_zero()
-                .ok_or(ShareDecodeError::InvalidShareIndexScalar)?;
+                .ok_or(BackupDecodeError::InvalidShareIndexScalar)?;
 
             Ok(SecretShare {
                 secret: secret_share,
@@ -185,9 +228,10 @@ mod share_backup {
         }
     }
 
-    /// An error encountered when encoding a Frostsnap backup.
+    /// An error encountered when decoding a Frostsnap backup.
     #[derive(Debug, Clone, PartialEq)]
-    pub enum ShareDecodeError {
+    #[cfg_attr(docsrs, doc(cfg(feature = "share_backup")))]
+    pub enum BackupDecodeError {
         /// Decode error from bech32 library
         Bech32DecodeError(bech32::primitives::decode::CheckedHrpstringError),
         /// Decoded secret share is not a valid secp256k1 scalar
@@ -199,24 +243,24 @@ mod share_backup {
     }
 
     #[cfg(feature = "std")]
-    impl std::error::Error for ShareDecodeError {}
+    impl std::error::Error for BackupDecodeError {}
 
-    impl fmt::Display for ShareDecodeError {
+    impl fmt::Display for BackupDecodeError {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match &self {
-                ShareDecodeError::Bech32DecodeError(e) => {
+                BackupDecodeError::Bech32DecodeError(e) => {
                     write!(f, "Failed to decode bech32m string: {e}")
                 }
-                ShareDecodeError::InvalidSecretShareScalar => {
+                BackupDecodeError::InvalidSecretShareScalar => {
                     write!(
                         f,
                         "Invalid secret share scalar value, not on secp256k1 curve."
                     )
                 }
-                ShareDecodeError::InvalidHumanReadablePrefix => {
+                BackupDecodeError::InvalidHumanReadablePrefix => {
                     write!(f, "Expected human readable prefix `frost`",)
                 }
-                ShareDecodeError::InvalidShareIndexScalar => {
+                BackupDecodeError::InvalidShareIndexScalar => {
                     write!(f, "Share index scalar was not a valid secp256k1 scalar.",)
                 }
             }
@@ -227,16 +271,14 @@ mod share_backup {
     mod test {
         use super::*;
         use crate::frost::SecretShare;
-        use alloc::string::ToString;
-        use core::str::FromStr;
         use secp256kfun::{proptest::prelude::*, Scalar};
 
         proptest! {
             #[test]
             fn share_backup_roundtrip(index in any::<Scalar<Public, NonZero>>(), secret in any::<Scalar<Secret, Zero>>()) {
                 let orig = SecretShare { secret, index };
-                let orig_encoded = orig.to_string();
-                let decoded = SecretShare::from_str(&orig_encoded).unwrap();
+                let orig_encoded = orig.to_bech32_backup();
+                let decoded = SecretShare::from_bech32_backup(&orig_encoded).unwrap();
                 assert_eq!(orig, decoded)
             }
 
@@ -248,23 +290,22 @@ mod share_backup {
                     index,
                     secret,
                 };
-                let backup = secret_share
-                .to_string();
+                let backup = secret_share.to_bech32_backup();
 
                 if share_index_u32 >= HUMAN_READABLE_THRESHOLD {
-                    assert!(backup.starts_with("frost1"));
+                    prop_assert!(backup.starts_with("frost1"));
                 } else {
                     assert!(backup.starts_with(&format!("frost[{}]", share_index_u32)));
                 }
 
-                assert_eq!(SecretShare::from_str(&backup), Ok(secret_share))
+                prop_assert_eq!(SecretShare::from_bech32_backup(&backup), Ok(secret_share))
             }
         }
     }
 }
 
 #[cfg(feature = "share_backup")]
-pub use share_backup::ShareDecodeError;
+pub use share_backup::BackupDecodeError;
 
 #[cfg(test)]
 mod test {
