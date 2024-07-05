@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## UNRELEASED
+
+- Added `prelude` module for convenient importing
+
 
 ## v0.10.0
 

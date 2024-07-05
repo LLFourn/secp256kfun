@@ -27,7 +27,7 @@ This library and [secp256kfun] are experimental.
 
 ```rust
 use schnorr_fun::{
-    fun::{marker::*, Scalar, nonce},
+    fun::{prelude::*, nonce},
     Schnorr,
     Message
 };
