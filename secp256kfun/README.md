@@ -58,7 +58,7 @@ Points and Scalars are marked with `Zero` or `NonZero` at compile time (by defau
 So if you declare your function with a `NonZero` type, passing a `Zero` type will be a compile time error as shown below:
 
 ```rust,compile_fail
-use secp256kfun::{marker::*, Scalar, Point,G,g};
+use secp256kfun::prelude::*;
 // a randomly selected Scalar will never be zero (statistically unreachable)
 let x = Scalar::random(&mut rand::thread_rng());
 dbg!(&x); // Scalar<.., NonZero>
@@ -116,7 +116,7 @@ For example, below we have a `pedersen_commitment` function which is called by t
 Note that we only have to write the function once and the caller decides by marking whether the function should run in constant time or variable time.
 
 ```rust
-use secp256kfun::{marker::*, Point, Scalar, g};
+use secp256kfun::prelude::*;
 
 /// commit to a secret value x with publicly known A and B.
 fn pedersen_commit(

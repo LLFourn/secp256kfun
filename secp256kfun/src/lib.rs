@@ -97,3 +97,8 @@ pub extern crate secp256k1_0_29;
 
 #[cfg(feature = "libsecp_compat")]
 pub use secp256k1_0_29 as secp256k1;
+
+/// Convenience module to import the most frequently used tools
+pub mod prelude {
+    pub use crate::{g, marker::*, s, Point, Scalar, G};
+}
