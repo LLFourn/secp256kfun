@@ -1,4 +1,4 @@
-use secp256kfun::{marker::*, poly, Scalar};
+use secp256kfun::{poly, prelude::*};
 /// A *[Shamir secret share]*.
 ///
 /// Each share is an `(x,y)` pair where `y = p(x)` for some polynomial `p`. With a sufficient
@@ -55,7 +55,7 @@ pub struct SecretShare {
     /// value (other than 0).
     pub index: Scalar<Public>,
     /// The secret scalar which is the output of the polynomial evaluated at `index`
-    pub secret: Scalar<Secret, Zero>,
+    pub share: Scalar<Secret, Zero>,
 }
 
 impl SecretShare {
@@ -63,10 +63,15 @@ impl SecretShare {
     pub fn recover_secret(shares: &[SecretShare]) -> Scalar<Secret, Zero> {
         let index_and_secret = shares
             .iter()
-            .map(|share| (share.index, share.secret))
+            .map(|share| (share.index, share.share))
             .collect::<alloc::vec::Vec<_>>();
 
         poly::scalar::interpolate_and_eval_poly_at_0(&index_and_secret[..])
+    }
+
+    /// The verification share for this secret share.
+    pub fn verification_share(&self) -> Point<NonNormal, Public, Zero> {
+        g!(self.share * G)
     }
 
     /// Encodes the secret share to 64 bytes. The first 32 is the index and the second 32 is the
@@ -74,7 +79,7 @@ impl SecretShare {
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut bytes = [0u8; 64];
         bytes[..32].copy_from_slice(self.index.to_bytes().as_ref());
-        bytes[32..].copy_from_slice(self.secret.to_bytes().as_ref());
+        bytes[32..].copy_from_slice(self.share.to_bytes().as_ref());
         bytes
     }
 
@@ -83,7 +88,7 @@ impl SecretShare {
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         Some(Self {
             index: Scalar::from_slice(&bytes[..32])?,
-            secret: Scalar::from_slice(&bytes[32..])?,
+            share: Scalar::from_slice(&bytes[32..])?,
         })
     }
 }
@@ -98,6 +103,122 @@ secp256kfun::impl_fromstr_deserialize! {
 secp256kfun::impl_display_debug_serialize! {
     fn to_bytes(share: &SecretShare) -> [u8;64] {
         share.to_bytes()
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(
+        crate = "crate::fun::bincode",
+        encode_bounds = "Point<T>: crate::fun::bincode::Encode",
+        decode_bounds = "Point<T>: crate::fun::bincode::Decode",
+        borrow_decode_bounds = "Point<T>: crate::fun::bincode::BorrowDecode<'__de>"
+    )
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(
+        crate = "crate::fun::serde",
+        bound(
+            deserialize = "Point<T>: crate::fun::serde::de::Deserialize<'de>",
+            serialize = "Point<T>: crate::fun::serde::Serialize"
+        )
+    )
+)]
+/// A secret share paired with the image of the secret for which it is a share of.
+///
+/// This is useful so you can keep track of tweaks to the secret value and tweaks to the shared key
+/// in tandem.
+pub struct PairedSecretShare<T: Normalized> {
+    secret_share: SecretShare,
+    shared_key: Point<T>,
+}
+
+impl<T: Normalized> PairedSecretShare<T> {
+    /// The index of the secret share
+    pub fn index(&self) -> PartyIndex {
+        self.secret_share.index
+    }
+
+    /// The secret bit of the share
+    pub fn share(&self) -> Scalar<Secret, Zero> {
+        self.secret_share.share
+    }
+
+    /// The shared key this secret is for
+    pub fn shared_key(&self) -> Point<T> {
+        self.shared_key
+    }
+
+    /// The inner un-paired secret share.
+    ///
+    /// This exists since when you do a physical paper backup of a secret share you usually don't
+    /// record explicitly the entire shared key (maybe just a short identifier).
+    pub fn secret_share(&self) -> &SecretShare {
+        &self.secret_share
+    }
+}
+
+impl AsRef<SecretShare> for PairedSecretShare<EvenY> {
+    fn as_ref(&self) -> &SecretShare {
+        &self.secret_share
+    }
+}
+
+impl PairedSecretShare<Normal> {
+    /// Pair a secret share to a shared key
+    pub fn new(secret_share: SecretShare, shared_key: Point) -> Self {
+        Self {
+            secret_share,
+            shared_key,
+        }
+    }
+
+    /// Add a `Scalar` to both the secret share and the paired shared key.
+    pub fn homomorphic_add(
+        mut self,
+        scalar: Scalar<impl Secrecy, impl ZeroChoice>,
+    ) -> Option<Self> {
+        self.shared_key = g!(self.shared_key + scalar * G).normalize().non_zero()?;
+        self.secret_share.share = s!(self.secret_share.share + scalar);
+        Some(self)
+    }
+
+    /// Create an XOnly secert share where the paired image is always an `EvenY` point.
+    pub fn into_xonly(mut self) -> PairedSecretShare<EvenY> {
+        let (shared_key, needs_negation) = self.shared_key.into_point_with_even_y();
+        self.secret_share.share.conditional_negate(needs_negation);
+
+        PairedSecretShare {
+            secret_share: self.secret_share,
+            shared_key,
+        }
+    }
+}
+
+impl PairedSecretShare<EvenY> {
+    /// Add a scalar to the share such that share becomes a share of the previous secret plus
+    /// `scalar`.
+    ///
+    /// If the secret image were to become zero it returns `None` since this desinged to be
+    /// [`BIP340`] secret share which does not allow 0.
+    ///
+    /// [`BIP340`]: https://bips.xyz/bip340
+    pub fn xonly_homomorphic_add(
+        mut self,
+        scalar: Scalar<impl Secrecy, impl ZeroChoice>,
+    ) -> Option<Self> {
+        let (shared_key, needs_negation) = g!(self.shared_key + scalar * G)
+            .normalize()
+            .non_zero()?
+            .into_point_with_even_y();
+        self.shared_key = shared_key;
+        self.secret_share.share = s!(self.secret_share.share + scalar);
+        self.secret_share.share.conditional_negate(needs_negation);
+        Some(self)
     }
 }
 
@@ -140,7 +261,7 @@ mod share_backup {
             };
 
             let chars = self
-                .secret
+                .share
                 .to_bytes()
                 .into_iter()
                 .chain(share_index_bytes.into_iter().flatten())
@@ -222,7 +343,7 @@ mod share_backup {
                 .ok_or(BackupDecodeError::InvalidShareIndexScalar)?;
 
             Ok(SecretShare {
-                secret: secret_share,
+                share: secret_share,
                 index: share_index,
             })
         }
@@ -275,8 +396,8 @@ mod share_backup {
 
         proptest! {
             #[test]
-            fn share_backup_roundtrip(index in any::<Scalar<Public, NonZero>>(), secret in any::<Scalar<Secret, Zero>>()) {
-                let orig = SecretShare { secret, index };
+            fn share_backup_roundtrip(index in any::<Scalar<Public, NonZero>>(), share in any::<Scalar<Secret, Zero>>()) {
+                let orig = SecretShare { share, index };
                 let orig_encoded = orig.to_bech32_backup();
                 let decoded = SecretShare::from_bech32_backup(&orig_encoded).unwrap();
                 assert_eq!(orig, decoded)
@@ -284,11 +405,11 @@ mod share_backup {
 
 
             #[test]
-            fn short_backup_length(secret in any::<Scalar<Secret, Zero>>(), share_index_u32 in 1u32..200) {
+            fn short_backup_length(share in any::<Scalar<Secret, Zero>>(), share_index_u32 in 1u32..200) {
                 let index = Scalar::<Public, Zero>::from(share_index_u32).non_zero().unwrap().public();
                 let secret_share = SecretShare {
                     index,
-                    secret,
+                    share,
                 };
                 let backup = secret_share.to_bech32_backup();
 
@@ -306,6 +427,8 @@ mod share_backup {
 
 #[cfg(feature = "share_backup")]
 pub use share_backup::BackupDecodeError;
+
+use super::PartyIndex;
 
 #[cfg(test)]
 mod test {
@@ -329,10 +452,11 @@ mod test {
             let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
 
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-            let (frost_key, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
-            let chosen = shares.choose_multiple(&mut rng, threshold).cloned().collect::<Vec<_>>();
+            let (frost_poly, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
+            let chosen = shares.choose_multiple(&mut rng, threshold).cloned()
+                .map(|paired_share| paired_share.secret_share).collect::<Vec<_>>();
             let secret = SecretShare::recover_secret(&chosen);
-            prop_assert_eq!(g!(secret * G), frost_key.public_key());
+            prop_assert_eq!(g!(secret * G), frost_poly.shared_key());
         }
     }
 }

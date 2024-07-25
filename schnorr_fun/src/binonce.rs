@@ -4,7 +4,7 @@
 //! Your public nonces are derived from scalars which must be kept secret.
 //! Derived binonces should be unique and and must not be reused for signing under any circumstances
 //! as this can leak your secret key.
-use secp256kfun::{g, marker::*, rand_core::RngCore, Point, Scalar, G};
+use secp256kfun::{g, hash::HashInto, marker::*, rand_core::RngCore, Point, Scalar, G};
 
 /// A nonce (pair of points) that each party must share with the others in the first stage of signing.
 ///
@@ -26,7 +26,7 @@ impl<Z: ZeroChoice> Nonce<Z> {
     }
 }
 
-impl<Z> Nonce<Z> {
+impl<Z: ZeroChoice> Nonce<Z> {
     /// Negate the two nonces
     pub fn conditional_negate(&mut self, needs_negation: bool) {
         self.0[0] = self.0[0].conditional_negate(needs_negation);
@@ -42,6 +42,33 @@ impl<Z> Nonce<Z> {
         bytes[33..].copy_from_slice(self.0[1].to_bytes().as_ref());
         bytes
     }
+
+    /// Binds an aggregated binonce to a it's binding coefficient (which is produced differently for
+    /// different schemes) and produces the final nonce (the one that will go into the signature).
+    pub fn bind(&self, binding_coeff: Scalar<Public>) -> (Point<EvenY>, bool) {
+        g!(self.0[0] + binding_coeff * self.0[1])
+            .normalize()
+            .non_zero()
+            .unwrap_or(Point::generator())
+            .into_point_with_even_y()
+    }
+}
+
+impl<Z> HashInto for Nonce<Z> {
+    fn hash_into(self, hash: &mut impl secp256kfun::digest::Digest) {
+        self.0.hash_into(hash)
+    }
+}
+
+impl Nonce<Zero> {
+    /// Adds a bunch of binonces together (one for each party signing usually).
+    pub fn aggregate(nonces: impl Iterator<Item = Nonce<impl ZeroChoice>>) -> Self {
+        let agg = nonces.fold([Point::zero(); 2], |acc, nonce| {
+            [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
+        });
+
+        Self([agg[0].normalize(), agg[1].normalize()])
+    }
 }
 
 secp256kfun::impl_fromstr_deserialize! {
@@ -52,7 +79,7 @@ secp256kfun::impl_fromstr_deserialize! {
 }
 
 secp256kfun::impl_display_serialize! {
-    fn to_bytes<Z>(nonce: &Nonce<Z>) -> [u8;66] {
+    fn to_bytes<Z: ZeroChoice>(nonce: &Nonce<Z>) -> [u8;66] {
         nonce.to_bytes()
     }
 }

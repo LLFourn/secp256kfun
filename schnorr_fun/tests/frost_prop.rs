@@ -28,16 +28,27 @@ proptest! {
 
         // // create some scalar polynomial for each party
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-        let (mut frost_key, secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
+        let (mut frost_poly, mut secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
 
         if let Some(tweak) = plain_tweak {
-            frost_key = frost_key.tweak(tweak).unwrap();
+            for secret_share in &mut secret_shares {
+                *secret_share = secret_share.homomorphic_add(tweak).unwrap();
+            }
+            frost_poly = frost_poly.homomorphic_add(tweak).unwrap();
         }
 
-        let mut frost_key = frost_key.into_xonly_key();
+        let mut xonly_poly = frost_poly.into_xonly();
+        let mut xonly_secret_shares = secret_shares.into_iter().map(|secret_share| secret_share.into_xonly()).collect::<Vec<_>>();
 
         if let Some(tweak) = xonly_tweak {
-            frost_key = frost_key.tweak(tweak).unwrap();
+            xonly_poly = xonly_poly.xonly_homomorphic_add(tweak).unwrap();
+            for secret_share in &mut xonly_secret_shares {
+                *secret_share = secret_share.xonly_homomorphic_add(tweak).unwrap();
+            }
+        }
+
+        for secret_share in &xonly_secret_shares {
+            assert_eq!(secret_share.shared_key(), xonly_poly.shared_key());
         }
 
         // use a boolean mask for which t participants are signers
@@ -46,55 +57,59 @@ proptest! {
         // shuffle the mask for random signers
         signer_mask.shuffle(&mut rng);
 
-        let secret_shares = signer_mask.into_iter().zip(secret_shares.into_iter()).filter(|(is_signer, _)| *is_signer)
+        let secret_shares_of_signers = signer_mask.into_iter().zip(xonly_secret_shares.into_iter()).filter(|(is_signer, _)| *is_signer)
             .map(|(_, secret_share)| secret_share).collect::<Vec<_>>();
 
 
         let sid = b"frost-prop-test".as_slice();
         let message = Message::plain("test", b"test");
 
-        let mut secret_nonces: BTreeMap<_, _> = secret_shares.iter().map(|secret_share| {
-            (secret_share.index, proto.gen_nonce::<ChaCha20Rng>(
+        let mut secret_nonces: BTreeMap<_, _> = secret_shares_of_signers.iter().map(|paired_secret_share| {
+            (paired_secret_share.secret_share().index, proto.gen_nonce::<ChaCha20Rng>(
                 &mut proto.seed_nonce_rng(
-                    &frost_key,
-                    &secret_share.secret,
+                    *paired_secret_share,
                     sid,
                 )))
         }).collect();
 
 
         let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
-        dbg!(&public_nonces);
 
-        let signing_session = proto.start_sign_session(
-            &frost_key,
+        let coord_signing_session = proto.start_coordinator_sign_session(
+            &xonly_poly,
             public_nonces,
             message
         );
 
+        let party_signing_session = proto.start_party_sign_session(
+            xonly_poly.shared_key(),
+            coord_signing_session.participants(),
+            coord_signing_session.agg_binonce(),
+            message,
+        );
+
         let mut signatures = vec![];
-        for secret_share in secret_shares  {
+        for secret_share in secret_shares_of_signers  {
             let sig = proto.sign(
-                &frost_key,
-                &signing_session,
+                &party_signing_session,
                 &secret_share,
-                secret_nonces.remove(&secret_share.index).unwrap()
+                secret_nonces.remove(&secret_share.index()).unwrap()
             );
             assert!(proto.verify_signature_share(
-                &frost_key,
-                &signing_session,
-                secret_share.index,
+                &xonly_poly,
+                &coord_signing_session,
+                secret_share.index(),
                 sig)
             );
             signatures.push(sig);
         }
         let combined_sig = proto.combine_signature_shares(
-            &frost_key,
-            &signing_session,
-            signatures);
+            &coord_signing_session,
+            signatures
+        );
 
         assert!(proto.schnorr.verify(
-            &frost_key.public_key(),
+            &xonly_poly.shared_key(),
             message,
             &combined_sig
         ));

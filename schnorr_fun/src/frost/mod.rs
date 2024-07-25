@@ -175,12 +175,17 @@
 //! [`musig`]: crate::musig
 //! [`Scalar`]: crate::fun::Scalar
 
+mod frost_poly;
+pub use frost_poly::*;
 mod share;
 pub use share::*;
 
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{Message, Schnorr, Signature};
-use alloc::{collections::BTreeMap, vec::Vec};
+use crate::{binonce, Message, Schnorr, Signature};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    vec::Vec,
+};
 use core::num::NonZeroU32;
 use secp256kfun::{
     derive_nonce_rng,
@@ -296,7 +301,7 @@ where
 /// [`Frost::new_keygen`]
 #[derive(Clone, Debug)]
 pub struct KeyGen {
-    frost_key: FrostKey<Normal>,
+    frost_poly: FrostPoly<Normal>,
     point_polys: BTreeMap<PartyIndex, Vec<Point>>,
 }
 
@@ -364,143 +369,6 @@ impl core::fmt::Display for FinishKeyGenError {
 #[cfg(feature = "std")]
 impl std::error::Error for FinishKeyGenError {}
 
-/// A FROST key
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrostKey<T: PointType> {
-    /// The joint public key of the frost multisignature.
-    ///
-    /// This public key will change as you add tweaks or convert [`into_xonly_key`].
-    /// Only initially will the public key match the first coefficient of the public polynomial.
-    tweaked_public_key: Point<T>,
-    /// The public point polynomial that defines the access structure to the FROST key.
-    point_polynomial: Vec<Point<Normal, Public, Zero>>,
-    /// The tweak applied to this frost key, tracks the aggregate tweak.
-    tweak: Scalar<Public, Zero>,
-    /// Whether the secret keys need to be negated during signing (only used for EvenY keys).
-    needs_negation: bool,
-}
-
-impl<T: Copy + PointType> FrostKey<T> {
-    /// The public key with all tweaks applied
-    pub fn public_key(&self) -> Point<T> {
-        self.tweaked_public_key
-    }
-
-    /// The verification shares of each party in the key.
-    ///
-    /// The verification share is the image of their secret share.
-    pub fn verification_share(&self, index: &PartyIndex) -> Point<NonNormal, Public, Zero> {
-        poly::point::eval(&self.point_polynomial, *index)
-    }
-
-    /// The threshold number of participants required in a signing coalition to produce a valid signature.
-    pub fn threshold(&self) -> usize {
-        self.point_polynomial.len()
-    }
-
-    /// The public image of the key's polynomial on the elliptic curve.
-    ///
-    /// Note: the first coefficient (index `0`) is guaranteed to be non-zero but the coefficients
-    /// may be.
-    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
-        self.point_polynomial.clone()
-    }
-}
-
-impl FrostKey<Normal> {
-    /// Convert the key into a BIP340 FrostKey.
-    ///
-    /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
-    ///
-    /// [BIP340]: https://bips.xyz/340
-    pub fn into_xonly_key(self) -> FrostKey<EvenY> {
-        let (tweaked_public_key, needs_negation) = self.public_key().into_point_with_even_y();
-        let mut tweak = self.tweak;
-        tweak.conditional_negate(needs_negation);
-        FrostKey {
-            tweaked_public_key,
-            point_polynomial: self.point_polynomial,
-            tweak,
-            needs_negation,
-        }
-    }
-
-    /// Apply a plain tweak to the frost public key.
-    ///
-    /// This is useful for deriving unhardened child frost keys from a master frost public key using [BIP32].
-    ///
-    /// Tweak the frost public key with a scalar so that the resulting key is equal to the
-    /// existing key plus `tweak * G`. The tweak mutates the public key while still allowing
-    /// the original set of signers to sign under the new key.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
-    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
-    /// secret key it returns `None`.
-    ///
-    /// [BIP32]: https://bips.xyz/32
-    pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let tweaked_public_key = g!(self.tweaked_public_key + tweak * G)
-            .normalize()
-            .non_zero()?;
-        let tweak = s!(self.tweak + tweak).public();
-
-        Some(FrostKey {
-            tweaked_public_key,
-            point_polynomial: self.point_polynomial,
-            tweak,
-            needs_negation: self.needs_negation,
-        })
-    }
-
-    /// Put the `FrostKey` into a form that can be encoded/decode.
-    ///
-    /// Note this encoding **ignores the tweaks that have been applied to the `FrostKey`**. To
-    /// restore tweaks you must reapply them after it's been [`decode`]d.
-    ///
-    /// [`decode`]: Self::decode
-    pub fn encode(&self) -> EncodedFrostKey {
-        EncodedFrostKey::from(self.clone())
-    }
-
-    /// Decode the `FrostKey` from an `EncodedFrostKey`.
-    pub fn decode(encoded_frost_key: EncodedFrostKey) -> Self {
-        Self::from(encoded_frost_key)
-    }
-}
-
-impl FrostKey<EvenY> {
-    /// Applies an "XOnly" tweak to the FROST public key.
-    /// This is how you embed a taproot commitment into a frost public key
-    ///
-    /// Tweak the frost public key with a scalar so that the resulting key is equal to the
-    /// existing key plus `tweak * G` as an [`EvenY`] point. The tweak mutates the public key while still allowing
-    /// the original set of signers to sign under the new key.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
-    /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
-    /// secret key it returns `None`.
-    pub fn tweak(self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        let (new_public_key, needs_negation) = g!(self.tweaked_public_key + tweak * G)
-            .normalize()
-            .non_zero()?
-            .into_point_with_even_y();
-        let mut new_tweak = s!(self.tweak + tweak).public();
-        new_tweak.conditional_negate(needs_negation);
-        let needs_negation = self.needs_negation ^ needs_negation;
-
-        Some(Self {
-            tweaked_public_key: new_public_key,
-            point_polynomial: self.point_polynomial,
-            needs_negation,
-            tweak: new_tweak,
-        })
-    }
-}
-
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// Convienence method to generate secret shares and proof-of-possession to be shared with other
     /// participants. Each secret share needs to be securely communicated to the intended
@@ -543,7 +411,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     ///
     /// Parameters:
     ///
-    /// - `frost_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`
+    /// - `frost_key`: the joint public key we are signing under. This can be an `EvenY` or `Normal`
     ///    It will return the same nonce regardless.
     /// - `secret`: you're secret key share for the `frost_key`
     /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
@@ -564,18 +432,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// resulting rng for each input.
     pub fn seed_nonce_rng<R: SeedableRng<Seed = [u8; 32]>>(
         &self,
-        frost_key: &FrostKey<impl Normalized>,
-        secret: &Scalar<Secret, impl ZeroChoice>,
+        paired_secret_share: PairedSecretShare<impl Normalized>,
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
-        let threshold_bytes = (frost_key.threshold() as u64).to_be_bytes();
-        let pk_bytes = frost_key.public_key().to_xonly_bytes();
+        let pk_bytes = paired_secret_share.shared_key().to_xonly_bytes();
 
         let rng: R = derive_nonce_rng!(
             nonce_gen => self.nonce_gen(),
-            secret => &secret,
-            public => [pk_bytes, threshold_bytes, sid_len, session_id],
+            secret => paired_secret_share.share(),
+            public => [pk_bytes, sid_len, session_id],
             seedable_rng => R
         );
         rng
@@ -591,7 +457,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         threshold: usize,
         n_parties: usize,
         rng: &mut impl RngCore,
-    ) -> (FrostKey<Normal>, Vec<SecretShare>) {
+    ) -> (FrostPoly<Normal>, Vec<PairedSecretShare<Normal>>) {
         let scalar_polys = (0..n_parties)
             .map(|i| {
                 (
@@ -732,22 +598,17 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             }
         }
 
-        let public_key = joint_poly[0]
-            .normalize()
-            .non_zero()
-            .ok_or(NewKeyGenError::ZeroFrostKey)?;
+        let frost_poly = FrostPoly::from_poly(
+            joint_poly
+                .into_iter()
+                .map(|coef| coef.normalize())
+                .collect(),
+        )
+        .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         Ok(KeyGen {
             point_polys,
-            frost_key: FrostKey {
-                tweaked_public_key: public_key,
-                point_polynomial: joint_poly
-                    .into_iter()
-                    .map(|coef| coef.normalize())
-                    .collect(),
-                tweak: Scalar::zero(),
-                needs_negation: false,
-            },
+            frost_poly,
         })
     }
 
@@ -757,7 +618,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         keygen: KeyGen,
         proofs_of_possession: BTreeMap<PartyIndex, Signature>,
         proof_of_possession_msg: Message,
-    ) -> Result<FrostKey<Normal>, FinishKeyGenError> {
+    ) -> Result<FrostPoly<Normal>, FinishKeyGenError> {
         for (party_index, poly) in &keygen.point_polys {
             let pop = proofs_of_possession
                 .get(party_index)
@@ -772,7 +633,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             }
         }
 
-        Ok(keygen.frost_key)
+        Ok(keygen.frost_poly)
     }
 
     /// Combine all receieved shares into your long-lived secret share.
@@ -793,7 +654,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         my_index: PartyIndex,
         secret_shares: BTreeMap<PartyIndex, (Scalar<Secret, Zero>, Signature)>,
         proof_of_possession_msg: Message,
-    ) -> Result<(SecretShare, FrostKey<Normal>), FinishKeyGenError> {
+    ) -> Result<(PairedSecretShare<Normal>, FrostPoly<Normal>), FinishKeyGenError> {
         let mut total_secret_share = s!(0);
 
         for (party_index, poly) in &keygen.point_polys {
@@ -816,73 +677,98 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             total_secret_share += secret_share;
         }
 
-        Ok((
-            SecretShare {
-                index: my_index,
-                secret: total_secret_share,
-            },
-            keygen.frost_key,
-        ))
+        let secret_share = SecretShare {
+            index: my_index,
+            share: total_secret_share,
+        };
+
+        let secret_share_with_image =
+            PairedSecretShare::new(secret_share, keygen.frost_poly.shared_key());
+
+        Ok((secret_share_with_image, keygen.frost_poly))
     }
 
-    /// Start a FROST signing session.
+    /// Start party signing session
+    pub fn start_party_sign_session(
+        &self,
+        shared_key: Point<EvenY>,
+        parties: BTreeSet<PartyIndex>,
+        agg_binonce: Nonce<Zero>,
+        message: Message,
+    ) -> PartySignSession {
+        let binding_coeff = self.binding_coefficient(shared_key, agg_binonce, message);
+        let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
+        let challenge = self.schnorr.challenge(&final_nonce, &shared_key, message);
+
+        PartySignSession {
+            shared_key,
+            parties,
+            binding_coeff,
+            challenge,
+            binonce_needs_negation,
+        }
+    }
+
+    /// Start a FROST signing session as a *coordinator*.
     ///
-    /// Each signing party must call this with the same arguments for it to succeeed. This means you
-    /// must all agree on each other's nonces before starting the sign session. In `nonces` each
-    /// item is the signer's index and their `Nonce`. It's length must be at least `threshold`.
-    /// Generating your own nonces can be done with [`Frost::gen_nonce`].
+    /// The corodinator must have collected nonces from each of the signers and pass them in as `nonces`.
+    /// From there
+    ///
     ///
     /// # Panics
     ///
     /// If the number of nonces is less than the threshold.
-    pub fn start_sign_session(
+    pub fn start_coordinator_sign_session(
         &self,
-        frost_key: &FrostKey<EvenY>,
-        nonces: BTreeMap<PartyIndex, Nonce>,
+        frost_poly: &FrostPoly<EvenY>,
+        mut nonces: BTreeMap<PartyIndex, Nonce>,
         message: Message,
-    ) -> SignSession {
-        let nonce_map = nonces;
-
-        if nonce_map.len() < frost_key.threshold() {
+    ) -> CoordinatorSignSession {
+        if nonces.len() < frost_poly.threshold() {
             panic!("nonces' length was less than the threshold");
         }
 
-        let agg_nonce = nonce_map
-            .iter()
-            .fold([Point::zero(); 2], |acc, (_, nonce)| {
-                [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
-            });
+        let agg_binonce = binonce::Nonce::aggregate(nonces.values().cloned());
 
-        let agg_nonce = [agg_nonce[0].normalize(), agg_nonce[1].normalize()];
-
-        let binding_coeff = Scalar::from_hash(
-            self.binding_hash
-                .clone()
-                .add(agg_nonce[0])
-                .add(agg_nonce[1])
-                .add(frost_key.public_key())
-                .add(message),
-        );
-        let (agg_nonce, nonces_need_negation) = g!(agg_nonce[0] + binding_coeff * agg_nonce[1])
-            .normalize()
-            .non_zero()
-            .unwrap_or(Point::generator())
-            .into_point_with_even_y();
+        let binding_coeff = self.binding_coefficient(frost_poly.shared_key(), agg_binonce, message);
+        let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
 
         let challenge = self
             .schnorr
-            .challenge(&agg_nonce, &frost_key.public_key(), message);
+            .challenge(&final_nonce, &frost_poly.shared_key(), message);
 
-        SignSession {
+        for nonce in nonces.values_mut() {
+            nonce.conditional_negate(binonce_needs_negation);
+        }
+
+        CoordinatorSignSession {
             binding_coeff,
-            nonces_need_negation,
-            agg_nonce,
+            agg_binonce,
+            final_nonce,
             challenge,
-            nonces: nonce_map,
+            nonces,
         }
     }
 
-    /// Generates a partial signature share under the frost key using a secret share.
+    fn binding_coefficient(
+        &self,
+        public_key: Point<EvenY>,
+        agg_binonce: Nonce<Zero>,
+        message: Message,
+    ) -> Scalar<Public> {
+        Scalar::from_hash(
+            self.binding_hash
+                .clone()
+                .add(agg_binonce)
+                .add(public_key)
+                .add(message),
+        )
+        .public()
+    }
+
+    /// Generates a signature share under the frost key using a secret share.
+    ///
+    /// The `secret_share` is taken as a `PairedSecretShare<EvenY>` to guarantee that the secret is aligned with an `EvenY` point.
     ///
     /// ## Return value
     ///
@@ -890,32 +776,25 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ///
     /// ## Panics
     ///
-    /// Panics if the `secret_nonce` does not match the previously provided public nonce in the
-    /// `session`.
+    /// Panics if the shah
     pub fn sign(
         &self,
-        frost_key: &FrostKey<EvenY>,
-        session: &SignSession,
-        secret_share: &SecretShare,
+        session: &PartySignSession,
+        secret_share: &PairedSecretShare<EvenY>,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        let mut lambda =
-            poly::eval_basis_poly_at_0(secret_share.index, session.nonces.keys().cloned());
-        assert_eq!(
-            *session
-                .nonces
-                .get(&secret_share.index)
-                .expect("my_index was not in session"),
-            secret_nonce.public(),
-            "secret nonce didn't match previously provided public nonce"
-        );
-        lambda.conditional_negate(frost_key.needs_negation);
+        if session.shared_key != secret_share.shared_key() {
+            panic!("the share's shared key is not the same as the shared key of the session");
+        }
+        let secret_share = secret_share.secret_share();
+        let lambda =
+            poly::eval_basis_poly_at_0(secret_share.index, session.parties.iter().cloned());
         let [mut r1, mut r2] = secret_nonce.secret;
-        r1.conditional_negate(session.nonces_need_negation);
-        r2.conditional_negate(session.nonces_need_negation);
+        r1.conditional_negate(session.binonce_needs_negation);
+        r2.conditional_negate(session.binonce_needs_negation);
 
         let b = &session.binding_coeff;
-        let x = &secret_share.secret;
+        let x = secret_share.share;
         let c = &session.challenge;
         s!(r1 + (r2 * b) + lambda * x * c).public()
     }
@@ -927,24 +806,21 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Returns `bool`, true if partial signature is valid.
     pub fn verify_signature_share(
         &self,
-        frost_key: &FrostKey<EvenY>,
-        session: &SignSession,
+        frost_poly: &FrostPoly<EvenY>,
+        session: &CoordinatorSignSession,
         index: PartyIndex,
         signature_share: Scalar<Public, Zero>,
     ) -> bool {
         let s = signature_share;
-        let mut lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys().cloned());
-        lambda.conditional_negate(frost_key.needs_negation);
+        let lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys().cloned());
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = frost_key.verification_share(&index);
+        let X = frost_poly.verification_share(index);
         let [R1, R2] = session
             .nonces
             .get(&index)
             .expect("verifying party index that is not part of frost signing coalition")
             .0;
-        let R1 = R1.conditional_negate(session.nonces_need_negation);
-        let R2 = R2.conditional_negate(session.nonces_need_negation);
         g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero()
     }
 
@@ -959,18 +835,16 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// Returns a combined schnorr [`Signature`] on the message
     pub fn combine_signature_shares(
         &self,
-        frost_key: &FrostKey<EvenY>,
-        session: &SignSession,
+        session: &CoordinatorSignSession,
         signature_shares: Vec<Scalar<Public, Zero>>,
     ) -> Signature {
-        let ck = s!(session.challenge * frost_key.tweak);
         let sum_s = signature_shares
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
             .unwrap_or(Scalar::zero());
         Signature {
-            R: session.agg_nonce,
-            s: s!(sum_s + ck).public(),
+            R: session.final_nonce,
+            s: sum_s,
         }
     }
 }
@@ -991,23 +865,53 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-pub struct SignSession {
-    binding_coeff: Scalar,
-    nonces_need_negation: bool,
-    agg_nonce: Point<EvenY>,
+pub struct CoordinatorSignSession {
+    binding_coeff: Scalar<Public>,
+    agg_binonce: binonce::Nonce<Zero>,
+    final_nonce: Point<EvenY>,
     challenge: Scalar<Public, Zero>,
     nonces: BTreeMap<PartyIndex, Nonce>,
 }
 
-impl SignSession {
+impl CoordinatorSignSession {
     /// Fetch the participant indices for this signing session.
     ///
     /// ## Return value
     ///
     /// An iterator of participant indices
-    pub fn participants(&self) -> impl DoubleEndedIterator<Item = PartyIndex> + '_ {
-        self.nonces.keys().copied()
+    pub fn participants(&self) -> BTreeSet<PartyIndex> {
+        self.nonces.keys().cloned().collect()
     }
+
+    /// The aggregated nonce used to sign
+    pub fn agg_binonce(&self) -> binonce::Nonce<Zero> {
+        self.agg_binonce
+    }
+
+    /// The final nonce that will actually go on the blockchain
+    pub fn final_nonce(&self) -> Point<EvenY> {
+        self.final_nonce
+    }
+}
+
+/// The session that is used to sign a message.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(crate = "crate::fun::bincode")
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
+)]
+pub struct PartySignSession {
+    shared_key: Point<EvenY>,
+    parties: BTreeSet<Scalar<Public>>,
+    challenge: Scalar<Public, Zero>,
+    binonce_needs_negation: bool,
+    binding_coeff: Scalar<Public>,
 }
 
 /// Constructor for a Frost instance using deterministic nonce generation.
@@ -1055,106 +959,6 @@ where
     Frost::default()
 }
 
-/// An encoded FROST key
-///
-/// This encodes only stores the joint public polynomial. **It does not encode tweaks applied to the
-/// `FrostKey`**.
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(crate::fun::serde::Serialize),
-    serde(crate = "crate::fun::serde")
-)]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode),
-    bincode(crate = "crate::fun::bincode",)
-)]
-pub struct EncodedFrostKey {
-    /// The public point polynomial that defines the access structure to the FROST key.
-    point_polynomial: Vec<Point<Normal, Public, Zero>>,
-}
-
-impl EncodedFrostKey {
-    /// Traverse back to a FROST key to be used in signing
-    pub fn into_frost_key(&self) -> FrostKey<Normal> {
-        self.clone().into()
-    }
-
-    /// The threshold number of participants required in a signing coalition to produce a valid signature.
-    pub fn threshold(&self) -> usize {
-        self.point_polynomial.len()
-    }
-
-    /// The public polynomial that defines the access structure to the FROST key.
-    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
-        self.point_polynomial.clone()
-    }
-}
-
-#[cfg(feature = "bincode")]
-impl crate::fun::bincode::Decode for EncodedFrostKey {
-    fn decode<D: secp256kfun::bincode::de::Decoder>(
-        decoder: &mut D,
-    ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
-        let poly = Vec::<Point<Normal, Public, Zero>>::decode(decoder)?;
-
-        if poly[0].is_zero() {
-            return Err(secp256kfun::bincode::error::DecodeError::Other(
-                "first coefficient of a frost polynomial can't be zero",
-            ));
-        }
-
-        Ok(EncodedFrostKey {
-            point_polynomial: poly,
-        })
-    }
-}
-
-#[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(EncodedFrostKey);
-
-#[cfg(feature = "serde")]
-impl<'de> crate::fun::serde::Deserialize<'de> for EncodedFrostKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: secp256kfun::serde::Deserializer<'de>,
-    {
-        let poly = Vec::<Point<Normal, Public, Zero>>::deserialize(deserializer)?;
-
-        if poly[0].is_zero() {
-            return Err(crate::fun::serde::de::Error::custom(
-                "first coefficient of a frost polynomial can't be zero",
-            ));
-        }
-
-        Ok(EncodedFrostKey {
-            point_polynomial: poly,
-        })
-    }
-}
-
-impl From<EncodedFrostKey> for FrostKey<Normal> {
-    fn from(from: EncodedFrostKey) -> Self {
-        FrostKey {
-            tweaked_public_key: from.point_polynomial[0]
-                .non_zero()
-                .expect("the frost public key can not be zero"),
-            point_polynomial: from.point_polynomial,
-            tweak: Scalar::zero(),
-            needs_negation: false,
-        }
-    }
-}
-
-impl<T: PointType> From<FrostKey<T>> for EncodedFrostKey {
-    fn from(from: FrostKey<T>) -> Self {
-        EncodedFrostKey {
-            point_polynomial: from.point_polynomial,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
 
@@ -1164,17 +968,17 @@ mod test {
     #[test]
     fn zero_agg_nonce_results_in_G() {
         let frost = new_with_deterministic_nonces::<Sha256>();
-        let (frost_key, _shares) = frost.simulate_keygen(2, 3, &mut rand::thread_rng());
+        let (frost_poly, _shares) = frost.simulate_keygen(2, 3, &mut rand::thread_rng());
         let nonce = NonceKeyPair::random(&mut rand::thread_rng()).public();
         let mut malicious_nonce = nonce;
         malicious_nonce.conditional_negate(true);
 
-        let session = frost.start_sign_session(
-            &frost_key.into_xonly_key(),
+        let session = frost.start_coordinator_sign_session(
+            &frost_poly.into_xonly(),
             BTreeMap::from_iter([(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)]),
             Message::<Public>::plain("test", b"hello"),
         );
 
-        assert_eq!(session.agg_nonce, *G);
+        assert_eq!(session.final_nonce(), *G);
     }
 }
