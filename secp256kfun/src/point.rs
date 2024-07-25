@@ -251,6 +251,19 @@ impl<T, S, Z> Point<T, S, Z> {
         backend::BackendPoint::is_zero(&self.0)
     }
 
+    /// Convert a point that is marked as `Zero` to `NonZero`.
+    ///
+    /// If the point *was* actually zero ([`is_zero`] returns true) it returns `None`.
+    ///
+    /// [`is_zero`]: Point::is_zero
+    pub fn non_zero(self) -> Option<Point<T, S, NonZero>> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Point::from_inner(self.0, self.1))
+        }
+    }
+
     pub(crate) const fn from_inner(backend_point: backend::Point, point_type: T) -> Self {
         Point(backend_point, point_type, PhantomData)
     }
@@ -421,19 +434,6 @@ impl<S> Point<EvenY, S, NonZero> {
 }
 
 impl<T, S> Point<T, S, Zero> {
-    /// Convert a point that is marked as `Zero` to `NonZero`.
-    ///
-    /// If the point *was* actually zero ([`is_zero`] returns true) it returns `None`.
-    ///
-    /// [`is_zero`]: Point::is_zero
-    pub fn non_zero(self) -> Option<Point<T, S, NonZero>> {
-        if self.is_zero() {
-            None
-        } else {
-            Some(Point::from_inner(self.0, self.1))
-        }
-    }
-
     /// Returns the [`identity element`] of the group A.K.A. the point at infinity.
     ///
     /// # Example
