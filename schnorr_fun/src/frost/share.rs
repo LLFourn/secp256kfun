@@ -178,13 +178,22 @@ impl PairedSecretShare<Normal> {
     }
 
     /// Add a `Scalar` to both the secret share and the paired shared key.
-    pub fn homomorphic_add(
-        mut self,
-        scalar: Scalar<impl Secrecy, impl ZeroChoice>,
-    ) -> Option<Self> {
-        self.shared_key = g!(self.shared_key + scalar * G).normalize().non_zero()?;
-        self.secret_share.share = s!(self.secret_share.share + scalar);
+    /// If the share is a share of `secret` it becomes the share of the `secret + tweak`.
+    ///
+    /// This is useful for for deriving unhardened child frost keys from a root frost public key
+    /// using [BIP32]
+    ///
+    /// [BIP32]: https://bips.xyz/32
+    pub fn homomorphic_add(mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
+        self.shared_key = g!(self.shared_key + tweak * G).normalize().non_zero()?;
+        self.secret_share.share = s!(self.secret_share.share + tweak);
         Some(self)
+    }
+
+    /// Multiply the secret share by `scalar`.
+    pub fn homomorphic_mul(&mut self, tweak: Scalar<impl Secrecy>) {
+        self.shared_key = g!(tweak * self.shared_key).normalize();
+        self.secret_share.share = s!(tweak * self.secret_share.share);
     }
 
     /// Create an XOnly secert share where the paired image is always an `EvenY` point.
@@ -200,8 +209,9 @@ impl PairedSecretShare<Normal> {
 }
 
 impl PairedSecretShare<EvenY> {
-    /// Add a scalar to the share such that share becomes a share of the previous secret plus
-    /// `scalar`.
+    /// Adds an "XOnly" tweak to the FROST public key. If the share is a share of `secret` it
+    /// becomes the share of the `secret + tweak` however the even-y coordinate of the shared key is
+    /// maintained by negating if need be.
     ///
     /// If the secret image were to become zero it returns `None` since this desinged to be
     /// [`BIP340`] secret share which does not allow 0.
@@ -209,16 +219,27 @@ impl PairedSecretShare<EvenY> {
     /// [`BIP340`]: https://bips.xyz/bip340
     pub fn xonly_homomorphic_add(
         mut self,
-        scalar: Scalar<impl Secrecy, impl ZeroChoice>,
+        tweak: Scalar<impl Secrecy, impl ZeroChoice>,
     ) -> Option<Self> {
-        let (shared_key, needs_negation) = g!(self.shared_key + scalar * G)
+        let (shared_key, needs_negation) = g!(self.shared_key + tweak * G)
             .normalize()
             .non_zero()?
             .into_point_with_even_y();
         self.shared_key = shared_key;
-        self.secret_share.share = s!(self.secret_share.share + scalar);
+        self.secret_share.share = s!(self.secret_share.share + tweak);
         self.secret_share.share.conditional_negate(needs_negation);
         Some(self)
+    }
+
+    /// Multiply the secret share and paired key by `scalar` maintaing the paired key's even y
+    /// coordinate by negating them both (if need be).
+    pub fn xonly_homomorphic_mul(&mut self, mut tweak: Scalar<impl Secrecy>) {
+        let (shared_key, needs_negation) = g!(tweak * self.shared_key)
+            .normalize()
+            .into_point_with_even_y();
+        self.shared_key = shared_key;
+        tweak.conditional_negate(needs_negation);
+        self.secret_share.share *= tweak;
     }
 }
 

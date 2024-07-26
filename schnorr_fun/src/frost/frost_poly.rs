@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, ops::Deref};
 
 use alloc::vec::Vec;
 use secp256kfun::{poly, prelude::*};
@@ -125,6 +125,16 @@ impl FrostPoly<Normal> {
     pub fn homomorphic_negate(&mut self) {
         poly::point::negate(&mut self.point_polynomial)
     }
+
+    /// Multiplies the shared key by a scalar.
+    ///
+    /// In otder for a [`PairedSecretShare`] to be valid against the new key they will have to apply
+    /// [the same operation](PairedSecretShare::xonly_homomorphic_mul).
+    pub fn homomorphic_mul(&mut self, tweak: Scalar<impl Secrecy>) {
+        for coeff in &mut self.point_polynomial {
+            *coeff = g!(tweak * coeff.deref()).normalize();
+        }
+    }
 }
 
 impl FrostPoly<EvenY> {
@@ -152,6 +162,25 @@ impl FrostPoly<EvenY> {
         }
 
         Some(self)
+    }
+
+    /// Multiplies the shared key by a scalar.
+    ///
+    /// In otder for a `PairedSecretShare` to be valid against the new key they will have to apply
+    /// [the same operation](PairedSecretShare::xonly_homomorphic_mul).
+    pub fn xonly_homomorphic_mul(&mut self, mut tweak: Scalar<impl Secrecy>) {
+        self.point_polynomial[0] = g!(tweak * self.point_polynomial[0]).normalize();
+        let needs_negation = !self.point_polynomial[0]
+            .non_zero()
+            .expect("multiplication cannot be zero")
+            .is_y_even();
+
+        self.point_polynomial[0] = self.point_polynomial[0].conditional_negate(needs_negation);
+        tweak.conditional_negate(needs_negation);
+
+        for coeff in &mut self.point_polynomial[1..] {
+            *coeff = g!(tweak * coeff.deref()).normalize();
+        }
     }
 
     /// The public key that would have signatures verified against for this shared key.

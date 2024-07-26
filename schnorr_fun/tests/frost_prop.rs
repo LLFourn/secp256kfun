@@ -20,8 +20,10 @@ proptest! {
     #[test]
     fn frost_prop_test(
         (n_parties, threshold) in (2usize..=4).prop_flat_map(|n| (Just(n), 2usize..=n)),
-        plain_tweak in option::of(any::<Scalar<Public, Zero>>()),
-        xonly_tweak in option::of(any::<Scalar<Public, Zero>>())
+        add_tweak in option::of(any::<Scalar<Public, Zero>>()),
+        xonly_add_tweak in option::of(any::<Scalar<Public, Zero>>()),
+        mul_tweak in option::of(any::<Scalar<Public>>()),
+        xonly_mul_tweak in option::of(any::<Scalar<Public>>())
     ) {
         let proto = new_with_deterministic_nonces::<Sha256>();
         assert!(threshold <= n_parties);
@@ -30,25 +32,39 @@ proptest! {
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
         let (mut frost_poly, mut secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
 
-        if let Some(tweak) = plain_tweak {
+        if let Some(tweak) = add_tweak {
             for secret_share in &mut secret_shares {
                 *secret_share = secret_share.homomorphic_add(tweak).unwrap();
             }
             frost_poly = frost_poly.homomorphic_add(tweak).unwrap();
         }
 
+        if let Some(mul_tweak) = mul_tweak {
+            frost_poly.homomorphic_mul(mul_tweak);
+             for secret_share in &mut secret_shares {
+                secret_share.homomorphic_mul(mul_tweak);
+            }
+        }
+
         let mut xonly_poly = frost_poly.into_xonly();
         let mut xonly_secret_shares = secret_shares.into_iter().map(|secret_share| secret_share.into_xonly()).collect::<Vec<_>>();
 
-        if let Some(tweak) = xonly_tweak {
+        if let Some(tweak) = xonly_add_tweak {
             xonly_poly = xonly_poly.xonly_homomorphic_add(tweak).unwrap();
             for secret_share in &mut xonly_secret_shares {
                 *secret_share = secret_share.xonly_homomorphic_add(tweak).unwrap();
             }
         }
 
+        if let Some(xonly_mul_tweak) = xonly_mul_tweak {
+            xonly_poly.xonly_homomorphic_mul(xonly_mul_tweak);
+            for secret_share in &mut xonly_secret_shares {
+                secret_share.xonly_homomorphic_mul(xonly_mul_tweak);
+            }
+        }
+
         for secret_share in &xonly_secret_shares {
-            assert_eq!(secret_share.shared_key(), xonly_poly.shared_key());
+            assert_eq!(secret_share.shared_key(), xonly_poly.shared_key(), "shared key doesn't match");
         }
 
         // use a boolean mask for which t participants are signers
