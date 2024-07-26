@@ -210,6 +210,12 @@ pub mod point {
             self::add_in_place(&mut interpolating_polynomial, point_scaled_basis_poly);
         }
 
+        while interpolating_polynomial.len() > 1
+            && interpolating_polynomial.last().unwrap().is_zero()
+        {
+            interpolating_polynomial.pop();
+        }
+
         interpolating_polynomial
     }
 
