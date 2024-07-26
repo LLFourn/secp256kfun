@@ -16,14 +16,14 @@ use super::PartyIndex;
     derive(crate::fun::bincode::Encode),
     bincode(crate = "crate::fun::bincode",)
 )]
-pub struct FrostPoly<T> {
+pub struct SharedKey<T> {
     /// The public point polynomial that defines the access structure to the FROST key.
     point_polynomial: Vec<Point<Normal, Public, Zero>>,
     #[cfg_attr(feature = "serde", serde(skip))]
     ty: PhantomData<T>,
 }
 
-impl<T: Copy> FrostPoly<T> {
+impl<T> SharedKey<T> {
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
@@ -45,14 +45,15 @@ impl<T: Copy> FrostPoly<T> {
     }
 }
 
-impl FrostPoly<Normal> {
+impl SharedKey<Normal> {
     /// The key that was shared with this polynomial defining the sharing.
     ///
     /// This is the first coefficient of the polynomial.
-    pub fn shared_key(&self) -> Point<Normal> {
+    pub fn key(&self) -> Point<Normal> {
         self.point_polynomial[0].non_zero().expect("invariant")
     }
-    /// Constructor to create a `FrostPoly<Normal>` from a vector of points.
+    /// Constructor to create a from a vector of points where each item represent a polynomial
+    /// coefficient.
     ///
     /// Returns `None` if the first coefficient is [`Point::zero`].
     pub fn from_poly(poly: Vec<Point<Normal, Public, Zero>>) -> Option<Self> {
@@ -70,7 +71,15 @@ impl FrostPoly<Normal> {
         })
     }
 
-    /// Create a `FrostPoly` from a set of verification shares.
+    /// Create a shared key from a subset of verification shares.
+    ///
+    /// If all the verification shares are correct and you have at least a threshold of them then
+    /// you'll get the right answer. If you put in a wrong share you won't get the right answer!
+    ///
+    /// ## Security
+    ///
+    /// ⚠ You can't just take any random points you want and pass them in here and hope it's secure.
+    /// They need to be from a securely generated key.
     pub fn from_verification_shares(
         shares: &[(PartyIndex, Point<impl PointType, Public, impl ZeroChoice>)],
     ) -> Self {
@@ -80,18 +89,18 @@ impl FrostPoly<Normal> {
             ty: PhantomData,
         }
     }
-    /// Convert the key into a BIP340 FrostKey.
+    /// Convert the key into a BIP340 "x-only" SharedKey.
     ///
     /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
     ///
     /// [BIP340]: https://bips.xyz/340
-    pub fn into_xonly(mut self) -> FrostPoly<EvenY> {
-        let needs_negation = !self.shared_key().is_y_even();
+    pub fn into_xonly(mut self) -> SharedKey<EvenY> {
+        let needs_negation = !self.key().is_y_even();
         if needs_negation {
             self.homomorphic_negate();
-            debug_assert!(self.shared_key().is_y_even());
+            debug_assert!(self.key().is_y_even());
         }
-        FrostPoly {
+        SharedKey {
             point_polynomial: self.point_polynomial,
             ty: PhantomData,
         }
@@ -106,7 +115,7 @@ impl FrostPoly<Normal> {
     ///
     /// ## Return value
     ///
-    /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
+    /// Returns a new [`SharedKey`] with the same parties but a different frost public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     ///
@@ -128,8 +137,10 @@ impl FrostPoly<Normal> {
 
     /// Multiplies the shared key by a scalar.
     ///
-    /// In otder for a [`PairedSecretShare`] to be valid against the new key they will have to apply
-    /// [the same operation](PairedSecretShare::xonly_homomorphic_mul).
+    /// In order for a [`PairedSecretShare`] to be valid against the new key they will have to apply
+    /// [the same operation](super::PairedSecretShare::xonly_homomorphic_mul).
+    ///
+    /// [`PairedSecretShare`]: super::PairedSecretShare
     pub fn homomorphic_mul(&mut self, tweak: Scalar<impl Secrecy>) {
         for coeff in &mut self.point_polynomial {
             *coeff = g!(tweak * coeff.deref()).normalize();
@@ -137,7 +148,7 @@ impl FrostPoly<Normal> {
     }
 }
 
-impl FrostPoly<EvenY> {
+impl SharedKey<EvenY> {
     /// Applies an "XOnly" tweak to the FROST public key.
     /// This is how you embed a taproot commitment into a frost public key
     ///
@@ -147,7 +158,7 @@ impl FrostPoly<EvenY> {
     ///
     /// ## Return value
     ///
-    /// Returns a new [`FrostKey`] with the same parties but a different frost public key.
+    /// Returns a new [`SharedKey`] with the same parties but a different frost public key.
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
     pub fn xonly_homomorphic_add(
@@ -167,7 +178,7 @@ impl FrostPoly<EvenY> {
     /// Multiplies the shared key by a scalar.
     ///
     /// In otder for a `PairedSecretShare` to be valid against the new key they will have to apply
-    /// [the same operation](PairedSecretShare::xonly_homomorphic_mul).
+    /// [the same operation](super::PairedSecretShare::xonly_homomorphic_mul).
     pub fn xonly_homomorphic_mul(&mut self, mut tweak: Scalar<impl Secrecy>) {
         self.point_polynomial[0] = g!(tweak * self.point_polynomial[0]).normalize();
         let needs_negation = !self.point_polynomial[0]
@@ -184,7 +195,7 @@ impl FrostPoly<EvenY> {
     }
 
     /// The public key that would have signatures verified against for this shared key.
-    pub fn shared_key(&self) -> Point<EvenY> {
+    pub fn key(&self) -> Point<EvenY> {
         let (even_y_point, _needs_negation) = self.point_polynomial[0]
             .non_zero()
             .expect("invariant")
@@ -195,7 +206,7 @@ impl FrostPoly<EvenY> {
 }
 
 #[cfg(feature = "bincode")]
-impl crate::fun::bincode::Decode for FrostPoly<Normal> {
+impl crate::fun::bincode::Decode for SharedKey<Normal> {
     fn decode<D: secp256kfun::bincode::de::Decoder>(
         decoder: &mut D,
     ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
@@ -207,7 +218,7 @@ impl crate::fun::bincode::Decode for FrostPoly<Normal> {
             ));
         }
 
-        Ok(FrostPoly {
+        Ok(SharedKey {
             point_polynomial: poly,
             ty: PhantomData,
         })
@@ -215,7 +226,7 @@ impl crate::fun::bincode::Decode for FrostPoly<Normal> {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> crate::fun::serde::Deserialize<'de> for FrostPoly<Normal> {
+impl<'de> crate::fun::serde::Deserialize<'de> for SharedKey<Normal> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: secp256kfun::serde::Deserializer<'de>,
@@ -236,4 +247,4 @@ impl<'de> crate::fun::serde::Deserialize<'de> for FrostPoly<Normal> {
 }
 
 #[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(FrostPoly<Normal>);
+crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal>);

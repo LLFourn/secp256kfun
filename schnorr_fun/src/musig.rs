@@ -339,8 +339,8 @@ where
     /// - `agg_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`.
     ///    It will return the same nonce regardless.
     /// - `secret`: you're secret key as part of `agg_key`. This **must be the secret key you are
-    /// going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
-    /// exactly equal to the secret key you pass to [`sign`] (the MuSig specification requires this).
+    ///    going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
+    ///    exactly equal to the secret key you pass to [`sign`] (the MuSig specification requires this).
     /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///
     /// The application should decide upon a unique `session_id` per call to this function. If the

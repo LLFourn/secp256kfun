@@ -64,7 +64,7 @@ proptest! {
         }
 
         for secret_share in &xonly_secret_shares {
-            assert_eq!(secret_share.shared_key(), xonly_poly.shared_key(), "shared key doesn't match");
+            assert_eq!(secret_share.shared_key(), xonly_poly.key(), "shared key doesn't match");
         }
 
         // use a boolean mask for which t participants are signers
@@ -91,15 +91,15 @@ proptest! {
 
         let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
 
-        let coord_signing_session = proto.start_coordinator_sign_session(
+        let coord_signing_session = proto.coordinator_sign_session(
             &xonly_poly,
             public_nonces,
             message
         );
 
-        let party_signing_session = proto.start_party_sign_session(
-            xonly_poly.shared_key(),
-            coord_signing_session.participants(),
+        let party_signing_session = proto.party_sign_session(
+            xonly_poly.key(),
+            coord_signing_session.parties(),
             coord_signing_session.agg_binonce(),
             message,
         );
@@ -125,7 +125,7 @@ proptest! {
         );
 
         assert!(proto.schnorr.verify(
-            &xonly_poly.shared_key(),
+            &xonly_poly.key(),
             message,
             &combined_sig
         ));

@@ -477,7 +477,7 @@ mod test {
             let chosen = shares.choose_multiple(&mut rng, threshold).cloned()
                 .map(|paired_share| paired_share.secret_share).collect::<Vec<_>>();
             let secret = SecretShare::recover_secret(&chosen);
-            prop_assert_eq!(g!(secret * G), frost_poly.shared_key());
+            prop_assert_eq!(g!(secret * G), frost_poly.key());
         }
     }
 }
