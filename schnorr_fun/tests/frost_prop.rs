@@ -104,30 +104,32 @@ proptest! {
             message,
         );
 
-        let mut signatures = vec![];
+        let mut signatures = BTreeMap::default();
         for secret_share in secret_shares_of_signers  {
             let sig = proto.sign(
                 &party_signing_session,
                 &secret_share,
                 secret_nonces.remove(&secret_share.index()).unwrap()
             );
-            assert!(proto.verify_signature_share(
+            assert_eq!(proto.verify_signature_share(
                 &xonly_shared_key,
                 &coord_signing_session,
                 secret_share.index(),
-                sig)
+                sig), Ok(())
             );
-            signatures.push(sig);
+            signatures.insert(secret_share.index(), sig);
         }
         let combined_sig = proto.combine_signature_shares(
-            &coord_signing_session,
-            signatures
+            coord_signing_session.final_nonce(),
+            signatures.values().cloned()
         );
 
+        assert_eq!(proto.verify_and_combine_signature_shares(&xonly_shared_key, &coord_signing_session, signatures), Ok(combined_sig.clone()));
         assert!(proto.schnorr.verify(
             &xonly_shared_key.key(),
             message,
             &combined_sig
         ));
+
     }
 }

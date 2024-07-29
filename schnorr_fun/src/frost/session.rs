@@ -40,7 +40,7 @@ impl CoordinatorSignSession {
         self.agg_binonce
     }
 
-    /// The final nonce that will actually go on the blockchain
+    /// The final nonce that will actually appear in the signature
     pub fn final_nonce(&self) -> Point<EvenY> {
         self.final_nonce
     }
@@ -68,4 +68,12 @@ pub struct PartySignSession {
     pub(crate) challenge: Scalar<Public, Zero>,
     pub(crate) binonce_needs_negation: bool,
     pub(crate) binding_coeff: Scalar<Public>,
+    pub(crate) final_nonce: Point<EvenY>,
+}
+
+impl PartySignSession {
+    /// The final nonce that will actually appear in the signature
+    pub fn final_nonce(&self) -> Point<EvenY> {
+        self.final_nonce
+    }
 }
