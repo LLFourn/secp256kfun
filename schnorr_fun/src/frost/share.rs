@@ -112,9 +112,9 @@ secp256kfun::impl_display_debug_serialize! {
     derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
     bincode(
         crate = "crate::fun::bincode",
-        encode_bounds = "Point<T>: crate::fun::bincode::Encode",
-        decode_bounds = "Point<T>: crate::fun::bincode::Decode",
-        borrow_decode_bounds = "Point<T>: crate::fun::bincode::BorrowDecode<'__de>"
+        encode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Encode",
+        decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Decode",
+        borrow_decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::BorrowDecode<'__de>"
     )
 )]
 #[cfg_attr(
@@ -123,8 +123,8 @@ secp256kfun::impl_display_debug_serialize! {
     serde(
         crate = "crate::fun::serde",
         bound(
-            deserialize = "Point<T>: crate::fun::serde::de::Deserialize<'de>",
-            serialize = "Point<T>: crate::fun::serde::Serialize"
+            deserialize = "Point<T, Public, Z>: crate::fun::serde::de::Deserialize<'de>",
+            serialize = "Point<T, Public, Z>: crate::fun::serde::Serialize"
         )
     )
 )]
@@ -132,12 +132,12 @@ secp256kfun::impl_display_debug_serialize! {
 ///
 /// This is useful so you can keep track of tweaks to the secret value and tweaks to the shared key
 /// in tandem.
-pub struct PairedSecretShare<T: Normalized> {
+pub struct PairedSecretShare<T: Normalized, Z = NonZero> {
     secret_share: SecretShare,
-    shared_key: Point<T>,
+    shared_key: Point<T, Public, Z>,
 }
 
-impl<T: Normalized> PairedSecretShare<T> {
+impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
     /// The index of the secret share
     pub fn index(&self) -> PartyIndex {
         self.secret_share.index
@@ -149,7 +149,7 @@ impl<T: Normalized> PairedSecretShare<T> {
     }
 
     /// The shared key this secret is for
-    pub fn shared_key(&self) -> Point<T> {
+    pub fn shared_key(&self) -> Point<T, Public, Z> {
         self.shared_key
     }
 
@@ -162,41 +162,87 @@ impl<T: Normalized> PairedSecretShare<T> {
     }
 }
 
-impl AsRef<SecretShare> for PairedSecretShare<EvenY> {
-    fn as_ref(&self) -> &SecretShare {
-        &self.secret_share
-    }
-}
-
-impl PairedSecretShare<Normal> {
+impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
     /// Pair a secret share to a shared key
-    pub fn new(secret_share: SecretShare, shared_key: Point) -> Self {
+    pub fn new(secret_share: SecretShare, shared_key: Point<T, Public, Z>) -> Self {
         Self {
             secret_share,
             shared_key,
         }
     }
 
-    /// Add a `Scalar` to both the secret share and the paired shared key.
-    /// If the share is a share of `secret` it becomes the share of the `secret + tweak`.
+    /// Adds a scalar `tweak` to the paired secret share.
     ///
-    /// This is useful for for deriving unhardened child frost keys from a root frost public key
-    /// using [BIP32]
+    /// The returned `PairedSecretShare<Normal, Zero>` represents a sharing of the original value + `tweak`.
+    ///
+    /// This is useful for deriving unhardened child frost keys from a master frost public key using
+    /// [BIP32]. In cases like this since you know that the tweak was computed from a hash of the
+    /// original key you call [`non_zero`] and unwrap the `Option` since zero is computationally
+    /// unreachable.
+    ///
+    /// If you want to apply an "x-only" tweak you need to call this then [`non_zero`] and finally [`into_xonly`].
+    ///
+    /// See also: [`SharedKey::homomorphic_add`]
     ///
     /// [BIP32]: https://bips.xyz/32
-    pub fn homomorphic_add(mut self, tweak: Scalar<impl Secrecy, impl ZeroChoice>) -> Option<Self> {
-        self.shared_key = g!(self.shared_key + tweak * G).normalize().non_zero()?;
-        self.secret_share.share = s!(self.secret_share.share + tweak);
-        Some(self)
+    /// [`non_zero`]: Self::non_zero
+    /// [`into_xonly`]: Self::into_xonly
+    /// [`SharedKey::homomorphic_add`]: crate::frost::SharedKey::homomorphic_add
+    #[must_use]
+    pub fn homomorphic_add(
+        self,
+        tweak: Scalar<impl Secrecy, impl ZeroChoice>,
+    ) -> PairedSecretShare<Normal, Zero> {
+        let PairedSecretShare {
+            mut secret_share,
+            shared_key,
+        } = self;
+        let shared_key = g!(shared_key + tweak * G).normalize();
+        secret_share.share = s!(secret_share.share + tweak);
+        PairedSecretShare {
+            shared_key,
+            secret_share,
+        }
     }
 
     /// Multiply the secret share by `scalar`.
-    pub fn homomorphic_mul(&mut self, tweak: Scalar<impl Secrecy>) {
-        self.shared_key = g!(tweak * self.shared_key).normalize();
-        self.secret_share.share = s!(tweak * self.secret_share.share);
+    #[must_use]
+    pub fn homomorphic_mul(self, tweak: Scalar<impl Secrecy>) -> PairedSecretShare<Normal, Z> {
+        let PairedSecretShare {
+            shared_key,
+            mut secret_share,
+        } = self;
+
+        let shared_key = g!(tweak * shared_key).normalize();
+        secret_share.share = s!(tweak * self.secret_share.share);
+        PairedSecretShare {
+            secret_share,
+            shared_key,
+        }
     }
 
+    /// Converts a `PairedSecretShare<T, Zero>` to a `PairedSecretShare<T, NonZero>`.
+    ///
+    /// If the paired shared key *was* actually zero ([`is_zero`] returns true) it returns `None`.
+    ///
+    /// [`is_zero`]: Point::is_zero
+    #[must_use]
+    pub fn non_zero(self) -> Option<PairedSecretShare<T, NonZero>> {
+        Some(PairedSecretShare {
+            secret_share: self.secret_share,
+            shared_key: self.shared_key.non_zero()?,
+        })
+    }
+
+    /// Is the key this is a share of zero
+    pub fn is_zero(&self) -> bool {
+        self.shared_key.is_zero()
+    }
+}
+
+impl PairedSecretShare<Normal, NonZero> {
     /// Create an XOnly secert share where the paired image is always an `EvenY` point.
+    #[must_use]
     pub fn into_xonly(mut self) -> PairedSecretShare<EvenY> {
         let (shared_key, needs_negation) = self.shared_key.into_point_with_even_y();
         self.secret_share.share.conditional_negate(needs_negation);
@@ -205,41 +251,6 @@ impl PairedSecretShare<Normal> {
             secret_share: self.secret_share,
             shared_key,
         }
-    }
-}
-
-impl PairedSecretShare<EvenY> {
-    /// Adds an "XOnly" tweak to the FROST public key. If the share is a share of `secret` it
-    /// becomes the share of the `secret + tweak` however the even-y coordinate of the shared key is
-    /// maintained by negating if need be.
-    ///
-    /// If the secret image were to become zero it returns `None` since this desinged to be
-    /// [`BIP340`] secret share which does not allow 0.
-    ///
-    /// [`BIP340`]: https://bips.xyz/bip340
-    pub fn xonly_homomorphic_add(
-        mut self,
-        tweak: Scalar<impl Secrecy, impl ZeroChoice>,
-    ) -> Option<Self> {
-        let (shared_key, needs_negation) = g!(self.shared_key + tweak * G)
-            .normalize()
-            .non_zero()?
-            .into_point_with_even_y();
-        self.shared_key = shared_key;
-        self.secret_share.share = s!(self.secret_share.share + tweak);
-        self.secret_share.share.conditional_negate(needs_negation);
-        Some(self)
-    }
-
-    /// Multiply the secret share and paired key by `scalar` maintaing the paired key's even y
-    /// coordinate by negating them both (if need be).
-    pub fn xonly_homomorphic_mul(&mut self, mut tweak: Scalar<impl Secrecy>) {
-        let (shared_key, needs_negation) = g!(tweak * self.shared_key)
-            .normalize()
-            .into_point_with_even_y();
-        self.shared_key = shared_key;
-        tweak.conditional_negate(needs_negation);
-        self.secret_share.share *= tweak;
     }
 }
 

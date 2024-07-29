@@ -30,41 +30,41 @@ proptest! {
 
         // // create some scalar polynomial for each party
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-        let (mut frost_poly, mut secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
+        let (mut shared_key, mut secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
 
         if let Some(tweak) = add_tweak {
             for secret_share in &mut secret_shares {
-                *secret_share = secret_share.homomorphic_add(tweak).unwrap();
+                *secret_share = secret_share.homomorphic_add(tweak).non_zero().unwrap();
             }
-            frost_poly = frost_poly.homomorphic_add(tweak).unwrap();
+            shared_key = shared_key.homomorphic_add(tweak).non_zero().unwrap();
         }
 
         if let Some(mul_tweak) = mul_tweak {
-            frost_poly.homomorphic_mul(mul_tweak);
-             for secret_share in &mut secret_shares {
-                secret_share.homomorphic_mul(mul_tweak);
+            shared_key = shared_key.homomorphic_mul(mul_tweak);
+            for secret_share in &mut secret_shares {
+                *secret_share = secret_share.homomorphic_mul(mul_tweak);
             }
         }
 
-        let mut xonly_poly = frost_poly.into_xonly();
+        let mut xonly_shared_key = shared_key.into_xonly();
         let mut xonly_secret_shares = secret_shares.into_iter().map(|secret_share| secret_share.into_xonly()).collect::<Vec<_>>();
 
         if let Some(tweak) = xonly_add_tweak {
-            xonly_poly = xonly_poly.xonly_homomorphic_add(tweak).unwrap();
+            xonly_shared_key = xonly_shared_key.homomorphic_add(tweak).non_zero().unwrap().into_xonly();
             for secret_share in &mut xonly_secret_shares {
-                *secret_share = secret_share.xonly_homomorphic_add(tweak).unwrap();
+                *secret_share = secret_share.homomorphic_add(tweak).non_zero().unwrap().into_xonly();
             }
         }
 
         if let Some(xonly_mul_tweak) = xonly_mul_tweak {
-            xonly_poly.xonly_homomorphic_mul(xonly_mul_tweak);
+            xonly_shared_key = xonly_shared_key.homomorphic_mul(xonly_mul_tweak).into_xonly();
             for secret_share in &mut xonly_secret_shares {
-                secret_share.xonly_homomorphic_mul(xonly_mul_tweak);
+                *secret_share = secret_share.homomorphic_mul(xonly_mul_tweak).into_xonly();
             }
         }
 
         for secret_share in &xonly_secret_shares {
-            assert_eq!(secret_share.shared_key(), xonly_poly.key(), "shared key doesn't match");
+            assert_eq!(secret_share.shared_key(), xonly_shared_key.key(), "shared key doesn't match");
         }
 
         // use a boolean mask for which t participants are signers
@@ -92,13 +92,13 @@ proptest! {
         let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
 
         let coord_signing_session = proto.coordinator_sign_session(
-            &xonly_poly,
+            &xonly_shared_key,
             public_nonces,
             message
         );
 
         let party_signing_session = proto.party_sign_session(
-            xonly_poly.key(),
+            xonly_shared_key.key(),
             coord_signing_session.parties(),
             coord_signing_session.agg_binonce(),
             message,
@@ -112,7 +112,7 @@ proptest! {
                 secret_nonces.remove(&secret_share.index()).unwrap()
             );
             assert!(proto.verify_signature_share(
-                &xonly_poly,
+                &xonly_shared_key,
                 &coord_signing_session,
                 secret_share.index(),
                 sig)
@@ -125,7 +125,7 @@ proptest! {
         );
 
         assert!(proto.schnorr.verify(
-            &xonly_poly.key(),
+            &xonly_shared_key.key(),
             message,
             &combined_sig
         ));
