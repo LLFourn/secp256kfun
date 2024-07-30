@@ -63,7 +63,7 @@ impl CoordinatorSignSession {
     serde(crate = "crate::fun::serde")
 )]
 pub struct PartySignSession {
-    pub(crate) shared_key: Point<EvenY>,
+    pub(crate) public_key: Point<EvenY>,
     pub(crate) parties: BTreeSet<Scalar<Public>>,
     pub(crate) challenge: Scalar<Public, Zero>,
     pub(crate) binonce_needs_negation: bool,
@@ -75,5 +75,10 @@ impl PartySignSession {
     /// The final nonce that will actually appear in the signature
     pub fn final_nonce(&self) -> Point<EvenY> {
         self.final_nonce
+    }
+
+    /// The public key the session was started under
+    pub fn public_key(&self) -> Point<EvenY> {
+        self.public_key
     }
 }

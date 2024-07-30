@@ -62,8 +62,8 @@ impl<Z> HashInto for Nonce<Z> {
 
 impl Nonce<Zero> {
     /// Adds a bunch of binonces together (one for each party signing usually).
-    pub fn aggregate(nonces: impl Iterator<Item = Nonce<impl ZeroChoice>>) -> Self {
-        let agg = nonces.fold([Point::zero(); 2], |acc, nonce| {
+    pub fn aggregate(nonces: impl IntoIterator<Item = Nonce>) -> Self {
+        let agg = nonces.into_iter().fold([Point::zero(); 2], |acc, nonce| {
             [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
         });
 

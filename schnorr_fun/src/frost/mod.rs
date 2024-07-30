@@ -703,20 +703,31 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         Ok((secret_share_with_image, keygen.frost_poly))
     }
 
+    /// Aggregate the nonces of the signers so you can start a [`party_sign_session`] without a
+    /// coordinator.
+    ///
+    /// [`party_sign_session`]: Self::party_sign_session
+    pub fn aggregate_binonces(
+        &self,
+        nonces: impl IntoIterator<Item = Nonce>,
+    ) -> binonce::Nonce<Zero> {
+        binonce::Nonce::aggregate(nonces)
+    }
+
     /// Start party signing session
     pub fn party_sign_session(
         &self,
-        shared_key: Point<EvenY>,
+        public_key: Point<EvenY>,
         parties: BTreeSet<PartyIndex>,
-        agg_binonce: Nonce<Zero>,
+        agg_binonce: binonce::Nonce<Zero>,
         message: Message,
     ) -> PartySignSession {
-        let binding_coeff = self.binding_coefficient(shared_key, agg_binonce, message);
+        let binding_coeff = self.binding_coefficient(public_key, agg_binonce, message);
         let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
-        let challenge = self.schnorr.challenge(&final_nonce, &shared_key, message);
+        let challenge = self.schnorr.challenge(&final_nonce, &public_key, message);
 
         PartySignSession {
-            shared_key,
+            public_key,
             parties,
             binding_coeff,
             challenge,
@@ -736,22 +747,22 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// If the number of nonces is less than the threshold.
     pub fn coordinator_sign_session(
         &self,
-        frost_poly: &SharedKey<EvenY>,
+        shared_key: &SharedKey<EvenY>,
         mut nonces: BTreeMap<PartyIndex, Nonce>,
         message: Message,
     ) -> CoordinatorSignSession {
-        if nonces.len() < frost_poly.threshold() {
+        if nonces.len() < shared_key.threshold() {
             panic!("nonces' length was less than the threshold");
         }
 
         let agg_binonce = binonce::Nonce::aggregate(nonces.values().cloned());
 
-        let binding_coeff = self.binding_coefficient(frost_poly.key(), agg_binonce, message);
+        let binding_coeff = self.binding_coefficient(shared_key.key(), agg_binonce, message);
         let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
 
         let challenge = self
             .schnorr
-            .challenge(&final_nonce, &frost_poly.key(), message);
+            .challenge(&final_nonce, &shared_key.key(), message);
 
         for nonce in nonces.values_mut() {
             nonce.conditional_negate(binonce_needs_negation);
@@ -799,7 +810,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &PairedSecretShare<EvenY>,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        if session.shared_key != secret_share.shared_key() {
+        if session.public_key != secret_share.shared_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
         }
         let secret_share = secret_share.secret_share();
