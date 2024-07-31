@@ -1,3 +1,7 @@
+use crate::Point;
+
+use super::ZeroChoice;
+
 /// Every `T` of a [`Point<T,S,Z>`] implements the `PointType` trait.
 ///
 /// There are several different point types.
@@ -16,6 +20,14 @@ pub trait PointType:
 
     /// Whether the point type is normalized or not (i.e. not [`NonNormal`])
     fn is_normalized() -> bool;
+
+    /// Cast a point that is not of this type to this type.
+    ///
+    /// This is useful internally for doing very generic things and shouldn't be used in
+    /// applications.
+    fn cast_point<T: PointType, S, Z: ZeroChoice>(
+        point: Point<T, S, Z>,
+    ) -> Option<Point<Self, S, Z>>;
 }
 
 /// A Fully Normalized Point. Internally `Normal` points are represented using
@@ -72,12 +84,45 @@ impl Normalized for EvenY {}
 impl Normalized for Normal {}
 impl Normalized for BasePoint {}
 
-impl<N: Normalized> PointType for N {
+impl PointType for Normal {
     type NegationType = Normal;
 
     #[inline(always)]
     fn is_normalized() -> bool {
         true
+    }
+
+    fn cast_point<T: PointType, S, Z: ZeroChoice>(
+        point: Point<T, S, Z>,
+    ) -> Option<Point<Self, S, Z>> {
+        Some(point.normalize())
+    }
+}
+
+impl PointType for EvenY {
+    type NegationType = Normal;
+
+    fn is_normalized() -> bool {
+        true
+    }
+
+    fn cast_point<T: PointType, S, Z: ZeroChoice>(
+        point: Point<T, S, Z>,
+    ) -> Option<Point<Self, S, Z>> {
+        let (point, needs_negation) = point.non_zero()?.into_point_with_even_y();
+        if needs_negation {
+            return None;
+        }
+
+        // we don't want to allow creating Point<EvenY, Public, Zero>
+        if Z::is_zero() {
+            return None;
+        }
+
+        // we already checked it's not zero
+        let point = Z::cast_point(point).expect("infallible");
+
+        Some(point)
     }
 }
 
@@ -87,5 +132,25 @@ impl PointType for NonNormal {
     #[inline(always)]
     fn is_normalized() -> bool {
         false
+    }
+
+    fn cast_point<T: PointType, S, Z: ZeroChoice>(
+        point: Point<T, S, Z>,
+    ) -> Option<Point<Self, S, Z>> {
+        Some(point.non_normal())
+    }
+}
+
+impl PointType for BasePoint {
+    type NegationType = Normal;
+
+    fn is_normalized() -> bool {
+        true
+    }
+
+    fn cast_point<T: PointType, S, Z: ZeroChoice>(
+        _point: Point<T, S, Z>,
+    ) -> Option<Point<Self, S, Z>> {
+        None
     }
 }

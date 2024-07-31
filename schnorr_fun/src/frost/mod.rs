@@ -99,14 +99,14 @@
 //! # let nonce3 = NonceKeyPair::random(&mut rand::thread_rng());
 //! // share your public nonce with the other signing participant(s) receive public nonces
 //! # let received_nonce3 = nonce3.public();
-//! // 🐙 the coordinator has received these
+//! // 🐙 the coordinator has received the nonces
 //! let nonces = BTreeMap::from_iter([(my_index, my_nonce.public()), (party_index3, received_nonce3)]);
 //! let coord_session = frost.coordinator_sign_session(&xonly_shared_key, nonces, message);
 //! // Parties receive the agg_nonce from the coordiantor and the list of perties
 //! let agg_binonce = coord_session.agg_binonce();
 //! let parties = coord_session.parties();
 //! // start a sign session with these nonces for a message
-//! let sign_session = frost.party_sign_session(xonly_my_secret_share.shared_key(),parties, agg_binonce, message);
+//! let sign_session = frost.party_sign_session(xonly_my_secret_share.public_key(),parties, agg_binonce, message);
 //! // create a partial signature using our secret share and secret nonce
 //! let my_sig_share = frost.sign(&sign_session, &xonly_my_secret_share, my_nonce);
 //! # let sig_share3 = frost.sign(&sign_session, &xonly_secret_share3, nonce3);
@@ -118,7 +118,7 @@
 //!     [(my_index, my_sig_share), (party_index3, sig_share3)].into()
 //! )?;
 //! assert!(frost.schnorr.verify(
-//!     &xonly_shared_key.key(),
+//!     &xonly_shared_key.public_key(),
 //!     message,
 //!     &combined_sig
 //! ));
@@ -452,7 +452,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
         session_id: &[u8],
     ) -> R {
         let sid_len = (session_id.len() as u64).to_be_bytes();
-        let pk_bytes = paired_secret_share.shared_key().to_xonly_bytes();
+        let pk_bytes = paired_secret_share.public_key().to_xonly_bytes();
 
         let rng: R = derive_nonce_rng!(
             nonce_gen => self.nonce_gen(),
@@ -620,6 +620,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
                 .map(|coef| coef.normalize())
                 .collect(),
         )
+        .non_zero()
         .ok_or(NewKeyGenError::ZeroFrostKey)?;
 
         Ok(KeyGen {
@@ -698,7 +699,8 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             share: total_secret_share,
         };
 
-        let secret_share_with_image = PairedSecretShare::new(secret_share, keygen.frost_poly.key());
+        let secret_share_with_image =
+            PairedSecretShare::new(secret_share, keygen.frost_poly.public_key());
 
         Ok((secret_share_with_image, keygen.frost_poly))
     }
@@ -757,12 +759,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 
         let agg_binonce = binonce::Nonce::aggregate(nonces.values().cloned());
 
-        let binding_coeff = self.binding_coefficient(shared_key.key(), agg_binonce, message);
+        let binding_coeff = self.binding_coefficient(shared_key.public_key(), agg_binonce, message);
         let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
 
         let challenge = self
             .schnorr
-            .challenge(&final_nonce, &shared_key.key(), message);
+            .challenge(&final_nonce, &shared_key.public_key(), message);
 
         for nonce in nonces.values_mut() {
             nonce.conditional_negate(binonce_needs_negation);
@@ -810,7 +812,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         secret_share: &PairedSecretShare<EvenY>,
         secret_nonce: NonceKeyPair,
     ) -> Scalar<Public, Zero> {
-        if session.public_key != secret_share.shared_key() {
+        if session.public_key != secret_share.public_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
         }
         let secret_share = secret_share.secret_share();

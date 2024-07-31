@@ -64,7 +64,7 @@ proptest! {
         }
 
         for secret_share in &xonly_secret_shares {
-            assert_eq!(secret_share.shared_key(), xonly_shared_key.key(), "shared key doesn't match");
+            assert_eq!(secret_share.public_key(), xonly_shared_key.public_key(), "shared key doesn't match");
         }
 
         // use a boolean mask for which t participants are signers
@@ -98,7 +98,7 @@ proptest! {
         );
 
         let party_signing_session = proto.party_sign_session(
-            xonly_shared_key.key(),
+            xonly_shared_key.public_key(),
             coord_signing_session.parties(),
             coord_signing_session.agg_binonce(),
             message,
@@ -126,7 +126,7 @@ proptest! {
 
         assert_eq!(proto.verify_and_combine_signature_shares(&xonly_shared_key, &coord_signing_session, signatures), Ok(combined_sig.clone()));
         assert!(proto.schnorr.verify(
-            &xonly_shared_key.key(),
+            &xonly_shared_key.public_key(),
             message,
             &combined_sig
         ));

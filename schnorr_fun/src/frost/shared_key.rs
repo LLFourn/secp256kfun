@@ -3,7 +3,7 @@ use core::{marker::PhantomData, ops::Deref};
 use alloc::vec::Vec;
 use secp256kfun::{poly, prelude::*};
 
-use super::PartyIndex;
+use super::{PairedSecretShare, PartyIndex, SecretShare};
 /// A polynomial
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -31,20 +31,33 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         poly::point::eval(&self.point_polynomial, index)
     }
 
+    /// "pair" a secret share that belongs to this shared key so you can keep track of tweaks to the
+    /// public key and the secret share together.
+    ///
+    /// Returns `None` if the secret share is not a valid share of this key.
+    pub fn pair_secret_share(&self, secret_share: SecretShare) -> Option<PairedSecretShare<T, Z>> {
+        if self.verification_share(secret_share.index) != g!(secret_share.share * G) {
+            return None;
+        }
+
+        Some(PairedSecretShare::new(secret_share, self.public_key()))
+    }
+
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
     pub fn threshold(&self) -> usize {
         self.point_polynomial.len()
     }
 
-    /// The public image of the key's polynomial on the elliptic curve.
+    /// The internal public polynomial coefficients that defines the public key and the share structure.
     ///
-    /// Note: the first coefficient (index `0`) is guaranteed to be non-zero but the coefficients
-    /// may be.
+    /// To get the first coefficient of the polynomial typed correctly call [`public_key`].
+    ///
+    /// [`public_key`]: Self::public_key
     pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
         self.point_polynomial.clone()
     }
 
-    /// Type unsafe: you have to make sure the polynomial fits the type parameters
+    /// ☠ Type unsafe: you have to make sure the polynomial fits the type parameters
     fn from_inner(point_polynomial: Vec<Point<Normal, Public, Zero>>) -> Self {
         SharedKey {
             point_polynomial,
@@ -134,6 +147,19 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         let poly = poly::point::normalize(poly);
         SharedKey::from_inner(poly.collect())
     }
+
+    /// The public key that has been shared.
+    ///
+    /// This is using *public key* in a rather loose sense. Unless it's a `SharedKey<EvenY>` then it
+    /// won't be usable as an actual Schnorr [BIP340] public key.
+    ///
+    /// [BIP340]: https://bips.xyz/340
+    pub fn public_key(&self) -> Point<T, Public, Z> {
+        // SAFETY: we hold the first coefficient to match the type parameters always
+        let public_key = Z::cast_point(self.point_polynomial[0]).expect("invariant");
+        let public_key = T::cast_point(public_key).expect("invariant");
+        public_key
+    }
 }
 
 impl SharedKey<Normal> {
@@ -143,49 +169,31 @@ impl SharedKey<Normal> {
     ///
     /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly(mut self) -> SharedKey<EvenY> {
-        let needs_negation = !self.key().is_y_even();
+        let needs_negation = !self.public_key().is_y_even();
         if needs_negation {
             self = self.homomorphic_negate();
-            debug_assert!(self.key().is_y_even());
+            debug_assert!(self.public_key().is_y_even());
         }
 
         SharedKey::from_inner(self.point_polynomial)
     }
 }
 
-impl<Z: ZeroChoice> SharedKey<Normal, Z> {
-    /// The key that was shared with this polynomial defining the sharing.
-    ///
-    /// This is the first coefficient of the polynomial.
-    pub fn key(&self) -> Point<Normal, Public, Z> {
-        Z::cast_point(self.point_polynomial[0]).expect("invariant")
-    }
-    /// Constructor to create a from a vector of points where each item represent a polynomial
+impl SharedKey<Normal, Zero> {
+    /// Constructor to create a shared key from a vector of points where each item represent a polynomial
     /// coefficient.
     ///
-    /// Returns `None` if the first coefficient is [`Point::zero`].
-    pub fn from_poly(poly: Vec<Point<Normal, Public, Zero>>) -> Option<Self> {
+    /// The resulting shared key will be `SharedKey<Normal, Zero>`. It's up to the caller to do the zero check with [`non_zero`]
+    ///
+    /// [`non_zero`]: Self::non_zero
+    pub fn from_poly(poly: Vec<Point<Normal, Public, Zero>>) -> Self {
         if poly.is_empty() {
-            return None;
+            // an empty polynomial is represented as a vector with a single zero item to avoid
+            // panics
+            return Self::from_poly(vec![Point::zero()]);
         }
 
-        if poly[0].is_zero() && !Z::is_zero() {
-            return None;
-        }
-
-        Some(SharedKey::from_inner(poly))
-    }
-}
-
-impl SharedKey<EvenY> {
-    /// The public key that would have signatures verified against for this shared key.
-    pub fn key(&self) -> Point<EvenY> {
-        let (even_y_point, _needs_negation) = self.point_polynomial[0]
-            .non_zero()
-            .expect("invariant")
-            .into_point_with_even_y();
-        assert!(!_needs_negation);
-        even_y_point
+        SharedKey::from_inner(poly)
     }
 }
 

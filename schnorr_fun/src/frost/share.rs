@@ -20,8 +20,7 @@ use secp256kfun::{poly, prelude::*};
 /// shares that way. Share identification can help for keeping track of them and distinguishing shares
 /// when there are only a small number of them.
 ///
-/// The backup format is enabled with the `share_backup` feature and accessed with the `FromStr`
-/// and `Display`.
+/// The backup format is enabled with the `share_backup` feature and accessed with the feature enabled methods.
 ///
 /// ### Index in human readable part
 ///
@@ -132,9 +131,9 @@ secp256kfun::impl_display_debug_serialize! {
 ///
 /// This is useful so you can keep track of tweaks to the secret value and tweaks to the shared key
 /// in tandem.
-pub struct PairedSecretShare<T: Normalized, Z = NonZero> {
+pub struct PairedSecretShare<T: PointType, Z = NonZero> {
     secret_share: SecretShare,
-    shared_key: Point<T, Public, Z>,
+    public_key: Point<T, Public, Z>,
 }
 
 impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
@@ -148,9 +147,9 @@ impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
         self.secret_share.share
     }
 
-    /// The shared key this secret is for
-    pub fn shared_key(&self) -> Point<T, Public, Z> {
-        self.shared_key
+    /// The public key that this secert share is a part of
+    pub fn public_key(&self) -> Point<T, Public, Z> {
+        self.public_key
     }
 
     /// The inner un-paired secret share.
@@ -162,12 +161,16 @@ impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
     }
 }
 
-impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
-    /// Pair a secret share to a shared key
-    pub fn new(secret_share: SecretShare, shared_key: Point<T, Public, Z>) -> Self {
+impl<Z: ZeroChoice, T: PointType> PairedSecretShare<T, Z> {
+    /// Pair a secret share to a shared key.
+    ///
+    /// Users are meant to use [`pair_secret_share`] to create this
+    ///
+    /// [`pair_secret_share`]: SharedKey::pair_secret_share
+    pub(crate) fn new(secret_share: SecretShare, public_key: Point<T, Public, Z>) -> Self {
         Self {
             secret_share,
-            shared_key,
+            public_key,
         }
     }
 
@@ -195,12 +198,12 @@ impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
     ) -> PairedSecretShare<Normal, Zero> {
         let PairedSecretShare {
             mut secret_share,
-            shared_key,
+            public_key: shared_key,
         } = self;
         let shared_key = g!(shared_key + tweak * G).normalize();
         secret_share.share = s!(secret_share.share + tweak);
         PairedSecretShare {
-            shared_key,
+            public_key: shared_key,
             secret_share,
         }
     }
@@ -209,7 +212,7 @@ impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
     #[must_use]
     pub fn homomorphic_mul(self, tweak: Scalar<impl Secrecy>) -> PairedSecretShare<Normal, Z> {
         let PairedSecretShare {
-            shared_key,
+            public_key: shared_key,
             mut secret_share,
         } = self;
 
@@ -217,7 +220,7 @@ impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
         secret_share.share = s!(tweak * self.secret_share.share);
         PairedSecretShare {
             secret_share,
-            shared_key,
+            public_key: shared_key,
         }
     }
 
@@ -230,13 +233,13 @@ impl<Z: ZeroChoice, T: Normalized> PairedSecretShare<T, Z> {
     pub fn non_zero(self) -> Option<PairedSecretShare<T, NonZero>> {
         Some(PairedSecretShare {
             secret_share: self.secret_share,
-            shared_key: self.shared_key.non_zero()?,
+            public_key: self.public_key.non_zero()?,
         })
     }
 
     /// Is the key this is a share of zero
     pub fn is_zero(&self) -> bool {
-        self.shared_key.is_zero()
+        self.public_key.is_zero()
     }
 }
 
@@ -244,12 +247,12 @@ impl PairedSecretShare<Normal, NonZero> {
     /// Create an XOnly secert share where the paired image is always an `EvenY` point.
     #[must_use]
     pub fn into_xonly(mut self) -> PairedSecretShare<EvenY> {
-        let (shared_key, needs_negation) = self.shared_key.into_point_with_even_y();
+        let (shared_key, needs_negation) = self.public_key.into_point_with_even_y();
         self.secret_share.share.conditional_negate(needs_negation);
 
         PairedSecretShare {
             secret_share: self.secret_share,
-            shared_key,
+            public_key: shared_key,
         }
     }
 }
@@ -488,7 +491,7 @@ mod test {
             let chosen = shares.choose_multiple(&mut rng, threshold).cloned()
                 .map(|paired_share| paired_share.secret_share).collect::<Vec<_>>();
             let secret = SecretShare::recover_secret(&chosen);
-            prop_assert_eq!(g!(secret * G), frost_poly.key());
+            prop_assert_eq!(g!(secret * G), frost_poly.public_key());
         }
     }
 }
