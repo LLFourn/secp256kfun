@@ -53,8 +53,8 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     /// To get the first coefficient of the polynomial typed correctly call [`public_key`].
     ///
     /// [`public_key`]: Self::public_key
-    pub fn point_polynomial(&self) -> Vec<Point<Normal, Public, Zero>> {
-        self.point_polynomial.clone()
+    pub fn point_polynomial(&self) -> &[Point<Normal, Public, Zero>] {
+        &self.point_polynomial
     }
 
     /// ☠ Type unsafe: you have to make sure the polynomial fits the type parameters
@@ -157,8 +157,8 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     pub fn public_key(&self) -> Point<T, Public, Z> {
         // SAFETY: we hold the first coefficient to match the type parameters always
         let public_key = Z::cast_point(self.point_polynomial[0]).expect("invariant");
-        let public_key = T::cast_point(public_key).expect("invariant");
-        public_key
+        T::cast_point(public_key).expect("invariant")
+    }
     }
 }
 
