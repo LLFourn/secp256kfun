@@ -106,6 +106,7 @@ impl PointType for EvenY {
         true
     }
 
+    /// ⚠ This will always return `None` if trying to cast from a `Zero` marked point (even if the actual point is not `Zero`)
     fn cast_point<T: PointType, S, Z: ZeroChoice>(
         point: Point<T, S, Z>,
     ) -> Option<Point<Self, S, Z>> {

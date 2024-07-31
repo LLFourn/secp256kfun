@@ -159,6 +159,38 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         let public_key = Z::cast_point(self.point_polynomial[0]).expect("invariant");
         T::cast_point(public_key).expect("invariant")
     }
+
+    /// Encodes a `SharedKey` as the compressed encoding of each underlying polynomial coefficient
+    ///
+    /// i.e. call [`Point::to_bytes`] on each coefficent starting with the constant term. Note that
+    /// even if it's a `SharedKey<EvenY>` the first coefficient (A.K.A the public key) will still be
+    /// encoded as 33 bytes.
+    ///
+    /// ⚠ Unlike other secp256kfun things this doesn't exactly match the serde/bincode
+    /// implemenations which will length prefix the list of points.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.point_polynomial.len() * 33);
+        for coeff in &self.point_polynomial {
+            bytes.extend(coeff.to_bytes())
+        }
+        bytes
+    }
+
+    /// Decodes a `SharedKey<T,Z>` (for any `T` and `Z`) from a slice.
+    ///
+    /// Returns `None` if the bytes don't represent points or if the first coefficient doesn't
+    /// satisfy the constraints of `T` and `Z`.
+    pub fn from_slice(bytes: &[u8]) -> Option<Self> {
+        let mut poly = vec![];
+        for point_bytes in bytes.chunks(33) {
+            poly.push(Point::from_slice(point_bytes)?);
+        }
+
+        // check first coefficient satisfies both type parameters
+        let first_coeff = Z::cast_point(poly[0])?;
+        let _check = T::cast_point(first_coeff)?;
+
+        Some(Self::from_inner(poly))
     }
 }
 
@@ -196,19 +228,18 @@ impl SharedKey<Normal, Zero> {
         SharedKey::from_inner(poly)
     }
 }
-
 #[cfg(feature = "bincode")]
-impl crate::fun::bincode::Decode for SharedKey<Normal> {
+impl<T: PointType, Z: ZeroChoice> crate::fun::bincode::Decode for SharedKey<T, Z> {
     fn decode<D: secp256kfun::bincode::de::Decoder>(
         decoder: &mut D,
     ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
+        use secp256kfun::bincode::error::DecodeError;
         let poly = Vec::<Point<Normal, Public, Zero>>::decode(decoder)?;
-
-        if poly[0].is_zero() {
-            return Err(secp256kfun::bincode::error::DecodeError::Other(
-                "first coefficient of a frost polynomial can't be zero",
-            ));
-        }
+        let first_coeff = Z::cast_point(poly[0]).ok_or(DecodeError::Other(
+            "zero public key for non-zero shared key",
+        ))?;
+        let _check = T::cast_point(first_coeff)
+            .ok_or(DecodeError::Other("odd-y public key for even-y shared key"))?;
 
         Ok(SharedKey {
             point_polynomial: poly,
@@ -218,18 +249,20 @@ impl crate::fun::bincode::Decode for SharedKey<Normal> {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> crate::fun::serde::Deserialize<'de> for SharedKey<Normal> {
+impl<'de, T: PointType, Z: ZeroChoice> crate::fun::serde::Deserialize<'de> for SharedKey<T, Z> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: secp256kfun::serde::Deserializer<'de>,
     {
         let poly = Vec::<Point<Normal, Public, Zero>>::deserialize(deserializer)?;
 
-        if poly[0].is_zero() {
-            return Err(crate::fun::serde::de::Error::custom(
-                "first coefficient of a frost polynomial can't be zero",
-            ));
-        }
+        let first_coeff = Z::cast_point(poly[0]).ok_or(crate::fun::serde::de::Error::custom(
+            "zero public key for non-zero shared key",
+        ))?;
+
+        let _check = T::cast_point(first_coeff).ok_or(crate::fun::serde::de::Error::custom(
+            "odd-y public key for even-y shared key",
+        ))?;
 
         Ok(Self {
             point_polynomial: poly,
@@ -239,4 +272,139 @@ impl<'de> crate::fun::serde::Deserialize<'de> for SharedKey<Normal> {
 }
 
 #[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal>);
+crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal, Zero>);
+#[cfg(feature = "bincode")]
+crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal, NonZero>);
+#[cfg(feature = "bincode")]
+crate::fun::bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn bincode_encoding_decoding_roundtrip() {
+        use crate::fun::bincode;
+        let poly_zero = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(0 * G),
+                g!(1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+            ])
+            .collect(),
+        );
+        let poly_one = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+                g!(3 * G).mark_zero(),
+            ])
+            .collect(),
+        )
+        .non_zero()
+        .unwrap()
+        .into_xonly();
+
+        let poly_minus_one = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(-1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+                g!(3 * G).mark_zero(),
+            ])
+            .collect(),
+        )
+        .non_zero()
+        .unwrap();
+
+        let bytes_poly_zero =
+            bincode::encode_to_vec(&poly_zero, bincode::config::standard()).unwrap();
+        let bytes_poly_one =
+            bincode::encode_to_vec(&poly_one, bincode::config::standard()).unwrap();
+        let bytes_poly_minus_one =
+            bincode::encode_to_vec(&poly_minus_one, bincode::config::standard()).unwrap();
+
+        let (poly_zero_got, _) = bincode::decode_from_slice::<SharedKey<Normal, Zero>, _>(
+            &bytes_poly_zero,
+            bincode::config::standard(),
+        )
+        .unwrap();
+        let (poly_one_got, _) = bincode::decode_from_slice::<SharedKey<EvenY, NonZero>, _>(
+            &bytes_poly_one,
+            bincode::config::standard(),
+        )
+        .unwrap();
+
+        let (poly_minus_one_got, _) = bincode::decode_from_slice::<SharedKey<Normal, NonZero>, _>(
+            &bytes_poly_minus_one,
+            bincode::config::standard(),
+        )
+        .unwrap();
+
+        assert!(bincode::decode_from_slice::<SharedKey<Normal, NonZero>, _>(
+            &bytes_poly_zero,
+            bincode::config::standard(),
+        )
+        .is_err());
+
+        assert!(bincode::decode_from_slice::<SharedKey<EvenY, NonZero>, _>(
+            &bytes_poly_minus_one,
+            bincode::config::standard(),
+        )
+        .is_err());
+
+        assert_eq!(poly_zero_got, poly_zero);
+        assert_eq!(poly_one_got, poly_one);
+        assert_eq!(poly_minus_one_got, poly_minus_one);
+    }
+
+    #[test]
+    fn to_bytes_from_slice_roudtrip() {
+        let poly_zero = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(0 * G),
+                g!(1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+            ])
+            .collect(),
+        );
+        let poly_one = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+                g!(3 * G).mark_zero(),
+            ])
+            .collect(),
+        )
+        .non_zero()
+        .unwrap()
+        .into_xonly();
+
+        let poly_minus_one = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(-1 * G).mark_zero(),
+                g!(2 * G).mark_zero(),
+                g!(3 * G).mark_zero(),
+            ])
+            .collect(),
+        )
+        .non_zero()
+        .unwrap();
+
+        let bytes_poly_zero = poly_zero.to_bytes();
+        let bytes_poly_one = poly_one.to_bytes();
+        let bytes_poly_minus_one = poly_minus_one.to_bytes();
+
+        let poly_zero_got = SharedKey::<Normal, Zero>::from_slice(&bytes_poly_zero[..]).unwrap();
+        let poly_one_got = SharedKey::<EvenY, NonZero>::from_slice(&bytes_poly_one).unwrap();
+        let poly_minus_one_got =
+            SharedKey::<Normal, NonZero>::from_slice(&bytes_poly_minus_one[..]).unwrap();
+
+        assert!(SharedKey::<Normal, NonZero>::from_slice(&bytes_poly_zero[..]).is_none());
+        assert!(SharedKey::<EvenY, NonZero>::from_slice(&bytes_poly_minus_one[..]).is_none());
+
+        assert_eq!(poly_zero_got, poly_zero);
+        assert_eq!(poly_one_got, poly_one);
+        assert_eq!(poly_minus_one_got, poly_minus_one);
+    }
+}
