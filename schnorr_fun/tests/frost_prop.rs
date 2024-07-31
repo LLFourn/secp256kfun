@@ -124,7 +124,7 @@ proptest! {
             signatures.values().cloned()
         );
 
-        assert_eq!(proto.verify_and_combine_signature_shares(&xonly_shared_key, &coord_signing_session, signatures), Ok(combined_sig.clone()));
+        assert_eq!(proto.verify_and_combine_signature_shares(&xonly_shared_key, &coord_signing_session, signatures), Ok(combined_sig));
         assert!(proto.schnorr.verify(
             &xonly_shared_key.public_key(),
             message,

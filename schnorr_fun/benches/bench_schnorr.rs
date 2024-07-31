@@ -49,7 +49,7 @@ fn verify_schnorr(c: &mut Criterion) {
         });
 
         {
-            let sig = sig.clone().set_secrecy::<Secret>();
+            let sig = sig.set_secrecy::<Secret>();
             group.bench_function("fun::schnorr_verify_ct", |b| {
                 b.iter(|| schnorr.verify(verification_key, message, &sig))
             });

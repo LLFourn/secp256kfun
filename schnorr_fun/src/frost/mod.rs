@@ -504,10 +504,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
                     .map(|(gen_party_index, (party_shares, pop))| {
                         (
                             *gen_party_index,
-                            (
-                                party_shares.remove(receiver_party_index).unwrap(),
-                                pop.clone(),
-                            ),
+                            (party_shares.remove(receiver_party_index).unwrap(), *pop),
                         )
                     })
                     .collect::<BTreeMap<_, _>>();
