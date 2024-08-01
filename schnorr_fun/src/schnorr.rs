@@ -1,10 +1,8 @@
-use secp256kfun::nonce::NoNonces;
+use secp256kfun::{hash::Hash32, nonce::NoNonces};
 
 use crate::{
     fun::{
-        derive_nonce,
-        digest::{generic_array::typenum::U32, Digest},
-        g,
+        derive_nonce, g,
         hash::{HashAdd, Tag},
         marker::*,
         nonce::NonceGen,
@@ -32,7 +30,7 @@ pub struct Schnorr<CH, NG = NoNonces> {
     challenge_hash: CH,
 }
 
-impl<H: Digest<OutputSize = U32> + Tag + Default> Schnorr<H, NoNonces> {
+impl<H: Hash32> Schnorr<H, NoNonces> {
     /// Create a new instance that can only verify signatures.
     ///
     /// # Example
@@ -110,7 +108,7 @@ where
 
 impl<CH, NG> Schnorr<CH, NG>
 where
-    CH: Digest<OutputSize = U32> + Clone,
+    CH: Hash32,
     NG: NonceGen,
 {
     /// Sign a message using a secret key and a particular nonce derivation scheme.
@@ -148,7 +146,7 @@ where
     }
 }
 
-impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
+impl<NG, CH: Hash32> Schnorr<CH, NG> {
     /// Returns the challenge hash being used to sign/verify signatures
     pub fn challenge_hash(&self) -> CH {
         self.challenge_hash.clone()
