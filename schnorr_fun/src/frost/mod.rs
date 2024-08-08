@@ -108,13 +108,12 @@
 //! // start a sign session with these nonces for a message
 //! let sign_session = frost.party_sign_session(xonly_my_secret_share.public_key(),parties, agg_binonce, message);
 //! // create a partial signature using our secret share and secret nonce
-//! let my_sig_share = frost.sign(&sign_session, &xonly_my_secret_share, my_nonce);
-//! # let sig_share3 = frost.sign(&sign_session, &xonly_secret_share3, nonce3);
+//! let my_sig_share = sign_session.sign(&xonly_my_secret_share, my_nonce);
+//! # let sig_share3 = sign_session.sign(&xonly_secret_share3, nonce3);
 //! // 🐙 receive the partial signature(s) from the other participant(s).
 //! // 🐙 combine signature shares into a single signature that is valid under the FROST key
-//! let combined_sig = frost.verify_and_combine_signature_shares(
+//! let combined_sig = coord_session.verify_and_combine_signature_shares(
 //!     &xonly_shared_key,
-//!     &coord_session,
 //!     [(my_index, my_sig_share), (party_index3, sig_share3)].into()
 //! )?;
 //! assert!(frost.schnorr.verify(
@@ -740,7 +739,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     /// The corodinator must have collected nonces from each of the signers and pass them in as `nonces`.
     /// From there
     ///
-    ///
     /// # Panics
     ///
     /// If the number of nonces is less than the threshold.
@@ -792,149 +790,6 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         )
         .public()
     }
-
-    /// Generates a signature share under the frost key using a secret share.
-    ///
-    /// The `secret_share` is taken as a `PairedSecretShare<EvenY>` to guarantee that the secret is aligned with an `EvenY` point.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a signature share
-    ///
-    /// ## Panics
-    ///
-    /// Panics if the `secret_share` was not part of the signing session
-    pub fn sign(
-        &self,
-        session: &PartySignSession,
-        secret_share: &PairedSecretShare<EvenY>,
-        secret_nonce: NonceKeyPair,
-    ) -> Scalar<Public, Zero> {
-        if session.public_key != secret_share.public_key() {
-            panic!("the share's shared key is not the same as the shared key of the session");
-        }
-        let secret_share = secret_share.secret_share();
-        let lambda =
-            poly::eval_basis_poly_at_0(secret_share.index, session.parties.iter().cloned());
-        let [mut r1, mut r2] = secret_nonce.secret;
-        r1.conditional_negate(session.binonce_needs_negation);
-        r2.conditional_negate(session.binonce_needs_negation);
-
-        let b = &session.binding_coeff;
-        let x = secret_share.share;
-        let c = &session.challenge;
-        s!(r1 + (r2 * b) + lambda * x * c).public()
-    }
-
-    /// Verify a partial signature for a participant for a particular session.
-    ///
-    /// The `verification_share` is usually derived from either [`SharedKey::verification_share`] or
-    /// [`PairedSecretShare::verification_share`].
-    ///
-    /// ## Return Value
-    ///
-    /// Returns `true` if signature share is valid.
-    pub fn verify_signature_share(
-        &self,
-        verification_share: VerificationShare<impl PointType>,
-        session: &CoordinatorSignSession,
-        signature_share: Scalar<Public, Zero>,
-    ) -> Result<(), SignatureShareInvalid> {
-        let X = verification_share.share_image;
-        let index = verification_share.index;
-
-        // We need to know the verification share was generated against the session's key for
-        // further validity to have any meaning.
-        if verification_share.public_key != session.public_key() {
-            return Err(SignatureShareInvalid { index });
-        }
-
-        let s = signature_share;
-        let lambda =
-            poly::eval_basis_poly_at_0(verification_share.index, session.nonces.keys().cloned());
-        let c = &session.challenge;
-        let b = &session.binding_coeff;
-        debug_assert!(
-            session.parties().contains(&index),
-            "the party is not part of the session"
-        );
-        let [R1, R2] = session
-            .nonces
-            .get(&index)
-            .ok_or(SignatureShareInvalid { index })?
-            .0;
-        let valid = g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero();
-        if valid {
-            Ok(())
-        } else {
-            Err(SignatureShareInvalid { index })
-        }
-    }
-
-    /// Combines signature shares from each party into the final signature.
-    ///
-    /// You can use this instead of calling [`verify_signature_share`] on each share.
-    ///
-    /// [`verify_signature_share`]: Self::verify_signature_share
-    pub fn verify_and_combine_signature_shares(
-        &self,
-        shared_key: &SharedKey<EvenY>,
-        session: &CoordinatorSignSession,
-        signature_shares: BTreeMap<PartyIndex, Scalar<Public, Zero>>,
-    ) -> Result<Signature, VerifySignatureSharesError> {
-        if signature_shares.len() < shared_key.threshold() {
-            return Err(VerifySignatureSharesError::NotEnough {
-                missing: shared_key.threshold() - signature_shares.len(),
-            });
-        }
-        for (party_index, signature_share) in &signature_shares {
-            self.verify_signature_share(
-                shared_key.verification_share(*party_index),
-                session,
-                *signature_share,
-            )
-            .map_err(VerifySignatureSharesError::Invalid)?;
-        }
-
-        let signature = self
-            .combine_signature_shares(session.final_nonce(), signature_shares.values().cloned());
-
-        Ok(signature)
-    }
-
-    /// Combine a vector of signatures shares into an aggregate signature given the final nonce.
-    ///
-    /// You can get `final_nonce` from either of the [`CoordinatorSignSession`] or the [`PartySignSession`].
-    ///
-    /// This method does not check the validity of the `signature_shares`
-    /// but if you have verified each signature share
-    /// individually the output will be a valid siganture under the `frost_key` and message provided
-    /// when starting the session.
-    ///
-    /// Alternatively you can use [`verify_and_combine_signature_shares`] which checks and combines
-    /// the signature shares.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a schnorr [`Signature`] on the message
-    ///
-    /// [`CoordinatorSignSession`]: CoordinatorSignSession::final_nonce
-    /// [`PartySignSession`]: PartySignSession::final_nonce
-    /// [`verify_and_combine_signature_shares`]: Self::verify_and_combine_signature_shares
-    pub fn combine_signature_shares(
-        &self,
-        final_nonce: Point<EvenY>,
-        signature_shares: impl IntoIterator<Item = Scalar<Public, Zero>>,
-    ) -> Signature {
-        let sum_s = signature_shares
-            .into_iter()
-            .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
-            .unwrap_or(Scalar::zero());
-        Signature {
-            R: final_nonce,
-            s: sum_s,
-        }
-    }
 }
 
 /// Constructor for a Frost instance using deterministic nonce generation.
@@ -981,47 +836,6 @@ where
 {
     Frost::default()
 }
-
-/// Error for a signature share being invalid
-#[derive(Clone, Debug, PartialEq)]
-pub struct SignatureShareInvalid {
-    index: PartyIndex,
-}
-
-/// Error returned by [`Frost::verify_and_combine_signature_shares`]
-#[derive(Clone, Debug, PartialEq)]
-pub enum VerifySignatureSharesError {
-    /// Not enough signature shares to compelte the signature
-    NotEnough {
-        /// How many are missing
-        missing: usize,
-    },
-    /// One of the signature shars was invalid
-    Invalid(SignatureShareInvalid),
-}
-
-impl core::fmt::Display for VerifySignatureSharesError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match self {
-            VerifySignatureSharesError::NotEnough { missing } => {
-                write!(f, "not enough signature shares have been collected to finish the signature. You need {missing} more.")
-            }
-            VerifySignatureSharesError::Invalid(invalid) => write!(f, "{invalid}"),
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for VerifySignatureSharesError {}
-
-impl core::fmt::Display for SignatureShareInvalid {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "signature share from party {} was invalid", self.index)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for SignatureShareInvalid {}
 
 #[cfg(test)]
 mod test {

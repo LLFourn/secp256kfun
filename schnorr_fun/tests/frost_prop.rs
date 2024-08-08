@@ -106,24 +106,22 @@ proptest! {
 
         let mut signatures = BTreeMap::default();
         for secret_share in secret_shares_of_signers  {
-            let sig = proto.sign(
-                &party_signing_session,
+            let sig = party_signing_session.sign(
                 &secret_share,
                 secret_nonces.remove(&secret_share.index()).unwrap()
             );
-            assert_eq!(proto.verify_signature_share(
+            assert_eq!(coord_signing_session.verify_signature_share(
                 secret_share.verification_share(),
-                &coord_signing_session,
                 sig), Ok(())
             );
             signatures.insert(secret_share.index(), sig);
         }
-        let combined_sig = proto.combine_signature_shares(
+        let combined_sig = coord_signing_session.combine_signature_shares(
             coord_signing_session.final_nonce(),
             signatures.values().cloned()
         );
 
-        assert_eq!(proto.verify_and_combine_signature_shares(&xonly_shared_key, &coord_signing_session, signatures), Ok(combined_sig));
+        assert_eq!(coord_signing_session.verify_and_combine_signature_shares(&xonly_shared_key, signatures), Ok(combined_sig));
         assert!(proto.schnorr.verify(
             &xonly_shared_key.public_key(),
             message,
