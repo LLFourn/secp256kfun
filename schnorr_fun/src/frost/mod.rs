@@ -28,7 +28,7 @@
 //! # let public_poly2 = poly::scalar::to_point_poly(&secret_poly2);
 //! # let public_poly3 = poly::scalar::to_point_poly(&secret_poly3);
 //!
-//! // Party indicies can be any non-zero scalar
+//! // Party indices can be any non-zero scalar
 //! let my_index = s!(1).public();
 //! let party_index2 = s!(2).public();
 //! let party_index3 = s!(3).public();
@@ -86,7 +86,7 @@
 //! // received their secret shares correctly and have the same view of the protocol
 //! // (e.g same keygen_id). If they all give the OK then we're ready to use the key and do some signing!
 //! // With signing we'll have at least one party be the "coordinator" (steps marked with 🐙)
-//! // In this example we'll be the coordiantor (but it doesn't have to be on eof the signing parties)
+//! // In this example we'll be the coordinator (but it doesn't have to be on eof the signing parties)
 //! let xonly_shared_key = shared_key.into_xonly(); // this is the key signatures will be valid under
 //! let xonly_my_secret_share = my_secret_share.into_xonly();
 //! # let xonly_secret_share3 = secret_share3.into_xonly();
@@ -169,7 +169,7 @@
 //! let mut poly_rng = derive_nonce_rng! {
 //!     // use synthetic nonces that add system randomness in
 //!     nonce_gen => nonce_gen,
-//!     // Use your static secret key to add further protectoin
+//!     // Use your static secret key to add further protection
 //!     secret => static_secret_key,
 //!     // session id should be unique for each key generation session
 //!     public => ["frost_key_session_1053"],
@@ -221,8 +221,8 @@ use secp256kfun::{
 /// It is used in interpolation and computation of the shared secret.
 ///
 /// This index can be any non-zero [`Scalar`], but must be unique between parties.
-/// In most cases it will make sense to use simple indicies `s!(1), s!(2), ...` for smaller backups.
-/// Other applications may desire to use indicies corresponding to pre-existing keys or identifiers.
+/// In most cases it will make sense to use simple indices `s!(1), s!(2), ...` for smaller backups.
+/// Other applications may desire to use indices corresponding to pre-existing keys or identifiers.
 pub type PartyIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
@@ -269,7 +269,7 @@ impl<H, NG> Frost<H, NG> {
         &self.nonce_gen
     }
 
-    /// Create our secret shares to be shared with other participants using pre-existing indicies
+    /// Create our secret shares to be shared with other participants using pre-existing indices
     ///
     /// Each secret share needs to be securely communicated to the intended participant.
     ///
@@ -386,9 +386,9 @@ impl core::fmt::Display for FinishKeyGenError {
 impl std::error::Error for FinishKeyGenError {}
 
 impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
-    /// Convienence method to generate secret shares and proof-of-possession to be shared with other
+    /// Convenience method to generate secret shares and proof-of-possession to be shared with other
     /// participants. Each secret share needs to be securely communicated to the intended
-    /// participant but the proof of possession (shnorr signature) can be publically shared with
+    /// participant but the proof of possession (schnorr signature) can be publically shared with
     /// everyone.
     pub fn create_shares_and_pop(
         &self,
@@ -438,7 +438,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     /// must not reuse the session id, the resulting rng or anything derived from that rng again.
     ///
     /// 💡 Before using this function with a deterministic rng write a short justification as to why
-    /// you beleive your session id will be unique per signing attempt. Perhaps include it as a
+    /// you believe your session id will be unique per signing attempt. Perhaps include it as a
     /// comment next to the call. Note **it must be unique even across signing attempts for the same
     /// or different messages**.
     ///
@@ -537,7 +537,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
 }
 
 impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Generate an id for the key generation by hashing the party indicies and their point
+    /// Generate an id for the key generation by hashing the party indices and their point
     /// polynomials
     pub fn keygen_id(&self, keygen: &KeyGen) -> [u8; 32] {
         let mut keygen_hash = self.keygen_id_hash.clone();
@@ -650,7 +650,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         Ok(keygen.frost_poly)
     }
 
-    /// Combine all receieved shares into your long-lived secret share.
+    /// Combine all received shares into your long-lived secret share.
     ///
     /// The `secret_shares` includes your own share as well as shares from each of the other
     /// parties. The `secret_shares` are validated to match the expected result by evaluating their
@@ -773,6 +773,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             final_nonce,
             challenge,
             nonces,
+            public_key: shared_key.public_key(),
         }
     }
 
@@ -802,7 +803,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
     ///
     /// ## Panics
     ///
-    /// Panics if the shah
+    /// Panics if the `secret_share` was not part of the signing session
     pub fn sign(
         &self,
         session: &PartySignSession,
@@ -825,27 +826,42 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
         s!(r1 + (r2 * b) + lambda * x * c).public()
     }
 
-    /// Verify a partial signature for a participant at `index` (from zero).
+    /// Verify a partial signature for a participant for a particular session.
+    ///
+    /// The `verification_share` is usually derived from either [`SharedKey::verification_share`] or
+    /// [`PairedSecretShare::verification_share`].
     ///
     /// ## Return Value
     ///
     /// Returns `true` if signature share is valid.
     pub fn verify_signature_share(
         &self,
-        shared_key: &SharedKey<EvenY>,
+        verification_share: VerificationShare<impl PointType>,
         session: &CoordinatorSignSession,
-        index: PartyIndex,
         signature_share: Scalar<Public, Zero>,
     ) -> Result<(), SignatureShareInvalid> {
+        let X = verification_share.share_image;
+        let index = verification_share.index;
+
+        // We need to know the verification share was generated against the session's key for
+        // further validity to have any meaning.
+        if verification_share.public_key != session.public_key() {
+            return Err(SignatureShareInvalid { index });
+        }
+
         let s = signature_share;
-        let lambda = poly::eval_basis_poly_at_0(index, session.nonces.keys().cloned());
+        let lambda =
+            poly::eval_basis_poly_at_0(verification_share.index, session.nonces.keys().cloned());
         let c = &session.challenge;
         let b = &session.binding_coeff;
-        let X = shared_key.verification_share(index);
+        debug_assert!(
+            session.parties().contains(&index),
+            "the party is not part of the session"
+        );
         let [R1, R2] = session
             .nonces
             .get(&index)
-            .expect("verifying party index that is not part of frost signing coalition")
+            .ok_or(SignatureShareInvalid { index })?
             .0;
         let valid = g!(R1 + b * R2 + (c * lambda) * X - s * G).is_zero();
         if valid {
@@ -872,8 +888,12 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
             });
         }
         for (party_index, signature_share) in &signature_shares {
-            self.verify_signature_share(shared_key, session, *party_index, *signature_share)
-                .map_err(VerifySignatureSharesError::Invalid)?;
+            self.verify_signature_share(
+                shared_key.verification_share(*party_index),
+                session,
+                *signature_share,
+            )
+            .map_err(VerifySignatureSharesError::Invalid)?;
         }
 
         let signature = self

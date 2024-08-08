@@ -112,9 +112,8 @@ proptest! {
                 secret_nonces.remove(&secret_share.index()).unwrap()
             );
             assert_eq!(proto.verify_signature_share(
-                &xonly_shared_key,
+                secret_share.verification_share(),
                 &coord_signing_session,
-                secret_share.index(),
                 sig), Ok(())
             );
             signatures.insert(secret_share.index(), sig);

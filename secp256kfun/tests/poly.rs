@@ -58,8 +58,8 @@ fn test_add_scalar_poly() {
 #[test]
 fn test_recover_public_poly() {
     let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-    let indicies = vec![s!(1).public(), s!(3).public(), s!(2).public()];
-    let points = indicies
+    let indices = vec![s!(1).public(), s!(3).public(), s!(2).public()];
+    let points = indices
         .clone()
         .into_iter()
         .map(|index| {
@@ -80,14 +80,14 @@ fn test_recover_public_poly() {
 #[test]
 fn test_recover_overdetermined_poly() {
     let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-    let indicies = vec![
+    let indices = vec![
         s!(1).public(),
         s!(2).public(),
         s!(3).public(),
         s!(4).public(),
         s!(5).public(),
     ];
-    let points = indicies
+    let points = indices
         .clone()
         .into_iter()
         .map(|index| (index, poly::point::eval(&poly, index.public()).normalize()))
@@ -114,10 +114,10 @@ fn test_recover_zero_poly() {
 
 #[test]
 fn test_reconstruct_shared_secret() {
-    let indicies = vec![s!(1).public(), s!(2).public(), s!(3).public()];
+    let indices = vec![s!(1).public(), s!(2).public(), s!(3).public()];
     let scalar_poly = vec![s!(42), s!(53), s!(64)];
 
-    let secret_shares: Vec<_> = indicies
+    let secret_shares: Vec<_> = indices
         .clone()
         .into_iter()
         .map(|index| (index, poly::scalar::eval(&scalar_poly, index)))

@@ -1,10 +1,13 @@
 use core::{marker::PhantomData, ops::Deref};
 
+use super::{PairedSecretShare, PartyIndex, SecretShare, VerificationShare};
 use alloc::vec::Vec;
 use secp256kfun::{poly, prelude::*};
 
-use super::{PairedSecretShare, PartyIndex, SecretShare};
-/// A polynomial
+/// A polynomial where the first coefficient (constant term) is the image of a secret `Scalar` that
+/// has been shared in a [Shamir's secret sharing] structure.
+///
+/// [Shamir's secret sharing]: https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -24,19 +27,13 @@ pub struct SharedKey<T = Normal, Z = NonZero> {
 }
 
 impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
-    /// The verification shares of each party in the key.
-    ///
-    /// The verification share is the image of their secret share.
-    pub fn verification_share(&self, index: PartyIndex) -> Point<NonNormal, Public, Zero> {
-        poly::point::eval(&self.point_polynomial, index)
-    }
-
     /// "pair" a secret share that belongs to this shared key so you can keep track of tweaks to the
     /// public key and the secret share together.
     ///
     /// Returns `None` if the secret share is not a valid share of this key.
     pub fn pair_secret_share(&self, secret_share: SecretShare) -> Option<PairedSecretShare<T, Z>> {
-        if self.verification_share(secret_share.index) != g!(secret_share.share * G) {
+        let share_image = poly::point::eval(&self.point_polynomial, secret_share.index);
+        if share_image != g!(secret_share.share * G) {
             return None;
         }
 
@@ -131,23 +128,6 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         SharedKey::from_inner(self.point_polynomial)
     }
 
-    /// Create a shared key from a subset of verification shares.
-    ///
-    /// If all the verification shares are correct and you have at least a threshold of them then
-    /// you'll get the right answer. If you put in a wrong share you won't get the right answer!
-    ///
-    /// ## Security
-    ///
-    /// ⚠ You can't just take any random points you want and pass them in here and hope it's secure.
-    /// They need to be from a securely generated key.
-    pub fn from_verification_shares(
-        shares: &[(PartyIndex, Point<impl PointType, Public, impl ZeroChoice>)],
-    ) -> SharedKey<Normal, Z> {
-        let poly = poly::point::interpolate(shares);
-        let poly = poly::point::normalize(poly);
-        SharedKey::from_inner(poly.collect())
-    }
-
     /// The public key that has been shared.
     ///
     /// This is using *public key* in a rather loose sense. Unless it's a `SharedKey<EvenY>` then it
@@ -162,12 +142,12 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
 
     /// Encodes a `SharedKey` as the compressed encoding of each underlying polynomial coefficient
     ///
-    /// i.e. call [`Point::to_bytes`] on each coefficent starting with the constant term. Note that
+    /// i.e. call [`Point::to_bytes`] on each coefficient starting with the constant term. Note that
     /// even if it's a `SharedKey<EvenY>` the first coefficient (A.K.A the public key) will still be
     /// encoded as 33 bytes.
     ///
     /// ⚠ Unlike other secp256kfun things this doesn't exactly match the serde/bincode
-    /// implemenations which will length prefix the list of points.
+    /// implementations which will length prefix the list of points.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.point_polynomial.len() * 33);
         for coeff in &self.point_polynomial {
@@ -227,7 +207,43 @@ impl SharedKey<Normal, Zero> {
 
         SharedKey::from_inner(poly)
     }
+
+    /// Create a shared key from a subset of share images.
+    ///
+    /// If all the share images are correct and you have at least a threshold of them then you'll
+    /// get the original shared key. If you put in a wrong share you won't get the right answer and
+    /// there will be no error.
+    ///
+    /// Note that a "share image" is not a concept that we really use in the core of this library
+    /// but you can get one from a share with [`SecretShare::share_image`].
+    ///
+    /// ## Security
+    ///
+    /// ⚠ You can't just take any points you want and pass them in here and hope it's secure.
+    /// They need to be from a securely generated key.
+    pub fn from_share_images(
+        shares: &[(PartyIndex, Point<impl PointType, Public, impl ZeroChoice>)],
+    ) -> Self {
+        let poly = poly::point::interpolate(shares);
+        let poly = poly::point::normalize(poly);
+        SharedKey::from_inner(poly.collect())
+    }
 }
+
+impl SharedKey<EvenY> {
+    /// The verification shares of each party in the key.
+    ///
+    /// The verification share is the image of their secret share.
+    pub fn verification_share(&self, index: PartyIndex) -> VerificationShare<NonNormal> {
+        let share_image = poly::point::eval(&self.point_polynomial, index);
+        VerificationShare {
+            index,
+            share_image,
+            public_key: self.public_key(),
+        }
+    }
+}
+
 #[cfg(feature = "bincode")]
 impl<T: PointType, Z: ZeroChoice> crate::fun::bincode::Decode for SharedKey<T, Z> {
     fn decode<D: secp256kfun::bincode::de::Decoder>(

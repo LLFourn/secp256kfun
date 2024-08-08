@@ -52,7 +52,7 @@ use secp256kfun::{poly, prelude::*};
 pub struct SecretShare {
     /// The scalar index for this secret share, usually this is a small number but it can take any
     /// value (other than 0).
-    pub index: Scalar<Public>,
+    pub index: PartyIndex,
     /// The secret scalar which is the output of the polynomial evaluated at `index`
     pub share: Scalar<Secret, Zero>,
 }
@@ -66,11 +66,6 @@ impl SecretShare {
             .collect::<alloc::vec::Vec<_>>();
 
         poly::scalar::interpolate_and_eval_poly_at_0(&index_and_secret[..])
-    }
-
-    /// The verification share for this secret share.
-    pub fn verification_share(&self) -> Point<NonNormal, Public, Zero> {
-        g!(self.share * G)
     }
 
     /// Encodes the secret share to 64 bytes. The first 32 is the index and the second 32 is the
@@ -89,6 +84,11 @@ impl SecretShare {
             index: Scalar::from_slice(&bytes[..32])?,
             share: Scalar::from_slice(&bytes[32..])?,
         })
+    }
+
+    /// Get the image of the secret share.
+    pub fn share_image(&self) -> Point<NonNormal, Public, Zero> {
+        g!(self.share * G)
     }
 }
 
@@ -243,7 +243,7 @@ impl<Z: ZeroChoice, T: PointType> PairedSecretShare<T, Z> {
     }
 }
 
-impl PairedSecretShare<Normal, NonZero> {
+impl PairedSecretShare<Normal> {
     /// Create an XOnly secert share where the paired image is always an `EvenY` point.
     #[must_use]
     pub fn into_xonly(mut self) -> PairedSecretShare<EvenY> {
@@ -255,6 +255,38 @@ impl PairedSecretShare<Normal, NonZero> {
             public_key: shared_key,
         }
     }
+}
+
+impl PairedSecretShare<EvenY> {
+    /// Get the verification for the inner secret share.
+    pub fn verification_share(&self) -> VerificationShare<NonNormal> {
+        VerificationShare {
+            index: self.index(),
+            share_image: self.secret_share.share_image(),
+            public_key: self.public_key,
+        }
+    }
+}
+
+/// This is the public image of a [`SecretShare`]. You can't sign with it but you can verify
+/// signature shares created by the secret share.
+///
+/// A `VerificationShare` is the same as a [`share_image`] except it's generated against an `EvenY`
+/// key that can actually have signatures verified against it.
+///
+/// A `VerificationShare` is not designed to be persisted. The verification share will only be able
+/// to verify signatures against the key that it was generated from. Tweaking a key with
+/// `homomorphic_add` etc will invalidate the verification share.
+///
+/// [`share_image`]: SecretShare::share_image
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VerificationShare<T: PointType> {
+    /// The index of the share in the secret sharing
+    pub index: PartyIndex,
+    /// The image of the secret share
+    pub share_image: Point<T, Public, Zero>,
+    /// The public key that this is a share of
+    pub public_key: Point<EvenY>,
 }
 
 #[cfg(feature = "share_backup")]

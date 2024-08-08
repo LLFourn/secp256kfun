@@ -53,11 +53,11 @@ pub mod scalar {
     pub fn interpolate_and_eval_poly_at_0(
         x_and_y: &[(Scalar<Public>, Scalar<impl Secrecy, impl ZeroChoice>)],
     ) -> Scalar<Secret, Zero> {
-        let indicies = x_and_y.iter().map(|(index, _)| *index);
+        let indices = x_and_y.iter().map(|(index, _)| *index);
         x_and_y
             .iter()
             .map(|(index, secret)| {
-                let lambda = eval_basis_poly_at_0(*index, indicies.clone());
+                let lambda = eval_basis_poly_at_0(*index, indices.clone());
                 s!(secret * lambda)
             })
             .fold(s!(0), |interpolated_poly, scaled_basis_poly| {
@@ -189,7 +189,7 @@ pub mod point {
 
     /// Find the coefficients of the polynomial that interpolates a set of points (index, point).
     ///
-    /// Panics if the indicies are not unique.
+    /// Panics if the indices are not unique.
     ///
     /// A vector with a tail of zero coefficients means the interpolation was overdetermined.
     #[allow(clippy::type_complexity)]

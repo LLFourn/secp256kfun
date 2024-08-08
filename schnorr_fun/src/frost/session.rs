@@ -18,10 +18,12 @@ use secp256kfun::prelude::*;
     serde(crate = "crate::fun::serde")
 )]
 pub struct CoordinatorSignSession {
+    pub(crate) public_key: Point<EvenY>,
     pub(crate) binding_coeff: Scalar<Public>,
-    pub(crate) agg_binonce: binonce::Nonce<Zero>,
     pub(crate) final_nonce: Point<EvenY>,
     pub(crate) challenge: Scalar<Public, Zero>,
+
+    pub(crate) agg_binonce: binonce::Nonce<Zero>,
     pub(crate) nonces: BTreeMap<PartyIndex, binonce::Nonce>,
 }
 
@@ -44,6 +46,11 @@ impl CoordinatorSignSession {
     pub fn final_nonce(&self) -> Point<EvenY> {
         self.final_nonce
     }
+
+    /// The public key this session was started under
+    pub fn public_key(&self) -> Point<EvenY> {
+        self.public_key
+    }
 }
 
 /// The session that is used to sign a message.
@@ -64,11 +71,12 @@ impl CoordinatorSignSession {
 )]
 pub struct PartySignSession {
     pub(crate) public_key: Point<EvenY>,
-    pub(crate) parties: BTreeSet<Scalar<Public>>,
-    pub(crate) challenge: Scalar<Public, Zero>,
-    pub(crate) binonce_needs_negation: bool,
     pub(crate) binding_coeff: Scalar<Public>,
     pub(crate) final_nonce: Point<EvenY>,
+    pub(crate) challenge: Scalar<Public, Zero>,
+
+    pub(crate) parties: BTreeSet<Scalar<Public>>,
+    pub(crate) binonce_needs_negation: bool,
 }
 
 impl PartySignSession {
