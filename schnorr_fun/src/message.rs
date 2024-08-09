@@ -1,4 +1,9 @@
-use secp256kfun::{digest::Digest, hash::HashInto, marker::*, Slice};
+use secp256kfun::{
+    digest::{self},
+    hash::HashInto,
+    marker::*,
+    Slice,
+};
 
 /// A message to be signed.
 ///
@@ -57,11 +62,11 @@ impl<'a, S: Secrecy> Message<'a, S> {
 }
 
 impl<S> HashInto for Message<'_, S> {
-    fn hash_into(self, hash: &mut impl Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         if let Some(prefix) = self.app_tag {
             let mut padded_prefix = [0u8; 64];
             padded_prefix[..prefix.len()].copy_from_slice(prefix.as_bytes());
-            hash.update(padded_prefix);
+            hash.update(&padded_prefix);
         }
         hash.update(<&[u8]>::from(self.bytes));
     }
@@ -70,7 +75,7 @@ impl<S> HashInto for Message<'_, S> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use sha2::Sha256;
+    use sha2::{Digest, Sha256};
 
     #[test]
     fn message_hash_into() {

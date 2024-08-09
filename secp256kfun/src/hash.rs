@@ -1,13 +1,13 @@
 //! Generally useful utilities related to hashing.
 //!
-//! In general, things in here are defined against the [`Digest`] trait from the [`RustCrypto`] project.
+//! In general, things in here are defined against the [`digest`] crate from the [`RustCrypto`] project.
 //!
-//! [`Digest`]: digest::Digest
 //! [`RustCrypto`]: https://github.com/RustCrypto/hashes
+use digest::FixedOutput;
+
 use crate::digest::{
     crypto_common::BlockSizeUser,
-    generic_array::typenum::{PartialDiv, Unsigned},
-    Digest,
+    generic_array::typenum::{PartialDiv, Unsigned, U32},
 };
 /// Extension trait for some cryptotraphic function that can be domain separated by a tag.
 /// Used for hashes and [nonce generators][`NonceGen`].
@@ -52,7 +52,7 @@ pub trait Tag: Sized {
     fn tag_vectored<'a>(self, tag_components: impl Iterator<Item = &'a [u8]> + Clone) -> Self;
 }
 
-impl<H: BlockSizeUser + Digest + Default + Clone> Tag for H
+impl<H: BlockSizeUser + FixedOutput + Default + Clone> Tag for H
 where
     <H as BlockSizeUser>::BlockSize: PartialDiv<H::OutputSize>,
     <<H as BlockSizeUser>::BlockSize as PartialDiv<H::OutputSize>>::Output: Unsigned,
@@ -63,7 +63,7 @@ where
             for component in tag_components {
                 hash.update(component);
             }
-            hash.finalize()
+            hash.finalize_fixed()
         };
         let fill_block =
             <<H::BlockSize as PartialDiv<H::OutputSize>>::Output as Unsigned>::to_usize();
@@ -82,13 +82,15 @@ where
 /// # Example
 ///
 /// ```
-/// use digest::Digest;
-/// use secp256kfun::hash::{HashAdd, HashInto};
+/// use secp256kfun::{
+///     digest::{self, Digest},
+///     hash::{HashAdd, HashInto},
+/// };
 /// #[derive(Clone, Copy)]
 /// struct CryptoData([u8; 42]);
 ///
 /// impl HashInto for CryptoData {
-///     fn hash_into(self, hash: &mut impl digest::Digest) {
+///     fn hash_into(self, hash: &mut impl digest::Update) {
 ///         hash.update(&self.0[..])
 ///     }
 /// }
@@ -98,17 +100,17 @@ where
 /// ```
 pub trait HashInto {
     /// Asks the item to convert itself to bytes and add itself to `hash`.
-    fn hash_into(self, hash: &mut impl digest::Digest);
+    fn hash_into(self, hash: &mut impl digest::Update);
 }
 
 impl HashInto for u8 {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
-        hash.update([self])
+    fn hash_into(self, hash: &mut impl digest::Update) {
+        hash.update(&[self])
     }
 }
 
 impl<'a, T: HashInto + Clone> HashInto for &'a T {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         self.clone().hash_into(hash)
     }
 }
@@ -117,7 +119,7 @@ impl<'a, T> HashInto for &'a [T]
 where
     &'a T: HashInto,
 {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         for item in self {
             item.hash_into(hash)
         }
@@ -125,28 +127,43 @@ where
 }
 
 impl HashInto for &str {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         hash.update(self.as_bytes())
     }
 }
 
 impl<T: HashInto, const N: usize> HashInto for [T; N] {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         for item in self {
             item.hash_into(hash)
         }
     }
 }
 
-/// Extension trait for [`digest::Digest`] to make adding things to the hash convenient.
+#[cfg(feature = "alloc")]
+impl<K: HashInto, V: HashInto> HashInto for alloc::collections::BTreeMap<K, V> {
+    fn hash_into(self, hash: &mut impl digest::Update) {
+        for (key, value) in self {
+            key.hash_into(hash);
+            value.hash_into(hash);
+        }
+    }
+}
+
+/// Extension trait for [`digest::Update`] to make adding things to the hash convenient.
 pub trait HashAdd {
     /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
     fn add<HI: HashInto>(self, data: HI) -> Self;
 }
 
-impl<D: Digest> HashAdd for D {
+impl<D: digest::Update> HashAdd for D {
     fn add<HI: HashInto>(mut self, data: HI) -> Self {
         data.hash_into(&mut self);
         self
     }
 }
+
+/// A convienient basket of trait impls
+pub trait Hash32: digest::FixedOutput<OutputSize = U32> + Clone + Default + Tag {}
+
+impl<H> Hash32 for H where H: digest::FixedOutput<OutputSize = U32> + Clone + Default + Tag {}

@@ -4,7 +4,7 @@ use core::{
     marker::PhantomData,
     ops::{AddAssign, MulAssign, SubAssign},
 };
-use digest::{generic_array::typenum::U32, Digest};
+use digest::{self, generic_array::typenum::U32};
 use rand_core::RngCore;
 
 /// A secp256k1 scalar (an integer mod the curve order)
@@ -255,9 +255,9 @@ impl Scalar<Secret, NonZero> {
     /// #     secp256kfun::hex::decode_array("8131e6f4b45754f2c90bd06688ceeabc0c45055460729928b4eecf11026a9e2d").unwrap()
     /// # );
     /// ```
-    pub fn from_hash(hash: impl Digest<OutputSize = U32>) -> Self {
+    pub fn from_hash(hash: impl digest::FixedOutput<OutputSize = U32>) -> Self {
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(hash.finalize().as_slice());
+        bytes.copy_from_slice(hash.finalize_fixed().as_slice());
         Scalar::from_bytes_mod_order(bytes)
             .non_zero()
             .expect("computationally unreachable")
@@ -383,8 +383,8 @@ impl<S, Z> core::ops::Neg for &Scalar<S, Z> {
 }
 
 impl<S, Z> HashInto for Scalar<S, Z> {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
-        hash.update(self.to_bytes())
+    fn hash_into(self, hash: &mut impl digest::Update) {
+        hash.update(&self.to_bytes())
     }
 }
 

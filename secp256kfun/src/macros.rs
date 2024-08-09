@@ -179,10 +179,10 @@ macro_rules! derive_nonce_rng {
         use core::borrow::Borrow;
         use $crate::nonce::NonceGen;
         use $crate::rand_core::SeedableRng;
-        use $crate::digest::Digest;
+        use $crate::digest::FixedOutput;
 
         let hash = $nonce_gen.begin_derivation($secret.borrow())$(.add($public))+;
-        <$rng>::from_seed(hash.finalize().into())
+        <$rng>::from_seed(hash.finalize_fixed().into())
     }}
 }
 

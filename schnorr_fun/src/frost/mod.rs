@@ -203,10 +203,8 @@ use alloc::{
 };
 use core::num::NonZeroU32;
 use secp256kfun::{
-    derive_nonce_rng,
-    digest::{generic_array::typenum::U32, Digest},
-    g,
-    hash::{HashAdd, Tag},
+    derive_nonce_rng, g,
+    hash::{Hash32, HashAdd, Tag},
     marker::*,
     nonce::{self, NonceGen},
     poly,
@@ -245,7 +243,7 @@ pub struct Frost<H, NG> {
 
 impl<H, NG> Default for Frost<H, NG>
 where
-    H: Default + Tag + Digest<OutputSize = U32>,
+    H: Hash32,
     NG: Default + Tag + Clone,
 {
     fn default() -> Self {
@@ -384,8 +382,8 @@ impl core::fmt::Display for FinishKeyGenError {
 #[cfg(feature = "std")]
 impl std::error::Error for FinishKeyGenError {}
 
-impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
-    /// Convenience method to generate secret shares and proof-of-possession to be shared with other
+impl<H: Hash32, NG: NonceGen> Frost<H, NG> {
+    /// Convienence method to generate secret shares and proof-of-possession to be shared with other
     /// participants. Each secret share needs to be securely communicated to the intended
     /// participant but the proof of possession (schnorr signature) can be publically shared with
     /// everyone.
@@ -535,19 +533,19 @@ impl<H: Digest<OutputSize = U32> + Clone, NG: NonceGen> Frost<H, NG> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
-    /// Generate an id for the key generation by hashing the party indices and their point
+impl<H: Hash32, NG> Frost<H, NG> {
+    /// Generate an id for the key generation by hashing the party indicies and their point
     /// polynomials
     pub fn keygen_id(&self, keygen: &KeyGen) -> [u8; 32] {
         let mut keygen_hash = self.keygen_id_hash.clone();
-        keygen_hash.update((keygen.point_polys.len() as u32).to_be_bytes());
+        keygen_hash.update((keygen.point_polys.len() as u32).to_be_bytes().as_ref());
         for (index, poly) in &keygen.point_polys {
-            keygen_hash.update(index.to_bytes());
+            keygen_hash.update(index.to_bytes().as_ref());
             for point in poly {
-                keygen_hash.update(point.to_bytes());
+                keygen_hash.update(point.to_bytes().as_ref());
             }
         }
-        keygen_hash.finalize().into()
+        keygen_hash.finalize_fixed().into()
     }
 
     /// Collect all the public polynomials commitments into a [`KeyGen`] to produce a [`SharedKey`].
@@ -803,7 +801,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> Frost<H, NG> {
 /// ```
 pub fn new_with_deterministic_nonces<H>() -> Frost<H, nonce::Deterministic<H>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    H: Hash32,
 {
     Frost::default()
 }
@@ -821,7 +819,7 @@ where
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> Frost<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    H: Hash32,
     R: RngCore + Default + Clone,
 {
     Frost::default()
@@ -832,7 +830,7 @@ where
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
 pub fn new_without_nonce_generation<H>() -> Frost<H, nonce::NoNonces>
 where
-    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    H: Hash32,
 {
     Frost::default()
 }

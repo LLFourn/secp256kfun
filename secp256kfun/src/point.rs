@@ -498,13 +498,13 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
 }
 
 impl<S, Z> HashInto for Point<Normal, S, Z> {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         hash.update(self.to_bytes().as_ref())
     }
 }
 
 impl<S> HashInto for Point<EvenY, S, NonZero> {
-    fn hash_into(self, hash: &mut impl digest::Digest) {
+    fn hash_into(self, hash: &mut impl digest::Update) {
         hash.update(self.to_xonly_bytes().as_ref())
     }
 }

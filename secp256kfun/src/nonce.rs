@@ -19,7 +19,6 @@
 //! [`derive_nonce!`]: crate::derive_nonce!
 use crate::{hash::*, marker::*, Scalar};
 use core::marker::PhantomData;
-use digest::{generic_array::typenum::U32, Digest};
 use rand_core::RngCore;
 
 /// A helper trait over RNGs that handle internal mutablility.
@@ -167,7 +166,7 @@ pub struct Deterministic<H> {
 /// [`derive_nonce`]: crate::derive_nonce
 pub trait NonceGen {
     /// The type of hash that `begin_derivation` will return.
-    type Hash: Digest<OutputSize = U32>;
+    type Hash: Hash32;
 
     /// Takes a secret [`Scalar`] and outputs a hash. Before turining this hash into the nonce, you
     /// must add a secret input and all the public inputs from the scheme into the hash. So for a
@@ -175,7 +174,7 @@ pub trait NonceGen {
     fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash;
 }
 
-impl<H: Digest<OutputSize = U32> + Clone> NonceGen for Deterministic<H> {
+impl<H: Hash32> NonceGen for Deterministic<H> {
     type Hash = H;
     fn begin_derivation(&self, secret: &Scalar<Secret, impl ZeroChoice>) -> Self::Hash {
         self.nonce_hash.clone().add(secret)
@@ -204,7 +203,7 @@ impl Tag for NoNonces {
 
 impl<H, R> NonceGen for Synthetic<H, R>
 where
-    H: Tag + Digest<OutputSize = U32> + Clone,
+    H: Hash32,
     R: NonceRng,
 {
     type Hash = H;
@@ -213,9 +212,9 @@ where
         let mut aux_bytes = [0u8; 32];
         self.rng.fill_bytes(&mut aux_bytes[..]);
         let mut aux_hash = self.aux_hash.clone();
-        aux_hash.update(aux_bytes);
+        digest::Update::update(&mut aux_hash, &aux_bytes);
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(aux_hash.finalize().as_ref());
+        bytes.copy_from_slice(aux_hash.finalize_fixed().as_ref());
 
         // bitwise xor the hashed randomness with secret
         for (i, byte) in bytes.iter_mut().enumerate() {

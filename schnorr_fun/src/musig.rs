@@ -74,13 +74,11 @@
 use crate::{adaptor::EncryptedSignature, binonce, Message, Schnorr, Signature};
 use alloc::vec::Vec;
 use secp256kfun::{
-    digest::{generic_array::typenum::U32, Digest},
-    g,
-    hash::{HashAdd, Tag},
-    marker::*,
+    hash::{Hash32, HashAdd, Tag},
     nonce::{self, NoNonces, NonceGen},
+    prelude::*,
     rand_core::{RngCore, SeedableRng},
-    s, KeyPair, Point, Scalar, G,
+    KeyPair,
 };
 
 /// The MuSig context.
@@ -265,7 +263,7 @@ impl AggKey<EvenY> {
     }
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
+impl<H: Hash32, NG> MuSig<H, NG> {
     /// Generates a new aggregated key from a list of individual keys.
     ///
     /// Each party can be local (you know the secret key) or remote (you only know the public key).
@@ -290,7 +288,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     /// ```
     pub fn new_agg_key(&self, keys: Vec<Point>) -> AggKey<Normal> {
         let coeff_hash = {
-            let L = self.pk_hash.clone().add(&keys[..]).finalize();
+            let L = self.pk_hash.clone().add(&keys[..]).finalize_fixed();
             self.coeff_hash.clone().add(L.as_slice())
         };
 
@@ -326,7 +324,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
 
 impl<H, NG> MuSig<H, NG>
 where
-    H: Digest<OutputSize = U32> + Clone,
+    H: Hash32,
     NG: NonceGen,
 {
     /// Seed a random number generator to be used for MuSig nonces.
@@ -437,7 +435,7 @@ pub struct SignSession<T = Ordinary> {
     signing_type: T,
 }
 
-impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
+impl<H: Hash32, NG> MuSig<H, NG> {
     /// Start a signing session.
     ///
     /// You must provide the public nonces for this signing session in the correct order.
@@ -674,7 +672,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
 /// ```
 pub fn new_with_deterministic_nonces<H>() -> MuSig<H, nonce::Deterministic<H>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    H: Hash32,
 {
     MuSig::default()
 }
@@ -692,7 +690,7 @@ where
 /// ```
 pub fn new_with_synthetic_nonces<H, R>() -> MuSig<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
 where
-    H: Tag + Digest<OutputSize = U32> + Default + Clone,
+    H: Hash32,
     R: RngCore + Default + Clone,
 {
     MuSig::default()
@@ -703,7 +701,7 @@ where
 /// You can still sign with this instance but you you will have to generate nonces in your own way.
 pub fn new_without_nonce_generation<H>() -> MuSig<H, NoNonces>
 where
-    H: Tag + Digest<OutputSize = U32> + Default,
+    H: Hash32,
 {
     MuSig::default()
 }

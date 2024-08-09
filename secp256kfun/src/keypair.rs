@@ -4,10 +4,10 @@ use crate::{g, marker::*, Point, Scalar, G};
 /// ## Synopsis
 ///
 /// ```
-/// use secp256kfun::{marker::*, KeyPair, Scalar};
+/// use secp256kfun::{prelude::*, KeyPair};
 /// let my_secret_key = Scalar::random(&mut rand::thread_rng());
-/// let my_keypair = KeyPair::<Normal>::new(my_secret_key.clone());
-/// let my_xonly_keypair = KeyPair::<EvenY>::new(my_secret_key);
+/// let my_keypair: KeyPair<Normal> = KeyPair::new(my_secret_key.clone());
+/// let my_xonly_keypair: KeyPair<EvenY> = KeyPair::new_xonly(my_secret_key);
 ///
 /// if my_keypair.public_key().is_y_even() {
 ///     assert_eq!(my_keypair, my_xonly_keypair);
@@ -32,7 +32,7 @@ use crate::{g, marker::*, Point, Scalar, G};
 /// [`Point`]: crate::Point
 /// [`Normal`]: crate::marker::Normal
 /// [`EvenY`]: crate::marker::EvenY
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct KeyPair<T = Normal> {
     sk: Scalar,
     pk: Point<T>,
@@ -71,7 +71,7 @@ impl KeyPair<EvenY> {
     /// use secp256kfun::{g, marker::*, s, KeyPair, Scalar, G};
     ///
     /// let original_secret_key = Scalar::random(&mut rand::thread_rng());
-    /// let keypair = KeyPair::<EvenY>::new(original_secret_key.clone());
+    /// let keypair = KeyPair::new_xonly(original_secret_key.clone());
     ///
     /// assert!(
     ///     &original_secret_key == keypair.secret_key()
@@ -83,7 +83,7 @@ impl KeyPair<EvenY> {
     ///
     /// [`Point`]: crate::Point
     /// [`EvenY`]: crate::marker::EvenY
-    pub fn new(mut secret_key: Scalar) -> Self {
+    pub fn new_xonly(mut secret_key: Scalar) -> Self {
         let pk = Point::even_y_from_scalar_mul(G, &mut secret_key);
         Self { sk: secret_key, pk }
     }
@@ -108,7 +108,7 @@ impl<T> KeyPair<T> {
     /// # Example
     /// ```
     /// use secp256kfun::{KeyPair, Scalar, marker::*};
-    /// let keypair = KeyPair::<Normal>::new(Scalar::random(&mut rand::thread_rng()));
+    /// let keypair = KeyPair::new(Scalar::random(&mut rand::thread_rng()));
     /// let (secret_key, public_key) = keypair.as_tuple();
     pub fn as_tuple(&self) -> (&Scalar, Point<T>)
     where
@@ -154,6 +154,6 @@ crate::impl_fromstr_deserialize! {
     name => "secp256k1 scalar",
     fn from_bytes(bytes: [u8;32]) -> Option<KeyPair<EvenY>> {
         let sk = Scalar::from_bytes(bytes)?.non_zero()?;
-        Some(KeyPair::<EvenY>::new(sk))
+        Some(KeyPair::new_xonly(sk))
     }
 }

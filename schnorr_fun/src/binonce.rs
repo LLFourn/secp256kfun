@@ -55,7 +55,7 @@ impl<Z: ZeroChoice> Nonce<Z> {
 }
 
 impl<Z> HashInto for Nonce<Z> {
-    fn hash_into(self, hash: &mut impl secp256kfun::digest::Digest) {
+    fn hash_into(self, hash: &mut impl secp256kfun::digest::Update) {
         self.0.hash_into(hash)
     }
 }
