@@ -105,7 +105,7 @@ secp256kfun::impl_display_debug_serialize! {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug)]
 #[cfg_attr(
     feature = "bincode",
     derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
@@ -131,9 +131,15 @@ secp256kfun::impl_display_debug_serialize! {
 ///
 /// This is useful so you can keep track of tweaks to the secret value and tweaks to the shared key
 /// in tandem.
-pub struct PairedSecretShare<T: PointType, Z = NonZero> {
+pub struct PairedSecretShare<T = Normal, Z = NonZero> {
     secret_share: SecretShare,
     public_key: Point<T, Public, Z>,
+}
+
+impl<T: PointType, Z> PartialEq for PairedSecretShare<T, Z> {
+    fn eq(&self, other: &Self) -> bool {
+        self.secret_share == other.secret_share && self.public_key == other.public_key
+    }
 }
 
 impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
