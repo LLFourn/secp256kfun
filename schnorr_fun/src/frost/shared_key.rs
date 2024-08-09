@@ -1,14 +1,13 @@
-use core::{marker::PhantomData, ops::Deref};
-
 use super::{PairedSecretShare, PartyIndex, SecretShare, VerificationShare};
 use alloc::vec::Vec;
+use core::{marker::PhantomData, ops::Deref};
 use secp256kfun::{poly, prelude::*};
 
 /// A polynomial where the first coefficient (constant term) is the image of a secret `Scalar` that
 /// has been shared in a [Shamir's secret sharing] structure.
 ///
 /// [Shamir's secret sharing]: https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq)]
 #[cfg_attr(
     feature = "serde",
     derive(crate::fun::serde::Serialize),
@@ -241,6 +240,12 @@ impl SharedKey<EvenY> {
             share_image,
             public_key: self.public_key(),
         }
+    }
+}
+
+impl<T1, Z1, T2, Z2> PartialEq<SharedKey<T2, Z2>> for SharedKey<T1, Z1> {
+    fn eq(&self, other: &SharedKey<T2, Z2>) -> bool {
+        other.point_polynomial == self.point_polynomial
     }
 }
 
