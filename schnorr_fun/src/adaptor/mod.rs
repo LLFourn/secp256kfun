@@ -123,7 +123,7 @@ pub trait Adaptor {
     /// # Example
     /// ```
     /// # use schnorr_fun::{adaptor::Adaptor, fun::Scalar, Schnorr};
-    /// # let schnorr = schnorr_fun::test_instance!();
+    /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let decryption_key = Scalar::random(&mut rand::thread_rng());
     /// let encryption_key = schnorr.encryption_key_for(&decryption_key);
     fn encryption_key_for(&self, decryption_key: &Scalar) -> Point;

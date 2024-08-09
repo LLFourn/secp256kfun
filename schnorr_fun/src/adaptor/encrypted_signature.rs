@@ -48,7 +48,7 @@ mod test {
     fn encrypted_signature_serialization_roundtrip() {
         use super::*;
         use crate::{adaptor::*, fun::Scalar, Message};
-        let schnorr = crate::test_instance!();
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let encryption_key = Point::random(&mut rand::thread_rng());
         let encrypted_signature = schnorr.encrypted_sign(
