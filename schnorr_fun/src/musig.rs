@@ -71,8 +71,7 @@
 //!
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
-pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{adaptor::EncryptedSignature, Message, Schnorr, Signature};
+use crate::{adaptor::EncryptedSignature, binonce, Message, Schnorr, Signature};
 use alloc::vec::Vec;
 use secp256kfun::{
     digest::{generic_array::typenum::U32, Digest},
@@ -116,8 +115,8 @@ impl<H, NG> MuSig<H, NG> {
     /// Generate nonces for creating signatures shares.
     ///
     /// ⚠ You must use a CAREFULLY CHOSEN nonce rng, see [`MuSig::seed_nonce_rng`]
-    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> NonceKeyPair {
-        NonceKeyPair::random(nonce_rng)
+    pub fn gen_nonce<R: RngCore>(&self, nonce_rng: &mut R) -> binonce::NonceKeyPair {
+        binonce::NonceKeyPair::random(nonce_rng)
     }
 }
 
@@ -340,8 +339,8 @@ where
     /// - `agg_key`: the joint public key we are signing under. This can be an `XOnly` or `Normal`.
     ///    It will return the same nonce regardless.
     /// - `secret`: you're secret key as part of `agg_key`. This **must be the secret key you are
-    /// going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
-    /// exactly equal to the secret key you pass to [`sign`] (the MuSig specification requires this).
+    ///    going to sign with**. It cannot be an "untweaked" version of the signing key. It must be
+    ///    exactly equal to the secret key you pass to [`sign`] (the MuSig specification requires this).
     /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///
     /// The application should decide upon a unique `session_id` per call to this function. If the
@@ -430,9 +429,9 @@ pub struct Adaptor {
     bincode(crate = "crate::fun::bincode")
 )]
 pub struct SignSession<T = Ordinary> {
-    b: Scalar<Public, Zero>,
+    b: Scalar<Public>,
     c: Scalar<Public, Zero>,
-    public_nonces: Vec<Nonce>,
+    public_nonces: Vec<binonce::Nonce>,
     R: Point<EvenY>,
     nonce_needs_negation: bool,
     signing_type: T,
@@ -455,15 +454,11 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     pub fn start_sign_session(
         &self,
         agg_key: &AggKey<EvenY>,
-        nonces: Vec<Nonce>,
+        nonces: Vec<binonce::Nonce>,
         message: Message<'_, Public>,
     ) -> SignSession {
-        let (b, c, public_nonces, R, nonce_needs_negation) = self._start_sign_session(
-            agg_key,
-            nonces,
-            message,
-            &Point::<Normal, Public, _>::zero(),
-        );
+        let (b, c, public_nonces, R, nonce_needs_negation) =
+            self._start_sign_session(agg_key, nonces, message, Point::<Normal, Public, _>::zero());
         SignSession {
             b,
             c,
@@ -497,9 +492,9 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     pub fn start_encrypted_sign_session(
         &self,
         agg_key: &AggKey<EvenY>,
-        nonces: Vec<Nonce>,
+        nonces: Vec<binonce::Nonce>,
         message: Message<'_, Public>,
-        encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
+        encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> Option<SignSession<Adaptor>> {
         let (b, c, public_nonces, R, nonce_needs_negation) =
             self._start_sign_session(agg_key, nonces, message, encryption_key);
@@ -519,51 +514,41 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
     fn _start_sign_session(
         &self,
         agg_key: &AggKey<EvenY>,
-        nonces: Vec<Nonce>,
+        mut nonces: Vec<binonce::Nonce>,
         message: Message<'_, Public>,
-        encryption_key: &Point<impl PointType, impl Secrecy, impl ZeroChoice>,
+        encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> (
+        Scalar<Public>,
         Scalar<Public, Zero>,
-        Scalar<Public, Zero>,
-        Vec<Nonce>,
+        Vec<binonce::Nonce>,
         Point<EvenY>,
         bool,
     ) {
-        let mut Rs = nonces;
-        let agg_Rs = Rs.iter().fold([Point::zero(); 2], |acc, nonce| {
-            [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
-        });
-        let agg_Rs = Nonce::<Zero>([
-            g!(agg_Rs[0] + encryption_key).normalize(),
-            agg_Rs[1].normalize(),
-        ]);
+        let mut agg_binonce = binonce::Nonce::aggregate(nonces.iter().cloned());
+        agg_binonce.0[0] = g!(agg_binonce.0[0] + encryption_key).normalize();
 
-        let b = {
+        let binding_coeff = {
             let H = self.nonce_coeff_hash.clone();
             Scalar::from_hash(
-                H.add(agg_Rs.to_bytes())
+                H.add(agg_binonce)
                     .add(agg_key.agg_public_key())
                     .add(message),
             )
         }
-        .public()
-        .mark_zero();
+        .public();
 
-        let (R, r_needs_negation) = g!(agg_Rs.0[0] + b * agg_Rs.0[1])
-            .normalize()
-            .non_zero()
-            .unwrap_or(Point::generator())
-            .into_point_with_even_y();
-
-        for R_i in &mut Rs {
-            R_i.conditional_negate(r_needs_negation);
-        }
+        let (R, nonces_need_negation) = agg_binonce.bind(binding_coeff);
 
         let c = self
             .schnorr
             .challenge(&R, &agg_key.agg_public_key(), message);
 
-        (b, c, Rs, R, r_needs_negation)
+        // we may as well eagerly do
+        for nonce in &mut nonces {
+            nonce.conditional_negate(nonces_need_negation);
+        }
+
+        (binding_coeff, c, nonces, R, nonces_need_negation)
     }
 
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
@@ -573,7 +558,7 @@ impl<H: Digest<OutputSize = U32> + Clone, NG> MuSig<H, NG> {
         session: &SignSession<T>,
         my_index: usize,
         keypair: &KeyPair,
-        local_secret_nonce: NonceKeyPair,
+        local_secret_nonce: binonce::NonceKeyPair,
     ) -> Scalar<Public, Zero> {
         assert_eq!(
             keypair.public_key(),
@@ -898,7 +883,7 @@ mod test {
                     &agg_key1,
                     nonces.clone(),
                     message,
-                    &encryption_key
+                    encryption_key
                 )
                 .unwrap();
             let p2_session = musig
@@ -906,7 +891,7 @@ mod test {
                     &agg_key2,
                     nonces.clone(),
                     message,
-                    &encryption_key
+                    encryption_key
                 )
                 .unwrap();
             let p3_session = musig
@@ -914,7 +899,7 @@ mod test {
                     &agg_key3,
                     nonces,
                     message,
-                    &encryption_key
+                    encryption_key
                 )
                 .unwrap();
                 let p1_sig = musig.sign(&agg_key1, &p1_session, 0, &keypair1, p1_nonce);

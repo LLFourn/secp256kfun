@@ -153,9 +153,9 @@ pub trait Adaptor {
     /// There are two crucial things to understand when calling this:
     ///
     /// 1. You should be certain that the encrypted signature is what you think it is by calling
-    /// [`verify_encrypted_signature`] on it first.
+    ///    [`verify_encrypted_signature`] on it first.
     /// 2. Once you give the decrypted signature to anyone who has seen `encrypted_signature` they will be
-    /// able to learn `decryption_key` by calling [`recover_decryption_key`].
+    ///    able to learn `decryption_key` by calling [`recover_decryption_key`].
     ///
     /// See [synopsis] for an example
     ///

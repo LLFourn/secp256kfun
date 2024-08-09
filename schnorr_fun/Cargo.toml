@@ -18,7 +18,7 @@ secp256kfun = { path = "../secp256kfun", version = "0.10",  default-features = f
 bech32 = { version = "0.11", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-secp256kfun = { path = "../secp256kfun", version = "0.10",  features = ["proptest"] }
+secp256kfun = { path = "../secp256kfun", version = "0.10",  features = ["proptest", "bincode", "alloc"] }
 rand = { version = "0.8" }
 lazy_static = "1.4"
 bincode = "1.0"

@@ -1,5 +1,5 @@
 #![cfg(feature = "alloc")]
-use secp256kfun::{g, marker::*, poly, s, Point, G};
+use secp256kfun::{poly, prelude::*};
 
 #[test]
 fn test_lagrange_lambda() {
@@ -58,8 +58,8 @@ fn test_add_scalar_poly() {
 #[test]
 fn test_recover_public_poly() {
     let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-    let indicies = vec![s!(1).public(), s!(3).public(), s!(2).public()];
-    let points = indicies
+    let indices = vec![s!(1).public(), s!(3).public(), s!(2).public()];
+    let points = indices
         .clone()
         .into_iter()
         .map(|index| {
@@ -80,46 +80,44 @@ fn test_recover_public_poly() {
 #[test]
 fn test_recover_overdetermined_poly() {
     let poly = vec![g!(1 * G), g!(2 * G), g!(3 * G)];
-    let indicies = vec![
+    let indices = vec![
         s!(1).public(),
         s!(2).public(),
         s!(3).public(),
         s!(4).public(),
         s!(5).public(),
     ];
-    let points = indicies
+    let points = indices
         .clone()
         .into_iter()
-        .map(|index| {
-            (
-                index,
-                poly::point::eval(&poly, index.public())
-                    .normalize()
-                    .non_zero()
-                    .unwrap(),
-            )
-        })
+        .map(|index| (index, poly::point::eval(&poly, index.public()).normalize()))
         .collect::<Vec<_>>();
 
     let interpolation = poly::point::interpolate(&points);
 
-    let (interpolated_coeffs, zero_coeffs) = interpolation.split_at(poly.len());
-    let n_extra_points = indicies.len() - poly.len();
+    assert_eq!(interpolation, poly);
+}
+
+#[test]
+fn test_recover_zero_poly() {
+    let interpolation = poly::point::interpolate(&[
+        (s!(1).public(), Point::<Normal, Public, _>::zero()),
+        (s!(2).public(), Point::<Normal, Public, _>::zero()),
+    ]);
+
     assert_eq!(
-        (0..n_extra_points)
-            .map(|_| Point::<Normal, Public, Zero>::zero().public().normalize())
-            .collect::<Vec<_>>(),
-        zero_coeffs.to_vec()
+        interpolation,
+        vec![Point::<NonNormal, Public, _>::zero()],
+        "should not be empty vector"
     );
-    assert_eq!(interpolated_coeffs, poly);
 }
 
 #[test]
 fn test_reconstruct_shared_secret() {
-    let indicies = vec![s!(1).public(), s!(2).public(), s!(3).public()];
+    let indices = vec![s!(1).public(), s!(2).public(), s!(3).public()];
     let scalar_poly = vec![s!(42), s!(53), s!(64)];
 
-    let secret_shares: Vec<_> = indicies
+    let secret_shares: Vec<_> = indices
         .clone()
         .into_iter()
         .map(|index| (index, poly::scalar::eval(&scalar_poly, index)))

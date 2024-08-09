@@ -1,9 +1,9 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
     binonce,
+    binonce::NonceKeyPair,
     fun::{marker::*, serde, Point, Scalar},
-    musig::{self, NonceKeyPair},
-    Message,
+    musig, Message,
 };
 static TEST_JSON: &str = include_str!("musig/sign_verify_vectors.json");
 use secp256kfun::hex;

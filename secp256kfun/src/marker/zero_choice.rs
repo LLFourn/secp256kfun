@@ -1,3 +1,4 @@
+use crate::Point;
 /// Something marked with Zero might be `0` i.e. the additive identity
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -30,16 +31,28 @@ pub trait ZeroChoice:
 {
     /// Returns whether the type is `Zero`
     fn is_zero() -> bool;
+
+    /// Casts a point from one zeroness to another.
+    fn cast_point<T, S, Z: ZeroChoice>(point: Point<T, S, Z>) -> Option<Point<T, S, Self>>;
 }
 
 impl ZeroChoice for Zero {
     fn is_zero() -> bool {
         true
     }
+
+    fn cast_point<T, S, Z: ZeroChoice>(point: Point<T, S, Z>) -> Option<Point<T, S, Zero>> {
+        Some(point.mark_zero())
+    }
 }
+
 impl ZeroChoice for NonZero {
     fn is_zero() -> bool {
         false
+    }
+
+    fn cast_point<T, S, Z: ZeroChoice>(point: Point<T, S, Z>) -> Option<Point<T, S, Self>> {
+        point.non_zero()
     }
 }
 

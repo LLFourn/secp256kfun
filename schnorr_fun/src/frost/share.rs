@@ -1,4 +1,4 @@
-use secp256kfun::{marker::*, poly, Scalar};
+use secp256kfun::{poly, prelude::*};
 /// A *[Shamir secret share]*.
 ///
 /// Each share is an `(x,y)` pair where `y = p(x)` for some polynomial `p`. With a sufficient
@@ -20,8 +20,7 @@ use secp256kfun::{marker::*, poly, Scalar};
 /// shares that way. Share identification can help for keeping track of them and distinguishing shares
 /// when there are only a small number of them.
 ///
-/// The backup format is enabled with the `share_backup` feature and accessed with the `FromStr`
-/// and `Display`.
+/// The backup format is enabled with the `share_backup` feature and accessed with the feature enabled methods.
 ///
 /// ### Index in human readable part
 ///
@@ -53,9 +52,9 @@ use secp256kfun::{marker::*, poly, Scalar};
 pub struct SecretShare {
     /// The scalar index for this secret share, usually this is a small number but it can take any
     /// value (other than 0).
-    pub index: Scalar<Public>,
+    pub index: PartyIndex,
     /// The secret scalar which is the output of the polynomial evaluated at `index`
-    pub secret: Scalar<Secret, Zero>,
+    pub share: Scalar<Secret, Zero>,
 }
 
 impl SecretShare {
@@ -63,7 +62,7 @@ impl SecretShare {
     pub fn recover_secret(shares: &[SecretShare]) -> Scalar<Secret, Zero> {
         let index_and_secret = shares
             .iter()
-            .map(|share| (share.index, share.secret))
+            .map(|share| (share.index, share.share))
             .collect::<alloc::vec::Vec<_>>();
 
         poly::scalar::interpolate_and_eval_poly_at_0(&index_and_secret[..])
@@ -74,7 +73,7 @@ impl SecretShare {
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut bytes = [0u8; 64];
         bytes[..32].copy_from_slice(self.index.to_bytes().as_ref());
-        bytes[32..].copy_from_slice(self.secret.to_bytes().as_ref());
+        bytes[32..].copy_from_slice(self.share.to_bytes().as_ref());
         bytes
     }
 
@@ -83,8 +82,13 @@ impl SecretShare {
     pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
         Some(Self {
             index: Scalar::from_slice(&bytes[..32])?,
-            secret: Scalar::from_slice(&bytes[32..])?,
+            share: Scalar::from_slice(&bytes[32..])?,
         })
+    }
+
+    /// Get the image of the secret share.
+    pub fn share_image(&self) -> Point<NonNormal, Public, Zero> {
+        g!(self.share * G)
     }
 }
 
@@ -99,6 +103,190 @@ secp256kfun::impl_display_debug_serialize! {
     fn to_bytes(share: &SecretShare) -> [u8;64] {
         share.to_bytes()
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    bincode(
+        crate = "crate::fun::bincode",
+        encode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Encode",
+        decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Decode",
+        borrow_decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::BorrowDecode<'__de>"
+    )
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(
+        crate = "crate::fun::serde",
+        bound(
+            deserialize = "Point<T, Public, Z>: crate::fun::serde::de::Deserialize<'de>",
+            serialize = "Point<T, Public, Z>: crate::fun::serde::Serialize"
+        )
+    )
+)]
+/// A secret share paired with the image of the secret for which it is a share of.
+///
+/// This is useful so you can keep track of tweaks to the secret value and tweaks to the shared key
+/// in tandem.
+pub struct PairedSecretShare<T: PointType, Z = NonZero> {
+    secret_share: SecretShare,
+    public_key: Point<T, Public, Z>,
+}
+
+impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
+    /// The index of the secret share
+    pub fn index(&self) -> PartyIndex {
+        self.secret_share.index
+    }
+
+    /// The secret bit of the share
+    pub fn share(&self) -> Scalar<Secret, Zero> {
+        self.secret_share.share
+    }
+
+    /// The public key that this secert share is a part of
+    pub fn public_key(&self) -> Point<T, Public, Z> {
+        self.public_key
+    }
+
+    /// The inner un-paired secret share.
+    ///
+    /// This exists since when you do a physical paper backup of a secret share you usually don't
+    /// record explicitly the entire shared key (maybe just a short identifier).
+    pub fn secret_share(&self) -> &SecretShare {
+        &self.secret_share
+    }
+}
+
+impl<Z: ZeroChoice, T: PointType> PairedSecretShare<T, Z> {
+    /// Pair a secret share to a shared key.
+    ///
+    /// Users are meant to use [`pair_secret_share`] to create this
+    ///
+    /// [`pair_secret_share`]: SharedKey::pair_secret_share
+    pub(crate) fn new(secret_share: SecretShare, public_key: Point<T, Public, Z>) -> Self {
+        Self {
+            secret_share,
+            public_key,
+        }
+    }
+
+    /// Adds a scalar `tweak` to the paired secret share.
+    ///
+    /// The returned `PairedSecretShare<Normal, Zero>` represents a sharing of the original value + `tweak`.
+    ///
+    /// This is useful for deriving unhardened child frost keys from a master frost public key using
+    /// [BIP32]. In cases like this since you know that the tweak was computed from a hash of the
+    /// original key you call [`non_zero`] and unwrap the `Option` since zero is computationally
+    /// unreachable.
+    ///
+    /// If you want to apply an "x-only" tweak you need to call this then [`non_zero`] and finally [`into_xonly`].
+    ///
+    /// See also: [`SharedKey::homomorphic_add`]
+    ///
+    /// [BIP32]: https://bips.xyz/32
+    /// [`non_zero`]: Self::non_zero
+    /// [`into_xonly`]: Self::into_xonly
+    /// [`SharedKey::homomorphic_add`]: crate::frost::SharedKey::homomorphic_add
+    #[must_use]
+    pub fn homomorphic_add(
+        self,
+        tweak: Scalar<impl Secrecy, impl ZeroChoice>,
+    ) -> PairedSecretShare<Normal, Zero> {
+        let PairedSecretShare {
+            mut secret_share,
+            public_key: shared_key,
+        } = self;
+        let shared_key = g!(shared_key + tweak * G).normalize();
+        secret_share.share = s!(secret_share.share + tweak);
+        PairedSecretShare {
+            public_key: shared_key,
+            secret_share,
+        }
+    }
+
+    /// Multiply the secret share by `scalar`.
+    #[must_use]
+    pub fn homomorphic_mul(self, tweak: Scalar<impl Secrecy>) -> PairedSecretShare<Normal, Z> {
+        let PairedSecretShare {
+            public_key: shared_key,
+            mut secret_share,
+        } = self;
+
+        let shared_key = g!(tweak * shared_key).normalize();
+        secret_share.share = s!(tweak * self.secret_share.share);
+        PairedSecretShare {
+            secret_share,
+            public_key: shared_key,
+        }
+    }
+
+    /// Converts a `PairedSecretShare<T, Zero>` to a `PairedSecretShare<T, NonZero>`.
+    ///
+    /// If the paired shared key *was* actually zero ([`is_zero`] returns true) it returns `None`.
+    ///
+    /// [`is_zero`]: Point::is_zero
+    #[must_use]
+    pub fn non_zero(self) -> Option<PairedSecretShare<T, NonZero>> {
+        Some(PairedSecretShare {
+            secret_share: self.secret_share,
+            public_key: self.public_key.non_zero()?,
+        })
+    }
+
+    /// Is the key this is a share of zero
+    pub fn is_zero(&self) -> bool {
+        self.public_key.is_zero()
+    }
+}
+
+impl PairedSecretShare<Normal> {
+    /// Create an XOnly secert share where the paired image is always an `EvenY` point.
+    #[must_use]
+    pub fn into_xonly(mut self) -> PairedSecretShare<EvenY> {
+        let (shared_key, needs_negation) = self.public_key.into_point_with_even_y();
+        self.secret_share.share.conditional_negate(needs_negation);
+
+        PairedSecretShare {
+            secret_share: self.secret_share,
+            public_key: shared_key,
+        }
+    }
+}
+
+impl PairedSecretShare<EvenY> {
+    /// Get the verification for the inner secret share.
+    pub fn verification_share(&self) -> VerificationShare<NonNormal> {
+        VerificationShare {
+            index: self.index(),
+            share_image: self.secret_share.share_image(),
+            public_key: self.public_key,
+        }
+    }
+}
+
+/// This is the public image of a [`SecretShare`]. You can't sign with it but you can verify
+/// signature shares created by the secret share.
+///
+/// A `VerificationShare` is the same as a [`share_image`] except it's generated against an `EvenY`
+/// key that can actually have signatures verified against it.
+///
+/// A `VerificationShare` is not designed to be persisted. The verification share will only be able
+/// to verify signatures against the key that it was generated from. Tweaking a key with
+/// `homomorphic_add` etc will invalidate the verification share.
+///
+/// [`share_image`]: SecretShare::share_image
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VerificationShare<T: PointType> {
+    /// The index of the share in the secret sharing
+    pub index: PartyIndex,
+    /// The image of the secret share
+    pub share_image: Point<T, Public, Zero>,
+    /// The public key that this is a share of
+    pub public_key: Point<EvenY>,
 }
 
 #[cfg(feature = "share_backup")]
@@ -140,7 +328,7 @@ mod share_backup {
             };
 
             let chars = self
-                .secret
+                .share
                 .to_bytes()
                 .into_iter()
                 .chain(share_index_bytes.into_iter().flatten())
@@ -222,7 +410,7 @@ mod share_backup {
                 .ok_or(BackupDecodeError::InvalidShareIndexScalar)?;
 
             Ok(SecretShare {
-                secret: secret_share,
+                share: secret_share,
                 index: share_index,
             })
         }
@@ -275,8 +463,8 @@ mod share_backup {
 
         proptest! {
             #[test]
-            fn share_backup_roundtrip(index in any::<Scalar<Public, NonZero>>(), secret in any::<Scalar<Secret, Zero>>()) {
-                let orig = SecretShare { secret, index };
+            fn share_backup_roundtrip(index in any::<Scalar<Public, NonZero>>(), share in any::<Scalar<Secret, Zero>>()) {
+                let orig = SecretShare { share, index };
                 let orig_encoded = orig.to_bech32_backup();
                 let decoded = SecretShare::from_bech32_backup(&orig_encoded).unwrap();
                 assert_eq!(orig, decoded)
@@ -284,11 +472,11 @@ mod share_backup {
 
 
             #[test]
-            fn short_backup_length(secret in any::<Scalar<Secret, Zero>>(), share_index_u32 in 1u32..200) {
+            fn short_backup_length(share in any::<Scalar<Secret, Zero>>(), share_index_u32 in 1u32..200) {
                 let index = Scalar::<Public, Zero>::from(share_index_u32).non_zero().unwrap().public();
                 let secret_share = SecretShare {
                     index,
-                    secret,
+                    share,
                 };
                 let backup = secret_share.to_bech32_backup();
 
@@ -306,6 +494,8 @@ mod share_backup {
 
 #[cfg(feature = "share_backup")]
 pub use share_backup::BackupDecodeError;
+
+use super::PartyIndex;
 
 #[cfg(test)]
 mod test {
@@ -329,10 +519,11 @@ mod test {
             let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
 
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-            let (frost_key, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
-            let chosen = shares.choose_multiple(&mut rng, threshold).cloned().collect::<Vec<_>>();
+            let (frost_poly, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
+            let chosen = shares.choose_multiple(&mut rng, threshold).cloned()
+                .map(|paired_share| paired_share.secret_share).collect::<Vec<_>>();
             let secret = SecretShare::recover_secret(&chosen);
-            prop_assert_eq!(g!(secret * G), frost_key.public_key());
+            prop_assert_eq!(g!(secret * G), frost_poly.public_key());
         }
     }
 }

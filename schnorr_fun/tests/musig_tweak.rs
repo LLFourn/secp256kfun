@@ -4,9 +4,9 @@ use std::{rc::Rc, sync::Arc};
 
 use schnorr_fun::{
     binonce,
+    binonce::NonceKeyPair,
     fun::{marker::*, serde, Point, Scalar},
-    musig::{self, NonceKeyPair},
-    Message,
+    musig, Message,
 };
 static TEST_JSON: &'static str = include_str!("musig/tweak_vectors.json");
 use secp256kfun::hex;

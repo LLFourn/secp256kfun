@@ -53,11 +53,11 @@ pub mod scalar {
     pub fn interpolate_and_eval_poly_at_0(
         x_and_y: &[(Scalar<Public>, Scalar<impl Secrecy, impl ZeroChoice>)],
     ) -> Scalar<Secret, Zero> {
-        let indicies = x_and_y.iter().map(|(index, _)| *index);
+        let indices = x_and_y.iter().map(|(index, _)| *index);
         x_and_y
             .iter()
             .map(|(index, secret)| {
-                let lambda = eval_basis_poly_at_0(*index, indicies.clone());
+                let lambda = eval_basis_poly_at_0(*index, indices.clone());
                 s!(secret * lambda)
             })
             .fold(s!(0), |interpolated_poly, scaled_basis_poly| {
@@ -133,6 +133,13 @@ pub mod scalar {
             _ => None,
         })
     }
+
+    /// Negates a scalar polynomial
+    pub fn negate(poly: &mut [Scalar<impl Secrecy, impl ZeroChoice>]) {
+        for coeff in poly {
+            *coeff = -*coeff;
+        }
+    }
 }
 
 /// Functions for dealing with point polynomials
@@ -182,11 +189,15 @@ pub mod point {
 
     /// Find the coefficients of the polynomial that interpolates a set of points (index, point).
     ///
-    /// Panics if the indicies are not unique.
+    /// Panics if the indices are not unique.
     ///
     /// A vector with a tail of zero coefficients means the interpolation was overdetermined.
+    #[allow(clippy::type_complexity)]
     pub fn interpolate(
-        index_and_point: &[(Scalar<Public, impl ZeroChoice>, Point)],
+        index_and_point: &[(
+            Scalar<Public, impl ZeroChoice>,
+            Point<impl PointType, impl Secrecy, impl ZeroChoice>,
+        )],
     ) -> Vec<Point<NonNormal, Public, Zero>> {
         let x_ms = index_and_point.iter().map(|(index, _)| *index);
         let mut interpolating_polynomial: Vec<Point<NonNormal, Public, Zero>> = vec![];
@@ -199,7 +210,30 @@ pub mod point {
             self::add_in_place(&mut interpolating_polynomial, point_scaled_basis_poly);
         }
 
+        while interpolating_polynomial.len() > 1
+            && interpolating_polynomial.last().unwrap().is_zero()
+        {
+            interpolating_polynomial.pop();
+        }
+
         interpolating_polynomial
+    }
+
+    /// Negates a scalar polynomial
+    pub fn negate<T>(poly: &mut [Point<T, impl Secrecy, impl ZeroChoice>])
+    where
+        T: PointType<NegationType = T>,
+    {
+        for coeff in poly {
+            *coeff = -*coeff;
+        }
+    }
+
+    /// Normalizes the points in a polynomial
+    pub fn normalize<S, Z>(
+        poly: impl IntoIterator<Item = Point<impl PointType, S, Z>>,
+    ) -> impl Iterator<Item = Point<Normal, S, Z>> {
+        poly.into_iter().map(|point| point.normalize())
     }
 }
 /// Returns an iterator of 1, x, x², x³ ...
