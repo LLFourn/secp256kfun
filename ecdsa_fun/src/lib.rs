@@ -132,12 +132,7 @@ impl<NG: NonceGen> ECDSA<NG> {
     ///
     /// ```
     /// use ecdsa_fun::{
-    ///     fun::{
-    ///         digest::{Digest, Update},
-    ///         g,
-    ///         marker::*,
-    ///         Scalar, G,
-    ///     },
+    ///     fun::{digest::Digest, prelude::*},
     ///     nonce, ECDSA,
     /// };
     /// use rand::rngs::ThreadRng;
@@ -149,7 +144,7 @@ impl<NG: NonceGen> ECDSA<NG> {
     /// let message_hash = {
     ///     let message = b"Attack at dawn";
     ///     let mut message_hash = [0u8; 32];
-    ///     let hash = Sha256::default().chain(message);
+    ///     let hash = Sha256::default().chain_update(message);
     ///     message_hash.copy_from_slice(hash.finalize().as_ref());
     ///     message_hash
     /// };

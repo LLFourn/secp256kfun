@@ -130,7 +130,7 @@ mod test {
     fn signature_serialization_roundtrip() {
         use super::*;
         use crate::{fun::Scalar, Message};
-        let schnorr = crate::test_instance!();
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let signature = schnorr.sign(&kp, Message::<Public>::plain("test", b"foo"));
         let serialized = bincode::serialize(&signature).unwrap();

@@ -1,14 +1,12 @@
-use secp256kfun::nonce::NoNonces;
+use secp256kfun::{hash::Hash32, nonce::NoNonces};
 
 use crate::{
     fun::{
         derive_nonce,
-        digest::{generic_array::typenum::U32, Digest},
-        g,
         hash::{HashAdd, Tag},
-        marker::*,
-        nonce::NonceGen,
-        s, KeyPair, Point, Scalar, G,
+        nonce::{self, NonceGen},
+        prelude::*,
+        rand_core, KeyPair,
     },
     Message, Signature,
 };
@@ -32,7 +30,7 @@ pub struct Schnorr<CH, NG = NoNonces> {
     challenge_hash: CH,
 }
 
-impl<H: Digest<OutputSize = U32> + Tag + Default> Schnorr<H, NoNonces> {
+impl<H: Hash32> Schnorr<H, NoNonces> {
     /// Create a new instance that can only verify signatures.
     ///
     /// # Example
@@ -110,7 +108,7 @@ where
 
 impl<CH, NG> Schnorr<CH, NG>
 where
-    CH: Digest<OutputSize = U32> + Clone,
+    CH: Hash32,
     NG: NonceGen,
 {
     /// Sign a message using a secret key and a particular nonce derivation scheme.
@@ -122,7 +120,7 @@ where
     /// #     Message,
     /// #     fun::{marker::*, Scalar},
     /// # };
-    /// # let schnorr = schnorr_fun::test_instance!();
+    /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let message = Message::<Public>::plain(
     ///     "times-of-london",
@@ -148,7 +146,7 @@ where
     }
 }
 
-impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
+impl<NG, CH: Hash32> Schnorr<CH, NG> {
     /// Returns the challenge hash being used to sign/verify signatures
     pub fn challenge_hash(&self) -> CH {
         self.challenge_hash.clone()
@@ -158,7 +156,7 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     ///
     /// [`KeyPair<EvenY>`]: crate::fun::KeyPair
     pub fn new_keypair(&self, sk: Scalar) -> KeyPair<EvenY> {
-        KeyPair::<EvenY>::new(sk)
+        KeyPair::new_xonly(sk)
     }
 
     /// Produces the Fiat-Shamir challenge for a Schnorr signature in the form specified by [BIP-340].
@@ -171,11 +169,8 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     /// Here's how you could use this to roll your own signatures.
     ///
     /// ```
-    /// use schnorr_fun::{
-    ///     fun::{marker::*, s, Point, Scalar, G},
-    ///     Message, Schnorr, Signature,
-    /// };
-    /// # let schnorr = schnorr_fun::test_instance!();
+    /// use schnorr_fun::{fun::prelude::*, Message, Schnorr, Signature};
+    /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
@@ -254,6 +249,39 @@ impl<NG, CH: Digest<OutputSize = U32> + Clone> Schnorr<CH, NG> {
     }
 }
 
+/// Create a new [`Schnorr`] instance with deterministic nonce generation from a given hash as a type
+/// paramater.
+///
+/// This exists to avoid having to write out the right type parameters
+///
+/// # Example
+///
+/// ```
+/// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
+/// ```
+pub fn new_with_deterministic_nonces<H>() -> Schnorr<H, nonce::Deterministic<H>>
+where
+    H: Hash32,
+{
+    Schnorr::default()
+}
+
+/// Create a new [`Schnorr`] instance with synthetic nonce generation from a given hash and rng as a
+/// type parameter.
+///
+/// # Example
+///
+/// ```
+/// let schnorr = schnorr_fun::new_with_synthetic_nonces::<sha2::Sha256, rand::rngs::ThreadRng>();
+/// ```
+pub fn new_with_synthetic_nonces<H, R>() -> Schnorr<H, nonce::Synthetic<H, nonce::GlobalRng<R>>>
+where
+    H: Hash32,
+    R: rand_core::RngCore + Default + Clone,
+{
+    Schnorr::default()
+}
+
 #[cfg(test)]
 pub mod test {
     use crate::fun::nonce::Deterministic;
@@ -296,7 +324,7 @@ pub mod test {
 
         #[test]
         fn anticipated_signature_on_should_correspond_to_actual_signature(sk in any::<Scalar>()) {
-            let schnorr = crate::test_instance!();
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair = schnorr.new_keypair(sk);
             let msg = Message::<Public>::plain(
                 "test",
@@ -318,7 +346,7 @@ pub mod test {
 
         #[test]
         fn sign_deterministic(s1 in any::<Scalar>(), s2 in any::<Scalar>()) {
-            let schnorr = crate::test_instance!();
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair_1 = schnorr.new_keypair(s1);
             let keypair_2 = schnorr.new_keypair(s2);
             let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
