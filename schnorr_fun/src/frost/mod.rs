@@ -76,14 +76,15 @@
 //!
 //! The original scheme was introduced in *[FROST: Flexible Round-Optimized Schnorr Threshold
 //! Signatures][FROST]*. A more satisfying security proof was provided in *[Security of Multi- and Threshold
-//! Signatures]*.
+//! Signatures]*. This implementation follows most closely *[Practical Schnorr Threshold Signatures Without the Algebraic Group Model]*.
 //!
-//! > ⚠ At this stage this implementation is for API exploration purposes only. The way it is
-//! > currently implemented is not proven secure.
+//! > ⚠ CAUTION ⚠: We *think* that this follows the scheme in the "Practical" paper which is proven secure but
+//! > we haven't put a lot of effort into verifying this yet.
 //!
 //! [FROST]: <https://eprint.iacr.org/2020/852.pdf>
 //! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
 //! [Security of Multi- and Threshold Signatures]: <https://eprint.iacr.org/2021/1375.pdf>
+//! [Practical Schnorr Threshold Signatures Without the Algebraic Group Model]: https://eprint.iacr.org/2023/899
 //! [`musig`]: crate::musig
 //! [`Scalar`]: crate::fun::Scalar
 
@@ -263,7 +264,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
         agg_binonce: binonce::Nonce<Zero>,
         message: Message,
     ) -> PartySignSession {
-        let binding_coeff = self.binding_coefficient(public_key, agg_binonce, message);
+        let binding_coeff = self.binding_coefficient(public_key, agg_binonce, message, &parties);
         let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
         let challenge = self.schnorr.challenge(&final_nonce, &public_key, message);
 
@@ -297,7 +298,12 @@ impl<H: Hash32, NG> Frost<H, NG> {
 
         let agg_binonce = binonce::Nonce::aggregate(nonces.values().cloned());
 
-        let binding_coeff = self.binding_coefficient(shared_key.public_key(), agg_binonce, message);
+        let binding_coeff = self.binding_coefficient(
+            shared_key.public_key(),
+            agg_binonce,
+            message,
+            &nonces.keys().cloned().collect(),
+        );
         let (final_nonce, binonce_needs_negation) = agg_binonce.bind(binding_coeff);
 
         let challenge = self
@@ -323,12 +329,15 @@ impl<H: Hash32, NG> Frost<H, NG> {
         public_key: Point<EvenY>,
         agg_binonce: Nonce<Zero>,
         message: Message,
+        parties: &BTreeSet<PartyIndex>,
     ) -> Scalar<Public> {
         Scalar::from_hash(
             self.binding_hash
                 .clone()
-                .add(agg_binonce)
                 .add(public_key)
+                .add((parties.len() as u32).to_be_bytes())
+                .add(parties)
+                .add(agg_binonce)
                 .add(message),
         )
         .public()
