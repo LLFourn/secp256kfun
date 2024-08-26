@@ -474,8 +474,10 @@ impl<H: Hash32, NG: NonceGen> Frost<H, NG> {
         let scalar_polys = (0..n_parties)
             .map(|i| {
                 (
-                    Scalar::from_non_zero_u32(NonZeroU32::new((i + 1) as u32).expect("we added 1"))
-                        .public(),
+                    PartyIndex::from_non_zero_u32(
+                        NonZeroU32::new((i + 1) as u32).expect("we added 1"),
+                    )
+                    .public(),
                     poly::scalar::generate(threshold, rng),
                 )
             })
