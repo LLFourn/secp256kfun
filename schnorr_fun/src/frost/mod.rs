@@ -6,93 +6,34 @@
 //! use schnorr_fun::binonce::NonceKeyPair;
 //! use schnorr_fun::fun::{s, poly};
 //! use schnorr_fun::{
-//!     frost,
+//!     frost::{self, chilldkg::simplepedpop},
 //!     Message,
 //! };
 //! use std::collections::BTreeMap;
 //! use rand_chacha::ChaCha20Rng;
 //! use sha2::Sha256;
-//! // use sha256 to produce deterministic nonces -- be careful!
-//! let frost = frost::new_with_deterministic_nonces::<Sha256>();
-//! // Use randomness from ThreadRng to create synthetic nonces -- harder to make a mistake.
-//! let frost = frost::new_with_synthetic_nonces::<Sha256, rand::rngs::ThreadRng>();
-//! // We need an RNG for key generation -- don't use ThreadRng in practice see note below.
-//! let mut rng = rand::thread_rng();
-//! // we're doing a 2 out of 3
-//! let threshold = 2;
-//! // Generate our secret scalar polynomial we'll use in the key generation protocol
-//! let my_secret_poly = poly::scalar::generate(threshold, &mut rng);
-//! let my_public_poly = poly::scalar::to_point_poly(&my_secret_poly);
-//! # let secret_poly2 = poly::scalar::generate(threshold, &mut rng);
-//! # let secret_poly3 = poly::scalar::generate(threshold, &mut rng);
-//! # let public_poly2 = poly::scalar::to_point_poly(&secret_poly2);
-//! # let public_poly3 = poly::scalar::to_point_poly(&secret_poly3);
 //!
-//! // Party indices can be any non-zero scalar
-//! let my_index = s!(1).public();
-//! let party_index2 = s!(2).public();
-//! let party_index3 = s!(3).public();
-//! // share our public point poly, and receive the point polys from other participants
-//! let public_polys_received = BTreeMap::from_iter([
-//!     (my_index, my_public_poly),
-//!     (party_index2, public_poly2),
-//!     (party_index3, public_poly3),
-//! ]);
-//! // (optionally) construct my_polys so we don't trust what's in public_poly_received for our index (in case it has been replaced with something malicious)
-//! let my_polys = BTreeMap::from_iter([(my_index, &my_secret_poly)]);
-//! let keygen = frost.new_keygen(public_polys_received, &my_polys).expect("something wrong with what was provided by other parties");
-//! // Generate secret shares for others and proof-of-possession to protect against rogue key attacks.
-//! // We need pass a message to sign for the proof-of-possession. We choose the keygen
-//! // id here but anything works (you can even use the empty message).
-//! let keygen_id = frost.keygen_id(&keygen);
-//! let pop_message = Message::raw(&keygen_id);
-//! let (mut shares_i_generated, my_pop) = frost.create_shares_and_pop(&keygen, &my_secret_poly, pop_message);
-//! # let (shares2, pop2) = frost.create_shares_and_pop(&keygen, &secret_poly2, pop_message);
-//! # let (shares3, pop3) = frost.create_shares_and_pop(&keygen, &secret_poly3, pop_message);
-//! // Now we send the corresponding shares we generated to the other parties along with our proof-of-possession.
-//! // Eventually we'll receive shares from the others and combine them to create our secret key share:
-//! # let share_and_pop_from_2 = (shares2.get(&my_index).unwrap().clone(), pop2.clone());
-//! # let share_and_pop_from_3 = (shares3.get(&my_index).unwrap().clone(), pop3.clone());
-//! # let received_shares3 = BTreeMap::from_iter([
-//! #    (my_index, (shares_i_generated.get(&party_index3).unwrap().clone(), my_pop.clone())),
-//! #    (party_index2, (shares2.get(&party_index3).unwrap().clone(), pop2.clone())),
-//! #    (party_index3, (shares3.get(&party_index3).unwrap().clone(), pop3.clone())),
-//! # ]);
-//! let share_i_generated_for_myself = (shares_i_generated.remove(&my_index).unwrap(), my_pop);
-//! let my_shares = BTreeMap::from_iter([
-//!     (my_index, share_i_generated_for_myself),
-//!     (party_index2, share_and_pop_from_2),
-//!     (party_index3, share_and_pop_from_3)
-//! ]);
-//! // finish keygen by verifying the shares we received, verifying all proofs-of-possession,
-//! // and calculate our long-lived secret share of the joint FROST key.
-//! # let (secret_share3, _frost_key3) = frost
-//! #    .finish_keygen(
-//! #        keygen.clone(),
-//! #        party_index3,
-//! #        received_shares3,
-//! #        Message::raw(&frost.keygen_id(&keygen)),
-//! #    )
-//! #    .unwrap();
-//! let (my_secret_share, shared_key) = frost
-//!     .finish_keygen(
-//!         keygen,
-//!         my_index,
-//!         my_shares,
-//!         pop_message,
-//!     )
-//!     .expect("something was wrong with the shares we received");
-//! // ⚠️ At this point you probably want to check out of band that all the other parties
-//! // received their secret shares correctly and have the same view of the protocol
-//! // (e.g same keygen_id). If they all give the OK then we're ready to use the key and do some signing!
+//! let schnorr = schnorr_fun::new_with_deterministic_nonces::<Sha256>();
+//!
+//! // This runs a 2-of-3 key generation on a single computer which means it's a trusted party.
+//! // See the documentation/API of the protocols in `chilldkg` to see how to distrubute the key generation properly.
+//! let (shared_key, secret_shares) = simplepedpop::simulate_keygen(&schnorr, 2, 3,3, &mut rand::thread_rng());
+//! let my_secret_share = secret_shares[0];
+//! let my_index = my_secret_share.index();
+//! # let secret_share2 = secret_shares[1];
+//! # let secret_share3 = secret_shares[2];
+//! # let party_index3 = secret_share3.index();
+//!
+//! let frost = frost::new_with_deterministic_nonces::<Sha256>();
+//!
 //! // With signing we'll have at least one party be the "coordinator" (steps marked with 🐙)
-//! // In this example we'll be the coordinator (but it doesn't have to be on eof the signing parties)
+//! // In this example we'll be the coordinator (but it doesn't have to be one of the signing parties)
 //! let xonly_shared_key = shared_key.into_xonly(); // this is the key signatures will be valid under
 //! let xonly_my_secret_share = my_secret_share.into_xonly();
 //! # let xonly_secret_share3 = secret_share3.into_xonly();
 //! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session (and send them to coordinator somehow)
-//! // ⚠️ session_id MUST be different for every signing attempt to avoid nonce reuse (if using deterministic nonces).
+//! // ⚠ session_id MUST be different for every signing attempt to avoid nonce reuse (if using deterministic nonces).
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
 //! let mut nonce_rng: ChaCha20Rng = frost.seed_nonce_rng(my_secret_share, session_id);
 //! let my_nonce = frost.gen_nonce(&mut nonce_rng);
@@ -138,49 +79,8 @@
 //! Signatures][FROST]*. A more satisfying security proof was provided in *[Security of Multi- and Threshold
 //! Signatures]*.
 //!
-//! > ⚠️ At this stage this implementation is for API exploration purposes only. The way it is
+//! > ⚠ At this stage this implementation is for API exploration purposes only. The way it is
 //! > currently implemented is not proven secure.
-//!
-//! ##  Polynomial Generation
-//!
-//! The FROST key generation protocol takes as input a *secret* polynomial of degree `threshold - 1`.
-//! We represent a polynomial as a `Vec<Scalar>` where each [`Scalar`] represents a coefficient in the polynomial.
-//!
-//! The security of the protocol is only guaranteed if you sample your secret polynomial uniformly
-//! at random from the perspective of the other parties. There is little advantage to using
-//! deterministic randomness for this except to be able to reproduce the key generation with every
-//! party's long term static secret key. In theory a more compelling answer to reproducing shares is
-//! to use simple MPC protocol to produce a share for any party given a threshold number of parties.
-//! This protocol isn't implemented here yet.
-//!
-//! This library doesn't provide a default policy with regards to polynomial generation but here we
-//! give an example of a robust way to generate your secret scalar polynomial that should make sense
-//! in most applications:
-//!
-//! ```
-//! use schnorr_fun::{frost, fun::{ Scalar, poly, nonce, Tag, derive_nonce_rng }};
-//! use sha2::Sha256;
-//! use rand_chacha::ChaCha20Rng;
-//!
-//! let static_secret_key = /* from local storage */
-//! # Scalar::random(&mut rand::thread_rng());
-//! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<rand::rngs::ThreadRng>>::default().tag(b"my-app-name/frost/keygen");
-//! let mut poly_rng = derive_nonce_rng! {
-//!     // use synthetic nonces that add system randomness in
-//!     nonce_gen => nonce_gen,
-//!     // Use your static secret key to add further protection
-//!     secret => static_secret_key,
-//!     // session id should be unique for each key generation session
-//!     public => ["frost_key_session_1053"],
-//!     seedable_rng => ChaCha20Rng
-//! };
-//!
-//! let threshold = 3;
-//! let my_secret_poly: Vec<Scalar> = poly::scalar::generate(threshold, &mut poly_rng);
-//! ```
-//!
-//! Note that if a key generation session fails you should always start a fresh session with a
-//! different session id (but you can use the same nonce_gen).
 //!
 //! [FROST]: <https://eprint.iacr.org/2020/852.pdf>
 //! [secp256k1-zkp]: <https://github.com/ElementsProject/secp256k1-zkp/pull/138>
@@ -194,7 +94,7 @@ mod share;
 pub use share::*;
 mod session;
 pub use session::*;
-
+pub mod chilldkg;
 pub use crate::binonce::{Nonce, NonceKeyPair};
 use crate::{binonce, Message, Schnorr, Signature};
 use alloc::{
