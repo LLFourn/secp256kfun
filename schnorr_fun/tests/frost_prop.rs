@@ -1,4 +1,5 @@
 #![cfg(feature = "alloc")]
+use chilldkg::encpedpop;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha20Rng;
 use schnorr_fun::{
@@ -19,18 +20,18 @@ proptest! {
 
     #[test]
     fn frost_prop_test(
-        (n_parties, threshold) in (2usize..=4).prop_flat_map(|n| (Just(n), 2usize..=n)),
+        (n_parties, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
         add_tweak in option::of(any::<Scalar<Public, Zero>>()),
         xonly_add_tweak in option::of(any::<Scalar<Public, Zero>>()),
         mul_tweak in option::of(any::<Scalar<Public>>()),
         xonly_mul_tweak in option::of(any::<Scalar<Public>>())
     ) {
-        let proto = new_with_deterministic_nonces::<Sha256>();
+        let frost = new_with_deterministic_nonces::<Sha256>();
         assert!(threshold <= n_parties);
 
         // // create some scalar polynomial for each party
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-        let (mut shared_key, mut secret_shares) = proto.simulate_keygen(threshold, n_parties, &mut rng);
+        let (mut shared_key, mut secret_shares) = encpedpop::simulate_keygen(&frost.schnorr, threshold, n_parties, n_parties, &mut rng);
 
         if let Some(tweak) = add_tweak {
             for secret_share in &mut secret_shares {
@@ -68,8 +69,8 @@ proptest! {
         }
 
         // use a boolean mask for which t participants are signers
-        let mut signer_mask = vec![true; threshold];
-        signer_mask.append(&mut vec![false; n_parties - threshold]);
+        let mut signer_mask = vec![true; threshold as usize];
+        signer_mask.append(&mut vec![false; (n_parties - threshold) as usize]);
         // shuffle the mask for random signers
         signer_mask.shuffle(&mut rng);
 
@@ -81,8 +82,8 @@ proptest! {
         let message = Message::plain("test", b"test");
 
         let mut secret_nonces: BTreeMap<_, _> = secret_shares_of_signers.iter().map(|paired_secret_share| {
-            (paired_secret_share.secret_share().index, proto.gen_nonce::<ChaCha20Rng>(
-                &mut proto.seed_nonce_rng(
+            (paired_secret_share.secret_share().index, frost.gen_nonce::<ChaCha20Rng>(
+                &mut frost.seed_nonce_rng(
                     *paired_secret_share,
                     sid,
                 )))
@@ -91,13 +92,13 @@ proptest! {
 
         let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
 
-        let coord_signing_session = proto.coordinator_sign_session(
+        let coord_signing_session = frost.coordinator_sign_session(
             &xonly_shared_key,
             public_nonces,
             message
         );
 
-        let party_signing_session = proto.party_sign_session(
+        let party_signing_session = frost.party_sign_session(
             xonly_shared_key.public_key(),
             coord_signing_session.parties(),
             coord_signing_session.agg_binonce(),
@@ -122,7 +123,7 @@ proptest! {
         );
 
         assert_eq!(coord_signing_session.verify_and_combine_signature_shares(&xonly_shared_key, signatures), Ok(combined_sig));
-        assert!(proto.schnorr.verify(
+        assert!(frost.schnorr.verify(
             &xonly_shared_key.public_key(),
             message,
             &combined_sig

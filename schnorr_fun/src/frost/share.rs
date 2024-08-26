@@ -506,7 +506,7 @@ use super::PartyIndex;
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::frost;
+    use crate::frost::{self, chilldkg::simplepedpop};
     use alloc::vec::Vec;
     use secp256kfun::{
         g,
@@ -519,14 +519,14 @@ mod test {
     proptest! {
         #[test]
         fn recover_secret(
-            (parties, threshold) in (1usize..=10).prop_flat_map(|n| (Just(n), 1usize..=n)),
+            (parties, threshold) in (1u32..=10).prop_flat_map(|n| (Just(n), 1u32..=n)),
         ) {
             use rand::seq::SliceRandom;
             let frost = frost::new_with_deterministic_nonces::<sha2::Sha256>();
 
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-            let (frost_poly, shares) = frost.simulate_keygen(threshold, parties, &mut rng);
-            let chosen = shares.choose_multiple(&mut rng, threshold).cloned()
+            let (frost_poly, shares) = simplepedpop::simulate_keygen(&frost.schnorr, threshold, parties , parties , &mut rng);
+            let chosen = shares.choose_multiple(&mut rng, threshold as usize).cloned()
                 .map(|paired_share| paired_share.secret_share).collect::<Vec<_>>();
             let secret = SecretShare::recover_secret(&chosen);
             prop_assert_eq!(g!(secret * G), frost_poly.public_key());
