@@ -1,10 +1,10 @@
 //! Our take on the WIP *[ChillDKG: Distributed Key Generation for FROST][ChillDKG]* spec
 //!
 //! ChillDKG is a modular distributed key generation protocol. At the end all the intended parties
-//! have a valid [Shamir secret sharing] of a secret key without the secret key ever having existed
-//! on any party's computer.
+//! have a valid `t-of-n` [Shamir secret sharing] of a secret key without requiring a trusted party
+//! or even an honest majority.
 //!
-//! The WIP spec defines two roles:
+//! The [WIP spec][ChillDKG] defines two roles:
 //!
 //! - *Coordinator*: A central party who relays and aggregates messages between the other parties.
 //! - *Participants*: The parties who provide secret input and receive secret shares as output from the protocol.
@@ -12,14 +12,14 @@
 //! In this implementation we split "participants" into two further roles:
 //!
 //! - *Contributors*: parties that provide secret input into the key generation
-//! - *receivers*: parties that receive a secret share from the protocol.
+//! - *Receivers*: parties that receive a secret share from the protocol.
 //!
-//! We see a benefit to having parties that provide secret input but do not receive secret outupt.
+//! We see a benefit to having parties that provide secret input but do not receive secret output.
 //! The main example of this is having the coordinator itself be an *Contributor* too. In the context
 //! of a Bitcoin hardware wallet, the coordinator is usually the only party with access to the
 //! internet therefore, if the coordinator contributes input honestly, even if all the non-internet
 //! connected devices are malicious the *remote* adversary (who set the code of the malicious
-//! device) will not know the secret key. In fact, the adversary would have to recover `t` devics
+//! device) will not know the secret key. In fact, the adversary would have to recover `t` devices
 //! and extract their internal state to reconstruct the key. This is nice, because *in theory* and
 //! in this limited sense it gives the attacker no advantage from controlling the code of the
 //! signing devices (anyone who wants to reconstruct the key already needs `t` shares).
@@ -46,7 +46,7 @@ use secp256kfun::{
     rand_core, KeyPair,
 };
 
-/// SimplePedPop is a bare bones secure distributed key generation aglorithm that leaves a lot left
+/// SimplePedPop is a bare bones secure distributed key generation algorithm that leaves a lot left
 /// up to the application.
 ///
 /// The application must figure out:
@@ -122,7 +122,7 @@ pub mod simplepedpop {
         /// Verifies that the coordinator has honestly included this party's input into the
         /// aggregated input.
         ///
-        /// This passing by itsef doesn't mean that the key generation was successful. All
+        /// This passing by itself doesn't mean that the key generation was successful. All
         /// `Contributor`s must agree on this fact and all parties must have received the same
         /// `AggKeygenInput` and validated it.
         pub fn verify_agg_input(
@@ -164,7 +164,7 @@ pub mod simplepedpop {
 
     /// Map from party index to secret share contribution from the [`Contributor`].
     ///
-    /// Each entry in the map mus tbe sent to the corresponding party.
+    /// Each entry in the map must be sent to the corresponding party.
     pub type SecretKeygenInput = BTreeMap<PartyIndex, Scalar<Secret, Zero>>;
 
     /// Stores the state of the coordinator as it aggregates inputs from [`Contributor`]s.
@@ -178,12 +178,12 @@ pub mod simplepedpop {
         /// Creates a new coordinator with:
         ///
         /// - `threshold`: of key we're trying to generate
-        /// - `n_contributor`: The number of [`Contributor`]s
-        pub fn new(threshold: u32, n_contributor: u32) -> Self {
+        /// - `n_contributors`: The number of [`Contributor`]s
+        pub fn new(threshold: u32, n_contributors: u32) -> Self {
             assert!(threshold > 0);
             Self {
                 threshold,
-                inputs: (0..n_contributor).map(|i| (i, None)).collect(),
+                inputs: (0..n_contributors).map(|i| (i, None)).collect(),
             }
         }
 
@@ -242,22 +242,28 @@ pub mod simplepedpop {
                 return None;
             }
             let inputs = self.inputs.into_values().flatten().collect::<Vec<_>>();
+            // The "key contributions" are separated out and treated specially since they can't be
+            // aggregated by the coordinator since each one needs to be validated against a
+            // proof-of-possesson.
             let key_contrib = inputs
                 .iter()
                 .map(|message| (message.com[0], message.pop))
                 .collect();
-            let mut sum_coms = vec![Point::<NonNormal, Public, _>::zero(); self.threshold as usize];
+
+            // The rest of the coefficients can be aggregated
+            let mut agg_poly =
+                vec![Point::<NonNormal, Public, _>::zero(); self.threshold as usize - 1];
             for message in inputs {
-                for (i, com) in message.com.iter().enumerate() {
-                    sum_coms[i] += com
+                for (i, com) in message.com[1..].iter().enumerate() {
+                    agg_poly[i] += com
                 }
             }
 
-            let agg_poly = poly::point::normalize(sum_coms).collect::<Vec<_>>();
+            let agg_poly = poly::point::normalize(agg_poly).collect::<Vec<_>>();
 
             Some(AggKeygenInput {
                 key_contrib,
-                agg_poly: agg_poly[1..].to_vec(),
+                agg_poly,
             })
         }
     }
@@ -302,7 +308,7 @@ pub mod simplepedpop {
         }
 
         /// The *certification* bytes. Checking all parties have the same output of this function is
-        /// enough to check they have the same `AggKeyGenInput`.
+        /// enough to check they have the same `AggKeygenInput`.
         ///
         /// In `simplepedpop` this is just the coefficients of the polynomial.
         pub fn cert_bytes(&self) -> Vec<u8> {
@@ -455,7 +461,10 @@ pub mod simplepedpop {
 /// coordinator also aggregates the ciphertexts so communication is reduced to linear in the number
 /// of participants.
 ///
-/// The application still must figure out when all parties agree on the
+/// The application still must figure out when all parties agree on the [`AggKeygenInput`] before
+/// using it.
+///
+/// [`AggKeygenInput`]: encpedpop::AggKeygenInput
 pub mod encpedpop {
     use super::{simplepedpop, *};
     use crate::frost::{PairedSecretShare, PartyIndex, SecretShare, SharedKey};
@@ -530,7 +539,7 @@ pub mod encpedpop {
         /// Verifies that the coordinator has honestly included this party's input into the
         /// aggregated input.
         ///
-        /// This passing by itsef doesn't mean that the key generation was successful. All
+        /// This passing by itself doesn't mean that the key generation was successful. All
         /// `Contributor`s must agree on this fact and all parties must have received the same
         /// `AggKeygenInput` and validated it.
         pub fn verify_agg_input(
@@ -574,7 +583,7 @@ pub mod encpedpop {
         }
 
         /// The *certification* bytes. Checking all parties have the same output of this function is
-        /// enough to check they have the same `AggKeyGenInput`.
+        /// enough to check they have the same `AggKeygenInput`.
         pub fn cert_bytes(&self) -> Vec<u8> {
             let mut cert_bytes = self.inner.cert_bytes();
             cert_bytes.extend((self.encryption_nonces.len() as u32).to_be_bytes());
@@ -616,7 +625,7 @@ pub mod encpedpop {
             )
         }
 
-        /// Verify that another partty has certified the keygen. If you collect certifications from
+        /// Verify that another party has certified the keygen. If you collect certifications from
         /// all parties then the keygen was successful
         pub fn verify_cert<H: Hash32, NG>(
             &self,
@@ -700,7 +709,7 @@ pub mod encpedpop {
         /// Creates a new coordinator with:
         ///
         /// - `threshold`: of key we're trying to generate
-        /// - `n_contribtors`: The number of [`Contributor`]s
+        /// - `n_contributors`: The number of [`Contributor`]s
         /// - `receiver_encryption_keys`: The encryption keys of each of the share receivers.
         pub fn new(
             threshold: u32,
@@ -743,7 +752,7 @@ pub mod encpedpop {
                 return Err("didn't have share for all parties");
             }
 
-            // ⚠ only do mutations after we're sure everything is ok
+            // ⚠ only do mutations after we're sure everything is OK
             self.inner.add_input(schnorr, from, input.inner)?;
 
             for (dest, encrypted_share_contrib) in input.encrypted_shares {
@@ -822,6 +831,7 @@ pub mod encpedpop {
             .iter()
             .map(|(dest, (encryption_key, share))| {
                 let dh_key = g!(multi_nonce_keypair.secret_key() * encryption_key).normalize();
+                // SPEC DEVIATION: Hash inputs are as defined in "Multi-recipient Encryption, Revisited" by Pinto et al.
                 let pad = Scalar::from_hash(H::default().add(dh_key).add(encryption_key).add(dest));
                 let payload = s!(pad + share).public();
                 (*dest, payload)
@@ -913,7 +923,7 @@ pub mod encpedpop {
 /// `certpedpop` is built on top of [`encpedpop`] to add certification of the outcome.
 ///
 /// In [`encpedpop`] and [`simplepedpop`] it's left up to the application to figure out whether all
-/// the parties aggree on the `AggKeygenInput`. In `certpedpop` the relevant methods return
+/// the parties agree on the `AggKeygenInput`. In `certpedpop` the relevant methods return
 /// certification signatures on `AggKeygenInput` once they've been validated so they can be
 /// collected by the share receivers. Once the share receivers have got all the certificates they
 /// can finally output the key.
@@ -964,8 +974,8 @@ pub mod certpedpop {
         /// Verifies that the coordinator has honestly included this party's input into the
         /// aggregated input and returns a certification signature to that effect.
         ///
-        /// This passing by itsef doesn't mean that the key generation was successful. You must
-        /// first collect the signatures from all the cerifying parties (contributors and share
+        /// This passing by itself doesn't mean that the key generation was successful. You must
+        /// first collect the signatures from all the certifying parties (contributors and share
         /// receivers).
         pub fn verify_agg_input<H: Hash32, NG: NonceGen>(
             self,
@@ -1050,7 +1060,7 @@ pub mod certpedpop {
 
         /// Check the certificate contains a signature from each certifying party.
         ///
-        /// By default every share recevier is a certifying party but you must also get
+        /// By default every share receiver is a certifying party but you must also get
         /// certifications from the [`Contributor`]s for security. Their keys are passed in as
         /// `contributor_keys`.
         pub fn finalize<H: Hash32, NG>(
@@ -1181,7 +1191,7 @@ pub mod certpedpop {
             /// The key that had the invalid cert
             key: Point<EvenY>,
         },
-        /// A certififcate was missing
+        /// A certificate was missing
         Missing {
             /// They key whose cert was missing
             key: Point<EvenY>,
