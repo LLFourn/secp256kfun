@@ -2,6 +2,7 @@
 use crate::{backend, hash::HashInto, marker::*, op};
 use core::{
     marker::PhantomData,
+    num::NonZeroU32,
     ops::{AddAssign, MulAssign, SubAssign},
 };
 use digest::{self, generic_array::typenum::U32};
@@ -224,6 +225,13 @@ impl<S> Scalar<S, NonZero> {
     pub fn mark_zero_choice<Z: ZeroChoice>(self) -> Scalar<S, Z> {
         Scalar::from_inner(self.0)
     }
+
+    /// Converts a [`NonZeroU32`] into a `Scalar<Secret,NonZero>`.
+    ///
+    /// [`NonZeroU32`]: core::num::NonZeroU32
+    pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
+        Self::from_inner(backend::BackendScalar::from_u32(int.get()))
+    }
 }
 
 impl Scalar<Secret, NonZero> {
@@ -261,13 +269,6 @@ impl Scalar<Secret, NonZero> {
         Scalar::from_bytes_mod_order(bytes)
             .non_zero()
             .expect("computationally unreachable")
-    }
-
-    /// Converts a [`NonZeroU32`] into a `Scalar<Secret,NonZero>`.
-    ///
-    /// [`NonZeroU32`]: core::num::NonZeroU32
-    pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
-        Self::from_inner(backend::BackendScalar::from_u32(int.get()))
     }
 }
 
@@ -350,6 +351,12 @@ impl<Z, S> Eq for Scalar<Z, S> {}
 impl<S> From<u32> for Scalar<S, Zero> {
     fn from(int: u32) -> Self {
         Self::from_inner(backend::BackendScalar::from_u32(int))
+    }
+}
+
+impl<S> From<NonZeroU32> for Scalar<S, NonZero> {
+    fn from(int: NonZeroU32) -> Self {
+        Self::from_inner(backend::BackendScalar::from_u32(int.into()))
     }
 }
 

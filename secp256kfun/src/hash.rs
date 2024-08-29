@@ -150,6 +150,15 @@ impl<K: HashInto, V: HashInto> HashInto for alloc::collections::BTreeMap<K, V> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<T: HashInto + Ord> HashInto for alloc::collections::BTreeSet<T> {
+    fn hash_into(self, hash: &mut impl digest::Update) {
+        for item in self {
+            item.hash_into(hash)
+        }
+    }
+}
+
 /// Extension trait for [`digest::Update`] to make adding things to the hash convenient.
 pub trait HashAdd {
     /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
