@@ -168,12 +168,13 @@ impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
 }
 
 impl<Z: ZeroChoice, T: PointType> PairedSecretShare<T, Z> {
-    /// Pair a secret share to a shared key.
+    /// Pair a secret share to a shared key without checking its valid.
     ///
-    /// Users are meant to use [`pair_secret_share`] to create this
+    /// You're  meant to use [`pair_secret_share`] to create this which guarantees the pairing is
+    /// correct with respect to the `SharedKey`.
     ///
-    /// [`pair_secret_share`]: SharedKey::pair_secret_share
-    pub(crate) fn new(secret_share: SecretShare, public_key: Point<T, Public, Z>) -> Self {
+    /// [`pair_secret_share`]: crate::frost::SharedKey::pair_secret_share
+    pub fn new_unchecked(secret_share: SecretShare, public_key: Point<T, Public, Z>) -> Self {
         Self {
             secret_share,
             public_key,

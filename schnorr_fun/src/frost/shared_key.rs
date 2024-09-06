@@ -36,7 +36,10 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
             return None;
         }
 
-        Some(PairedSecretShare::new(secret_share, self.public_key()))
+        Some(PairedSecretShare::new_unchecked(
+            secret_share,
+            self.public_key(),
+        ))
     }
 
     /// The threshold number of participants required in a signing coalition to produce a valid signature.
