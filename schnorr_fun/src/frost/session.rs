@@ -205,11 +205,12 @@ impl PartySignSession {
     ///
     /// ## Return value
     ///
-    /// Returns a signature share
+    /// Returns a signature share. It will be valid if the right `secret_nonce` and `secret_share` was used.
     ///
     /// ## Panics
     ///
-    /// Panics if the `secret_share` was not part of the signing session
+    /// - If `secret_share` was not part of the signing session
+    /// - If `secret_share` is not paired with the same public key as the session.
     pub fn sign(
         &self,
         secret_share: &PairedSecretShare<EvenY>,
@@ -217,6 +218,9 @@ impl PartySignSession {
     ) -> Scalar<Public, Zero> {
         if self.public_key != secret_share.public_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
+        }
+        if !self.parties.contains(&secret_share.index()) {
+            panic!("this signer is not part of this signing session");
         }
         let secret_share = secret_share.secret_share();
         let lambda = poly::eval_basis_poly_at_0(secret_share.index, self.parties.iter().cloned());
