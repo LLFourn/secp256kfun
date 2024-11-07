@@ -202,6 +202,7 @@ crate::impl_display!(DL<L>);
 crate::impl_display!(DLG<L>);
 
 #[cfg(test)]
+#[allow(missing_docs)]
 pub mod test {
     use super::*;
     use crate::FiatShamir;
