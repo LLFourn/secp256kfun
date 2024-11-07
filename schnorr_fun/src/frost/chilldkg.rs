@@ -67,7 +67,7 @@ pub mod simplepedpop {
     /// A party that generates secret input to the key generation. You need at least one of these
     /// and if at least one of these parties is honest then the final secret key will not be known by an
     /// attacker (unless they obtain `t` shares!).
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq)]
     #[cfg_attr(
         feature = "bincode",
         derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
@@ -472,7 +472,7 @@ pub mod encpedpop {
     /// A party that generates secret input to the key generation. You need at least one of these
     /// and if at least one of these parties is honest then the final secret key will not be known by an
     /// attacker (unless they obtain `t` shares!).
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq)]
     #[cfg_attr(
         feature = "bincode",
         derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),

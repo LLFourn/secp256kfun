@@ -283,7 +283,7 @@ where
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
     use crate::fun::nonce::Deterministic;
 
     use super::*;
