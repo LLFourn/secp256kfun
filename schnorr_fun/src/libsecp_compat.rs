@@ -48,3 +48,20 @@ mod v0_29 {
         }
     }
 }
+
+#[cfg(feature = "libsecp_compat_0_30")]
+mod v0_30 {
+    use secp256kfun::secp256k1_0_30::schnorr;
+
+    impl From<crate::Signature> for schnorr::Signature {
+        fn from(sig: crate::Signature) -> Self {
+            schnorr::Signature::from_byte_array(sig.to_bytes())
+        }
+    }
+
+    impl From<schnorr::Signature> for crate::Signature {
+        fn from(sig: schnorr::Signature) -> Self {
+            crate::Signature::from_bytes(*sig.as_ref()).unwrap()
+        }
+    }
+}
