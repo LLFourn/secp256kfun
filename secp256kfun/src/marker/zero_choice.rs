@@ -57,7 +57,6 @@ impl ZeroChoice for NonZero {
 }
 
 /// A trait to figure out whether the result of a multiplication should be [`Zero`] or [`NonZero`] at compile time.
-
 pub trait DecideZero<ZZ> {
     /// If both arguments are `NonZero` then `Out` will be `NonZero`, otherwise `Zero`.
     type Out;

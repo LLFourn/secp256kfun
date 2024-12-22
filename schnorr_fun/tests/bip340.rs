@@ -14,7 +14,7 @@ static BIP340_CSV: &str = include_str!("./bip340-test-vectors.csv");
 
 struct AuxRng<'a>(&'a [u8]);
 
-impl<'a> rand_core::RngCore for AuxRng<'a> {
+impl rand_core::RngCore for AuxRng<'_> {
     fn next_u32(&mut self) -> u32 {
         rand_core::impls::next_u32_via_fill(self)
     }
@@ -30,7 +30,7 @@ impl<'a> rand_core::RngCore for AuxRng<'a> {
     }
 }
 
-impl<'a> NonceRng for AuxRng<'a> {
+impl NonceRng for AuxRng<'_> {
     fn fill_bytes(&self, bytes: &mut [u8]) {
         bytes.copy_from_slice(self.0)
     }
