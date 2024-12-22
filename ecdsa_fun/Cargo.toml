@@ -42,6 +42,7 @@ std = ["alloc"]
 alloc = ["secp256kfun/alloc", "sigma_fun?/alloc" ]
 serde = ["secp256kfun/serde","sigma_fun?/serde"]
 adaptor = ["dep:sigma_fun", "dep:bincode", "dep:rand_chacha"]
+bincode = [ "secp256kfun/bincode", "dep:bincode" ]
 proptest = ["secp256kfun/proptest"]
 
 

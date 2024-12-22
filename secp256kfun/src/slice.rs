@@ -24,15 +24,15 @@ pub struct Slice<'a, S = Public> {
     secrecy: PhantomData<S>,
 }
 
-impl<'a, S> Clone for Slice<'a, S> {
+impl<S> Clone for Slice<'_, S> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, S> Copy for Slice<'a, S> {}
+impl<S> Copy for Slice<'_, S> {}
 
-impl<'a, 'b, S1, S2> PartialEq<Slice<'b, S2>> for Slice<'a, S1> {
+impl<'b, S1, S2> PartialEq<Slice<'b, S2>> for Slice<'_, S1> {
     fn eq(&self, rhs: &Slice<'b, S2>) -> bool {
         // by default do comparison constant time
         self.inner.ct_eq(rhs.inner).into()
@@ -75,7 +75,7 @@ impl<'a, S> From<&'a [u8]> for Slice<'a, S> {
     }
 }
 
-impl<'a, S> HashInto for Slice<'a, S> {
+impl<S> HashInto for Slice<'_, S> {
     fn hash_into(self, hash: &mut impl digest::Update) {
         hash.update(self.inner)
     }

@@ -109,7 +109,7 @@ impl HashInto for u8 {
     }
 }
 
-impl<'a, T: HashInto + Clone> HashInto for &'a T {
+impl<T: HashInto + Clone> HashInto for &T {
     fn hash_into(self, hash: &mut impl digest::Update) {
         self.clone().hash_into(hash)
     }
