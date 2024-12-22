@@ -174,6 +174,18 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
 
         Some(Self::from_inner(poly))
     }
+
+    /// Gets an image at any index for the shared key. This can't be used for much other than
+    /// checking whether `Point` is the correct share image at a certain index. This can be useful
+    /// when you load in a share backup and want to check that it's correct.
+    ///
+    /// To verify a signature share for certain share you should use [`verification_share`] (which
+    /// contains a share image).
+    ///
+    /// [`verification_share`]: Self::verification_share
+    pub fn share_image(&self, index: PartyIndex) -> Point<NonNormal, Public, Zero> {
+        poly::point::eval(&self.point_polynomial, index)
+    }
 }
 
 impl SharedKey<Normal> {
