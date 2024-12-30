@@ -64,8 +64,7 @@ proptest! {
     ) {
         let secp = &*SECP;
         let keypair = secp256k1::Keypair::from_secret_key(secp, &key.into());
-        let secp_msg = secp256k1::Message::from_digest_slice(&msg).unwrap();
-        let sig = secp.sign_schnorr_no_aux_rand(&secp_msg, &keypair);
+        let sig = secp.sign_schnorr_no_aux_rand(&msg, &keypair);
         let schnorr = Schnorr::<Sha256,Bip340NoAux>::default();
         let fun_keypair = schnorr.new_keypair(key);
         let fun_msg = Message::<Public>::raw(&msg);
@@ -79,8 +78,7 @@ proptest! {
         let secp = &*SECP;
         let keypair = secp256k1::Keypair::from_secret_key(secp, &key.into());
         let fun_pk = secp256k1::XOnlyPublicKey::from_keypair(&keypair).0.into();
-        let secp_msg = secp256k1::Message::from_digest_slice(&msg).unwrap();
-        let sig = secp.sign_schnorr_with_aux_rand(&secp_msg, &keypair, &aux_rand);
+        let sig = secp.sign_schnorr_with_aux_rand(&msg, &keypair, &aux_rand);
         let schnorr = Schnorr::<Sha256,_>::verify_only();
         let fun_msg = Message::<Public>::raw(&msg);
         prop_assert!(schnorr.verify(&fun_pk, fun_msg, &sig.into()));
