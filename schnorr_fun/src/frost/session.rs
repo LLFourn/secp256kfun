@@ -2,7 +2,7 @@ use crate::{binonce, frost::PartyIndex, Signature};
 use alloc::collections::{BTreeMap, BTreeSet};
 use secp256kfun::{poly, prelude::*};
 
-use super::{NonceKeyPair, PairedSecretShare, SharedKey, VerificationShare};
+use super::{NonceKeyPair, PairedSecretShare, SharedKey, SignatureShare, VerificationShare};
 /// A FROST signing session used to *verify* signatures.
 ///
 /// Created using [`coordinator_sign_session`].
@@ -65,7 +65,7 @@ impl CoordinatorSignSession {
     pub fn verify_signature_share(
         &self,
         verification_share: VerificationShare<impl PointType>,
-        signature_share: Scalar<Public, Zero>,
+        signature_share: SignatureShare,
     ) -> Result<(), SignatureShareInvalid> {
         let X = verification_share.share_image;
         let index = verification_share.index;
@@ -106,7 +106,7 @@ impl CoordinatorSignSession {
     pub fn verify_and_combine_signature_shares(
         &self,
         shared_key: &SharedKey<EvenY>,
-        signature_shares: BTreeMap<PartyIndex, Scalar<Public, Zero>>,
+        signature_shares: BTreeMap<PartyIndex, SignatureShare>,
     ) -> Result<Signature, VerifySignatureSharesError> {
         if signature_shares.len() < shared_key.threshold() {
             return Err(VerifySignatureSharesError::NotEnough {
@@ -149,7 +149,7 @@ impl CoordinatorSignSession {
     pub fn combine_signature_shares(
         &self,
         final_nonce: Point<EvenY>,
-        signature_shares: impl IntoIterator<Item = Scalar<Public, Zero>>,
+        signature_shares: impl IntoIterator<Item = SignatureShare>,
     ) -> Signature {
         let sum_s = signature_shares
             .into_iter()
@@ -215,7 +215,7 @@ impl PartySignSession {
         &self,
         secret_share: &PairedSecretShare<EvenY>,
         secret_nonce: NonceKeyPair,
-    ) -> Scalar<Public, Zero> {
+    ) -> SignatureShare {
         if self.public_key != secret_share.public_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
         }

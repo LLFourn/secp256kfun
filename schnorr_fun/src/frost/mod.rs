@@ -389,6 +389,9 @@ where
     Frost::default()
 }
 
+/// A Frost signature share.
+pub type SignatureShare = Scalar<Public, Zero>;
+
 #[cfg(test)]
 mod test {
 
