@@ -1,7 +1,6 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
     binonce,
-    binonce::NonceKeyPair,
     fun::{marker::*, serde, Point, Scalar},
     musig, Message,
 };
@@ -26,7 +25,7 @@ impl<T> Maybe<T> {
 
 #[derive(Clone, Debug)]
 struct SecNonce {
-    nonce: NonceKeyPair,
+    nonce: binonce::SecretNonce,
     pk: Point,
 }
 
@@ -34,7 +33,7 @@ impl SecNonce {
     pub fn from_bytes(bytes: [u8; 97]) -> Option<Self> {
         let mut nonce = [0u8; 64];
         nonce.copy_from_slice(&bytes[..64]);
-        let nonce = binonce::NonceKeyPair::from_bytes(nonce)?;
+        let nonce = binonce::SecretNonce::from_bytes(nonce)?;
         Some(SecNonce {
             nonce,
             pk: Point::from_slice(&bytes[64..])?,

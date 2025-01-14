@@ -1,8 +1,12 @@
-use crate::{binonce, frost::PartyIndex, Signature};
+use crate::{
+    binonce::{self, SecretNonce},
+    frost::PartyIndex,
+    Signature,
+};
 use alloc::collections::{BTreeMap, BTreeSet};
 use secp256kfun::{poly, prelude::*};
 
-use super::{NonceKeyPair, PairedSecretShare, SharedKey, SignatureShare, VerificationShare};
+use super::{PairedSecretShare, SharedKey, SignatureShare, VerificationShare};
 /// A FROST signing session used to *verify* signatures.
 ///
 /// Created using [`coordinator_sign_session`].
@@ -214,7 +218,7 @@ impl PartySignSession {
     pub fn sign(
         &self,
         secret_share: &PairedSecretShare<EvenY>,
-        secret_nonce: NonceKeyPair,
+        secret_nonce: impl AsRef<SecretNonce>,
     ) -> SignatureShare {
         if self.public_key != secret_share.public_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
@@ -224,7 +228,7 @@ impl PartySignSession {
         }
         let secret_share = secret_share.secret_share();
         let lambda = poly::eval_basis_poly_at_0(secret_share.index, self.parties.iter().cloned());
-        let [mut r1, mut r2] = secret_nonce.secret;
+        let [mut r1, mut r2] = secret_nonce.as_ref().0;
         r1.conditional_negate(self.binonce_needs_negation);
         r2.conditional_negate(self.binonce_needs_negation);
 
