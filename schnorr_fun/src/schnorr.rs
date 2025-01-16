@@ -20,7 +20,7 @@ use crate::{
 /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
 /// [`NonceGen<H>`]: crate::fun::hash::NonceGen
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Schnorr<CH, NG = NoNonces> {
     /// The [`NonceGen`] used to generate nonces.
     ///

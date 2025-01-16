@@ -85,7 +85,7 @@ impl<R: RngCore> NonceRng for std::sync::Mutex<R> {
 /// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
 /// [`OsRng`]: rand_core::OsRng
 /// [`GlobalRng`]: crate::nonce::GlobalRng
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Synthetic<H, R> {
     rng: R,
     nonce_hash: H,
@@ -125,7 +125,7 @@ impl<H: Default, R: NonceRng> Synthetic<H, R> {
 /// ```
 ///
 /// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct GlobalRng<R> {
     // Using fn(R) ensures that it is sync even if R is not sync
     inner: PhantomData<fn(R)>,
@@ -145,7 +145,7 @@ pub struct GlobalRng<R> {
 /// let nonce_gen = Deterministic::<Sha256>::default().tag(b"BIP0340");
 /// ```
 /// [`Synthetic`]: crate::nonce::Synthetic
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Deterministic<H> {
     nonce_hash: H,
 }

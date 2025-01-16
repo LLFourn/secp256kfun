@@ -124,7 +124,7 @@ pub type PartyIndex = Scalar<Public, NonZero>;
 ///
 /// - `H`: hash type for challenges, and binding coefficient.
 /// - `NG`: nonce generator for FROST nonces (only used if you explicitly call nonce generation functions).
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Frost<H, NG> {
     /// The instance of the Schnorr signature scheme.
     pub schnorr: Schnorr<H, NG>,
