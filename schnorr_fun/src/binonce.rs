@@ -17,7 +17,7 @@ pub struct Nonce<Z = NonZero>(pub [Point<Normal, Public, Z>; 2]);
 impl<Z: ZeroChoice> Nonce<Z> {
     /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
     ///
-    /// If either pair of 33 bytes is `[0u8;32]` that point is interpreted as `Zero`.
+    /// If either pair of 33 bytes is `[0u8;33]` that point is interpreted as `Zero`.
     pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
         let R1 = Point::from_slice(&bytes[..33])?;
         let R2 = Point::from_slice(&bytes[33..])?;
@@ -35,7 +35,7 @@ impl<Z: ZeroChoice> Nonce<Z> {
 
     /// Serializes a public nonce as  as 66 bytes (two 33-byte serialized points).
     ///
-    /// If either point is `Zero` it will be serialized as `[0u8;32]`.
+    /// If either point is `Zero` it will be serialized as `[0u8;33]`.
     pub fn to_bytes(&self) -> [u8; 66] {
         let mut bytes = [0u8; 66];
         bytes[..33].copy_from_slice(self.0[0].to_bytes().as_ref());
@@ -72,7 +72,7 @@ impl Nonce<Zero> {
 }
 
 secp256kfun::impl_fromstr_deserialize! {
-    name => "public nonce pair",
+    name => "public binonce",
     fn from_bytes<Z: ZeroChoice>(bytes: [u8;66]) -> Option<Nonce<Z>> {
         Nonce::from_bytes(bytes)
     }
@@ -86,21 +86,54 @@ secp256kfun::impl_display_serialize! {
 
 /// A pair of secret nonces along with the public portion.
 ///
-/// A nonce key pair can be created manually with [`from_secrets`]
+/// A nonce key pair can be created manually with [`from_secret`]
 ///
-/// [`from_secrets`]: Self::from_secrets
+/// [`from_secret`]: Self::from_secret
 #[derive(Debug, Clone, PartialEq)]
 pub struct NonceKeyPair {
     /// The public nonce
     pub public: Nonce<NonZero>,
     /// The secret nonce
-    pub secret: [Scalar; 2],
+    pub secret: SecretNonce,
+}
+
+/// A pair of secret nonces.
+///
+/// ⚠ An attacker getting this allows them to extract your secret share from a signature share.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SecretNonce(pub [Scalar; 2]);
+
+impl SecretNonce {
+    /// Deserializes a secret binonce from 64-bytes (two 32-byte serialized scalars).
+    pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
+        let r1 = Scalar::from_slice(&bytes[..32])?.non_zero()?;
+        let r2 = Scalar::from_slice(&bytes[32..])?.non_zero()?;
+        Some(Self([r1, r2]))
+    }
+
+    /// Serializes a secret binonce to 64-bytes (two 32-bytes serialized scalars).
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut bytes = [0u8; 64];
+        bytes[..32].copy_from_slice(self.0[0].to_bytes().as_ref());
+        bytes[32..].copy_from_slice(self.0[1].to_bytes().as_ref());
+        bytes
+    }
+
+    /// Generate a nonce secret binonce from an rng
+    pub fn random(rng: &mut impl RngCore) -> Self {
+        Self([Scalar::random(rng), Scalar::random(rng)])
+    }
+
+    /// Convert a secret nonce into a key pair by computing the public nonce
+    pub fn into_keypair(self) -> NonceKeyPair {
+        NonceKeyPair::from_secret(self)
+    }
 }
 
 impl NonceKeyPair {
     /// Load nonces from two secret scalars
-    pub fn from_secrets(secret: [Scalar; 2]) -> Self {
-        let [ref r1, ref r2] = secret;
+    pub fn from_secret(secret: SecretNonce) -> Self {
+        let [ref r1, ref r2] = secret.0;
         let R1 = g!(r1 * G).normalize();
         let R2 = g!(r2 * G).normalize();
         NonceKeyPair {
@@ -108,29 +141,9 @@ impl NonceKeyPair {
             secret,
         }
     }
-    /// Deserializes a nonce key pair from 64-bytes (two 32-byte serialized scalars).
-    pub fn from_bytes(bytes: [u8; 64]) -> Option<Self> {
-        let r1 = Scalar::from_slice(&bytes[..32])?.non_zero()?;
-        let r2 = Scalar::from_slice(&bytes[32..])?.non_zero()?;
-        let R1 = g!(r1 * G).normalize();
-        let R2 = g!(r2 * G).normalize();
-        let pub_nonce = Nonce([R1, R2]);
-        Some(NonceKeyPair {
-            public: pub_nonce,
-            secret: [r1, r2],
-        })
-    }
-
-    /// Serializes a nonce key pair to 64-bytes (two 32-bytes serialized scalars).
-    pub fn to_bytes(&self) -> [u8; 64] {
-        let mut bytes = [0u8; 64];
-        bytes[..32].copy_from_slice(self.secret[0].to_bytes().as_ref());
-        bytes[32..].copy_from_slice(self.secret[1].to_bytes().as_ref());
-        bytes
-    }
 
     /// Get the secret portion of the nonce key pair (don't share this!)
-    pub fn secret(&self) -> &[Scalar; 2] {
+    pub fn secret(&self) -> &SecretNonce {
         &self.secret
     }
 
@@ -139,21 +152,46 @@ impl NonceKeyPair {
         self.public
     }
 
-    /// Generate a nonce keypair from an rng
+    /// Generate a random secret nonce and conver to a keypair
     pub fn random(rng: &mut impl RngCore) -> Self {
-        Self::from_secrets([Scalar::random(rng), Scalar::random(rng)])
+        Self::from_secret(SecretNonce::random(rng))
+    }
+}
+
+impl AsRef<SecretNonce> for NonceKeyPair {
+    fn as_ref(&self) -> &SecretNonce {
+        self.secret()
+    }
+}
+
+impl AsRef<SecretNonce> for SecretNonce {
+    fn as_ref(&self) -> &SecretNonce {
+        self
     }
 }
 
 secp256kfun::impl_fromstr_deserialize! {
-    name => "secret nonce pair",
-    fn from_bytes(bytes: [u8;64]) -> Option<NonceKeyPair> {
-        NonceKeyPair::from_bytes(bytes)
+    name => "secret binonce",
+    fn from_bytes(bytes: [u8;64]) -> Option<SecretNonce> {
+        SecretNonce::from_bytes(bytes)
     }
 }
 
 secp256kfun::impl_display_serialize! {
-    fn to_bytes(nkp: &NonceKeyPair) -> [u8;64] {
-        nkp.to_bytes()
+    fn to_bytes(value: &SecretNonce) -> [u8;64] {
+        value.to_bytes()
+    }
+}
+
+secp256kfun::impl_fromstr_deserialize! {
+    name => "secret binonce",
+    fn from_bytes(bytes: [u8;64]) -> Option<NonceKeyPair> {
+        Some(NonceKeyPair::from_secret(SecretNonce::from_bytes(bytes)?))
+    }
+}
+
+secp256kfun::impl_display_serialize! {
+    fn to_bytes(value: &NonceKeyPair) -> [u8;64] {
+        value.secret.to_bytes()
     }
 }

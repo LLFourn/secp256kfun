@@ -71,7 +71,11 @@
 //!
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
-use crate::{adaptor::EncryptedSignature, binonce, Message, Schnorr, Signature};
+use crate::{
+    adaptor::EncryptedSignature,
+    binonce::{self, SecretNonce},
+    Message, Schnorr, Signature,
+};
 use alloc::vec::Vec;
 use secp256kfun::{
     hash::{Hash32, HashAdd, Tag},
@@ -556,7 +560,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         session: &SignSession<T>,
         my_index: usize,
         keypair: &KeyPair,
-        local_secret_nonce: binonce::NonceKeyPair,
+        local_secret_nonce: impl AsRef<SecretNonce>,
     ) -> Scalar<Public, Zero> {
         assert_eq!(
             keypair.public_key(),
@@ -569,7 +573,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         let mut a = agg_key.coefs[my_index];
 
         a.conditional_negate(agg_key.needs_negation);
-        let [mut r1, mut r2] = local_secret_nonce.secret;
+        let [mut r1, mut r2] = local_secret_nonce.as_ref().0;
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
         s!(c * a * x_i + r1 + b * r2).public()
