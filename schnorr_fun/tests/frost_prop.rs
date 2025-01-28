@@ -92,10 +92,11 @@ proptest! {
 
         let public_nonces = secret_nonces.iter().map(|(signer_index, sn)| (*signer_index, sn.public())).collect::<BTreeMap<_, _>>();
 
-        let coord_signing_session = frost.coordinator_sign_session(
+        let coord_signing_session = frost.randomized_coordinator_sign_session(
             &xonly_shared_key,
             public_nonces,
-            message
+            message,
+            &mut rng
         );
 
         let party_signing_session = frost.party_sign_session(
@@ -118,7 +119,6 @@ proptest! {
             signatures.insert(secret_share.index(), sig);
         }
         let combined_sig = coord_signing_session.combine_signature_shares(
-            coord_signing_session.final_nonce(),
             signatures.values().cloned()
         );
 

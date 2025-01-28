@@ -62,10 +62,22 @@ impl<Z> HashInto for Nonce<Z> {
 
 impl Nonce<Zero> {
     /// Adds a bunch of binonces together (one for each party signing usually).
-    pub fn aggregate(nonces: impl IntoIterator<Item = Nonce>) -> Self {
-        let agg = nonces.into_iter().fold([Point::zero(); 2], |acc, nonce| {
+    ///
+    /// The second `randomization` argument is optional and so can be set to `[Point::zero]`. It
+    /// adds a point to the first nonce in the binonce which means the final nonce will be be
+    /// unrecognisable to anyone who knew all the `nonces` going into this function. Putting a
+    /// random point in here prevents nonce exfiltration attacks like [Dark Skippy].
+    ///
+    /// [Dark Skippy]: https://darkskippy.com
+    pub fn aggregate(
+        nonces: impl IntoIterator<Item = Nonce>,
+        randomization: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
+    ) -> Self {
+        let mut agg = nonces.into_iter().fold([Point::zero(); 2], |acc, nonce| {
             [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
         });
+
+        agg[0] += randomization;
 
         Self([agg[0].normalize(), agg[1].normalize()])
     }
