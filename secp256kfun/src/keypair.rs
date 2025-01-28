@@ -33,12 +33,12 @@ use crate::{g, marker::*, Point, Scalar, G};
 /// [`Normal`]: crate::marker::Normal
 /// [`EvenY`]: crate::marker::EvenY
 #[derive(Clone, Copy, Debug)]
-pub struct KeyPair<T = Normal> {
-    sk: Scalar,
-    pk: Point<T>,
+pub struct KeyPair<T = Normal, Z = NonZero> {
+    sk: Scalar<Secret, Z>,
+    pk: Point<T, Public, Z>,
 }
 
-/// two keypairs are the same if they have the
+/// Two keypairs are the same if they have the
 impl<T1: PointType, T2: PointType> PartialEq<KeyPair<T2>> for KeyPair<T1> {
     fn eq(&self, other: &KeyPair<T2>) -> bool {
         self.pk == other.pk
@@ -47,9 +47,9 @@ impl<T1: PointType, T2: PointType> PartialEq<KeyPair<T2>> for KeyPair<T1> {
 
 impl<T: PointType> Eq for KeyPair<T> {}
 
-impl KeyPair<Normal> {
+impl<Z: ZeroChoice> KeyPair<Normal, Z> {
     /// Create a new `KeyPair` from a `secret_key`.
-    pub fn new(secret_key: Scalar) -> Self {
+    pub fn new(secret_key: Scalar<Secret, Z>) -> Self {
         Self {
             pk: g!(secret_key * G).normalize(),
             sk: secret_key,
@@ -89,14 +89,14 @@ impl KeyPair<EvenY> {
     }
 }
 
-impl<T> KeyPair<T> {
+impl<T, Z> KeyPair<T, Z> {
     /// Returns a reference to the secret key.
-    pub fn secret_key(&self) -> &Scalar {
+    pub fn secret_key(&self) -> &Scalar<Secret, Z> {
         &self.sk
     }
 
     /// The public key
-    pub fn public_key(&self) -> Point<T>
+    pub fn public_key(&self) -> Point<T, Public, Z>
     where
         T: Copy,
     {
@@ -110,11 +110,21 @@ impl<T> KeyPair<T> {
     /// use secp256kfun::{KeyPair, Scalar, marker::*};
     /// let keypair = KeyPair::new(Scalar::random(&mut rand::thread_rng()));
     /// let (secret_key, public_key) = keypair.as_tuple();
-    pub fn as_tuple(&self) -> (&Scalar, Point<T>)
+    pub fn as_tuple(&self) -> (Scalar<Secret, Z>, Point<T, Public, Z>)
     where
         T: Copy,
     {
-        (&self.sk, self.pk)
+        (self.sk, self.pk)
+    }
+}
+
+impl KeyPair<Normal, Zero> {
+    /// Gets a `Zero` keypair where the secret key is not secret at all. It's just `Scalar::zero`.
+    pub fn zero() -> Self {
+        KeyPair {
+            sk: Scalar::zero(),
+            pk: Point::zero(),
+        }
     }
 }
 
@@ -137,7 +147,7 @@ impl From<KeyPair<Normal>> for KeyPair<EvenY> {
 }
 
 crate::impl_serialize! {
-    fn to_bytes<T>(kp: &KeyPair<T>) -> [u8;32] {
+    fn to_bytes<T, Z>(kp: &KeyPair<T, Z>) -> [u8;32] {
         kp.secret_key().to_bytes()
     }
 }
