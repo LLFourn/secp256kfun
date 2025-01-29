@@ -61,11 +61,25 @@ impl<Z> HashInto for Nonce<Z> {
 }
 
 impl Nonce<Zero> {
-    /// Adds a bunch of binonces together (one for each party signing usually).
+    /// Sums binonces together (one for each party signing usually).
     pub fn aggregate(nonces: impl IntoIterator<Item = Nonce>) -> Self {
-        let agg = nonces.into_iter().fold([Point::zero(); 2], |acc, nonce| {
+        Self::aggregate_and_add(nonces, Point::<Normal, Public, _>::zero())
+    }
+
+    /// Like [`Self::aggregate`] but adds a point to the result. This is used internally by
+    /// [`randomized_coordinator_sign_session`] to randomize the aggregate nonce.
+    ///
+    /// [`randomized_coordinator_sign_session`]: crate::frost::Frost::randomized_coordinator_sign_session
+    /// [Dark Skippy]: https://darkskippy.com
+    pub fn aggregate_and_add(
+        nonces: impl IntoIterator<Item = Nonce>,
+        addition: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
+    ) -> Self {
+        let mut agg = nonces.into_iter().fold([Point::zero(); 2], |acc, nonce| {
             [g!(acc[0] + nonce.0[0]), g!(acc[1] + nonce.0[1])]
         });
+
+        agg[0] += addition;
 
         Self([agg[0].normalize(), agg[1].normalize()])
     }
