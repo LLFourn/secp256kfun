@@ -31,14 +31,11 @@ pub struct CoordinatorSignSession {
 
     pub(crate) agg_binonce: binonce::Nonce<Zero>,
     pub(crate) nonces: BTreeMap<PartyIndex, binonce::Nonce>,
+    pub(crate) randomization: Scalar<Secret, Zero>,
 }
 
 impl CoordinatorSignSession {
     /// Fetch the participant indices for this signing session.
-    ///
-    /// ## Return value
-    ///
-    /// An iterator of participant indices
     pub fn parties(&self) -> BTreeSet<PartyIndex> {
         self.nonces.keys().cloned().collect()
     }
@@ -62,10 +59,6 @@ impl CoordinatorSignSession {
     ///
     /// The `verification_share` is usually derived from either [`SharedKey::verification_share`] or
     /// [`PairedSecretShare::verification_share`].
-    ///
-    /// ## Return Value
-    ///
-    /// Returns `true` if signature share is valid.
     pub fn verify_signature_share(
         &self,
         verification_share: VerificationShare<impl PointType>,
@@ -85,10 +78,6 @@ impl CoordinatorSignSession {
             poly::eval_basis_poly_at_0(verification_share.index, self.nonces.keys().cloned());
         let c = &self.challenge;
         let b = &self.binding_coeff;
-        debug_assert!(
-            self.parties().contains(&index),
-            "the party is not part of the session"
-        );
         let [R1, R2] = self
             .nonces
             .get(&index)
@@ -104,7 +93,8 @@ impl CoordinatorSignSession {
 
     /// Combines signature shares from each party into the final signature.
     ///
-    /// You can use this instead of calling [`verify_signature_share`] on each share.
+    /// You can use this instead of calling [`verify_signature_share`] on each share (but you won't
+    /// know when signature share was invalid).
     ///
     /// [`verify_signature_share`]: Self::verify_signature_share
     pub fn verify_and_combine_signature_shares(
@@ -125,42 +115,35 @@ impl CoordinatorSignSession {
             .map_err(VerifySignatureSharesError::Invalid)?;
         }
 
-        let signature =
-            self.combine_signature_shares(self.final_nonce(), signature_shares.values().cloned());
+        let signature = self.combine_signature_shares(signature_shares.values().cloned());
 
         Ok(signature)
     }
 
-    /// Combine a vector of signatures shares into an aggregate signature given the final nonce.
+    /// Combine signatures shares into an aggregate signature.
     ///
-    /// You can get `final_nonce` from either of the [`CoordinatorSignSession`] or the [`PartySignSession`].
-    ///
-    /// This method does not check the validity of the `signature_shares`
-    /// but if you have verified each signature share
-    /// individually the output will be a valid siganture under the `frost_key` and message provided
-    /// when starting the session.
+    /// This method does not check the validity of the `signature_shares` but if you have verified
+    /// each signature share individually the output will be a valid siganture under the `frost_key`
+    /// and message provided when starting the session.
     ///
     /// Alternatively you can use [`verify_and_combine_signature_shares`] which checks and combines
     /// the signature shares.
     ///
-    /// ## Return value
-    ///
-    /// Returns a schnorr [`Signature`] on the message
-    ///
     /// [`CoordinatorSignSession`]: CoordinatorSignSession::final_nonce
-    /// [`PartySignSession`]: PartySignSession::final_nonce
     /// [`verify_and_combine_signature_shares`]: Self::verify_and_combine_signature_shares
     pub fn combine_signature_shares(
         &self,
-        final_nonce: Point<EvenY>,
         signature_shares: impl IntoIterator<Item = SignatureShare>,
     ) -> Signature {
-        let sum_s = signature_shares
+        let mut sum_s = signature_shares
             .into_iter()
             .reduce(|acc, partial_sig| s!(acc + partial_sig).public())
             .unwrap_or(Scalar::zero());
+
+        sum_s += self.randomization;
+
         Signature {
-            R: final_nonce,
+            R: self.final_nonce,
             s: sum_s,
         }
     }
@@ -206,10 +189,6 @@ impl PartySignSession {
     /// Generates a signature share under the frost key using a secret share.
     ///
     /// The `secret_share` is taken as a `PairedSecretShare<EvenY>` to guarantee that the secret is aligned with an `EvenY` point.
-    ///
-    /// ## Return value
-    ///
-    /// Returns a signature share. It will be valid if the right `secret_nonce` and `secret_share` was used.
     ///
     /// ## Panics
     ///

@@ -526,8 +526,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         Point<EvenY>,
         bool,
     ) {
-        let mut agg_binonce = binonce::Nonce::aggregate(nonces.iter().cloned());
-        agg_binonce.0[0] = g!(agg_binonce.0[0] + encryption_key).normalize();
+        let agg_binonce = binonce::Nonce::aggregate_and_add(nonces.iter().cloned(), encryption_key);
 
         let binding_coeff = {
             let H = self.nonce_coeff_hash.clone();
@@ -545,7 +544,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
             .schnorr
             .challenge(&R, &agg_key.agg_public_key(), message);
 
-        // we may as well eagerly do
+        // we may as well eagerly do the negation
         for nonce in &mut nonces {
             nonce.conditional_negate(nonces_need_negation);
         }

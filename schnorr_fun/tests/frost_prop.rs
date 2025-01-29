@@ -74,14 +74,17 @@ proptest! {
         // shuffle the mask for random signers
         signer_mask.shuffle(&mut rng);
 
-        let secret_shares_of_signers = signer_mask.into_iter().zip(xonly_secret_shares.into_iter()).filter(|(is_signer, _)| *is_signer)
+        let secret_shares_of_signers = signer_mask
+            .into_iter()
+            .zip(xonly_secret_shares.into_iter())
+            .filter(|(is_signer, _)| *is_signer)
             .map(|(_, secret_share)| secret_share).collect::<Vec<_>>();
 
 
         let sid = b"frost-prop-test".as_slice();
         let message = Message::plain("test", b"test");
 
-        let mut secret_nonces: BTreeMap<_, _> = secret_shares_of_signers.iter().map(|paired_secret_share| {
+        let secret_nonces: BTreeMap<_, _> = secret_shares_of_signers.iter().map(|paired_secret_share| {
             (paired_secret_share.secret_share().index, frost.gen_nonce::<ChaCha20Rng>(
                 &mut frost.seed_nonce_rng(
                     *paired_secret_share,
@@ -94,40 +97,49 @@ proptest! {
 
         let coord_signing_session = frost.coordinator_sign_session(
             &xonly_shared_key,
+            public_nonces.clone(),
+            message,
+        );
+
+        let randomized_coord_signing_session = frost.randomized_coordinator_sign_session(
+            &xonly_shared_key,
             public_nonces,
-            message
-        );
-
-        let party_signing_session = frost.party_sign_session(
-            xonly_shared_key.public_key(),
-            coord_signing_session.parties(),
-            coord_signing_session.agg_binonce(),
             message,
+            &mut rng
         );
 
-        let mut signatures = BTreeMap::default();
-        for secret_share in secret_shares_of_signers  {
-            let sig = party_signing_session.sign(
-                &secret_share,
-                secret_nonces.remove(&secret_share.index()).unwrap()
+        for sign_session in [coord_signing_session, randomized_coord_signing_session] {
+            let party_signing_session = frost.party_sign_session(
+                xonly_shared_key.public_key(),
+                sign_session.parties(),
+                sign_session.agg_binonce(),
+                message,
             );
-            assert_eq!(coord_signing_session.verify_signature_share(
-                secret_share.verification_share(),
-                sig), Ok(())
+
+            let mut signatures = BTreeMap::default();
+            for secret_share in &secret_shares_of_signers  {
+                let sig = party_signing_session.sign(
+                    secret_share,
+                    secret_nonces.get(&secret_share.index()).unwrap().clone(),
+                );
+                assert_eq!(sign_session.verify_signature_share(
+                    secret_share.verification_share(),
+                    sig), Ok(())
+                );
+                signatures.insert(secret_share.index(), sig);
+            }
+            let combined_sig = sign_session.combine_signature_shares(
+                signatures.values().cloned()
             );
-            signatures.insert(secret_share.index(), sig);
+
+            assert_eq!(sign_session.verify_and_combine_signature_shares(&xonly_shared_key, signatures), Ok(combined_sig));
+            assert!(frost.schnorr.verify(
+                &xonly_shared_key.public_key(),
+                message,
+                &combined_sig
+            ));
+
         }
-        let combined_sig = coord_signing_session.combine_signature_shares(
-            coord_signing_session.final_nonce(),
-            signatures.values().cloned()
-        );
-
-        assert_eq!(coord_signing_session.verify_and_combine_signature_shares(&xonly_shared_key, signatures), Ok(combined_sig));
-        assert!(frost.schnorr.verify(
-            &xonly_shared_key.public_key(),
-            message,
-            &combined_sig
-        ));
 
     }
 }

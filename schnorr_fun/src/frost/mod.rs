@@ -106,6 +106,7 @@ use secp256kfun::{
     poly,
     prelude::*,
     rand_core::{RngCore, SeedableRng},
+    KeyPair,
 };
 
 /// The index of a party's secret share.
@@ -289,14 +290,47 @@ impl<H: Hash32, NG> Frost<H, NG> {
     pub fn coordinator_sign_session(
         &self,
         shared_key: &SharedKey<EvenY>,
+        nonces: BTreeMap<PartyIndex, Nonce>,
+        message: Message,
+    ) -> CoordinatorSignSession {
+        self.coordinator_sign_session_(shared_key, nonces, message, KeyPair::zero())
+    }
+
+    /// Start a FROST session as a coordiantor with randomization.
+    ///
+    /// Like [`Self::coordinator_sign_session`] except it randomizes the session such that even if
+    /// you knew all the other arguments the final nonce (the nonce that appears in the signature)
+    /// will be indistinguishable from random. This prevents attacks like [Dark
+    /// Skippy](https://darkskippy.com/) (if the coordinator is honest of course).
+    pub fn randomized_coordinator_sign_session(
+        &self,
+        shared_key: &SharedKey<EvenY>,
+        nonces: BTreeMap<PartyIndex, Nonce>,
+        message: Message,
+        rng: &mut impl RngCore,
+    ) -> CoordinatorSignSession {
+        self.coordinator_sign_session_(
+            shared_key,
+            nonces,
+            message,
+            KeyPair::new(Scalar::random(rng)),
+        )
+    }
+
+    fn coordinator_sign_session_(
+        &self,
+        shared_key: &SharedKey<EvenY>,
         mut nonces: BTreeMap<PartyIndex, Nonce>,
         message: Message,
+        randomization: KeyPair<impl PointType, impl ZeroChoice>,
     ) -> CoordinatorSignSession {
         if nonces.len() < shared_key.threshold() {
             panic!("nonces' length was less than the threshold");
         }
+        let (mut randomization_scalar, randomization_point) = randomization.as_tuple();
 
-        let agg_binonce = binonce::Nonce::aggregate(nonces.values().cloned());
+        let agg_binonce =
+            binonce::Nonce::aggregate_and_add(nonces.values().cloned(), randomization_point);
 
         let binding_coeff = self.binding_coefficient(
             shared_key.public_key(),
@@ -314,7 +348,10 @@ impl<H: Hash32, NG> Frost<H, NG> {
             nonce.conditional_negate(binonce_needs_negation);
         }
 
+        randomization_scalar.conditional_negate(binonce_needs_negation);
+
         CoordinatorSignSession {
+            randomization: randomization_scalar.mark_zero(),
             binding_coeff,
             agg_binonce,
             final_nonce,
