@@ -1,8 +1,14 @@
 # CHANGELOG
 
-## UNRELEASED
+## v0.11.0
 
 - Added `prelude` module for convenient importing
+- Remove `ShareBackup` in favour of `SecretShare`
+- Add compatibility to `rust-secp256k1` v0.29.0
+- Add compatibility to `rust-secp256k1` v0.30.0
+- Large changes to FROST api as usual
+- Add `Hash32` trait to collect all the useful hash traits we use all over the place
+- Add our own take on [chill-dkg](ttps://github.com/BlockstreamResearch/bip-frost-dkg/tree/master) WIP BIP
 
 
 ## v0.10.0
