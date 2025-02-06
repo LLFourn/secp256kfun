@@ -28,7 +28,7 @@ _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the res
 
 ```toml
 [dependencies]
-secp256kfun = "0.10"
+secp256kfun = "0.11"
 ```
 
 ### Should use?
@@ -110,7 +110,6 @@ Otherwise, information about those inputs may leak to anyone that can measure it
 In secp256kfun we try and solve this problem by allowing you to mark different inputs as `Public` or `Secret`.
 Depending on the marking the rust compiler may choose different low level operations.
 Choosing faster but variable time operations for `Public` inputs and slower safer constant time ones for things marked as `Secret`.
-In other words, the caller can decide which input are
 
 For example, below we have a `pedersen_commitment` function which is called by the committing party with a secret value and by the verifying party when the secret value is finally revealed.
 Note that we only have to write the function once and the caller decides by marking whether the function should run in constant time or variable time.
