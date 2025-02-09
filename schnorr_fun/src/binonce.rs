@@ -18,11 +18,11 @@ impl<Z: ZeroChoice> Nonce<Z> {
     /// Reads the pair of nonces from 66 bytes (two 33-byte serialized points).
     ///
     /// If either pair of 33 bytes is `[0u8;33]` that point is interpreted as `Zero`.
-    pub fn from_bytes(bytes: [u8; 66]) -> Option<Self> {
-        let R1 = Point::from_slice(&bytes[..33])?;
-        let R2 = Point::from_slice(&bytes[33..])?;
+    pub fn from_bytes(bytes: [u8; 66]) -> Self {
+        let R1 = Point::from_slice(&bytes[..33]).expect("Always 33 bytes");
+        let R2 = Point::from_slice(&bytes[33..]).expect("Always 33 bytes");
 
-        Some(Nonce([R1, R2]))
+        Nonce([R1, R2])
     }
 }
 
@@ -88,7 +88,7 @@ impl Nonce<Zero> {
 secp256kfun::impl_fromstr_deserialize! {
     name => "public binonce",
     fn from_bytes<Z: ZeroChoice>(bytes: [u8;66]) -> Option<Nonce<Z>> {
-        Nonce::from_bytes(bytes)
+       Some(Nonce::from_bytes(bytes))
     }
 }
 
