@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## UNRELEASED
 
+- Add From/TryFrom conversions for `Scalar` to all unsigned integer types
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
 
