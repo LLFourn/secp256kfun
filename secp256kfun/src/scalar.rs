@@ -2,7 +2,6 @@
 use crate::{backend, hash::HashInto, marker::*, op};
 use core::{
     marker::PhantomData,
-    num::NonZeroU32,
     ops::{AddAssign, MulAssign, SubAssign},
 };
 use digest::{self, generic_array::typenum::U32};
@@ -185,7 +184,7 @@ impl<S> Scalar<S, NonZero> {
 
     /// Returns the integer `1` as a `Scalar`.
     pub fn one() -> Self {
-        Scalar::from(1).non_zero().unwrap()
+        Scalar::<S, Zero>::from(1u32).non_zero().unwrap()
     }
 
     /// Returns the integer -1 (modulo the curve order) as a `Scalar`.
@@ -220,13 +219,6 @@ impl<S> Scalar<S, NonZero> {
     /// ```
     pub fn mark_zero_choice<Z: ZeroChoice>(self) -> Scalar<S, Z> {
         Scalar::from_inner(self.0)
-    }
-
-    /// Converts a [`NonZeroU32`] into a `Scalar<Secret,NonZero>`.
-    ///
-    /// [`NonZeroU32`]: core::num::NonZeroU32
-    pub fn from_non_zero_u32(int: core::num::NonZeroU32) -> Self {
-        Self::from_inner(backend::BackendScalar::from_u32(int.get()))
     }
 }
 
@@ -344,18 +336,6 @@ impl<Z1, Z2, S1, S2> PartialEq<Scalar<S2, Z2>> for Scalar<S1, Z1> {
 
 impl<Z, S> Eq for Scalar<Z, S> {}
 
-impl<S> From<u32> for Scalar<S, Zero> {
-    fn from(int: u32) -> Self {
-        Self::from_inner(backend::BackendScalar::from_u32(int))
-    }
-}
-
-impl<S> From<NonZeroU32> for Scalar<S, NonZero> {
-    fn from(int: NonZeroU32) -> Self {
-        Self::from_inner(backend::BackendScalar::from_u32(int.into()))
-    }
-}
-
 crate::impl_fromstr_deserialize! {
     name => "secp256k1 scalar",
     fn from_bytes<S, Z: ZeroChoice>(bytes: [u8;32]) -> Option<Scalar<S,Z>> {
@@ -405,7 +385,7 @@ where
     S: Secrecy,
 {
     fn default() -> Self {
-        Self::from_inner(backend::BackendScalar::from_u32(1))
+        Self::one()
     }
 }
 
@@ -470,10 +450,109 @@ impl<Z> Ord for Scalar<Public, Z> {
     }
 }
 
+mod conversion_impls {
+    use super::*;
+    use core::{any::type_name, convert::TryFrom, fmt, marker::PhantomData, mem};
+    use subtle::ConstantTimeEq;
+
+    /// Returned when a `Scalar` value exceeds the range of the target integer.
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct ScalarTooLarge<T>(PhantomData<T>);
+
+    impl<T> core::fmt::Display for ScalarTooLarge<T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "scalar value does not fit into {}", type_name::<T>())
+        }
+    }
+
+    impl<T> core::fmt::Debug for ScalarTooLarge<T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_tuple("ScalarTooLarge")
+                .field(&type_name::<T>())
+                .finish()
+        }
+    }
+
+    #[cfg(feature = "std")]
+    impl<T> std::error::Error for ScalarTooLarge<T> {}
+
+    /// Implements `From<$t> for $scalar` **and**
+    /// `TryFrom<$scalar> for $t` for every `$t` supplied.
+    macro_rules! impl_scalar_conversions {
+        ($($t:ty),+ $(,)?) => {
+            $(
+                impl<S> From<$t> for Scalar<S, Zero> {
+                    fn from(value: $t) -> Self {
+                        // big-endian integer → 32-byte array
+                        let mut bytes = [0u8; 32];
+                        let int_bytes = value.to_be_bytes();
+                        bytes[32 - int_bytes.len() ..].copy_from_slice(&int_bytes);
+                        Scalar::<S, Zero>::from_bytes(bytes).unwrap()
+                    }
+                }
+
+                impl<S, Z> TryFrom<Scalar<S, Z>> for $t {
+                    type Error = ScalarTooLarge<$t>;
+
+                    fn try_from(value: Scalar<S, Z>) -> Result<Self, Self::Error> {
+                        let bytes = value.to_bytes();
+
+                        // Overflow check: any non-zero in the high 32−N bytes fails.
+                        let high = &bytes[.. 32 - mem::size_of::<$t>()];
+                        if high.ct_eq(&[0x0;32 - mem::size_of::<$t>()]).into()  {
+                            // Safe: the slice is exactly the right length.
+                            let mut buf = [0u8; mem::size_of::<$t>()];
+                            buf.copy_from_slice(&bytes[32 - mem::size_of::<$t>() ..]);
+                            Ok(<$t>::from_be_bytes(buf))
+                        } else {
+                            Err(ScalarTooLarge(PhantomData))
+                        }
+
+                    }
+                }
+
+                impl<S> From<core::num::NonZero<$t>> for Scalar<S, NonZero> {
+                    fn from(value: core::num::NonZero<$t>) -> Self {
+                        // big-endian integer → 32-byte array
+                        let mut bytes = [0u8; 32];
+                        let int_bytes = value.get().to_be_bytes();
+                        bytes[32 - int_bytes.len() ..].copy_from_slice(&int_bytes);
+                        Scalar::<S, Zero>::from_bytes(bytes).unwrap().non_zero().unwrap()
+                    }
+                }
+
+                impl<S> TryFrom<Scalar<S, NonZero>> for core::num::NonZero<$t> {
+                    type Error = ScalarTooLarge<$t>;
+
+                    fn try_from(value: Scalar<S, NonZero>) -> Result<Self, Self::Error> {
+                        let bytes = value.to_bytes();
+
+                        // Overflow check: any non-zero in the high 32−N bytes fails.
+                        let high = &bytes[.. 32 - mem::size_of::<$t>()];
+                        if high.ct_eq(&[0x0;32 - mem::size_of::<$t>()]).into()  {
+                            // Safe: the slice is exactly the right length.
+                            let mut buf = [0u8; mem::size_of::<$t>()];
+                            buf.copy_from_slice(&bytes[32 - mem::size_of::<$t>() ..]);
+                            Ok(core::num::NonZero::new(<$t>::from_be_bytes(buf)).unwrap())
+                        } else {
+                            Err(ScalarTooLarge(PhantomData))
+                        }
+
+                    }
+                }
+
+            )*
+        };
+    }
+
+    impl_scalar_conversions!(u8, u16, u32, u64, usize, u128);
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{hex, s};
+    #[cfg(feature = "alloc")]
     use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -503,11 +582,12 @@ mod test {
         assert_ne!(scalar_1, scalar_2);
     }
 
+    #[cfg(feature = "alloc")] // prop assert macros need it
     proptest! {
         #[test]
         fn invert(x in any::<Scalar>(), y in any::<Scalar<Public>>()) {
-            assert_eq!(s!(x * { x.invert() }), s!(1));
-            assert_eq!(s!(y * { y.invert() }), s!(1));
+            prop_assert_eq!(s!(x * { x.invert() }), s!(1));
+            prop_assert_eq!(s!(y * { y.invert() }), s!(1));
         }
 
         #[test]
@@ -516,24 +596,48 @@ mod test {
                c in any::<Scalar<Public,Zero>>(),
                d in any::<Scalar<Secret,Zero>>(),
         ) {
-            assert_eq!(s!(a - a), s!(0));
-            assert_eq!(s!(b - b), s!(0));
-            assert_eq!(s!(c - c), s!(0));
-            assert_eq!(s!(d - d), s!(0));
-            assert_eq!(s!(a - a), s!(-a + a));
-            assert_eq!(s!(a - b), s!(-b + a));
-            assert_eq!(s!(a - c), s!(-c + a));
-            assert_eq!(s!(a - d), s!(-d + a));
+            prop_assert_eq!(s!(a - a), s!(0));
+            prop_assert_eq!(s!(b - b), s!(0));
+            prop_assert_eq!(s!(c - c), s!(0));
+            prop_assert_eq!(s!(d - d), s!(0));
+            prop_assert_eq!(s!(a - a), s!(-a + a));
+            prop_assert_eq!(s!(a - b), s!(-b + a));
+            prop_assert_eq!(s!(a - c), s!(-c + a));
+            prop_assert_eq!(s!(a - d), s!(-d + a));
 
             if a != b {
-                assert_ne!(s!(a - b), s!(b - a));
+                prop_assert_ne!(s!(a - b), s!(b - a));
             }
 
             if c != d {
-                assert_ne!(s!(c - d), s!(d - c));
+                prop_assert_ne!(s!(c - d), s!(d - c));
             }
         }
 
+        /// Any `u128` should convert to a `Scalar` and back loss-lessly.
+        #[test]
+        fn u128_roundtrip(xs in any::<u128>()) {
+            // u128 → Scalar
+            let s: Scalar<Public, Zero> = xs.into();
+
+            // Scalar → u128
+            let back = u128::try_from(s)
+                .expect("a u128 always fits inside a 256-bit scalar");
+
+            prop_assert_eq!(xs, back);
+        }
+
+        #[test]
+        fn nz_u128_roundtrip(xs in any::<core::num::NonZero<u128>>()) {
+            // u128 → Scalar
+            let s: Scalar<Public, NonZero> = xs.into();
+
+            // Scalar → u128
+            let back = core::num::NonZero::<u128>::try_from(s)
+                .expect("a u128 always fits inside a 256-bit scalar");
+
+            prop_assert_eq!(xs, back);
+        }
 
     }
 
@@ -566,7 +670,10 @@ mod test {
 
     #[test]
     fn zero() {
-        assert_eq!(Scalar::<Secret, Zero>::zero(), Scalar::<Secret, _>::from(0));
+        assert_eq!(
+            Scalar::<Secret, Zero>::zero(),
+            Scalar::<Secret, _>::from(0u32)
+        );
     }
 
     #[test]
@@ -610,7 +717,7 @@ mod test {
                 .as_ref()
             )
             .unwrap(),
-            Scalar::<Secret, _>::from(1)
+            Scalar::<Secret, _>::from(1u32)
         )
     }
 
@@ -629,21 +736,21 @@ mod test {
 
     #[test]
     fn assign_tests() {
-        let mut a = Scalar::<Secret, _>::from(42);
-        let b = Scalar::<Secret, _>::from(1337).public();
+        let mut a = Scalar::<Secret, _>::from(42u8);
+        let b = Scalar::<Secret, _>::from(1337u16).public();
         a += b;
-        assert_eq!(a, Scalar::<Secret, _>::from(1379));
+        assert_eq!(a, Scalar::<Secret, _>::from(1379u16));
         a -= b;
-        assert_eq!(a, Scalar::<Secret, _>::from(42));
+        assert_eq!(a, Scalar::<Secret, _>::from(42u32));
         a *= b;
-        assert_eq!(a, Scalar::<Secret, _>::from(42 * 1337));
+        assert_eq!(a, Scalar::<Secret, _>::from(42u16 * 1337u16));
     }
 
     #[test]
     fn scalar_ord() {
-        assert!(Scalar::<Public, _>::from(1337) > Scalar::<Public, _>::from(42));
-        assert!(Scalar::<Public, _>::from(42) < Scalar::<Public, _>::from(1337));
-        assert!(Scalar::<Public, _>::from(41) < Scalar::<Public, _>::from(42));
-        assert!(Scalar::<Public, _>::from(42) <= Scalar::<Public, _>::from(42));
+        assert!(Scalar::<Public, _>::from(1337u32) > Scalar::<Public, _>::from(42u8));
+        assert!(Scalar::<Public, _>::from(42u32) < Scalar::<Public, _>::from(1337u16));
+        assert!(Scalar::<Public, _>::from(41u32) < Scalar::<Public, _>::from(42u32));
+        assert!(Scalar::<Public, _>::from(42u32) <= Scalar::<Public, _>::from(42u32));
     }
 }

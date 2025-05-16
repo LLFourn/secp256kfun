@@ -73,8 +73,8 @@ fn compile_s(path: &Ident, node: Node) -> proc_macro2::TokenStream {
                 quote_spanned! { node.span =>  #path::Scalar::<#path::marker::Secret, _>::zero() }
             } else {
                 quote_spanned! { node.span =>
-                    #path::Scalar::<#path::marker::Secret, #path::marker::NonZero>::from_non_zero_u32(unsafe {
-                        core::num::NonZeroU32::new_unchecked(#lit_int)
+                    #path::Scalar::<#path::marker::Secret, #path::marker::NonZero>::from(unsafe {
+                        core::num::NonZero::new_unchecked(#lit_int)
                     })
                 }
             }

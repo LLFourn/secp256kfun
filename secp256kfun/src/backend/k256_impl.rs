@@ -15,10 +15,6 @@ impl BackendScalar for Scalar {
         -Scalar::ONE
     }
 
-    fn from_u32(int: u32) -> Self {
-        Self::from(int)
-    }
-
     fn zero() -> Self {
         Scalar::ZERO
     }

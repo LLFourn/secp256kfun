@@ -5,7 +5,6 @@ pub use k256_impl::*;
 
 pub trait BackendScalar: Sized {
     fn minus_one() -> Self;
-    fn from_u32(int: u32) -> Self;
     fn zero() -> Self;
     fn from_bytes_mod_order(bytes: [u8; 32]) -> Self;
     fn from_bytes(bytes: [u8; 32]) -> Option<Self>;
