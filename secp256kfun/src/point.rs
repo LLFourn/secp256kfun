@@ -372,7 +372,7 @@ where
 
 impl<T: PointType, S, Z> Eq for Point<T, S, Z> {}
 
-impl core::hash::Hash for Point<Normal, Public, NonZero> {
+impl<Z> core::hash::Hash for Point<Normal, Public, Z> {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.to_bytes().hash(state)
     }
