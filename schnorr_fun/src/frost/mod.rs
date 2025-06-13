@@ -208,8 +208,7 @@ impl<H: Hash32, NG: NonceGen> Frost<H, NG> {
     ///
     /// Parameters:
     ///
-    /// - `frost_key`: the joint public key we are signing under. This can be an `EvenY` or `Normal`
-    ///    It will return the same nonce regardless.
+    /// - `frost_key`: the joint public key we are signing under. This can be an `EvenY` or `Normal` It will return the same nonce regardless.
     /// - `secret`: you're secret key share for the `frost_key`
     /// - `session_id`: a string of bytes that is **unique for each signing attempt**.
     ///

@@ -30,8 +30,8 @@ macro_rules! s {
 /// - `<point> + <point>` adds two points
 /// - `<point> - <point>` subtracts one point from another
 /// - `<scalar_iter> .* <point_iter>` does a [dot product](https://en.wikipedia.org/wiki/Dot_product)
-///    between a list of points and scalars. If one list is shorter than the other then the excess
-///    points or scalars will be multiplied by 0. See [`op::point_scalar_dot_product`].
+///   between a list of points and scalars. If one list is shorter than the other then the excess
+///   points or scalars will be multiplied by 0. See [`op::point_scalar_dot_product`].
 ///
 /// The terms of the expression can be any variable followed by simple method calls, attribute
 /// access etc. If your term involves more expressions (anything involving specifying types using

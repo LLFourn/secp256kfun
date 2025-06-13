@@ -590,7 +590,7 @@ impl<TR: PointType, SL, SR, ZR> SubAssign<Point<TR, SR, ZR>> for Point<NonNormal
 
 impl<S: Secrecy> core::iter::Sum for Point<NonNormal, S, Zero> {
     fn sum<I: Iterator<Item = Self>>(mut iter: I) -> Self {
-        let mut sum = iter.next().unwrap_or(Point::zero());
+        let mut sum = iter.next().unwrap_or_default();
         for point in iter {
             sum += point;
         }

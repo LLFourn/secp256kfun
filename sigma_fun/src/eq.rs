@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 use crate::{
     rand_core::{CryptoRng, RngCore},
     Sigma,
@@ -147,7 +148,6 @@ mod test {
         ) => {{
             let statement = &$statement;
             let witness = &$witness;
-            #[allow(clippy::upper_case_acronyms)]
             type DLEQ = Eq<$mod::DLG<$len>, $mod::DL<$len>>;
 
             let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
