@@ -5,7 +5,7 @@
 ///
 /// - [`Secret`]: This value must be kept secret from parties I interact with.
 /// - [`Public`]: This value is known or it would not harm my security if this
-///               value is known to all parties I interact with.
+///   value is known to all parties I interact with.
 ///
 /// Note this consideration is only important if you do operations on the value
 /// during an interaction with a party. So if you would like to keep scalar `x`
