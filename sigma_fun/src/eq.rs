@@ -169,10 +169,7 @@ mod test {
     #[cfg(feature = "secp256k1")]
     mod secp256k1 {
         use super::*;
-        use crate::secp256k1::{
-            self,
-            fun::{Point, Scalar},
-        };
+        use crate::secp256k1::{self, fun::prelude::*};
         #[test]
         #[cfg(feature = "alloc")]
         fn secp256k1_dleq_has_correct_name() {
@@ -181,6 +178,26 @@ mod test {
                 secp256k1::DL::<U32>::default(),
             );
             assert_eq!(&format!("{dleq}"), "eq(DLG(secp256k1),DL(secp256k1))");
+        }
+
+        #[test]
+        #[cfg(all(feature = "bincode", feature = "alloc"))]
+        fn bincode_roundtrip() {
+            type DLEQ = Eq<secp256k1::DLG<U32>, secp256k1::DL<U32>>;
+            let x = s!(42);
+            let H = Point::random(&mut rand::thread_rng());
+            let xG = g!(x * G).normalize();
+            let xH = g!(x * H).normalize();
+            let statement = ((xG), (H, xH));
+            let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
+            let proof = proof_system.prove(&x, &statement, Some(&mut rand::thread_rng()));
+            let encoded = bincode::encode_to_vec(&proof, bincode::config::standard()).unwrap();
+            let (decoded, _) = bincode::decode_from_slice::<crate::CompactProof<DLEQ>, _>(
+                &encoded[..],
+                bincode::config::standard(),
+            )
+            .unwrap();
+            assert_eq!(decoded, proof);
         }
 
         proptest! {

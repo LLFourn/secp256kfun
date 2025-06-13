@@ -46,7 +46,7 @@ struct Serialization {
 }
 
 #[test]
-fn run_test_vectors() {
+fn run_ecdsa_adaptor_test_vectors() {
     let ecdsa_adaptor = Adaptor::<HashTranscript<Sha256>, _>::verify_only();
     let test_vectors = serde_json::from_str::<Vec<TestVector>>(DLC_SPEC_JSON).unwrap();
     for t in test_vectors {

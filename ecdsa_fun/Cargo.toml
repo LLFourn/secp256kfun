@@ -3,7 +3,7 @@ name = "ecdsa_fun"
 version = "0.11.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2021"
-rust-version = "1.63"
+rust-version = "1.64"
 license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/ecdsa_fun"
 repository = "https://github.com/LLFourn/secp256kfun"
@@ -17,7 +17,7 @@ keywords = ["bitcoin", "ecdsa", "secp256k1"]
 secp256kfun = { path = "../secp256kfun", version = "0.11", default-features = false }
 sigma_fun = { path = "../sigma_fun", version = "0.8", features = ["secp256k1"], default-features = false, optional = true }
 rand_chacha = {  version = "0.3", optional = true }  # needed for adaptor signatures atm but would be nice to get rid of
-bincode = { version = "1.0", optional = true }
+bincode  = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand = "0.8"
@@ -42,8 +42,8 @@ libsecp_compat_0_30 = ["secp256kfun/libsecp_compat_0_30"]
 std = ["alloc"]
 alloc = ["secp256kfun/alloc", "sigma_fun?/alloc" ]
 serde = ["secp256kfun/serde","sigma_fun?/serde"]
-adaptor = ["dep:sigma_fun", "dep:bincode", "dep:rand_chacha"]
-bincode = [ "secp256kfun/bincode", "dep:bincode" ]
+adaptor = ["dep:sigma_fun", "bincode", "dep:rand_chacha"]
+bincode = [ "secp256kfun/bincode", "dep:bincode", "sigma_fun?/bincode" ]
 proptest = ["secp256kfun/proptest"]
 
 

@@ -1,4 +1,4 @@
-edition = "2021"
+edition = "2024"
 condense_wildcard_suffixes = true
 format_macro_matchers = true
 imports_granularity="Crate"

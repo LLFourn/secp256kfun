@@ -10,11 +10,7 @@ use secp256kfun::{marker::*, Point, Scalar};
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub struct EncryptedSignature<S = Public> {
     /// The `R` point in the signature
@@ -56,9 +52,18 @@ mod test {
             &encryption_key,
             Message::<Public>::plain("test", b"foo"),
         );
-        let serialized = bincode::serialize(&encrypted_signature).unwrap();
+        let serialized = bincode::encode_to_vec(
+            bincode::serde::Compat(&encrypted_signature),
+            bincode::config::standard(),
+        )
+        .unwrap();
         assert_eq!(serialized.len(), 65);
-        let deserialized = bincode::deserialize::<EncryptedSignature>(&serialized).unwrap();
-        assert_eq!(encrypted_signature, deserialized);
+        let deserialized = bincode::decode_from_slice::<
+            bincode::serde::Compat<EncryptedSignature>,
+            _,
+        >(&serialized, bincode::config::standard())
+        .unwrap()
+        .0;
+        assert_eq!(encrypted_signature, deserialized.0);
     }
 }

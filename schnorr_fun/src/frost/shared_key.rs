@@ -13,11 +13,7 @@ use secp256kfun::{poly, prelude::*};
     derive(crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode),
-    bincode(crate = "crate::fun::bincode",)
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode))]
 pub struct SharedKey<T = Normal, Z = NonZero> {
     /// The public point polynomial that defines the access structure to the FROST key.
     point_polynomial: Vec<Point<Normal, Public, Zero>>,
@@ -265,7 +261,7 @@ impl<T1, Z1, T2, Z2> PartialEq<SharedKey<T2, Z2>> for SharedKey<T1, Z1> {
 }
 
 #[cfg(feature = "bincode")]
-impl<T: PointType, Z: ZeroChoice> crate::fun::bincode::Decode for SharedKey<T, Z> {
+impl<Context, T: PointType, Z: ZeroChoice> bincode::Decode<Context> for SharedKey<T, Z> {
     fn decode<D: secp256kfun::bincode::de::Decoder>(
         decoder: &mut D,
     ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
@@ -308,11 +304,11 @@ impl<'de, T: PointType, Z: ZeroChoice> crate::fun::serde::Deserialize<'de> for S
 }
 
 #[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal, Zero>);
+bincode::impl_borrow_decode!(SharedKey<Normal, Zero>);
 #[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(SharedKey<Normal, NonZero>);
+bincode::impl_borrow_decode!(SharedKey<Normal, NonZero>);
 #[cfg(feature = "bincode")]
-crate::fun::bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
+bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
 
 #[cfg(test)]
 mod test {
@@ -321,7 +317,6 @@ mod test {
     #[cfg(feature = "bincode")]
     #[test]
     fn bincode_encoding_decoding_roundtrip() {
-        use crate::fun::bincode;
         let poly_zero = SharedKey::<Normal, Zero>::from_poly(
             poly::point::normalize(vec![
                 g!(0 * G),

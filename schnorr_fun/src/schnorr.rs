@@ -18,7 +18,7 @@ use crate::{
 /// - `nonce_gen`: The [`NonceGen`] used to hash the signing inputs (and perhaps additional randomness) to produce the secret nonce.
 ///
 /// [_Fiat-Shamir_]: https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
-/// [`NonceGen<H>`]: crate::fun::hash::NonceGen
+/// [`NonceGen<H>`]: crate::fun::nonce::NonceGen
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #[derive(Clone, Debug, PartialEq)]
 pub struct Schnorr<CH, NG = NoNonces> {

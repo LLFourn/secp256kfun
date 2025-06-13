@@ -20,6 +20,7 @@ pub trait BackendPoint {
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point>;
 }
 
+#[allow(dead_code)]
 pub trait TimeSensitive {
     fn scalar_mul_norm_point(lhs: &Scalar, rhs: &Point) -> Point;
     fn scalar_mul_point(lhs: &Scalar, rhs: &Point) -> Point;

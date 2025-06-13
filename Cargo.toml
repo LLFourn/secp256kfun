@@ -8,3 +8,6 @@ members = [
     "arithmetic_macros"
 ]
 resolver = "2"
+
+[workspace.dependencies]
+bincode = { version = "2",  default-features = false, features = ["derive"] }

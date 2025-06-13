@@ -97,3 +97,58 @@ pub struct CompactProof<S: Sigma> {
     /// R
     pub response: S::Response,
 }
+
+/// Implements bincode encoding for `CompactProof` for challenge lengths of 32. This is a
+/// restriction until we can upgrade generic array.
+#[cfg(feature = "bincode")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+impl<S: Sigma> bincode::Encode for CompactProof<S>
+where
+    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
+    S::Response: bincode::Encode,
+{
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(self.challenge.as_slice());
+        bytes.encode(encoder)?;
+        self.response.encode(encoder)?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "bincode")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+impl<S, Context> bincode::Decode<Context> for CompactProof<S>
+where
+    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
+    S::Response: bincode::Decode<Context>,
+{
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        let challenge = <[u8; 32]>::decode(decoder)?;
+        let response = S::Response::decode(decoder)?;
+
+        Ok(CompactProof {
+            challenge: GenericArray::from_exact_iter(challenge).unwrap(),
+            response,
+        })
+    }
+}
+
+#[cfg(feature = "bincode")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
+impl<'de, S: Sigma, Context> bincode::BorrowDecode<'de, Context> for CompactProof<S>
+where
+    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
+    S::Response: bincode::Decode<Context>,
+{
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        bincode::Decode::decode(decoder)
+    }
+}

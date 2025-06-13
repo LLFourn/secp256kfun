@@ -1,6 +1,5 @@
 name: Tests
 
-
 on:
   push:
     branches:
@@ -9,11 +8,10 @@ on:
 
 # Make sure CI fails on all warnings, including Clippy lints
 env:
-    RUSTFLAGS: "-Dwarnings"
-    RUSTDOCFLAGS: "-Dwarnings"
+  RUSTFLAGS: "-Dwarnings"
+  RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
-
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
@@ -38,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.63.0
+      - uses: dtolnay/rust-toolchain@1.64.0
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo update -p proptest --precise "1.2.0"
@@ -66,9 +64,9 @@ jobs:
       - name: test-on-target
         uses: actions-rs/cargo@v1
         with:
-          use-cross:  ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
+          use-cross: ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
           command: test
-          args:  --all-features --release --target ${{ matrix.target }}
+          args: --all-features --release --target ${{ matrix.target }}
 
   # test nightly build/test
   test-nightly:
@@ -84,31 +82,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [ "secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun" ]
+        package: ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.0.0
       - run: cargo test --release --no-default-features -p ${{ matrix.package }}
 
-
   # test with alloc feature only
   test-alloc:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [ "secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun" ]
+        package: ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.0.0
       - run: cargo test --release --no-default-features --features alloc -p ${{ matrix.package }}
 
-
   doc-build:
-     name: doc-build
-     runs-on: ubuntu-latest
-     steps:
-       - uses: actions/checkout@v4
-       - uses: dtolnay/rust-toolchain@stable
-       - run:  cargo doc --no-deps --workspace --all-features
+    name: doc-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo doc --no-deps --workspace --all-features

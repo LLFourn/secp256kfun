@@ -174,7 +174,7 @@ assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 
 ## MSRV
 
-Minimum supported rust version is `v1.63`. 
+Minimum supported rust version is `v1.64`. 
 
 ## LICENSE
 

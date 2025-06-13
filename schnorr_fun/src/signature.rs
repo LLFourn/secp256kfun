@@ -133,9 +133,18 @@ mod test {
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let signature = schnorr.sign(&kp, Message::<Public>::plain("test", b"foo"));
-        let serialized = bincode::serialize(&signature).unwrap();
+        let serialized = bincode::encode_to_vec(
+            bincode::serde::Compat(&signature),
+            bincode::config::standard(),
+        )
+        .unwrap();
         assert_eq!(serialized.len(), 64);
-        let deserialized = bincode::deserialize::<Signature>(&serialized).unwrap();
-        assert_eq!(signature, deserialized);
+        let deserialized = bincode::decode_from_slice::<bincode::serde::Compat<Signature>, _>(
+            &serialized,
+            bincode::config::standard(),
+        )
+        .unwrap()
+        .0;
+        assert_eq!(signature, deserialized.0);
     }
 }

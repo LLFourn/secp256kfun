@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+- Upgrade to bincode v2
+- MSRV 1.63 -> 1.64
+
 ## v0.11.0
 
 - Added `prelude` module for convenient importing

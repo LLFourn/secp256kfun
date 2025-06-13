@@ -29,7 +29,7 @@ secp256kfun::impl_display_debug_serialize! {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, bincode::Encode, bincode::Decode)]
 #[cfg_attr(
     feature = "serde",
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -52,20 +52,19 @@ pub(crate) struct EncryptedSignatureInternal {
 #[derive(Clone, PartialEq)]
 pub struct EncryptedSignature(pub(crate) EncryptedSignatureInternal);
 
-#[cfg(feature = "serde")]
 secp256kfun::impl_display_debug_serialize! {
     fn to_bytes(es: &EncryptedSignature) -> [u8;162] {
         let mut bytes = [0u8;162];
-        bytes.copy_from_slice(bincode::serialize(&es.0).unwrap().as_slice());
+        let size = bincode::encode_into_slice(&es.0, &mut bytes[..], bincode::config::legacy()).expect("infallible");
+        assert_eq!(size, 162);
         bytes
     }
 }
 
-#[cfg(feature = "serde")]
 secp256kfun::impl_fromstr_deserialize! {
     name => "ECDSA adaptor signature",
     fn from_bytes(bytes: [u8;162]) -> Option<EncryptedSignature> {
-        bincode::deserialize(&bytes[..]).ok().map(EncryptedSignature)
+        bincode::decode_from_slice(&bytes[..], bincode::config::legacy()).ok().map(|(v,_)| EncryptedSignature(v))
     }
 }
 
@@ -104,10 +103,18 @@ mod test {
             &encryption_key,
             b"hello world you are beautiful!!!",
         );
-        let serialized = bincode::serialize(&encrypted_signature).unwrap();
+        let serialized = bincode::encode_to_vec(
+            bincode::serde::Compat(&encrypted_signature),
+            bincode::config::standard(),
+        )
+        .unwrap();
         assert_eq!(serialized.len(), 33 + 33 + 32 + 64);
-        let deseriazed = bincode::deserialize::<EncryptedSignature>(&serialized[..]).unwrap();
+        let (deseriazed, _) = bincode::decode_from_slice::<
+            bincode::serde::Compat<EncryptedSignature>,
+            _,
+        >(&serialized[..], bincode::config::standard())
+        .unwrap();
 
-        assert_eq!(deseriazed, encrypted_signature);
+        assert_eq!(deseriazed.0, encrypted_signature);
     }
 }

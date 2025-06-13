@@ -108,12 +108,11 @@ secp256kfun::impl_display_debug_serialize! {
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(
     feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
+    derive(bincode::Encode, bincode::Decode),
     bincode(
-        crate = "crate::fun::bincode",
-        encode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Encode",
-        decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::Decode",
-        borrow_decode_bounds = "Point<T, Public, Z>: crate::fun::bincode::BorrowDecode<'__de>"
+        encode_bounds = "Point<T, Public, Z>: bincode::Encode",
+        decode_bounds = "Point<T, Public, Z>: bincode::Decode<__Context>",
+        borrow_decode_bounds = "Point<T, Public, Z>: bincode::BorrowDecode<'__de, __Context>"
     )
 )]
 #[cfg_attr(
