@@ -13,11 +13,7 @@ use super::{PairedSecretShare, SharedKey, SignatureShare, VerificationShare};
 ///
 /// [`coordinator_sign_session`]: super::Frost::coordinator_sign_session
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 #[cfg_attr(
     feature = "serde",
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -155,11 +151,7 @@ impl CoordinatorSignSession {
 ///
 /// [`party_sign_session`]: super::Frost::party_sign_session
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 #[cfg_attr(
     feature = "serde",
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),

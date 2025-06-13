@@ -68,11 +68,7 @@ pub mod simplepedpop {
     /// and if at least one of these parties is honest then the final secret key will not be known by an
     /// attacker (unless they obtain `t` shares!).
     #[derive(Clone, Debug, PartialEq)]
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -144,11 +140,7 @@ pub mod simplepedpop {
 
     /// Produced by [`Contributor::gen_keygen_input`]. This is sent from the each
     /// `Contributor` to the *coordinator*.
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -270,11 +262,7 @@ pub mod simplepedpop {
 
     /// Key generation inputs after being aggregated by the coordinator
     #[derive(Clone, Debug, PartialEq)]
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -473,11 +461,7 @@ pub mod encpedpop {
     /// and if at least one of these parties is honest then the final secret key will not be known by an
     /// attacker (unless they obtain `t` shares!).
     #[derive(Clone, Debug, PartialEq)]
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -553,11 +537,7 @@ pub mod encpedpop {
 
     /// Key generation inputs after being aggregated by the coordinator
     #[derive(Clone, Debug, PartialEq)]
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
@@ -677,11 +657,7 @@ pub mod encpedpop {
 
     /// Produced by [`Contributor::gen_keygen_input`]. This is sent from the each
     /// `Contributor` to the *coordinator*.
-    #[cfg_attr(
-        feature = "bincode",
-        derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-        bincode(crate = "crate::fun::bincode")
-    )]
+    #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
     #[cfg_attr(
         feature = "serde",
         derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),

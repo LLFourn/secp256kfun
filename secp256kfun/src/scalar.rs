@@ -575,9 +575,9 @@ mod test {
 
     #[test]
     fn from_slice() {
-        assert!(Scalar::<Secret, NonZero>::from_slice(
+        assert!(dbg!(Scalar::<Secret, NonZero>::from_slice(
             b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()
-        )
+        ))
         .is_some());
         assert!(Scalar::<Secret, NonZero>::from_slice(
             b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()

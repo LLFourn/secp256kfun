@@ -191,7 +191,6 @@ where
         g!(decryption_key * G).normalize()
     }
 
-    #[must_use]
     fn verify_encrypted_signature(
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,

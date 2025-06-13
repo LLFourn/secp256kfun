@@ -387,11 +387,7 @@ where
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Ordinary;
 
 /// Marks the [`SignSession`] as being used to create an adaptor (a.k.a. one-time encrypted)
@@ -402,11 +398,7 @@ pub struct Ordinary;
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct Adaptor {
     y_needs_negation: bool,
 }
@@ -425,11 +417,7 @@ pub struct Adaptor {
     derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
     serde(crate = "crate::fun::serde")
 )]
-#[cfg_attr(
-    feature = "bincode",
-    derive(crate::fun::bincode::Encode, crate::fun::bincode::Decode),
-    bincode(crate = "crate::fun::bincode")
-)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct SignSession<T = Ordinary> {
     b: Scalar<Public>,
     c: Scalar<Public, Zero>,

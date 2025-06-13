@@ -317,7 +317,7 @@ mod test {
         }
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "bincode"))]
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(3))]
         #[test]
@@ -329,11 +329,11 @@ mod test {
             let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
             let (proof, _) = proof_system.prove(&secret, &mut rand::thread_rng());
 
-            let proof_serialized = bincode::serialize(&proof).unwrap();
-            let proof_deserialized: CrossCurveDLEQProof =
-                bincode::deserialize(&proof_serialized).unwrap();
+            let proof_serialized = bincode::encode_to_vec(bincode::serde::Compat(&proof), bincode::config::standard()).unwrap();
+            let proof_deserialized: bincode::serde::Compat<CrossCurveDLEQProof> =
+                bincode::decode_from_slice(&proof_serialized, bincode::config::standard()).unwrap().0;
 
-            assert_eq!(proof_deserialized, proof);
+            assert_eq!(proof_deserialized.0, proof);
         }
     }
 }

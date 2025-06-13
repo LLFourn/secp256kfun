@@ -83,7 +83,6 @@ impl<R: RngCore> NonceRng for std::sync::Mutex<R> {
 ///
 /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 /// [`ThreadRng`]: https://docs.rs/rand/latest/rand/rngs/struct.ThreadRng.html
-/// [`OsRng`]: rand_core::OsRng
 /// [`GlobalRng`]: crate::nonce::GlobalRng
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Synthetic<H, R> {

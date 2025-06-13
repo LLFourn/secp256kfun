@@ -426,7 +426,7 @@ macro_rules! impl_fromstr_deserialize {
 
         #[cfg(feature = "bincode")]
         #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
-        impl$(<$($tpl $(:$tcl)?),*>)? $crate::bincode::de::Decode for $type {
+        impl<__Context, $($($tpl $(:$tcl)?),*)?> $crate::bincode::de::Decode<__Context> for $type {
             fn decode<D: $crate::bincode::de::Decoder>(decoder: &mut D) -> Result<Self, $crate::bincode::error::DecodeError> {
                 use $crate::bincode::de::read::Reader;
                 let mut $input = [0u8; $len];
@@ -442,7 +442,7 @@ macro_rules! impl_fromstr_deserialize {
 
         #[cfg(feature = "bincode")]
         #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
-        impl<'de, $($($tpl $(:$tcl)?),*)?> $crate::bincode::BorrowDecode<'de> for $type {
+        impl<'de, __Context, $($($tpl $(:$tcl)?),*)? > $crate::bincode::BorrowDecode<'de, __Context> for $type {
             fn borrow_decode<D: $crate::bincode::de::BorrowDecoder<'de>>(
                 decoder: &mut D,
             ) -> core::result::Result<Self, $crate::bincode::error::DecodeError> {
