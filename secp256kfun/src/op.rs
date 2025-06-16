@@ -13,9 +13,9 @@
 //! [`Scalars`]: crate::Scalar
 #[allow(unused_imports)]
 use crate::{
+    Point, Scalar,
     backend::{self, ConstantTime, TimeSensitive, VariableTime},
     marker::*,
-    Point, Scalar,
 };
 use core::borrow::Borrow;
 
@@ -275,7 +275,7 @@ pub fn point_is_y_even<T: Normalized, S>(A: &Point<T, S, NonZero>) -> bool {
 
 #[cfg(test)]
 mod test {
-    use crate::{marker::*, Point, Scalar, G};
+    use crate::{G, Point, Scalar, marker::*};
     use core::str::FromStr;
 
     #[test]

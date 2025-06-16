@@ -4,7 +4,7 @@
 //! Your public nonces are derived from scalars which must be kept secret.
 //! Derived binonces should be unique and and must not be reused for signing under any circumstances
 //! as this can leak your secret key.
-use secp256kfun::{g, hash::HashInto, marker::*, rand_core::RngCore, Point, Scalar, G};
+use secp256kfun::{G, Point, Scalar, g, hash::HashInto, marker::*, rand_core::RngCore};
 
 /// A nonce (pair of points) that each party must share with the others in the first stage of signing.
 ///

@@ -1,6 +1,6 @@
 #[cfg(feature = "libsecp_compat_0_27")]
 mod v0_27 {
-    use crate::{marker::*, Point, Scalar};
+    use crate::{Point, Scalar, marker::*};
     use secp256k1::{PublicKey, SecretKey, XOnlyPublicKey};
     use secp256k1_0_27 as secp256k1;
 
@@ -103,7 +103,7 @@ mod v0_27 {
 
 #[cfg(feature = "libsecp_compat_0_28")]
 mod v0_28 {
-    use crate::{marker::*, Point, Scalar};
+    use crate::{Point, Scalar, marker::*};
     use secp256k1::{PublicKey, SecretKey, XOnlyPublicKey};
     use secp256k1_0_28 as secp256k1;
 
@@ -206,7 +206,7 @@ mod v0_28 {
 
 #[cfg(feature = "libsecp_compat_0_29")]
 mod v0_29 {
-    use crate::{marker::*, Point, Scalar};
+    use crate::{Point, Scalar, marker::*};
     use secp256k1::{PublicKey, SecretKey, XOnlyPublicKey};
     use secp256k1_0_29 as secp256k1;
 
@@ -309,7 +309,7 @@ mod v0_29 {
 
 #[cfg(feature = "libsecp_compat_0_30")]
 mod v0_30 {
-    use crate::{marker::*, Point, Scalar};
+    use crate::{Point, Scalar, marker::*};
     use secp256k1::{PublicKey, SecretKey, XOnlyPublicKey};
     use secp256k1_0_30 as secp256k1;
 

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use secp256kfun::{g, op, s, Point, Scalar};
+use secp256kfun::{Point, Scalar, g, op, s};
 
 #[derive(Clone)]
 struct Has<T> {

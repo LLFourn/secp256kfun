@@ -1,14 +1,14 @@
 use secp256kfun::{hash::Hash32, nonce::NoNonces};
 
 use crate::{
+    Message, Signature,
     fun::{
-        derive_nonce,
+        KeyPair, derive_nonce,
         hash::{HashAdd, Tag},
         nonce::{self, NonceGen},
         prelude::*,
-        rand_core, KeyPair,
+        rand_core,
     },
-    Message, Signature,
 };
 
 /// An instance of a [BIP-340] style Schnorr signature scheme.
@@ -67,8 +67,8 @@ where
     /// ```
     /// use rand::rngs::ThreadRng;
     /// use schnorr_fun::{
-    ///     nonce::{Deterministic, GlobalRng, Synthetic},
     ///     Schnorr,
+    ///     nonce::{Deterministic, GlobalRng, Synthetic},
     /// };
     /// use sha2::Sha256;
     /// // Use synthetic nonces (preferred)
@@ -96,7 +96,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use schnorr_fun::{nonce::Deterministic, Schnorr};
+    /// use schnorr_fun::{Schnorr, nonce::Deterministic};
     /// use sha2::Sha256;
     ///
     /// let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
@@ -169,7 +169,7 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
     /// Here's how you could use this to roll your own signatures.
     ///
     /// ```
-    /// use schnorr_fun::{fun::prelude::*, Message, Schnorr, Signature};
+    /// use schnorr_fun::{Message, Schnorr, Signature, fun::prelude::*};
     /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));

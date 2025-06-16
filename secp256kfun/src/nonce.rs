@@ -17,7 +17,7 @@
 //!
 //! [`NonceGen`]: crate::nonce::NonceGen
 //! [`derive_nonce!`]: crate::derive_nonce!
-use crate::{hash::*, marker::*, Scalar};
+use crate::{Scalar, hash::*, marker::*};
 use core::marker::PhantomData;
 use rand_core::RngCore;
 
@@ -137,8 +137,8 @@ pub struct GlobalRng<R> {
 ///
 /// ```
 /// use secp256kfun::{
-///     nonce::{Deterministic, NonceGen},
 ///     Tag,
+///     nonce::{Deterministic, NonceGen},
 /// };
 /// use sha2::Sha256;
 /// let nonce_gen = Deterministic::<Sha256>::default().tag(b"BIP0340");

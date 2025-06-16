@@ -14,7 +14,7 @@ use subtle::ConstantTimeEq;
 /// # Example
 ///
 /// ```
-/// use secp256kfun::{marker::*, Slice};
+/// use secp256kfun::{Slice, marker::*};
 /// let bytes = b"a secret message";
 /// let secret_slice = Slice::<Secret>::from(bytes.as_ref());
 /// ```

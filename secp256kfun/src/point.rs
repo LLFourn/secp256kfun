@@ -1,8 +1,9 @@
 use crate::{
+    Scalar,
     backend::{self, BackendPoint, TimeSensitive},
     hash::HashInto,
     marker::*,
-    op, Scalar,
+    op,
 };
 use core::{
     marker::PhantomData,
@@ -125,7 +126,7 @@ impl<Z: ZeroChoice, S> Point<Normal, S, Z> {
     ///
     /// # Examples
     /// ```
-    /// use secp256kfun::{marker::*, Point, G};
+    /// use secp256kfun::{G, Point, marker::*};
     /// let bytes = [
     ///     2, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155, 252,
     ///     219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152,
@@ -174,7 +175,7 @@ impl<T, S> Point<T, S, NonZero> {
     ///
     /// # Examples
     /// ```
-    /// use secp256kfun::{marker::*, Point};
+    /// use secp256kfun::{Point, marker::*};
     /// let point = Point::random(&mut rand::thread_rng());
     /// let (point_with_even_y, was_odd) = point.clone().into_point_with_even_y();
     /// ```
@@ -196,7 +197,7 @@ impl<T, S> Point<T, S, NonZero> {
     /// ## Examples
     ///
     /// ```
-    /// use secp256kfun::{marker::*, Point, G};
+    /// use secp256kfun::{G, Point, marker::*};
     /// assert_eq!(Point::<Normal, Public, _>::generator(), *G);
     /// ```
     ///
@@ -219,7 +220,7 @@ impl Point<EvenY, Public, NonZero> {
     /// # Examples
     ///
     /// ```
-    /// use secp256kfun::{marker::*, Point, Scalar, G};
+    /// use secp256kfun::{G, Point, Scalar, marker::*};
     /// let mut secret_key = Scalar::random(&mut rand::thread_rng());
     /// let public_key = Point::even_y_from_scalar_mul(G, &mut secret_key);
     /// assert!(public_key.is_y_even());
@@ -403,7 +404,7 @@ impl<S, Z, T: Normalized> Point<T, S, Z> {
     /// # Example
     /// Round trip serialization with [`from_bytes`]
     /// ```
-    /// use secp256kfun::{marker::*, Point};
+    /// use secp256kfun::{Point, marker::*};
     /// let point = Point::random(&mut rand::thread_rng());
     /// let bytes = point.to_bytes();
     /// assert!(bytes[0] == 0x02 || bytes[0] == 0x03);
@@ -438,7 +439,7 @@ impl<T, S> Point<T, S, Zero> {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{g, marker::*, s, Point, G};
+    /// use secp256kfun::{G, Point, g, marker::*, s};
     /// let zero = Point::<Normal, Public, _>::zero();
     /// assert!(zero.is_zero());
     /// assert_eq!(g!(zero + G), *G);
@@ -481,7 +482,7 @@ impl<S, T: Normalized> Point<T, S, NonZero> {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{marker::*, Point};
+    /// use secp256kfun::{Point, marker::*};
     /// let point = Point::random(&mut rand::thread_rng());
     /// let bytes = point.to_bytes_uncompressed();
     /// assert_eq!(Point::from_bytes_uncompressed(bytes).unwrap(), point);
@@ -601,7 +602,7 @@ impl<S: Secrecy> core::iter::Sum for Point<NonNormal, S, Zero> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{g, G};
+    use crate::{G, g};
     use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;

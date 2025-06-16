@@ -1,10 +1,10 @@
-use crate::{g, marker::*, Point, Scalar, G};
+use crate::{G, Point, Scalar, g, marker::*};
 /// A secret and public key pair.
 ///
 /// ## Synopsis
 ///
 /// ```
-/// use secp256kfun::{prelude::*, KeyPair};
+/// use secp256kfun::{KeyPair, prelude::*};
 /// let my_secret_key = Scalar::random(&mut rand::thread_rng());
 /// let my_keypair: KeyPair<Normal> = KeyPair::new(my_secret_key.clone());
 /// let my_xonly_keypair: KeyPair<EvenY> = KeyPair::new_xonly(my_secret_key);
@@ -68,7 +68,7 @@ impl KeyPair<EvenY> {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{g, marker::*, s, KeyPair, Scalar, G};
+    /// use secp256kfun::{G, KeyPair, Scalar, g, marker::*, s};
     ///
     /// let original_secret_key = Scalar::random(&mut rand::thread_rng());
     /// let keypair = KeyPair::new_xonly(original_secret_key.clone());

@@ -1,7 +1,7 @@
 use crate::{
+    Signature,
     binonce::{self, SecretNonce},
     frost::PartyIndex,
-    Signature,
 };
 use alloc::collections::{BTreeMap, BTreeSet};
 use secp256kfun::{poly, prelude::*};
@@ -241,7 +241,10 @@ impl core::fmt::Display for VerifySignatureSharesError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             VerifySignatureSharesError::NotEnough { missing } => {
-                write!(f, "not enough signature shares have been collected to finish the signature. You need {missing} more.")
+                write!(
+                    f,
+                    "not enough signature shares have been collected to finish the signature. You need {missing} more."
+                )
             }
             VerifySignatureSharesError::Invalid(invalid) => write!(f, "{invalid}"),
         }

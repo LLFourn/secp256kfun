@@ -11,16 +11,16 @@
 //! [`is_torsion_free`]: crate::ed25519::curve25519_dalek::edwards::EdwardsPoint::is_torsion_free
 //! [`ristretto`]: crate::ed25519::curve25519_dalek::ristretto
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use core::marker::PhantomData;
 pub use curve25519_dalek;
 use curve25519_dalek::{constants::ED25519_BASEPOINT_TABLE, edwards::EdwardsPoint, scalar::Scalar};
 use digest::Update;
 use generic_array::{
-    typenum::{self, type_operators::IsLessOrEqual, U31},
     ArrayLength, GenericArray,
+    typenum::{self, U31, type_operators::IsLessOrEqual},
 };
 
 /// Proves knowledge of `x` such that `A = x * B` for some `A` and `B` included in the statement.

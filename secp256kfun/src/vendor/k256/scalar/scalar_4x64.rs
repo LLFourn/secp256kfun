@@ -2,8 +2,8 @@
 //! Ported from <https://github.com/bitcoin-core/secp256k1>
 
 use super::super::{
-    util::{adc64, sbb64},
     FieldBytes,
+    util::{adc64, sbb64},
 };
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 

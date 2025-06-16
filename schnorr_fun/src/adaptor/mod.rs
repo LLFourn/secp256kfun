@@ -12,9 +12,9 @@
 //! ```
 //! use rand::rngs::ThreadRng;
 //! use schnorr_fun::{
-//!     adaptor::{Adaptor, EncryptedSign},
-//!     fun::{marker::*, nonce, Scalar},
 //!     Message, Schnorr,
+//!     adaptor::{Adaptor, EncryptedSign},
+//!     fun::{Scalar, marker::*, nonce},
 //! };
 //! use sha2::Sha256;
 //! let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
@@ -48,8 +48,8 @@
 //! }
 //! ```
 use crate::{
-    fun::{derive_nonce, nonce, prelude::*, KeyPair},
     Message, Schnorr, Signature,
+    fun::{KeyPair, derive_nonce, nonce, prelude::*},
 };
 mod encrypted_signature;
 pub use encrypted_signature::EncryptedSignature;

@@ -1,8 +1,8 @@
 #![cfg(all(feature = "libsecp_compat", feature = "proptest", feature = "alloc"))]
 use proptest::prelude::*;
 use schnorr_fun::{
-    fun::{marker::*, proptest, secp256k1, Scalar},
     Message, Schnorr,
+    fun::{Scalar, marker::*, proptest, secp256k1},
 };
 use secp256kfun::{
     digest::Digest,

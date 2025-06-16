@@ -14,10 +14,11 @@
 //! use ecdsa_fun::{
 //!     adaptor::{Adaptor, EncryptedSignature, HashTranscript},
 //!     fun::{
+//!         G, Scalar,
 //!         digest::{Digest, Update},
 //!         g,
 //!         marker::*,
-//!         nonce, Scalar, G,
+//!         nonce,
 //!     },
 //! };
 //! use rand::rngs::ThreadRng;
@@ -63,17 +64,17 @@
 //!     None => panic!("signature is not the decryption of our original encrypted signature"),
 //! }
 //! ```
-use crate::{Signature, ECDSA};
+use crate::{ECDSA, Signature};
 use secp256kfun::{
-    derive_nonce_rng,
+    G, Point, Scalar, Tag, derive_nonce_rng,
     digest::generic_array::typenum::U32,
     g,
     marker::*,
     nonce::{NoNonces, NonceGen},
-    s, Point, Scalar, Tag, G,
+    s,
 };
 pub use sigma_fun::HashTranscript;
-use sigma_fun::{secp256k1, Eq, FiatShamir, ProverTranscript, Transcript};
+use sigma_fun::{Eq, FiatShamir, ProverTranscript, Transcript, secp256k1};
 
 mod encrypted_signature;
 pub use encrypted_signature::*;
@@ -326,9 +327,11 @@ mod test {
             ));
 
             let signature = ecdsa_adaptor.decrypt_signature(&decryption_key, ciphertext.clone());
-            assert!(ecdsa_adaptor
-                .ecdsa
-                .verify(&verification_key, msg, &signature));
+            assert!(
+                ecdsa_adaptor
+                    .ecdsa
+                    .verify(&verification_key, msg, &signature)
+            );
 
             let recoverd_decryption_sk = ecdsa_adaptor
                 .recover_decryption_key(&encryption_key, &signature, &ciphertext)

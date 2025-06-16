@@ -1,4 +1,4 @@
-use secp256kfun::{marker::*, Scalar};
+use secp256kfun::{Scalar, marker::*};
 /// An ECDSA signature
 #[derive(Clone, PartialEq)]
 pub struct Signature {

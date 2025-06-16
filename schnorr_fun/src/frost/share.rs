@@ -298,7 +298,7 @@ pub struct VerificationShare<T: PointType> {
 #[cfg(feature = "share_backup")]
 mod share_backup {
     use super::*;
-    use bech32::{primitives::decode::CheckedHrpstring, Bech32m, ByteIterExt, Fe32IterExt, Hrp};
+    use bech32::{Bech32m, ByteIterExt, Fe32IterExt, Hrp, primitives::decode::CheckedHrpstring};
     use core::{fmt, str::FromStr};
 
     /// the threshold under which we encode the share index in the human readable section.
@@ -322,7 +322,7 @@ mod share_backup {
                 let mut u32_index_bytes = [0u8; 4];
                 u32_index_bytes.copy_from_slice(&bytes[28..]);
                 let u32_index = u32::from_be_bytes(u32_index_bytes);
-                Hrp::parse(&format!("frost[{}]", u32_index)).unwrap()
+                Hrp::parse(&format!("frost[{u32_index}]")).unwrap()
             } else {
                 share_index_bytes = Some(
                     self.index
@@ -343,7 +343,7 @@ mod share_backup {
                 .chars();
 
             for c in chars {
-                write!(f, "{}", c)?;
+                write!(f, "{c}")?;
             }
             Ok(())
         }
@@ -465,7 +465,7 @@ mod share_backup {
     mod test {
         use super::*;
         use crate::frost::SecretShare;
-        use secp256kfun::{proptest::prelude::*, Scalar};
+        use secp256kfun::{Scalar, proptest::prelude::*};
 
         proptest! {
             #[test]
@@ -509,12 +509,11 @@ mod test {
     use crate::frost::{self, chilldkg::simplepedpop};
     use alloc::vec::Vec;
     use secp256kfun::{
-        g,
+        G, g,
         proptest::{
             prelude::*,
             test_runner::{RngAlgorithm, TestRng},
         },
-        G,
     };
     proptest! {
         #[test]

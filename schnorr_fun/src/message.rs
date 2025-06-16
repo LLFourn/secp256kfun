@@ -1,8 +1,8 @@
 use secp256kfun::{
+    Slice,
     digest::{self},
     hash::HashInto,
     marker::*,
-    Slice,
 };
 
 /// A message to be signed.

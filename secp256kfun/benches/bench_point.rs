@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use secp256kfun::{g, Point, Scalar, G};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use secp256kfun::{G, Point, Scalar, g};
 
 fn point_add(c: &mut Criterion) {
     let mut group = c.benchmark_group("point_add");

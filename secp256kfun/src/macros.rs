@@ -42,7 +42,7 @@ macro_rules! s {
 ///
 /// Simple scalar multiplication by [`G`] but will work with any [`Point`]
 /// ```
-/// use secp256kfun::{g, Scalar, G};
+/// use secp256kfun::{G, Scalar, g};
 /// let x = Scalar::random(&mut rand::thread_rng());
 /// let X = g!(x * G);
 /// ```

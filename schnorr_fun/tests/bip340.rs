@@ -1,11 +1,11 @@
 use schnorr_fun::{
+    Message, Schnorr, Signature,
     fun::{
-        hex,
+        Scalar, hex,
         marker::*,
         nonce::{NonceRng, Synthetic},
-        rand_core, Scalar,
+        rand_core,
     },
-    Message, Schnorr, Signature,
 };
 use secp256kfun::Point;
 use sha2::Sha256;

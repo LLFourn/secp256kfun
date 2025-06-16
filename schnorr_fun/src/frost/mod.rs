@@ -96,17 +96,16 @@ mod session;
 pub use session::*;
 pub mod chilldkg;
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{binonce, Message, Schnorr, Signature};
+use crate::{Message, Schnorr, Signature, binonce};
 use alloc::collections::{BTreeMap, BTreeSet};
 use core::num::NonZeroU32;
 use secp256kfun::{
-    derive_nonce_rng,
+    KeyPair, derive_nonce_rng,
     hash::{Hash32, HashAdd, Tag},
     nonce::{self, NonceGen},
     poly,
     prelude::*,
     rand_core::{RngCore, SeedableRng},
-    KeyPair,
 };
 
 /// The index of a party's secret share.
@@ -186,7 +185,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use schnorr_fun::{frost::Frost, nonce::Deterministic, Schnorr};
+    /// use schnorr_fun::{Schnorr, frost::Frost, nonce::Deterministic};
     /// use sha2::Sha256;
     /// let schnorr = Schnorr::<Sha256, Deterministic<Sha256>>::default();
     /// let frost = Frost::new(schnorr);

@@ -1,5 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use secp256kfun::{nonce::Deterministic, secp256k1, Scalar};
+use criterion::{Criterion, criterion_group, criterion_main};
+use secp256kfun::{Scalar, nonce::Deterministic, secp256k1};
 use sha2::Sha256;
 
 const MESSAGE: &[u8; 32] = b"hello world you are beautiful!!!";
@@ -49,7 +49,7 @@ fn verify_ecdsa(c: &mut Criterion) {
     }
 
     {
-        use secp256k1::{ecdsa::Signature, Message, PublicKey, Secp256k1, SecretKey};
+        use secp256k1::{Message, PublicKey, Secp256k1, SecretKey, ecdsa::Signature};
         let secp = Secp256k1::new();
         let sig = Signature::from_compact(signature.to_bytes().as_ref()).unwrap();
         let secret_key = SecretKey::from_slice(&SK.to_bytes()[..]).unwrap();

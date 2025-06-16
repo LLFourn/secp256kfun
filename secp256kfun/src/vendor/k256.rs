@@ -9,7 +9,7 @@ pub use scalar::Scalar;
 pub mod mul;
 #[allow(unused)]
 pub mod util;
-use digest::generic_array::{typenum::U32, GenericArray};
+use digest::generic_array::{GenericArray, typenum::U32};
 
 const CURVE_EQUATION_B_SINGLE: u32 = 7u32;
 

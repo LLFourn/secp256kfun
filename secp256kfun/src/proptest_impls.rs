@@ -2,7 +2,7 @@
 //!
 //! [`Arbitrary`]: proptest::arbitrary::Arbitrary
 
-use crate::{marker::*, Point, Scalar, G};
+use crate::{G, Point, Scalar, marker::*};
 use ::proptest::prelude::*;
 
 impl<S: Secrecy> Arbitrary for Scalar<S, NonZero> {

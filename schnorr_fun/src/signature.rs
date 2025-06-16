@@ -1,4 +1,4 @@
-use crate::fun::{marker::*, rand_core::RngCore, Point, Scalar};
+use crate::fun::{Point, Scalar, marker::*, rand_core::RngCore};
 
 /// A Schnorr signature.
 #[derive(Clone, Eq, Copy)]
@@ -52,7 +52,7 @@ impl<S> Signature<S> {
     ///
     /// # Examples
     /// ```
-    /// use schnorr_fun::{fun::marker::*, Signature};
+    /// use schnorr_fun::{Signature, fun::marker::*};
     /// let signature = Signature::random(&mut rand::thread_rng());
     /// let secret_sig = signature.set_secrecy::<Secret>();
     /// ```
@@ -129,7 +129,7 @@ mod test {
     #[test]
     fn signature_serialization_roundtrip() {
         use super::*;
-        use crate::{fun::Scalar, Message};
+        use crate::{Message, fun::Scalar};
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let signature = schnorr.sign(&kp, Message::<Public>::plain("test", b"foo"));

@@ -1,7 +1,7 @@
 #![allow(unused)]
 use super::Input;
-use proc_macro2::{token_stream, Delimiter, Punct, Span, TokenStream, TokenTree};
-use quote::{quote_spanned, ToTokens};
+use proc_macro2::{Delimiter, Punct, Span, TokenStream, TokenTree, token_stream};
+use quote::{ToTokens, quote_spanned};
 use std::{fmt::Display, iter::Peekable};
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl core::fmt::Debug for OpTree {
                 .debug_tuple(&unary.kind.to_string())
                 .field(&unary.subj)
                 .finish(),
-            Self::LitInt(arg0) => write!(f, "{}", arg0),
+            Self::LitInt(arg0) => write!(f, "{arg0}"),
         }
     }
 }
@@ -80,13 +80,17 @@ impl InfixKind {
 
 impl core::fmt::Display for InfixKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            InfixKind::Add => "+",
-            InfixKind::Mul => "*",
-            InfixKind::Sub => "-",
-            InfixKind::LinComb => ".*",
-            InfixKind::Div => "/",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                InfixKind::Add => "+",
+                InfixKind::Mul => "*",
+                InfixKind::Sub => "-",
+                InfixKind::LinComb => ".*",
+                InfixKind::Div => "/",
+            }
+        )
     }
 }
 
@@ -105,10 +109,14 @@ pub enum UnaryKind {
 
 impl core::fmt::Display for UnaryKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            UnaryKind::Neg => "-",
-            UnaryKind::Ref => "&",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                UnaryKind::Neg => "-",
+                UnaryKind::Ref => "&",
+            }
+        )
     }
 }
 
@@ -155,7 +163,7 @@ fn rule_term(input: &mut Input) -> Result<Node, Error> {
                     return Err(Error {
                         span: group.span(),
                         problem: "can only use '(..)' or '{..}'".into(),
-                    })
+                    });
                 }
             }
         }
@@ -171,7 +179,7 @@ fn rule_term(input: &mut Input) -> Result<Node, Error> {
             return Err(Error {
                 span: tt.span(),
                 problem: "this is an invalid term".into(),
-            })
+            });
         }
     };
 

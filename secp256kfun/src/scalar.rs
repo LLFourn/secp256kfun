@@ -22,7 +22,7 @@ use rand_core::RngCore;
 /// cryptography is that scalar _multiplication_ can be done efficiently:
 ///
 /// ```
-/// use secp256kfun::{g, Scalar, G};
+/// use secp256kfun::{G, Scalar, g};
 /// let x = Scalar::random(&mut rand::thread_rng());
 /// let X = g!(x * G);
 /// ```
@@ -84,7 +84,7 @@ impl<Z, S> Scalar<S, Z> {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{marker::*, Scalar};
+    /// use secp256kfun::{Scalar, marker::*};
     /// assert!(Scalar::<Secret, Zero>::from_bytes([0u8; 32]).is_some());
     /// // NonZero scalar's can't be zero
     /// assert!(Scalar::<Secret, NonZero>::from_bytes([0u8; 32]).is_none());
@@ -174,7 +174,7 @@ impl<S> Scalar<S, NonZero> {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{marker::*, s, Scalar};
+    /// use secp256kfun::{Scalar, marker::*, s};
     /// let a = Scalar::random(&mut rand::thread_rng());
     /// let a_inverse = a.invert();
     /// assert_eq!(s!(a * a_inverse), s!(1));
@@ -200,7 +200,7 @@ impl<S> Scalar<S, NonZero> {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{marker::*, s, Scalar};
+    /// use secp256kfun::{Scalar, marker::*, s};
     ///
     /// /// Returns an iterator of 1, x, x², x³ ...
     /// fn powers<S: Secrecy, Z: ZeroChoice>(x: Scalar<S, Z>) -> impl Iterator<Item = Scalar<S, Z>> {
@@ -209,18 +209,14 @@ impl<S> Scalar<S, NonZero> {
     ///     })
     /// }
     ///
-    /// assert_eq!(powers(s!(2)).take(4).collect::<Vec<_>>(), vec![
-    ///     s!(1),
-    ///     s!(2),
-    ///     s!(4),
-    ///     s!(8)
-    /// ]);
-    /// assert_eq!(powers(s!(0)).take(4).collect::<Vec<_>>(), vec![
-    ///     s!(1).mark_zero(),
-    ///     s!(0),
-    ///     s!(0),
-    ///     s!(0)
-    /// ]);
+    /// assert_eq!(
+    ///     powers(s!(2)).take(4).collect::<Vec<_>>(),
+    ///     vec![s!(1), s!(2), s!(4), s!(8)]
+    /// );
+    /// assert_eq!(
+    ///     powers(s!(0)).take(4).collect::<Vec<_>>(),
+    ///     vec![s!(1).mark_zero(), s!(0), s!(0), s!(0)]
+    /// );
     /// ```
     pub fn mark_zero_choice<Z: ZeroChoice>(self) -> Scalar<S, Z> {
         Scalar::from_inner(self.0)
@@ -239,7 +235,7 @@ impl Scalar<Secret, NonZero> {
     /// cryptographically secure random number generator.
     /// # Example
     /// ```
-    /// use secp256kfun::{g, Scalar, G};
+    /// use secp256kfun::{G, Scalar, g};
     /// let secret_scalar = Scalar::random(&mut rand::thread_rng());
     /// let public_point = g!(secret_scalar * G);
     /// ```
@@ -300,7 +296,7 @@ impl<S> Scalar<S, Zero> {
     /// # Example
     /// ```
     /// # use core::convert::TryInto;
-    /// use secp256kfun::{hex, marker::*, s, Scalar};
+    /// use secp256kfun::{Scalar, hex, marker::*, s};
     /// let scalar = Scalar::<Secret, _>::from_bytes_mod_order(*b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// assert_eq!(scalar.to_bytes(), *b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     /// let scalar_overflowed = Scalar::<Secret, _>::from_bytes_mod_order(
@@ -319,7 +315,7 @@ impl<S> Scalar<S, Zero> {
     ///
     /// # Example
     /// ```
-    /// use secp256kfun::{marker::*, Scalar};
+    /// use secp256kfun::{Scalar, marker::*};
     /// let bytes = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     /// assert!(Scalar::<Secret, _>::from_slice_mod_order(&bytes[..31]).is_none());
     /// assert_eq!(
@@ -575,23 +571,25 @@ mod test {
 
     #[test]
     fn from_slice() {
-        assert!(dbg!(Scalar::<Secret, NonZero>::from_slice(
-            b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()
-        ))
-        .is_some());
-        assert!(Scalar::<Secret, NonZero>::from_slice(
-            b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref()
-        )
-        .is_none());
+        assert!(
+            Scalar::<Secret, NonZero>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
+                .is_some()
+        );
+        assert!(
+            Scalar::<Secret, NonZero>::from_slice(b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".as_ref())
+                .is_none()
+        );
 
-        assert!(Scalar::<Secret, NonZero>::from_slice(
-            hex::decode_array::<32>(
-                "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        assert!(
+            Scalar::<Secret, NonZero>::from_slice(
+                hex::decode_array::<32>(
+                    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                )
+                .unwrap()
+                .as_ref()
             )
-            .unwrap()
-            .as_ref()
-        )
-        .is_none());
+            .is_none()
+        );
     }
 
     #[test]

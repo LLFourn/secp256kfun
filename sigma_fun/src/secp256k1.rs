@@ -2,17 +2,17 @@
 //!
 //! [`secp256kfun`]: crate::secp256k1::fun
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use core::marker::PhantomData;
 use digest::Update;
 use generic_array::{
-    typenum::{self, type_operators::IsLessOrEqual, U32},
     ArrayLength, GenericArray,
+    typenum::{self, U32, type_operators::IsLessOrEqual},
 };
 pub use secp256kfun as fun;
-use secp256kfun::{g, marker::*, s, Point, Scalar};
+use secp256kfun::{Point, Scalar, g, marker::*, s};
 
 /// Proves knowledge of `x` such that `A = x * B` for some `A` and `B` included in the statement.
 #[derive(Clone, Debug, Default, PartialEq)]
