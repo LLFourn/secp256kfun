@@ -1,6 +1,6 @@
 #[cfg(feature = "libsecp_compat_0_27")]
 mod v0_27 {
-    use crate::{fun::secp256k1_0_27::ecdsa, Signature};
+    use crate::{Signature, fun::secp256k1_0_27::ecdsa};
 
     impl From<Signature> for ecdsa::Signature {
         fn from(sig: Signature) -> Self {
@@ -17,7 +17,7 @@ mod v0_27 {
 
 #[cfg(feature = "libsecp_compat_0_28")]
 mod v0_28 {
-    use crate::{fun::secp256k1_0_28::ecdsa, Signature};
+    use crate::{Signature, fun::secp256k1_0_28::ecdsa};
 
     impl From<Signature> for ecdsa::Signature {
         fn from(sig: Signature) -> Self {
@@ -34,7 +34,7 @@ mod v0_28 {
 
 #[cfg(feature = "libsecp_compat_0_29")]
 mod v0_29 {
-    use crate::{fun::secp256k1_0_29::ecdsa, Signature};
+    use crate::{Signature, fun::secp256k1_0_29::ecdsa};
 
     impl From<Signature> for ecdsa::Signature {
         fn from(sig: Signature) -> Self {
@@ -51,7 +51,7 @@ mod v0_29 {
 
 #[cfg(feature = "libsecp_compat_0_30")]
 mod v0_30 {
-    use crate::{fun::secp256k1_0_30::ecdsa, Signature};
+    use crate::{Signature, fun::secp256k1_0_30::ecdsa};
 
     impl From<Signature> for ecdsa::Signature {
         fn from(sig: Signature) -> Self {

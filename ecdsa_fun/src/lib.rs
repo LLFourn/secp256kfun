@@ -14,7 +14,7 @@ mod libsecp_compat;
 
 use fun::Tag;
 
-use fun::{derive_nonce, g, marker::*, nonce::NonceGen, s, Point, Scalar, G};
+use fun::{G, Point, Scalar, derive_nonce, g, marker::*, nonce::NonceGen, s};
 pub use secp256kfun as fun;
 pub use secp256kfun::nonce;
 mod signature;
@@ -54,7 +54,7 @@ impl<NG> ECDSA<NG> {
     ///
     /// # Example
     /// ```
-    /// use ecdsa_fun::{nonce, ECDSA};
+    /// use ecdsa_fun::{ECDSA, nonce};
     /// use rand::rngs::ThreadRng;
     /// use sha2::Sha256;
     /// let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
@@ -94,7 +94,7 @@ impl<NG> ECDSA<NG> {
     ///
     /// # Example
     /// ```
-    /// use ecdsa_fun::{fun::Scalar, ECDSA};
+    /// use ecdsa_fun::{ECDSA, fun::Scalar};
     /// let ecdsa = ECDSA::verify_only();
     /// let secret_key = Scalar::random(&mut rand::thread_rng());
     /// let verification_key = ecdsa.verification_key_for(&secret_key);
@@ -121,7 +121,7 @@ impl<NG> ECDSA<NG> {
 
         g!((s_inv * m) * G + (s_inv * R_x) * verification_key)
             .non_zero()
-            .map_or(false, |implied_R| implied_R.x_eq_scalar(R_x))
+            .is_some_and(|implied_R| implied_R.x_eq_scalar(R_x))
     }
 }
 
@@ -132,8 +132,9 @@ impl<NG: NonceGen> ECDSA<NG> {
     ///
     /// ```
     /// use ecdsa_fun::{
+    ///     ECDSA,
     ///     fun::{digest::Digest, prelude::*},
-    ///     nonce, ECDSA,
+    ///     nonce,
     /// };
     /// use rand::rngs::ThreadRng;
     /// use sha2::Sha256;

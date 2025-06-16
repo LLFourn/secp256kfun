@@ -1,7 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use digest::Update;
 
@@ -29,11 +29,11 @@ where
     // following. If they share the following it doesn't necessarily mean they
     // are Eq compatible but it's the best we can do for now.
     B: Sigma<
-        ChallengeLength = A::ChallengeLength,
-        Witness = A::Witness,
-        Response = A::Response,
-        AnnounceSecret = A::AnnounceSecret,
-    >,
+            ChallengeLength = A::ChallengeLength,
+            Witness = A::Witness,
+            Response = A::Response,
+            AnnounceSecret = A::AnnounceSecret,
+        >,
 {
     type Witness = A::Witness;
     type Statement = (A::Statement, B::Statement);
@@ -130,8 +130,8 @@ crate::impl_display!(Eq<A,B>);
 mod test {
     #![allow(unused_imports)]
     use crate::{
-        typenum::{U20, U31, U32},
         Eq, FiatShamir, HashTranscript,
+        typenum::{U20, U31, U32},
     };
     use ::proptest::prelude::*;
     use rand_chacha::ChaCha20Rng;
@@ -155,7 +155,7 @@ mod test {
             assert!(proof_system.verify(statement, &proof));
 
             let mut bogus_statement = statement.clone();
-            bogus_statement.1 .0 = $unrelated_point;
+            bogus_statement.1.0 = $unrelated_point;
             if &bogus_statement != statement {
                 assert!(!proof_system.verify(&bogus_statement, &proof));
 

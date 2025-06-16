@@ -19,7 +19,7 @@
 /// and `.public()` methods allow you to change the default.
 ///
 /// ```
-/// use secp256kfun::{g, marker::*, Point, Scalar, G};
+/// use secp256kfun::{G, Point, Scalar, g, marker::*};
 /// let x = Scalar::random(&mut rand::thread_rng());
 /// let H = Point::random(&mut rand::thread_rng());
 /// let X = g!(x * H); // This is constant time because x is secret by default.

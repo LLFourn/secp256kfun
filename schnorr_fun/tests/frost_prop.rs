@@ -3,9 +3,9 @@ use chilldkg::encpedpop;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha20Rng;
 use schnorr_fun::{
-    frost::*,
-    fun::{marker::*, Scalar},
     Message,
+    frost::*,
+    fun::{Scalar, marker::*},
 };
 use secp256kfun::proptest::{
     arbitrary::any,

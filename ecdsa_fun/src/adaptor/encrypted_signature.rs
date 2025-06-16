@@ -1,5 +1,5 @@
 use super::DLEQ;
-use crate::fun::{marker::*, Point, Scalar};
+use crate::fun::{Point, Scalar, marker::*};
 use sigma_fun::CompactProof;
 
 /// `PointNonce` is a [`NonZero`] Point that also has an x-coordinate that is NonZero

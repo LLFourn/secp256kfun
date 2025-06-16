@@ -1,4 +1,4 @@
-use secp256kfun::{marker::*, Point, Scalar};
+use secp256kfun::{Point, Scalar, marker::*};
 
 /// A one-time encrypted Schnorr signature or "adaptor signature".
 ///
@@ -43,7 +43,7 @@ mod test {
     #[test]
     fn encrypted_signature_serialization_roundtrip() {
         use super::*;
-        use crate::{adaptor::*, fun::Scalar, Message};
+        use crate::{Message, adaptor::*, fun::Scalar};
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let encryption_key = Point::random(&mut rand::thread_rng());

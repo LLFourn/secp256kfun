@@ -1,8 +1,8 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
-    binonce,
-    fun::{marker::*, serde, Point, Scalar},
-    musig, Message,
+    Message, binonce,
+    fun::{Point, Scalar, marker::*, serde},
+    musig,
 };
 static TEST_JSON: &str = include_str!("musig/sign_verify_vectors.json");
 use secp256kfun::hex;

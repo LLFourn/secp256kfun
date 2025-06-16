@@ -104,5 +104,5 @@ pub use secp256k1_0_30 as secp256k1;
 
 /// Convenience module to import the most frequently used tools
 pub mod prelude {
-    pub use crate::{g, marker::*, s, Point, Scalar, G};
+    pub use crate::{G, Point, Scalar, g, marker::*, s};
 }

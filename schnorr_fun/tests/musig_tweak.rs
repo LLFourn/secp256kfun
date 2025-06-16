@@ -3,9 +3,10 @@
 use std::{rc::Rc, sync::Arc};
 
 use schnorr_fun::{
+    Message,
     binonce::{self, NonceKeyPair},
-    fun::{marker::*, serde, Point, Scalar},
-    musig, Message,
+    fun::{Point, Scalar, marker::*, serde},
+    musig,
 };
 static TEST_JSON: &'static str = include_str!("musig/tweak_vectors.json");
 use secp256kfun::hex;

@@ -43,7 +43,7 @@ pub struct Normal;
 /// possible. To normalize a `NonNormal` point call `normalize` on the point.
 ///
 /// ```
-/// use secp256kfun::{g, marker::*, Scalar, G};
+/// use secp256kfun::{G, Scalar, g, marker::*};
 /// let scalar = Scalar::random(&mut rand::thread_rng());
 /// let non_normal_point = g!(scalar * G);
 /// let normal_point = non_normal_point.normalize();

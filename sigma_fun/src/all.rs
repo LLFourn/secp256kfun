@@ -1,11 +1,11 @@
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use digest::Update;
-use generic_array::{typenum::Unsigned, GenericArray};
+use generic_array::{GenericArray, typenum::Unsigned};
 
 /// Combinator for proving all of N statements of the same type is true.
 #[derive(Default, Clone, Debug, PartialEq)]

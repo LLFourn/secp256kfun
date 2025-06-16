@@ -33,17 +33,18 @@
 //! - [`certpedpop`]: `encpedpop` where each party also certifies the output so they can cryptographically convince each other that the key generation was successful.
 //!
 //! [ChillDKG]: https://github.com/BlockstreamResearch/bip-frost-dkg
-use crate::{frost::*, Schnorr};
+use crate::{Schnorr, frost::*};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
 };
 use secp256kfun::{
+    KeyPair,
     hash::{Hash32, HashAdd},
     nonce::NonceGen,
     poly,
     prelude::*,
-    rand_core, KeyPair,
+    rand_core,
 };
 
 /// SimplePedPop is a bare bones secure distributed key generation algorithm that leaves a lot left
@@ -433,11 +434,15 @@ pub mod simplepedpop {
 
     impl core::fmt::Display for ReceiveShareError {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            write!(f, "{}", match self {
-                ReceiveShareError::InvalidPop => "Invalid POP for one of the contributions",
-                ReceiveShareError::InvalidSecretShare =>
-                    "The share extracted from the key generation was invalid",
-            })
+            write!(
+                f,
+                "{}",
+                match self {
+                    ReceiveShareError::InvalidPop => "Invalid POP for one of the contributions",
+                    ReceiveShareError::InvalidSecretShare =>
+                        "The share extracted from the key generation was invalid",
+                }
+            )
         }
     }
 }
@@ -1178,10 +1183,10 @@ pub mod certpedpop {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             match self {
                 CertificateError::InvalidCert { key } => {
-                    write!(f, "certificate for key {} was invalid", key)
+                    write!(f, "certificate for key {key} was invalid")
                 }
                 CertificateError::Missing { key } => {
-                    write!(f, "certificate for key {} was missing", key)
+                    write!(f, "certificate for key {key} was missing")
                 }
             }
         }

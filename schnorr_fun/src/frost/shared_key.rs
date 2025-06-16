@@ -372,17 +372,21 @@ mod test {
         )
         .unwrap();
 
-        assert!(bincode::decode_from_slice::<SharedKey<Normal, NonZero>, _>(
-            &bytes_poly_zero,
-            bincode::config::standard(),
-        )
-        .is_err());
+        assert!(
+            bincode::decode_from_slice::<SharedKey<Normal, NonZero>, _>(
+                &bytes_poly_zero,
+                bincode::config::standard(),
+            )
+            .is_err()
+        );
 
-        assert!(bincode::decode_from_slice::<SharedKey<EvenY, NonZero>, _>(
-            &bytes_poly_minus_one,
-            bincode::config::standard(),
-        )
-        .is_err());
+        assert!(
+            bincode::decode_from_slice::<SharedKey<EvenY, NonZero>, _>(
+                &bytes_poly_minus_one,
+                bincode::config::standard(),
+            )
+            .is_err()
+        );
 
         assert_eq!(poly_zero_got, poly_zero);
         assert_eq!(poly_one_got, poly_one);

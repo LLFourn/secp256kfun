@@ -1,6 +1,6 @@
 #![cfg(feature = "serde")]
 use schnorr_fun::{
-    fun::{marker::*, serde, Point, Scalar},
+    fun::{Point, Scalar, marker::*, serde},
     musig,
 };
 static TEST_JSON: &str = include_str!("musig/key_agg_vectors.json");

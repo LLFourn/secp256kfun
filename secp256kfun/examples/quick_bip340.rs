@@ -2,10 +2,10 @@
 #![allow(non_snake_case)]
 use rand::thread_rng;
 use secp256kfun::{
-    g,
+    G, Point, Scalar, g,
     hash::{HashAdd, Tag},
     marker::*,
-    s, Point, Scalar, G,
+    s,
 };
 use sha2::Sha256;
 

@@ -6,7 +6,7 @@
 //!
 //! [`Scalars`]: crate::Scalar
 //! [`Points`]: crate::Point
-use crate::{g, marker::*, s, Point, Scalar, G};
+use crate::{G, Point, Scalar, g, marker::*, s};
 use alloc::vec::Vec;
 use rand_core::RngCore;
 
@@ -29,7 +29,7 @@ pub mod scalar {
     /// # Example
     ///
     /// ```
-    /// use secp256kfun::{poly, Scalar};
+    /// use secp256kfun::{Scalar, poly};
     /// let secret_poly = (0..5)
     ///     .map(|_| Scalar::random(&mut rand::thread_rng()))
     ///     .collect::<Vec<_>>();

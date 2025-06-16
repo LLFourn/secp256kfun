@@ -1,4 +1,4 @@
-use crate::{generic_array::GenericArray, ProverTranscript, Sigma, Transcript};
+use crate::{ProverTranscript, Sigma, Transcript, generic_array::GenericArray};
 use rand_core::{CryptoRng, RngCore};
 
 /// Applies the Fiat-Shamir transform to a given [`Sigma`] protocol given a [`Transcript`].

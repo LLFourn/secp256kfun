@@ -5,7 +5,7 @@
 //! ```
 //! # use schnorr_fun::binonce::NonceKeyPair;
 //! use rand_chacha::ChaCha20Rng;
-//! use schnorr_fun::{musig, nonce::Deterministic, Message, Schnorr};
+//! use schnorr_fun::{Message, Schnorr, musig, nonce::Deterministic};
 //! use sha2::Sha256;
 //! // use sha256 with deterministic nonce generation -- be careful!
 //! let musig = musig::new_with_deterministic_nonces::<sha2::Sha256>();
@@ -72,17 +72,17 @@
 //! [the excellent paper]: https://eprint.iacr.org/2020/1261.pdf
 //! [secp256k1-zkp]: https://github.com/ElementsProject/secp256k1-zkp/pull/131
 use crate::{
+    Message, Schnorr, Signature,
     adaptor::EncryptedSignature,
     binonce::{self, SecretNonce},
-    Message, Schnorr, Signature,
 };
 use alloc::vec::Vec;
 use secp256kfun::{
+    KeyPair,
     hash::{Hash32, HashAdd, Tag},
     nonce::{self, NoNonces, NonceGen},
     prelude::*,
     rand_core::{RngCore, SeedableRng},
-    KeyPair,
 };
 
 /// The MuSig context.
@@ -276,10 +276,10 @@ impl<H: Hash32, NG> MuSig<H, NG> {
     ///
     /// ```
     /// use schnorr_fun::{
+    ///     Schnorr,
     ///     fun::{Point, Scalar},
     ///     musig::MuSig,
     ///     nonce::Deterministic,
-    ///     Schnorr,
     /// };
     /// # let my_secret_key = Scalar::random(&mut rand::thread_rng());
     /// # let their_public_key = Point::random(&mut rand::thread_rng());

@@ -1,13 +1,13 @@
 use core::marker::PhantomData;
 
 use crate::{
+    Sigma, Writable,
     rand_core::{CryptoRng, RngCore, SeedableRng},
     typenum::{
-        marker_traits::NonZero, type_operators::IsLessOrEqual, PartialDiv, Unsigned, U32, U64,
+        PartialDiv, U32, U64, Unsigned, marker_traits::NonZero, type_operators::IsLessOrEqual,
     },
-    Sigma, Writable,
 };
-use digest::{crypto_common::BlockSizeUser, FixedOutput, Update};
+use digest::{FixedOutput, Update, crypto_common::BlockSizeUser};
 use generic_array::GenericArray;
 
 /// A trait for a Fiat-Shamir proof transcript.

@@ -1,9 +1,9 @@
 //! This broken and just as a reference until we get proper bip340 benchmarks from proper rust lib
 #![allow(non_upper_case_globals)]
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use schnorr_fun::{
-    fun::{marker::*, nonce, secp256k1, Scalar},
     Message, Schnorr,
+    fun::{Scalar, marker::*, nonce, secp256k1},
 };
 use sha2::Sha256;
 

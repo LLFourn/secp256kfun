@@ -17,25 +17,23 @@
 //!
 //! [MRL-0010]: https://web.getmonero.org/resources/research-lab/pubs/MRL-0010.pdf
 use crate::{
-    ed25519,
+    All, And, Eq, FiatShamir, Or, ProverTranscript, Sigma, Transcript, ed25519,
     or::Either,
     secp256k1,
     secp256k1::fun::{
-        g,
+        G as GP, Point as PointP, Scalar as ScalarP, g,
         marker::*,
         rand_core::{CryptoRng, RngCore},
         s,
         subtle::{self, ConditionallySelectable},
-        Point as PointP, Scalar as ScalarP, G as GP,
     },
-    All, And, Eq, FiatShamir, Or, ProverTranscript, Sigma, Transcript,
 };
 use alloc::vec::Vec;
 use curve25519_dalek::{
     constants::ED25519_BASEPOINT_TABLE, edwards::EdwardsPoint as PointQ, scalar::Scalar as ScalarQ,
     traits::Identity,
 };
-use generic_array::typenum::{U252, U31};
+use generic_array::typenum::{U31, U252};
 static GQ: &curve25519_dalek::edwards::EdwardsBasepointTable = &ED25519_BASEPOINT_TABLE;
 
 /// The underlying sigma protocol we will use to prove the relationship between the two sets of commitments.
@@ -284,8 +282,8 @@ fn to_bits(secret_key: &ScalarQ) -> [bool; COMMITMENT_BITS] {
 mod test {
     use super::*;
     use crate::{
-        ed25519::test::{ed25519_point, ed25519_scalar},
         HashTranscript,
+        ed25519::test::{ed25519_point, ed25519_scalar},
     };
     use ::proptest::prelude::*;
     use rand_chacha::ChaCha20Rng;

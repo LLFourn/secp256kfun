@@ -1,8 +1,7 @@
 #![cfg(feature = "libsecp_compat")]
 use ecdsa_fun::fun::{
-    hex,
-    secp256k1::{self, ecdsa, Message, PublicKey, SecretKey},
-    Point, Scalar,
+    Point, Scalar, hex,
+    secp256k1::{self, Message, PublicKey, SecretKey, ecdsa},
 };
 
 const TEST_SOUNDNESS: usize = 20;
@@ -27,9 +26,10 @@ fn ecdsa_sign() {
         let signature = ecdsa.sign(&secret_key, &message);
         let c_message = Message::from_digest_slice(&message[..]).unwrap();
         let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
-        assert!(secp
-            .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
-            .is_ok());
+        assert!(
+            secp.verify_ecdsa(&c_message, &c_siganture, &c_public_key)
+                .is_ok()
+        );
     }
 }
 
@@ -85,7 +85,8 @@ fn ecdsa_sign_high_message() {
     let signature = ecdsa.sign(&secret_key, &message);
     let c_message = Message::from_digest_slice(&message[..]).unwrap();
     let c_siganture = ecdsa::Signature::from_compact(&signature.to_bytes()).unwrap();
-    assert!(secp
-        .verify_ecdsa(&c_message, &c_siganture, &c_public_key)
-        .is_ok());
+    assert!(
+        secp.verify_ecdsa(&c_message, &c_siganture, &c_public_key)
+            .is_ok()
+    );
 }

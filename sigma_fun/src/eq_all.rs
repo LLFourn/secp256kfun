@@ -1,11 +1,11 @@
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use digest::Update;
-use generic_array::{typenum::Unsigned, GenericArray};
+use generic_array::{GenericArray, typenum::Unsigned};
 
 /// Combinator for proving any number of statements of the same kind have the same witness.
 #[derive(Debug, Clone, Default, PartialEq)]

@@ -7,7 +7,7 @@ use digest::FixedOutput;
 
 use crate::digest::{
     crypto_common::BlockSizeUser,
-    generic_array::typenum::{PartialDiv, Unsigned, U32},
+    generic_array::typenum::{PartialDiv, U32, Unsigned},
 };
 /// Extension trait for some cryptotraphic function that can be domain separated by a tag.
 /// Used for hashes and [nonce generators][`NonceGen`].
