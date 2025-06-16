@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Upgrade to bincode v2
-- MSRV 1.63 -> 1.64
+- MSRV 1.63 -> 1.85
 
 ## v0.11.0
 
