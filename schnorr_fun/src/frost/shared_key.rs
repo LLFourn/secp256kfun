@@ -1,4 +1,4 @@
-use super::{PairedSecretShare, PartyIndex, SecretShare, VerificationShare};
+use super::{PairedSecretShare, SecretShare, ShareIndex, VerificationShare};
 use alloc::vec::Vec;
 use core::{marker::PhantomData, ops::Deref};
 use secp256kfun::{poly, prelude::*};
@@ -179,7 +179,7 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     /// contains a share image).
     ///
     /// [`verification_share`]: Self::verification_share
-    pub fn share_image(&self, index: PartyIndex) -> Point<NonNormal, Public, Zero> {
+    pub fn share_image(&self, index: ShareIndex) -> Point<NonNormal, Public, Zero> {
         poly::point::eval(&self.point_polynomial, index)
     }
 }
@@ -232,7 +232,7 @@ impl SharedKey<Normal, Zero> {
     /// ⚠ You can't just take any points you want and pass them in here and hope it's secure.
     /// They need to be from a securely generated key.
     pub fn from_share_images(
-        shares: &[(PartyIndex, Point<impl PointType, Public, impl ZeroChoice>)],
+        shares: &[(ShareIndex, Point<impl PointType, Public, impl ZeroChoice>)],
     ) -> Self {
         let poly = poly::point::interpolate(shares);
         let poly = poly::point::normalize(poly);
@@ -244,7 +244,7 @@ impl SharedKey<EvenY> {
     /// The verification shares of each party in the key.
     ///
     /// The verification share is the image of their secret share.
-    pub fn verification_share(&self, index: PartyIndex) -> VerificationShare<NonNormal> {
+    pub fn verification_share(&self, index: ShareIndex) -> VerificationShare<NonNormal> {
         let share_image = poly::point::eval(&self.point_polynomial, index);
         VerificationShare {
             index,

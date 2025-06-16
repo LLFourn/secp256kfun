@@ -116,7 +116,7 @@ use secp256kfun::{
 /// This index can be any non-zero [`Scalar`], but must be unique between parties.
 /// In most cases it will make sense to use simple indices `s!(1), s!(2), ...` for smaller backups.
 /// Other applications may desire to use indices corresponding to pre-existing keys or identifiers.
-pub type PartyIndex = Scalar<Public, NonZero>;
+pub type ShareIndex = Scalar<Public, NonZero>;
 
 /// The FROST context.
 ///
@@ -169,9 +169,9 @@ impl<H, NG> Frost<H, NG> {
     pub fn create_share(
         &self,
         scalar_poly: &[Scalar],
-        party_index: Scalar<impl Secrecy>,
+        share_index: Scalar<impl Secrecy>,
     ) -> Scalar<Secret, Zero> {
-        poly::scalar::eval(scalar_poly, party_index)
+        poly::scalar::eval(scalar_poly, share_index)
     }
 }
 
@@ -259,7 +259,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
     pub fn party_sign_session(
         &self,
         public_key: Point<EvenY>,
-        parties: BTreeSet<PartyIndex>,
+        parties: BTreeSet<ShareIndex>,
         agg_binonce: binonce::Nonce<Zero>,
         message: Message,
     ) -> PartySignSession {
@@ -288,7 +288,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
     pub fn coordinator_sign_session(
         &self,
         shared_key: &SharedKey<EvenY>,
-        nonces: BTreeMap<PartyIndex, Nonce>,
+        nonces: BTreeMap<ShareIndex, Nonce>,
         message: Message,
     ) -> CoordinatorSignSession {
         self.coordinator_sign_session_(shared_key, nonces, message, KeyPair::zero())
@@ -303,7 +303,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
     pub fn randomized_coordinator_sign_session(
         &self,
         shared_key: &SharedKey<EvenY>,
-        nonces: BTreeMap<PartyIndex, Nonce>,
+        nonces: BTreeMap<ShareIndex, Nonce>,
         message: Message,
         rng: &mut impl RngCore,
     ) -> CoordinatorSignSession {
@@ -318,7 +318,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
     fn coordinator_sign_session_(
         &self,
         shared_key: &SharedKey<EvenY>,
-        mut nonces: BTreeMap<PartyIndex, Nonce>,
+        mut nonces: BTreeMap<ShareIndex, Nonce>,
         message: Message,
         randomization: KeyPair<impl PointType, impl ZeroChoice>,
     ) -> CoordinatorSignSession {
@@ -364,7 +364,7 @@ impl<H: Hash32, NG> Frost<H, NG> {
         public_key: Point<EvenY>,
         agg_binonce: Nonce<Zero>,
         message: Message,
-        parties: &BTreeSet<PartyIndex>,
+        parties: &BTreeSet<ShareIndex>,
     ) -> Scalar<Public> {
         Scalar::from_hash(
             self.binding_hash

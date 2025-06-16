@@ -1,7 +1,7 @@
 use crate::{
     Signature,
     binonce::{self, SecretNonce},
-    frost::PartyIndex,
+    frost::ShareIndex,
 };
 use alloc::collections::{BTreeMap, BTreeSet};
 use secp256kfun::{poly, prelude::*};
@@ -26,13 +26,13 @@ pub struct CoordinatorSignSession {
     pub(crate) challenge: Scalar<Public, Zero>,
 
     pub(crate) agg_binonce: binonce::Nonce<Zero>,
-    pub(crate) nonces: BTreeMap<PartyIndex, binonce::Nonce>,
+    pub(crate) nonces: BTreeMap<ShareIndex, binonce::Nonce>,
     pub(crate) randomization: Scalar<Secret, Zero>,
 }
 
 impl CoordinatorSignSession {
     /// Fetch the participant indices for this signing session.
-    pub fn parties(&self) -> BTreeSet<PartyIndex> {
+    pub fn parties(&self) -> BTreeSet<ShareIndex> {
         self.nonces.keys().cloned().collect()
     }
 
@@ -96,16 +96,16 @@ impl CoordinatorSignSession {
     pub fn verify_and_combine_signature_shares(
         &self,
         shared_key: &SharedKey<EvenY>,
-        signature_shares: BTreeMap<PartyIndex, SignatureShare>,
+        signature_shares: BTreeMap<ShareIndex, SignatureShare>,
     ) -> Result<Signature, VerifySignatureSharesError> {
         if signature_shares.len() < shared_key.threshold() {
             return Err(VerifySignatureSharesError::NotEnough {
                 missing: shared_key.threshold() - signature_shares.len(),
             });
         }
-        for (party_index, signature_share) in &signature_shares {
+        for (share_index, signature_share) in &signature_shares {
             self.verify_signature_share(
-                shared_key.verification_share(*party_index),
+                shared_key.verification_share(*share_index),
                 *signature_share,
             )
             .map_err(VerifySignatureSharesError::Invalid)?;
@@ -213,7 +213,7 @@ impl PartySignSession {
 /// Error for a signature share being invalid
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignatureShareInvalid {
-    index: PartyIndex,
+    index: ShareIndex,
 }
 
 impl core::fmt::Display for SignatureShareInvalid {

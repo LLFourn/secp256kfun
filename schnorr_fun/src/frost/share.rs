@@ -52,7 +52,7 @@ use secp256kfun::{poly, prelude::*};
 pub struct SecretShare {
     /// The scalar index for this secret share, usually this is a small number but it can take any
     /// value (other than 0).
-    pub index: PartyIndex,
+    pub index: ShareIndex,
     /// The secret scalar which is the output of the polynomial evaluated at `index`
     pub share: Scalar<Secret, Zero>,
 }
@@ -143,7 +143,7 @@ impl<T: PointType, Z> PartialEq for PairedSecretShare<T, Z> {
 
 impl<T: Normalized, Z: ZeroChoice> PairedSecretShare<T, Z> {
     /// The index of the secret share
-    pub fn index(&self) -> PartyIndex {
+    pub fn index(&self) -> ShareIndex {
         self.secret_share.index
     }
 
@@ -288,7 +288,7 @@ impl PairedSecretShare<EvenY> {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VerificationShare<T: PointType> {
     /// The index of the share in the secret sharing
-    pub index: PartyIndex,
+    pub index: ShareIndex,
     /// The image of the secret share
     pub share_image: Point<T, Public, Zero>,
     /// The public key that this is a share of
@@ -501,7 +501,7 @@ mod share_backup {
 #[cfg(feature = "share_backup")]
 pub use share_backup::BackupDecodeError;
 
-use super::PartyIndex;
+use super::ShareIndex;
 
 #[cfg(test)]
 mod test {
