@@ -82,7 +82,7 @@ pub mod simplepedpop {
 
     impl Contributor {
         /// Generates the keygen input for a party at `my_index`. Note that `my_index`
-        /// has nothing to do with the "receiver" index (the `PartyIndex` of share receivers). If
+        /// has nothing to do with the "receiver" index (the `ShareIndex` of share receivers). If
         /// there are `n` `KeyGenInputParty`s then each party must be assigned an index from `0` to `n-1`.
         ///
         /// This method return `Self` to retain the state of the protocol which is needded to verify
@@ -90,7 +90,7 @@ pub mod simplepedpop {
         pub fn gen_keygen_input<H, NG>(
             schnorr: &Schnorr<H, NG>,
             threshold: u32,
-            share_receivers: &BTreeSet<PartyIndex>,
+            share_receivers: &BTreeSet<ShareIndex>,
             my_index: u32,
             rng: &mut impl rand_core::RngCore,
         ) -> (Self, KeygenInput, SecretKeygenInput)
@@ -155,10 +155,10 @@ pub mod simplepedpop {
         pub pop: Signature,
     }
 
-    /// Map from party index to secret share contribution from the [`Contributor`].
+    /// Map from share index to secret share contribution from the [`Contributor`].
     ///
     /// Each entry in the map must be sent to the corresponding party.
-    pub type SecretKeygenInput = BTreeMap<PartyIndex, Scalar<Secret, Zero>>;
+    pub type SecretKeygenInput = BTreeMap<ShareIndex, Scalar<Secret, Zero>>;
 
     /// Stores the state of the coordinator as it aggregates inputs from [`Contributor`]s.
     #[derive(Clone, Debug, PartialEq)]
@@ -338,9 +338,9 @@ pub mod simplepedpop {
         Ok(paired_secret_share)
     }
 
-    /// Collect the secret inputs from each [`Contributor`] destined for a particular a party at `PartyIndex`.
+    /// Collect the secret inputs from each [`Contributor`] destined for a particular party at `ShareIndex`.
     pub fn collect_secret_inputs(
-        my_index: PartyIndex,
+        my_index: ShareIndex,
         secret_share_inputs: impl IntoIterator<Item = Scalar<Secret, Zero>>,
     ) -> SecretShare {
         let mut sum = s!(0);
@@ -370,12 +370,12 @@ pub mod simplepedpop {
         NG: NonceGen,
     {
         let share_receivers = (1..=n_receivers)
-            .map(|i| PartyIndex::from(NonZeroU32::new(i).unwrap()))
+            .map(|i| ShareIndex::from(NonZeroU32::new(i).unwrap()))
             .collect::<BTreeSet<_>>();
 
         let mut aggregator = Coordinator::new(threshold, n_generators);
         let mut contributors = vec![];
-        let mut secret_inputs = BTreeMap::<PartyIndex, Vec<Scalar<Secret, Zero>>>::default();
+        let mut secret_inputs = BTreeMap::<ShareIndex, Vec<Scalar<Secret, Zero>>>::default();
 
         for i in 0..n_generators {
             let (contributor, to_coordinator, shares) =
@@ -460,7 +460,7 @@ pub mod simplepedpop {
 /// [`AggKeygenInput`]: encpedpop::AggKeygenInput
 pub mod encpedpop {
     use super::{simplepedpop, *};
-    use crate::frost::{PairedSecretShare, PartyIndex, SecretShare, SharedKey};
+    use crate::frost::{PairedSecretShare, SecretShare, ShareIndex, SharedKey};
 
     /// A party that generates secret input to the key generation. You need at least one of these
     /// and if at least one of these parties is honest then the final secret key will not be known by an
@@ -478,7 +478,7 @@ pub mod encpedpop {
 
     impl Contributor {
         /// Generates the keygen input for a party at `my_index`. Note that `my_index`
-        /// has nothing to do with the "receiver" index (the `PartyIndex` of share receivers). If
+        /// has nothing to do with the "receiver" index (the `ShareIndex` of share receivers). If
         /// there are `n` `KeyGenInputParty`s then each party must be assigned an index from `0` to `n-1`.
         ///
         /// This method return `Self` to retain the state of the protocol which is needded to verify
@@ -486,7 +486,7 @@ pub mod encpedpop {
         pub fn gen_keygen_input<H, NG>(
             schnorr: &Schnorr<H, NG>,
             threshold: u32,
-            receiver_encryption_keys: &BTreeMap<PartyIndex, Point>,
+            receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
             my_index: u32,
             rng: &mut impl rand_core::RngCore,
         ) -> (Self, KeygenInput)
@@ -550,7 +550,7 @@ pub mod encpedpop {
     )]
     pub struct AggKeygenInput {
         inner: simplepedpop::AggKeygenInput,
-        encrypted_shares: BTreeMap<PartyIndex, (Point, Scalar<Public, Zero>)>,
+        encrypted_shares: BTreeMap<ShareIndex, (Point, Scalar<Public, Zero>)>,
         encryption_nonces: Vec<Point>,
     }
 
@@ -587,7 +587,7 @@ pub mod encpedpop {
         }
 
         /// Get the encryption key for every party
-        pub fn encryption_keys(&self) -> impl Iterator<Item = (PartyIndex, Point)> + '_ {
+        pub fn encryption_keys(&self) -> impl Iterator<Item = (ShareIndex, Point)> + '_ {
             self.encrypted_shares
                 .iter()
                 .map(|(party_index, (ek, _))| (*party_index, *ek))
@@ -628,19 +628,19 @@ pub mod encpedpop {
         /// Recover a share with the decryption key from the `AggKeygenInput`.
         pub fn recover_share<H: Hash32>(
             &self,
-            party_index: PartyIndex,
+            share_index: ShareIndex,
             encryption_keypair: &KeyPair,
         ) -> Result<PairedSecretShare, &'static str> {
             let (expected_public_key, agg_ciphertext) = self
                 .encrypted_shares
-                .get(&party_index)
+                .get(&share_index)
                 .ok_or("No party at party_index existed")?;
 
             if *expected_public_key != encryption_keypair.public_key() {
                 return Err("this isn't the right encryption keypair for this share");
             }
             let secret_share = decrypt::<H>(
-                party_index,
+                share_index,
                 encryption_keypair,
                 &self.encryption_nonces,
                 *agg_ciphertext,
@@ -649,7 +649,7 @@ pub mod encpedpop {
             let paired_secret_share = self
                 .shared_key()
                 .pair_secret_share(SecretShare {
-                    index: party_index,
+                    index: share_index,
                     share: secret_share,
                 })
                 .ok_or("the secret share recovered didn't match what was expected")?;
@@ -673,7 +673,7 @@ pub mod encpedpop {
         /// The input from the inner protocol
         pub inner: simplepedpop::KeygenInput,
         /// The shares encrypted for each receiving party
-        pub encrypted_shares: BTreeMap<PartyIndex, Scalar<Public, Zero>>,
+        pub encrypted_shares: BTreeMap<ShareIndex, Scalar<Public, Zero>>,
         /// The multi-encryption nonce for the encryptions in `encrypted_shares`
         pub encryption_nonce: Point,
     }
@@ -682,7 +682,7 @@ pub mod encpedpop {
     #[derive(Clone, Debug, PartialEq)]
     pub struct Coordinator {
         inner: simplepedpop::Coordinator,
-        agg_encrypted_shares: BTreeMap<PartyIndex, (Point, Scalar<Public, Zero>)>,
+        agg_encrypted_shares: BTreeMap<ShareIndex, (Point, Scalar<Public, Zero>)>,
         encryption_nonces: Vec<Point>,
     }
 
@@ -695,7 +695,7 @@ pub mod encpedpop {
         pub fn new(
             threshold: u32,
             n_contribtors: u32,
-            receiver_encryption_keys: &BTreeMap<PartyIndex, Point>,
+            receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
         ) -> Self {
             let agg_encrypted_shares = receiver_encryption_keys
                 .iter()
@@ -776,7 +776,7 @@ pub mod encpedpop {
     /// This also validates `agg_input`.
     pub fn receive_share<H, NG>(
         schnorr: &Schnorr<H, NG>,
-        my_index: PartyIndex,
+        my_index: ShareIndex,
         encryption_keypair: &KeyPair,
         agg_input: &AggKeygenInput,
     ) -> Result<PairedSecretShare<Normal, Zero>, simplepedpop::ReceiveShareError>
@@ -805,9 +805,9 @@ pub mod encpedpop {
     }
 
     fn encrypt<H: Hash32>(
-        encryption_jobs: BTreeMap<PartyIndex, (Point, Scalar<Secret, Zero>)>,
+        encryption_jobs: BTreeMap<ShareIndex, (Point, Scalar<Secret, Zero>)>,
         multi_nonce_keypair: KeyPair<Normal>,
-    ) -> BTreeMap<PartyIndex, Scalar<Public, Zero>> {
+    ) -> BTreeMap<ShareIndex, Scalar<Public, Zero>> {
         encryption_jobs
             .iter()
             .map(|(dest, (encryption_key, share))| {
@@ -821,7 +821,7 @@ pub mod encpedpop {
     }
 
     fn decrypt<H: Hash32>(
-        my_index: PartyIndex,
+        my_index: ShareIndex,
         encryption_keypair: &KeyPair<Normal>,
         multi_nocnes: &[Point],
         mut agg_ciphertext: Scalar<Public, Zero>,
@@ -867,7 +867,7 @@ pub mod encpedpop {
         let public_receiver_enckeys = receiver_enckeys
             .iter()
             .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
-            .collect::<BTreeMap<PartyIndex, Point>>();
+            .collect::<BTreeMap<ShareIndex, Point>>();
 
         let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
             ..n_generators)
@@ -930,7 +930,7 @@ pub mod certpedpop {
 
     impl Contributor {
         /// Generates the keygen input for a party at `my_index`. Note that `my_index`
-        /// has nothing to do with the "receiver" index (the `PartyIndex` of share receivers). If
+        /// has nothing to do with the "receiver" index (the `ShareIndex` of share receivers). If
         /// there are `n` `KeyGenInputParty`s then each party must be assigned an index from `0` to `n-1`.
         ///
         /// This method return `Self` to retain the state of the protocol which is needded to verify
@@ -938,7 +938,7 @@ pub mod certpedpop {
         pub fn gen_keygen_input<H: Hash32, NG: NonceGen>(
             schnorr: &Schnorr<H, NG>,
             threshold: u32,
-            receiver_encryption_keys: &BTreeMap<PartyIndex, Point>,
+            receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
             my_index: u32,
             rng: &mut impl rand_core::RngCore,
         ) -> (Self, KeygenInput) {
@@ -984,7 +984,7 @@ pub mod certpedpop {
         pub fn recover_share<H: Hash32, NG>(
             &self,
             schnorr: &Schnorr<H, NG>,
-            party_index: PartyIndex,
+            share_index: ShareIndex,
             encryption_keypair: KeyPair,
         ) -> Result<PairedSecretShare, &'static str> {
             let cert_key = encryption_keypair.public_key().into_point_with_even_y().0;
@@ -996,7 +996,7 @@ pub mod certpedpop {
                 return Err("my certification was invalid");
             }
             self.input
-                .recover_share::<H>(party_index, &encryption_keypair)
+                .recover_share::<H>(share_index, &encryption_keypair)
         }
 
         /// Gets the inner `encpedpop::AggKeygenInput`.
@@ -1021,7 +1021,7 @@ pub mod certpedpop {
         /// [`finalize`]: Self::finalize
         pub fn receive_share<H, NG>(
             schnorr: &Schnorr<H, NG>,
-            my_index: PartyIndex,
+            my_index: ShareIndex,
             encryption_keypair: &KeyPair,
             agg_input: &AggKeygenInput,
         ) -> Result<(Self, Signature), simplepedpop::ReceiveShareError>
@@ -1099,7 +1099,7 @@ pub mod certpedpop {
         let public_receiver_enckeys = receiver_enckeys
             .iter()
             .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
-            .collect::<BTreeMap<PartyIndex, Point>>();
+            .collect::<BTreeMap<ShareIndex, Point>>();
 
         let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
             ..n_generators)

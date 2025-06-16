@@ -1,0 +1,1 @@
+- run cargo fmt before running `git commit`
