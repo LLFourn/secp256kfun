@@ -36,11 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.64.0
+      - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
-      - run: |
-          cargo update -p proptest --precise "1.2.0"
-          cargo update -p tempfile --precise "3.3.0"
       - run: cargo tree --all-features # to debug deps issues
       - run: cargo build --release --all-features
 

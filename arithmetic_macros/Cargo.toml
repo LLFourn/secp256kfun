@@ -7,7 +7,7 @@ license = "0BSD"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/ecdsa_fun"
 repository = "https://github.com/LLFourn/secp256kfun"
 readme = "README.md"
-edition = "2021"
+edition = "2024"
 
 [lib]
 proc-macro = true

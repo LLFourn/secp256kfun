@@ -1,9 +1,9 @@
 use crate::{
-    rand_core::{CryptoRng, RngCore},
     Sigma,
+    rand_core::{CryptoRng, RngCore},
 };
 use digest::Update;
-use generic_array::{functional::FunctionalSequence, GenericArray};
+use generic_array::{GenericArray, functional::FunctionalSequence};
 
 /// Combinator for proving that `A` OR `B` is true.
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -86,13 +86,13 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         announce_secret: &Self::AnnounceSecret,
     ) -> Self::Announcement {
         match announce_secret {
-            (Either::Left((ref announce_secret, ref sim_response)), sim_challenge) => (
+            (Either::Left((announce_secret, sim_response)), sim_challenge) => (
                 self.lhs.announce(&statement.0, announce_secret),
                 self.rhs
                     .implied_announcement(&statement.1, sim_challenge, sim_response)
                     .expect("computationally unreachable for any large language"),
             ),
-            (Either::Right((ref sim_response, ref announce_secret)), sim_challenge) => (
+            (Either::Right((sim_response, announce_secret)), sim_challenge) => (
                 self.lhs
                     .implied_announcement(&statement.0, sim_challenge, sim_response)
                     .expect("computationally unreachable for any large language"),
@@ -109,14 +109,14 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
         let mut sim_challenge = GenericArray::<u8, Self::ChallengeLength>::default();
         rng.fill_bytes(sim_challenge.as_mut_slice());
         match witness {
-            Either::Left(ref witness) => {
+            Either::Left(witness) => {
                 let sim_response = self.rhs.sample_response(rng);
                 (
                     Either::Left((self.lhs.gen_announce_secret(witness, rng), sim_response)),
                     sim_challenge,
                 )
             }
-            Either::Right(ref witness) => {
+            Either::Right(witness) => {
                 let sim_response = self.lhs.sample_response(rng);
                 (
                     Either::Right((sim_response, self.rhs.gen_announce_secret(witness, rng))),
@@ -190,16 +190,16 @@ mod test {
     #[cfg(feature = "secp256k1")]
     mod secp256k1 {
         use crate::{
+            Either, HashTranscript, Or,
             secp256k1::{
                 self,
                 fun::{Point, Scalar},
             },
-            Either, HashTranscript, Or,
         };
         use ::proptest::prelude::*;
         use generic_array::typenum::U32;
         use rand_chacha::ChaCha20Rng;
-        use secp256kfun::{g, G};
+        use secp256kfun::{G, g};
         use sha2::Sha256;
 
         proptest! {
