@@ -1,6 +1,9 @@
 #![cfg(feature = "alloc")]
 use secp256kfun::{poly, prelude::*};
 
+#[cfg(feature = "proptest")]
+use proptest::prelude::*;
+
 #[test]
 fn test_lagrange_lambda() {
     let res = s!((1 * 4 * 5) / { s!((1 - 2) * (4 - 2) * (5 - 2)).non_zero().unwrap() });
@@ -128,6 +131,34 @@ fn test_reconstruct_shared_secret() {
 }
 
 #[test]
+fn test_trusted_dealer_shamir_sharing() {
+    let secret = s!(42);
+    let threshold = 3;
+    let n_shares = 5;
+
+    let shares: Vec<_> = poly::scalar::trusted_dealer_shamir_sharing(
+        secret,
+        threshold,
+        n_shares,
+        &mut rand::thread_rng(),
+    )
+    .collect();
+
+    // Verify we got the expected number of shares
+    assert_eq!(shares.len(), n_shares);
+
+    // Take threshold shares and reconstruct
+    let selected_shares = &shares[0..threshold];
+    let reconstructed = poly::scalar::interpolate_and_eval_poly_at_0(selected_shares);
+    assert_eq!(reconstructed, secret);
+
+    // Test with different subset of shares
+    let selected_shares = &shares[2..5];
+    let reconstructed = poly::scalar::interpolate_and_eval_poly_at_0(selected_shares);
+    assert_eq!(reconstructed, secret);
+}
+
+#[test]
 fn test_mul_scalar_poly() {
     let poly1 = [s!(1), s!(2), s!(3)];
     let poly2 = [s!(4), s!(5)];
@@ -135,4 +166,60 @@ fn test_mul_scalar_poly() {
     let res = poly::scalar::mul(&poly1[..], &poly2[..]);
 
     assert_eq!(res, vec![s!(4), s!(13), s!(22), s!(15)]);
+}
+
+#[cfg(feature = "proptest")]
+mod proptest_tests {
+    use super::*;
+    use rand::seq::SliceRandom;
+
+    proptest! {
+        #[test]
+        fn trusted_dealer_shamir_sharing_reconstruction(
+            secret_bytes in any::<[u8; 32]>(),
+            threshold in 2usize..10usize,
+            extra_shares in 0usize..5usize,
+        ) {
+            let secret = Scalar::<Secret, Zero>::from_bytes_mod_order(secret_bytes);
+            let n_shares = threshold + extra_shares;
+
+            let shares: Vec<_> = poly::scalar::trusted_dealer_shamir_sharing(
+                secret,
+                threshold,
+                n_shares,
+                &mut rand::thread_rng()
+            ).collect();
+
+            // Verify we got the expected number of shares
+            prop_assert_eq!(shares.len(), n_shares);
+
+            // Verify all share indices are unique and sequential
+            for (i, (share_index, _)) in shares.iter().enumerate() {
+                let expected_index = Scalar::<Public, Zero>::from(i + 1).non_zero().expect("> 0");
+                prop_assert_eq!(*share_index, expected_index);
+            }
+
+            // Test reconstruction with exactly threshold shares
+            let mut rng = rand::thread_rng();
+            let selected_shares: Vec<_> = shares
+                .choose_multiple(&mut rng, threshold)
+                .cloned()
+                .collect();
+
+            let reconstructed = poly::scalar::interpolate_and_eval_poly_at_0(&selected_shares);
+            prop_assert_eq!(reconstructed, secret);
+
+            // Test reconstruction with more than threshold shares (overdetermined)
+            if extra_shares > 0 {
+                let overdetermined_shares: Vec<_> = shares
+                    .choose_multiple(&mut rng, threshold + 1)
+                    .cloned()
+                    .collect();
+
+                let reconstructed_overdetermined =
+                    poly::scalar::interpolate_and_eval_poly_at_0(&overdetermined_shares);
+                prop_assert_eq!(reconstructed_overdetermined, secret);
+            }
+        }
+    }
 }
