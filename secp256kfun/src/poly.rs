@@ -39,28 +39,29 @@ pub mod scalar {
         scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
     }
 
-    /// Generate a [`Scalar`] polynomial for key generation
+    /// Generate a [`Scalar`] polynomial with `length` coefficients.
     ///
     /// [`Scalar`]: crate::Scalar
-    pub fn generate(threshold: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
-        (0..threshold).map(|_| Scalar::random(rng)).collect()
+    pub fn generate(length: usize, rng: &mut impl RngCore) -> Vec<Scalar> {
+        (0..length).map(|_| Scalar::random(rng)).collect()
     }
 
-    /// Generate a [`Scalar`] polynomial for sharing a particular secret scalar.
+    /// Generate a [`Scalar`] polynomial for sharing a particular `secret` scalar. `length` shares
+    /// will be needed to reconstruct the secret (or the whole polynomial).
     ///
     /// ## Panics
     ///
-    /// Panics if `threshold` == 0
+    /// Panics if `length` == 0 because the polynomial must have length 1 so the secret can be the first coefficient.
     pub fn generate_shamir_sharing_poly<Z: ZeroChoice>(
         secret: Scalar<Secret, Z>,
-        threshold: usize,
+        length: usize,
         rng: &mut impl RngCore,
     ) -> Vec<Scalar<Secret, Z>> {
-        if threshold == 0 {
+        if length == 0 {
             panic!("threshold cannot be 0");
         }
         core::iter::once(secret)
-            .chain((1..threshold).map(|_| Scalar::random(rng).mark_zero_choice()))
+            .chain((1..length).map(|_| Scalar::random(rng).mark_zero_choice()))
             .collect()
     }
 
