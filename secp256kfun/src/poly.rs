@@ -46,7 +46,70 @@ pub mod scalar {
         (0..threshold).map(|_| Scalar::random(rng)).collect()
     }
 
-    /// Evalulate the polynomial that passes through the points in `x_and_y` at `0`.
+    /// Generate a [`Scalar`] polynomial for sharing a particular secret scalar.
+    ///
+    /// ## Panics
+    ///
+    /// Panics if `threshold` == 0
+    pub fn generate_shamir_sharing_poly<Z: ZeroChoice>(
+        secret: Scalar<Secret, Z>,
+        threshold: usize,
+        rng: &mut impl RngCore,
+    ) -> Vec<Scalar<Secret, Z>> {
+        if threshold == 0 {
+            panic!("threshold cannot be 0");
+        }
+        core::iter::once(secret)
+            .chain((1..threshold).map(|_| Scalar::random(rng).mark_zero_choice()))
+            .collect()
+    }
+
+    /// Splits up `secret` into `n_shares` shamir secret shares.
+    ///
+    /// ## Panics
+    ///
+    /// - if `n_shares` < `threshold`
+    /// - if `threshold == 0`
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use secp256kfun::{ prelude::*, poly };
+    /// use rand::seq::SliceRandom;
+    /// let my_secret = s!(42);
+    ///
+    /// let shares: Vec<_> = poly::scalar::trusted_dealer_shamir_sharing(my_secret, 3, 5, &mut rand::thread_rng()).collect();
+    ///
+    /// // Sample 3 random shares (threshold amount) to reconstruct the secret
+    /// let mut rng = rand::thread_rng();
+    /// let random_shares: Vec<_> = shares.choose_multiple(&mut rng, 3).cloned().collect();
+    ///
+    /// let recovered_secret = poly::scalar::interpolate_and_eval_poly_at_0(&random_shares);
+    /// assert_eq!(recovered_secret, my_secret);
+    /// ```
+    pub fn trusted_dealer_shamir_sharing(
+        secret: Scalar<Secret, impl ZeroChoice>,
+        threshold: usize,
+        n_shares: usize,
+        rng: &mut impl RngCore,
+    ) -> impl Iterator<Item = (Scalar<Public>, Scalar<Secret, NonZero>)> {
+        if n_shares < threshold {
+            panic!("n_shares must be >= threshold");
+        }
+        let poly = generate_shamir_sharing_poly(secret, threshold, rng);
+        (1..=n_shares).map(move |i| {
+            let i = Scalar::<Public, Zero>::from(i).non_zero().expect("> 0");
+            (
+                i,
+                eval(&poly, i)
+                    .non_zero()
+                    .expect("computationally unreachable if rng is really random"),
+            )
+        })
+    }
+
+    /// Evalulate the polynomial that passes through the points in `x_and_y` at `0` i.e. reconstruct
+    /// the shamir shared secret.
     ///
     /// This is useful for recovering a secret from a set of Sharmir Secret Shares. Each shamir
     /// secret share is associated with a participant index (index, share).
