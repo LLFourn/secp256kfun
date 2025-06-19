@@ -474,12 +474,6 @@ mod tests {
         ];
 
         for (i, tv) in test_vectors.iter().enumerate() {
-            println!(
-                "Testing vector {}: msg = {:?}",
-                i,
-                String::from_utf8_lossy(tv.msg)
-            );
-
             // First test hash_to_field to verify u values
             let u = hash_to_field::<Sha256>(tv.msg, DST);
 
