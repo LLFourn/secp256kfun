@@ -389,7 +389,6 @@ fn isogeny_map(x: FieldElement, y: FieldElement) -> (FieldElement, FieldElement)
 mod tests {
     use super::*;
     use crate::hex::decode_array;
-    use alloc::string::String;
     use sha2::Sha256;
 
     // Local hex! macro that mimics hex_literal::hex!
