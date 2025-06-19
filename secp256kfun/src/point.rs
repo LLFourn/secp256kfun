@@ -1,7 +1,7 @@
 use crate::{
     Scalar,
     backend::{self, BackendPoint, TimeSensitive},
-    hash::HashInto,
+    hash::{Hash32, HashInto},
     marker::*,
     op,
 };
@@ -115,13 +115,35 @@ impl Point<Normal, Public, NonZero> {
         backend::Point::norm_from_coordinates(x, y).map(|p| Point::from_inner(p, Normal))
     }
 
-    /// Hash to curve implementation following draft-irtf-cfrg-hash-to-curve
+    /// Hash to curve implementation following RFC 9380
     ///
     /// Maps arbitrary byte strings to points on the secp256k1 curve in a way that is
     /// indifferentiable from a random oracle. This implementation uses the
-    /// simplified SWU method with a 3-isogeny mapping.
+    /// simplified SWU method with a 3-isogeny mapping as specified in
+    /// [RFC 9380](https://datatracker.ietf.org/doc/rfc9380/).
     ///
-    /// See: <https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/>
+    /// ## When to use this method
+    ///
+    /// The RFC 9380 method provides constant-time hashing regardless of input, which
+    /// can be important for denial of service resistance. With try-and-increment
+    /// methods (like [`hash_to_curve`] and [`hash_to_curve_rfc9381_tai`]), an
+    /// attacker can craft inputs that require more iterations (up to ~30x in practice),
+    /// potentially creating a DoS vector. See [this paper](https://eprint.iacr.org/2019/383)
+    /// for analysis.
+    ///
+    /// However, in most applications this is not a practical concern because:
+    /// - Hash-to-curve typically represents a small fraction of total computation
+    /// - The maximum slowdown is bounded and relatively modest
+    /// - Creating adversarial inputs requires significant computational resources
+    ///
+    /// **For most use cases, prefer [`hash_to_curve`]** which is simpler and faster.
+    /// Only use this method if you have specific DoS concerns and hash-to-curve
+    /// represents a significant portion of your protocol's computation.
+    ///
+    /// **HAZMAT WARNING**: It is this author's opinion that RFC 9380 is overwrought for
+    /// secp256k1. While this implementation passes test vectors from the
+    /// [`k256`](https://github.com/RustCrypto/elliptic-curves/tree/master/k256) crate (see their [test vectors](https://github.com/RustCrypto/elliptic-curves/blob/3381a99b6412ef9fa556e32a834e401d569007e3/k256/src/arithmetic/hash2curve.rs#L296)),
+    /// the spec's complexity makes it easy to introduce subtle bugs. Use with caution.
     ///
     /// # Parameters
     /// - `msg`: The message to hash
@@ -131,16 +153,130 @@ impl Point<Normal, Public, NonZero> {
     /// ```
     /// # use secp256kfun::{Point, hash};
     /// # use sha2::Sha256;
-    /// let point = Point::hash_to_curve::<Sha256>(b"hello world", b"myapp-v1");
+    /// let point = Point::hash_to_curve_sswu::<Sha256>(b"hello world", b"myapp-v1");
     /// ```
-    pub fn hash_to_curve<H>(msg: &[u8], dst: &[u8]) -> Point<NonNormal, Public, NonZero>
+    ///
+    /// [`hash_to_curve`]: Self::hash_to_curve
+    /// [`hash_to_curve_rfc9381_tai`]: Self::hash_to_curve_rfc9381_tai
+    pub fn hash_to_curve_sswu<H>(msg: &[u8], dst: &[u8]) -> Point<NonNormal, Public, NonZero>
     where
-        H: crate::hash::Hash32
-            + crate::digest::Update
-            + crate::digest::crypto_common::BlockSizeUser,
+        H: crate::hash::Hash32 + crate::digest::crypto_common::BlockSizeUser,
     {
         let backend_point = backend::Point::hash_to_curve::<H>(msg, dst);
         Point::from_inner(backend_point, NonNormal)
+    }
+
+    /// Hash to curve using try-and-increment method
+    ///
+    /// This is a simple and efficient method to hash arbitrary byte strings to curve points
+    /// with uniform distribution. It works by hashing the input with an incrementing counter
+    /// until a valid curve point is found.
+    ///
+    /// **This is the recommended method for most applications.** While it has variable
+    /// runtime based on input (see [`hash_to_curve_sswu`] for details), this is rarely
+    /// a practical concern.
+    ///
+    /// ## Why not the RFC 9381 try-and-increment?
+    ///
+    /// The VRF specification ([RFC 9381 §5.4.1.1](https://datatracker.ietf.org/doc/html/rfc9381#section-5.4.1.1))
+    /// includes a try-and-increment method (see [`hash_to_curve_rfc9381_tai`]) that always
+    /// uses a fixed y-coordinate parity (0x02). This results in a non-uniform distribution
+    /// that only includes points with even y-coordinates. Our implementation achieves
+    /// uniform distribution with a simple modification.
+    ///
+    /// [`hash_to_curve_rfc9381_tai`]: Self::hash_to_curve_rfc9381_tai
+    ///
+    /// # Example
+    /// ```
+    /// # use secp256kfun::{Point, hash::{Hash32, HashAdd}};
+    /// # use sha2::Sha256;
+    /// let hasher = Sha256::default().add(b"hello world");
+    /// let point = Point::hash_to_curve(hasher);
+    /// ```
+    ///
+    /// [`hash_to_curve_sswu`]: Self::hash_to_curve_sswu
+    pub fn hash_to_curve<H: Hash32>(hasher: H) -> Point<Normal, Public, NonZero> {
+        use crate::hash::HashAdd;
+
+        // Try up to 128 times (probability of failure is negligible)
+        for counter in 0u8..u8::MAX {
+            let hash_bytes = hasher.clone().add(counter).finalize_fixed();
+
+            // Use 0x03 (odd y) when counter==0, 0x02 (even y) when counter>0
+            // This ensures uniform distribution over all curve points
+            let mut bytes = [0u8; 33];
+            bytes[0] = 0x02 + (counter > 0) as u8;
+            bytes[1..].copy_from_slice(&hash_bytes);
+
+            if let Some(point) = Point::<Normal, Public, NonZero>::from_bytes(bytes) {
+                return point;
+            }
+        }
+
+        // This should never happen (probability ~ 2^-128)
+        unreachable!("Failed to find valid point after 128 attempts")
+    }
+
+    /// Hash to curve using RFC 9381 try-and-increment format
+    ///
+    /// This implements a hash-to-curve method following [RFC 9381]'s try-and-increment
+    /// algorithm as used in SECP256K1_SHA256_TAI.
+    ///
+    /// This method always produces points with even y-coordinates (0x02 prefix) which means it's
+    /// not quite uniform (but this is not a security problem in any reasonable protocol)
+    ///
+    /// Like other try-and-increment methods, this has variable runtime based on input.
+    /// See [`hash_to_curve_sswu`] for discussion of DoS considerations.
+    ///
+    /// [RFC 9381]: https://datatracker.ietf.org/doc/html/rfc9381#section-5.4.1.1
+    ///
+    /// # Example
+    /// ```
+    /// # use secp256kfun::Point;
+    /// # use sha2::Sha256;
+    /// let point = Point::hash_to_curve_rfc9381_tai::<Sha256>(b"hello world", b"my-salt");
+    /// // Use empty bytes if no salt is needed
+    /// let point2 = Point::hash_to_curve_rfc9381_tai::<Sha256>(b"hello world", b"");
+    /// ```
+    ///
+    /// [`hash_to_curve_sswu`]: Self::hash_to_curve_sswu
+    pub fn hash_to_curve_rfc9381_tai<H: Hash32>(
+        msg: &[u8],
+        salt: &[u8],
+    ) -> Point<Normal, Public, NonZero> {
+        use crate::hash::HashAdd;
+
+        const SUITE_BYTE: u8 = 0xFE; // SECP256K1_SHA256_TAI suite
+        const DOMAIN_SEP_FRONT: u8 = 0x01;
+        const DOMAIN_SEP_BACK: u8 = 0x00;
+
+        // Pre-compute the invariant part of the hash
+        let base_hasher = H::default()
+            .add(SUITE_BYTE)
+            .add(DOMAIN_SEP_FRONT)
+            .add(salt)
+            .add(msg);
+
+        // Try up to 255 times (using u8 counter)
+        for counter in 0u8..u8::MAX {
+            let hash_bytes = base_hasher
+                .clone()
+                .add(counter)
+                .add(DOMAIN_SEP_BACK)
+                .finalize_fixed();
+
+            // Always use 0x02 (even y) as per RFC 9381 try-and-increment
+            let mut bytes = [0u8; 33];
+            bytes[0] = 0x02;
+            bytes[1..].copy_from_slice(&hash_bytes);
+
+            if let Some(point) = Point::<Normal, Public, NonZero>::from_bytes(bytes) {
+                return point;
+            }
+        }
+
+        // This should never happen (probability ~ 2^-256)
+        unreachable!("Failed to find valid point after 256 attempts")
     }
 }
 
