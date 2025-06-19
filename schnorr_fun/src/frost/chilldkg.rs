@@ -460,7 +460,7 @@ pub mod simplepedpop {
 /// [`AggKeygenInput`]: encpedpop::AggKeygenInput
 pub mod encpedpop {
     use super::{simplepedpop, *};
-    use crate::frost::{PairedSecretShare, SecretShare, ShareIndex, SharedKey};
+    use crate::frost::{Fingerprint, PairedSecretShare, SecretShare, ShareIndex, SharedKey};
 
     /// A party that generates secret input to the key generation. You need at least one of these
     /// and if at least one of these parties is honest then the final secret key will not be known by an
@@ -658,6 +658,82 @@ pub mod encpedpop {
                 .non_zero()
                 .ok_or("the shared secret was zero")
         }
+
+        /// Grinds all polynomial coefficients to achieve a fingerprint by rejection sampling.
+        /// This is meant to be run by the coordinator.
+        ///
+        /// This method modifies each non-constant coefficient of the polynomial through group addition
+        /// until the hash of all coefficients up to that point has the required number of leading zero bits.
+        /// The fingerprint is tied to the specific public key by including it in the hash.
+        ///
+        /// ## Parameters
+        /// - `fingerprint`: The fingerprint configuration specifying difficulty and tag
+        ///
+        /// ## Security
+        /// This modification does not affect the security of the DKG as it only modifies
+        /// non-constant polynomial coefficients which are malleable by the coordinator.
+        pub fn grind_fingerprint<H: Hash32>(&mut self, fingerprint: Fingerprint) {
+            if self.inner.agg_poly.is_empty() {
+                return;
+            }
+
+            // Get the public key (first coefficient) by aggregating key contributions
+            let public_key = self
+                .inner
+                .key_contrib
+                .iter()
+                .fold(Point::zero(), |agg, (point, _)| g!(agg + point))
+                .normalize();
+
+            // Start with hash including the tag with length prefix
+            let mut hash_state = H::default();
+            if !fingerprint.tag.is_empty() {
+                hash_state = hash_state.add([fingerprint.tag.len() as u8]);
+                hash_state = hash_state.add(fingerprint.tag.as_bytes());
+            }
+            hash_state = hash_state.add(public_key);
+
+            let mut tweaks = Vec::with_capacity(self.inner.agg_poly.len());
+
+            // Grind each coefficient in sequence
+            for coeff_index in 0..self.inner.agg_poly.len() {
+                let mut total_tweak = Scalar::<Public, Zero>::zero();
+                let original_coeff = self.inner.agg_poly[coeff_index];
+                let mut current_coeff = original_coeff;
+
+                loop {
+                    // Clone the hash state from previous coefficients and add current one
+                    let hash = hash_state.clone().add(current_coeff);
+                    // Check if hash has required number of leading zero bits
+                    let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
+                    if Fingerprint::leading_zero_bits(&hash_bytes[..])
+                        >= fingerprint.bit_length as usize
+                    {
+                        // Update hash_state for next coefficient because the next coefficient hash
+                        // includes the current one.
+                        hash_state = hash;
+                        break;
+                    }
+
+                    // Add one more G to the coefficient
+                    total_tweak += s!(1);
+                    current_coeff = g!(current_coeff + G).normalize();
+                }
+
+                // Apply the final tweak to the polynomial coefficient
+                self.inner.agg_poly[coeff_index] = current_coeff;
+                tweaks.push(total_tweak);
+            }
+
+            // Apply all tweaks to encrypted shares at once
+            for (share_index, (_enc_key, encrypted_share)) in &mut self.encrypted_shares {
+                let mut power = *share_index;
+                for tweak in &tweaks {
+                    *encrypted_share += s!(tweak * power).public();
+                    power *= share_index;
+                }
+            }
+        }
     }
 
     /// Produced by [`Contributor::gen_keygen_input`]. This is sent from the each
@@ -843,11 +919,14 @@ pub mod encpedpop {
     ///
     /// This calls all the other functions defined in this module to get the whole job done on a
     /// single computer by simulating all the other parties.
+    ///
+    /// A fingerprint can be provided to grind the polynomial coefficients.
     pub fn simulate_keygen<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
         n_receivers: u32,
         n_generators: u32,
+        fingerprint: Fingerprint,
         rng: &mut impl rand_core::RngCore,
     ) -> (SharedKey<Normal>, Vec<PairedSecretShare<Normal>>)
     where
@@ -884,7 +963,11 @@ pub mod encpedpop {
                 .unwrap();
         }
 
-        let agg_input = aggregator.finish().unwrap();
+        let mut agg_input = aggregator.finish().unwrap();
+
+        // Apply fingerprint grinding
+        agg_input.grind_fingerprint::<H>(fingerprint);
+
         for contributor in contributors {
             contributor.verify_agg_input(&agg_input).unwrap();
         }
@@ -911,6 +994,8 @@ pub mod encpedpop {
 ///
 /// Certificates are collected from other share receivers as well as `Contributor`s.
 pub mod certpedpop {
+    use crate::frost::shared_key::Fingerprint;
+
     use super::*;
 
     /// A party that generates secret input to the key generation. You need at least one of these
@@ -1079,11 +1164,14 @@ pub mod certpedpop {
     ///
     /// This calls all the other functions defined in this module to get the whole job done on a
     /// single computer by simulating all the other parties.
+    ///
+    /// A fingerprint can be provided to grind the polynomial coefficients.
     pub fn simulate_keygen<H: Hash32, NG: NonceGen>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
         n_receivers: u32,
         n_generators: u32,
+        fingerprint: Fingerprint,
         rng: &mut impl rand_core::RngCore,
     ) -> (CertifiedKeygen, Vec<(PairedSecretShare<Normal>, KeyPair)>) {
         let share_receivers = (1..=n_receivers)
@@ -1124,7 +1212,11 @@ pub mod certpedpop {
                 .unwrap();
         }
 
-        let agg_input = aggregator.finish().unwrap();
+        let mut agg_input = aggregator.finish().unwrap();
+
+        // Apply fingerprint grinding
+        agg_input.grind_fingerprint::<H>(fingerprint);
+
         let mut certificate = BTreeMap::default();
 
         for (contributor, keypair) in contributors.into_iter().zip(contributor_keys.iter()) {
@@ -1225,7 +1317,14 @@ mod test {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
-            encpedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+            encpedpop::simulate_keygen(
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                Fingerprint::none(),
+                &mut rng,
+            );
         }
 
         #[test]
@@ -1236,12 +1335,51 @@ mod test {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
-            let (certified_keygen, paired_secret_shares_and_keys) = certpedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+            let (certified_keygen, paired_secret_shares_and_keys) = certpedpop::simulate_keygen(
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                Fingerprint::none(),
+                &mut rng
+            );
 
             for (paired_secret_share, encryption_keypair) in paired_secret_shares_and_keys {
                 let recovered = certified_keygen.recover_share(&schnorr, paired_secret_share.index(), encryption_keypair).unwrap();
                 assert_eq!(paired_secret_share, recovered);
             }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn encpedpop_simulate_keygen_with_fingerprint(
+            (n_receivers, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
+            n_generators in 1u32..5,
+            difficulty in 0u8..10,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            let fingerprint = crate::frost::shared_key::Fingerprint {
+                bit_length: difficulty,
+                tag: "test-fingerprint",
+            };
+
+            let (shared_key, paired_shares) = encpedpop::simulate_keygen(
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                fingerprint,
+                &mut rng,
+            );
+
+            for share in paired_shares {
+                assert_eq!(shared_key.pair_secret_share(*share.secret_share()), Some(share));
+            }
+
+            assert!(shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint), "fingerprint was grinded correctly");
         }
     }
 }
