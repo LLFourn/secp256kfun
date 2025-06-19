@@ -114,6 +114,34 @@ impl Point<Normal, Public, NonZero> {
         y.copy_from_slice(&bytes[33..65]);
         backend::Point::norm_from_coordinates(x, y).map(|p| Point::from_inner(p, Normal))
     }
+
+    /// Hash to curve implementation following draft-irtf-cfrg-hash-to-curve
+    ///
+    /// Maps arbitrary byte strings to points on the secp256k1 curve in a way that is
+    /// indifferentiable from a random oracle. This implementation uses the
+    /// simplified SWU method with a 3-isogeny mapping.
+    ///
+    /// See: <https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/>
+    ///
+    /// # Parameters
+    /// - `msg`: The message to hash
+    /// - `dst`: Domain separation tag (DST), should be unique per application
+    ///
+    /// # Example
+    /// ```
+    /// # use secp256kfun::{Point, hash};
+    /// # use sha2::Sha256;
+    /// let point = Point::hash_to_curve::<Sha256>(b"hello world", b"myapp-v1");
+    /// ```
+    pub fn hash_to_curve<H>(msg: &[u8], dst: &[u8]) -> Point<NonNormal, Public, NonZero>
+    where
+        H: crate::hash::Hash32
+            + crate::digest::Update
+            + crate::digest::crypto_common::BlockSizeUser,
+    {
+        let backend_point = backend::Point::hash_to_curve::<H>(msg, dst);
+        Point::from_inner(backend_point, NonNormal)
+    }
 }
 
 impl<Z: ZeroChoice, S> Point<Normal, S, Z> {
