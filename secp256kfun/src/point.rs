@@ -807,6 +807,44 @@ mod test {
     }
 
     #[test]
+    fn from_bytes_uncompressed_validates_curve_membership() {
+        // Test with a valid point (generator)
+        let g = Point::<Normal, Public, NonZero>::generator();
+        let (x, y) = g.coordinates();
+        let mut valid_bytes = [0u8; 65];
+        valid_bytes[0] = 0x04;
+        valid_bytes[1..33].copy_from_slice(&x);
+        valid_bytes[33..65].copy_from_slice(&y);
+
+        assert_eq!(
+            Point::<Normal, Public, NonZero>::from_bytes_uncompressed(valid_bytes),
+            Some(g)
+        );
+
+        // Test with invalid point not on curve
+        // Use a point where y^2 != x^3 + 7
+        let mut invalid_bytes = [0u8; 65];
+        invalid_bytes[0] = 0x04;
+        // Use x = 1
+        invalid_bytes[32] = 1;
+        // Use y = 1 (which doesn't satisfy y^2 = x^3 + 7 = 8)
+        invalid_bytes[64] = 1;
+
+        assert_eq!(
+            Point::<Normal, Public, NonZero>::from_bytes_uncompressed(invalid_bytes),
+            None
+        );
+
+        // Test with invalid prefix
+        let mut invalid_prefix = valid_bytes;
+        invalid_prefix[0] = 0x05;
+        assert_eq!(
+            Point::<Normal, Public, NonZero>::from_bytes_uncompressed(invalid_prefix),
+            None
+        );
+    }
+
+    #[test]
     fn zero_cases() {
         use crate::s;
         let i = Point::<Normal, Public, _>::zero();
