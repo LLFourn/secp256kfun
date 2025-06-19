@@ -182,6 +182,52 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     pub fn share_image(&self, index: ShareIndex) -> Point<NonNormal, Public, Zero> {
         poly::point::eval(&self.point_polynomial, index)
     }
+
+    /// Checks if the polynomial coefficients contain a fingerprint by verifying that
+    /// each coefficient (when hashed with all previous coefficients) has the required
+    /// number of leading zero bits.
+    ///
+    /// This is useful for detecting if shares come from the same DKG session or if
+    /// they have been corrupted.
+    ///
+    /// ## Parameters
+    /// - `fingerprint`: The expected fingerprint configuration
+    ///
+    /// ## Returns
+    /// `true` if all coefficients match the fingerprint pattern, `false` otherwise
+    pub fn check_fingerprint<H: crate::fun::hash::Hash32>(
+        &self,
+        fingerprint: &Fingerprint,
+    ) -> bool {
+        use crate::fun::hash::HashAdd;
+
+        if self.point_polynomial.is_empty() {
+            return true;
+        }
+
+        // Start with hash including the tag with length prefix
+        let mut hash_state = H::default();
+        if !fingerprint.tag.is_empty() {
+            hash_state = hash_state.add([fingerprint.tag.len() as u8]);
+            hash_state = hash_state.add(fingerprint.tag.as_bytes());
+        }
+        hash_state = hash_state.add(self.point_polynomial[0]);
+
+        // Check each non-constant coefficient
+        for i in 1..self.point_polynomial.len() {
+            // Update hash state with next coefficient
+            hash_state = hash_state.add(self.point_polynomial[i]);
+
+            let hash_result = hash_state.clone().finalize_fixed();
+            let hash_bytes: &[u8] = hash_result.as_ref();
+
+            if Fingerprint::leading_zero_bits(hash_bytes) < fingerprint.bit_length as usize {
+                return false;
+            }
+        }
+
+        true
+    }
 }
 
 impl SharedKey<Normal> {
@@ -309,6 +355,51 @@ bincode::impl_borrow_decode!(SharedKey<Normal, Zero>);
 bincode::impl_borrow_decode!(SharedKey<Normal, NonZero>);
 #[cfg(feature = "bincode")]
 bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
+
+/// Configuration for polynomial fingerprinting in DKG protocols.
+///
+/// This allows coordinators to embed identifying information into polynomial coefficients
+/// to help detect when shares from different DKG sessions are mixed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Fingerprint {
+    /// Number of leading zero bits required in the hash
+    pub bit_length: u8,
+    /// Domain separator tag to include in the hash
+    pub tag: &'static str,
+}
+
+impl Fingerprint {
+    /// Creates a fingerprint with no difficulty (no grinding required)
+    pub fn none() -> Self {
+        Self {
+            bit_length: 0,
+            tag: "",
+        }
+    }
+
+    /// Count leading zero bits across a byte slice
+    pub(crate) fn leading_zero_bits(bytes: &[u8]) -> usize {
+        let mut count = 0;
+        for &b in bytes {
+            if b == 0 {
+                count += 8;
+            } else {
+                count += b.leading_zeros() as usize;
+                break;
+            }
+        }
+        count
+    }
+}
+
+impl Default for Fingerprint {
+    fn default() -> Self {
+        Self {
+            bit_length: 8,
+            tag: "frost-dkg",
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
