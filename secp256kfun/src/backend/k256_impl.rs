@@ -57,6 +57,15 @@ impl BackendPoint for Point {
         let y = Option::from(FieldElement::from_bytes(&FieldBytes::from(y)))?;
         Some(AffinePoint::new(x, y).into())
     }
+
+    fn hash_to_curve<
+        H: crate::hash::Hash32 + crate::digest::Update + crate::digest::crypto_common::BlockSizeUser,
+    >(
+        msg: &[u8],
+        dst: &[u8],
+    ) -> Point {
+        crate::vendor::hash_to_curve::hash_to_curve::<H>(msg, dst)
+    }
 }
 
 pub struct ConstantTime;

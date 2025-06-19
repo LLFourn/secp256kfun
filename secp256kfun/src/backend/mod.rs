@@ -17,6 +17,15 @@ pub trait BackendPoint {
     fn norm_to_coordinates(&self) -> ([u8; 32], [u8; 32]);
     fn norm_from_bytes_y_oddness(x_bytes: [u8; 32], y_odd: bool) -> Option<Point>;
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point>;
+
+    /// Hash to curve implementation following draft-irtf-cfrg-hash-to-curve
+    /// See: <https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/>
+    fn hash_to_curve<
+        H: crate::hash::Hash32 + crate::digest::Update + crate::digest::crypto_common::BlockSizeUser,
+    >(
+        msg: &[u8],
+        dst: &[u8],
+    ) -> Point;
 }
 
 #[allow(dead_code)]
