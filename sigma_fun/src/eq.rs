@@ -192,10 +192,13 @@ mod test {
             let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
             let proof = proof_system.prove(&x, &statement, Some(&mut rand::thread_rng()));
             let encoded = bincode::encode_to_vec(&proof, bincode::config::standard()).unwrap();
-            let (decoded, _) = bincode::decode_from_slice::<crate::CompactProof<DLEQ>, _>(
-                &encoded[..],
-                bincode::config::standard(),
-            )
+            let (decoded, _) = bincode::decode_from_slice::<
+                crate::CompactProof<
+                    <DLEQ as crate::Sigma>::Response,
+                    <DLEQ as crate::Sigma>::ChallengeLength,
+                >,
+                _,
+            >(&encoded[..], bincode::config::standard())
             .unwrap();
             assert_eq!(decoded, proof);
         }
@@ -213,10 +216,13 @@ mod test {
             let proof_system = FiatShamir::<DLEQ, HashTranscript<Sha256, ChaCha20Rng>>::default();
             let proof = proof_system.prove(&x, &statement, Some(&mut rand::thread_rng()));
             let encoded = bincode::encode_to_vec(&proof, bincode::config::standard()).unwrap();
-            let (decoded, _) = bincode::decode_from_slice::<crate::CompactProof<DLEQ>, _>(
-                &encoded[..],
-                bincode::config::standard(),
-            )
+            let (decoded, _) = bincode::decode_from_slice::<
+                crate::CompactProof<
+                    <DLEQ as crate::Sigma>::Response,
+                    <DLEQ as crate::Sigma>::ChallengeLength,
+                >,
+                _,
+            >(&encoded[..], bincode::config::standard())
             .unwrap();
             assert_eq!(decoded, proof);
         }
