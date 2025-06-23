@@ -1,4 +1,7 @@
-use crate::{ProverTranscript, Sigma, Transcript, generic_array::GenericArray};
+use crate::{
+    ProverTranscript, Sigma, Transcript,
+    generic_array::{ArrayLength, GenericArray},
+};
 use rand_core::{CryptoRng, RngCore};
 
 /// Applies the Fiat-Shamir transform to a given [`Sigma`] protocol given a [`Transcript`].
@@ -45,7 +48,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
         witness: &S::Witness,
         statement: &S::Statement,
         rng: Option<&mut Rng>,
-    ) -> CompactProof<S>
+    ) -> CompactProof<S::Response, S::ChallengeLength>
     where
         T: ProverTranscript<S>,
     {
@@ -58,7 +61,7 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
         let response =
             self.sigma
                 .respond(witness, statement, announce_secret, &announce, &challenge);
-        CompactProof::<S> {
+        CompactProof {
             challenge,
             response,
         }
@@ -66,7 +69,11 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
 
     /// Verifies the proof given the statement.
     #[must_use]
-    pub fn verify(&self, statement: &S::Statement, proof: &CompactProof<S>) -> bool {
+    pub fn verify(
+        &self,
+        statement: &S::Statement,
+        proof: &CompactProof<S::Response, S::ChallengeLength>,
+    ) -> bool {
         let mut transcript = self.transcript.clone();
         transcript.add_statement(&self.sigma, statement);
         let implied_announcement =
@@ -89,21 +96,29 @@ impl<S: Sigma, T: Transcript<S>> FiatShamir<S, T> {
 /// the underlying group's Sigma protocol but this isn't implemented yet.
 ///
 /// [`FiatShamir`]: crate::FiatShamir
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(bound(
+        serialize = "R: serde::Serialize",
+        deserialize = "R: serde::Deserialize<'de>"
+    ))
+)]
 #[derive(Debug, Clone, PartialEq)]
-pub struct CompactProof<S: Sigma> {
+pub struct CompactProof<R, L: ArrayLength<u8>> {
     /// C
-    pub challenge: GenericArray<u8, S::ChallengeLength>,
+    pub challenge: GenericArray<u8, L>,
     /// R
-    pub response: S::Response,
+    pub response: R,
 }
 
 /// Implements bincode encoding for `CompactProof` for any challenge length.
 #[cfg(feature = "bincode")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
-impl<S: Sigma> bincode::Encode for CompactProof<S>
+impl<R, L> bincode::Encode for CompactProof<R, L>
 where
-    S::Response: bincode::Encode,
+    R: bincode::Encode,
+    L: ArrayLength<u8>,
 {
     fn encode<E: bincode::enc::Encoder>(
         &self,
@@ -118,19 +133,19 @@ where
 
 #[cfg(feature = "bincode")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
-impl<S, Context> bincode::Decode<Context> for CompactProof<S>
+impl<R, L, Context> bincode::Decode<Context> for CompactProof<R, L>
 where
-    S: Sigma,
-    S::Response: bincode::Decode<Context>,
+    R: bincode::Decode<Context>,
+    L: ArrayLength<u8>,
 {
     fn decode<D: bincode::de::Decoder<Context = Context>>(
         decoder: &mut D,
     ) -> Result<Self, bincode::error::DecodeError> {
         // Create a default GenericArray and read directly into it
-        let mut challenge = GenericArray::<u8, S::ChallengeLength>::default();
+        let mut challenge = GenericArray::<u8, L>::default();
         <D::R as bincode::de::read::Reader>::read(decoder.reader(), challenge.as_mut_slice())?;
 
-        let response = S::Response::decode(decoder)?;
+        let response = R::decode(decoder)?;
 
         Ok(CompactProof {
             challenge,
@@ -141,10 +156,10 @@ where
 
 #[cfg(feature = "bincode")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
-impl<'de, S: Sigma, Context> bincode::BorrowDecode<'de, Context> for CompactProof<S>
+impl<'de, R, L, Context> bincode::BorrowDecode<'de, Context> for CompactProof<R, L>
 where
-    S: Sigma,
-    S::Response: bincode::Decode<Context>,
+    R: bincode::Decode<Context>,
+    L: ArrayLength<u8>,
 {
     fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
         decoder: &mut D,

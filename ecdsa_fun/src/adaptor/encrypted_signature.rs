@@ -1,6 +1,6 @@
 use super::DLEQ;
 use crate::fun::{Point, Scalar, marker::*};
-use sigma_fun::CompactProof;
+use sigma_fun::{CompactProof, Sigma};
 
 /// `PointNonce` is a [`NonZero`] Point that also has an x-coordinate that is NonZero
 /// when reduced modulo the curve order.
@@ -40,7 +40,7 @@ pub(crate) struct EncryptedSignatureInternal {
     pub R: PointNonce,
     pub R_hat: Point,
     pub s_hat: Scalar<Public>,
-    pub proof: CompactProof<DLEQ>,
+    pub proof: CompactProof<<DLEQ as Sigma>::Response, <DLEQ as Sigma>::ChallengeLength>,
 }
 
 /// An "encrypted" ECDSA signature A.K.A. adaptor signature.
