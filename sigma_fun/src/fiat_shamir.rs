@@ -98,22 +98,19 @@ pub struct CompactProof<S: Sigma> {
     pub response: S::Response,
 }
 
-/// Implements bincode encoding for `CompactProof` for challenge lengths of 32. This is a
-/// restriction until we can upgrade generic array.
+/// Implements bincode encoding for `CompactProof` for any challenge length.
 #[cfg(feature = "bincode")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
 impl<S: Sigma> bincode::Encode for CompactProof<S>
 where
-    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
     S::Response: bincode::Encode,
 {
     fn encode<E: bincode::enc::Encoder>(
         &self,
         encoder: &mut E,
     ) -> Result<(), bincode::error::EncodeError> {
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(self.challenge.as_slice());
-        bytes.encode(encoder)?;
+        // Write the challenge bytes directly without length prefix
+        <E::W as bincode::enc::write::Writer>::write(encoder.writer(), self.challenge.as_slice())?;
         self.response.encode(encoder)?;
         Ok(())
     }
@@ -123,17 +120,20 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
 impl<S, Context> bincode::Decode<Context> for CompactProof<S>
 where
-    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
+    S: Sigma,
     S::Response: bincode::Decode<Context>,
 {
     fn decode<D: bincode::de::Decoder<Context = Context>>(
         decoder: &mut D,
     ) -> Result<Self, bincode::error::DecodeError> {
-        let challenge = <[u8; 32]>::decode(decoder)?;
+        // Create a default GenericArray and read directly into it
+        let mut challenge = GenericArray::<u8, S::ChallengeLength>::default();
+        <D::R as bincode::de::read::Reader>::read(decoder.reader(), challenge.as_mut_slice())?;
+
         let response = S::Response::decode(decoder)?;
 
         Ok(CompactProof {
-            challenge: GenericArray::from_exact_iter(challenge).unwrap(),
+            challenge,
             response,
         })
     }
@@ -143,7 +143,7 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "bincode")))]
 impl<'de, S: Sigma, Context> bincode::BorrowDecode<'de, Context> for CompactProof<S>
 where
-    S: Sigma<ChallengeLength = generic_array::typenum::U32>,
+    S: Sigma,
     S::Response: bincode::Decode<Context>,
 {
     fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
