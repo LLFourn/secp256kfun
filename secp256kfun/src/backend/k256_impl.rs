@@ -53,9 +53,19 @@ impl BackendPoint for Point {
     }
 
     fn norm_from_coordinates(x: [u8; 32], y: [u8; 32]) -> Option<Point> {
-        let x = Option::from(FieldElement::from_bytes(&FieldBytes::from(x)))?;
-        let y = Option::from(FieldElement::from_bytes(&FieldBytes::from(y)))?;
-        Some(AffinePoint::new(x, y).into())
+        let x_bytes = FieldBytes::from(x);
+        let y_field = Option::from(FieldElement::from_bytes(&FieldBytes::from(y)))?;
+
+        // Decompress to get the valid y coordinate for this x
+        let option: Option<AffinePoint> = AffinePoint::decompress(&x_bytes, 0.into()).into();
+        option.and_then(|point| {
+            // Check if the provided y matches the computed y or its negation
+            if point.y == y_field || point.y.negate(1).normalize() == y_field {
+                Some(AffinePoint::new(point.x, y_field).into())
+            } else {
+                None
+            }
+        })
     }
 }
 
