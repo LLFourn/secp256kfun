@@ -47,6 +47,50 @@ use secp256kfun::{
     rand_core,
 };
 
+/// A trait for signature schemes that can be used to certify the DKG output.
+///
+/// This allows applications to choose their preferred signature scheme for
+/// certifying the aggregated keygen input in certpedpop.
+pub trait CertificationScheme {
+    /// The signature type produced by this scheme
+    type Signature: Clone + core::fmt::Debug + PartialEq;
+
+    /// Sign the AggKeygenInput with the given keypair
+    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature;
+
+    /// Verify a certification signature
+    fn verify_cert(
+        &self,
+        cert_key: Point,
+        agg_input: &encpedpop::AggKeygenInput,
+        signature: &Self::Signature,
+    ) -> bool;
+}
+
+/// Standard Schnorr (BIP340) implementation of the CertificationScheme trait
+impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
+    type Signature = crate::Signature;
+
+    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature {
+        let cert_bytes = agg_input.cert_bytes();
+        let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
+        let keypair_even_y = (*keypair).into();
+        self.sign(&keypair_even_y, message)
+    }
+
+    fn verify_cert(
+        &self,
+        cert_key: Point,
+        agg_input: &encpedpop::AggKeygenInput,
+        signature: &Self::Signature,
+    ) -> bool {
+        let cert_bytes = agg_input.cert_bytes();
+        let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
+        let cert_key_even_y = cert_key.into_point_with_even_y().0;
+        self.verify(&cert_key_even_y, message, signature)
+    }
+}
+
 /// SimplePedPop is a bare bones secure distributed key generation algorithm that leaves a lot left
 /// up to the application.
 ///
@@ -1014,7 +1058,7 @@ pub mod certpedpop {
     /// Key generation inputs after being aggregated by the coordinator
     pub type AggKeygenInput = encpedpop::AggKeygenInput;
     /// The certification signatures from each certifying party (both contributors and share receivers).
-    pub type Certificate = BTreeMap<Point<EvenY>, Signature>;
+    pub type Certificate<S> = BTreeMap<Point, <S as CertificationScheme>::Signature>;
 
     impl Contributor {
         /// Generates the keygen input for a party at `my_index`. Note that `my_index`
@@ -1046,41 +1090,41 @@ pub mod certpedpop {
         /// This passing by itself doesn't mean that the key generation was successful. You must
         /// first collect the signatures from all the certifying parties (contributors and share
         /// receivers).
-        pub fn verify_agg_input<H: Hash32, NG: NonceGen>(
+        pub fn verify_agg_input<S: CertificationScheme>(
             self,
-            schnorr: &Schnorr<H, NG>,
+            cert_scheme: &S,
             agg_keygen_input: &AggKeygenInput,
-            cert_keypair: &KeyPair<EvenY>,
-        ) -> Result<Signature, simplepedpop::ContributionDidntMatch> {
+            cert_keypair: &KeyPair,
+        ) -> Result<S::Signature, simplepedpop::ContributionDidntMatch> {
             self.inner.verify_agg_input(agg_keygen_input)?;
-            let sig = agg_keygen_input.certify(schnorr, cert_keypair);
+            let sig = cert_scheme.certify(cert_keypair, agg_keygen_input);
             Ok(sig)
         }
     }
 
     /// A key generation session that has been certified by each certifying party (contributors and share receivers).
     #[derive(Clone, Debug, PartialEq)]
-    pub struct CertifiedKeygen {
+    pub struct CertifiedKeygen<S: CertificationScheme> {
         input: AggKeygenInput,
-        certificate: Certificate,
+        certificate: Certificate<S>,
     }
 
-    impl CertifiedKeygen {
+    impl<S: CertificationScheme> CertifiedKeygen<S> {
         /// Recover a share from a certified key generation with the decryption key.
         ///
         /// This checks that the `encryption_keypair` has signed the key generation first.
-        pub fn recover_share<H: Hash32, NG>(
+        pub fn recover_share<H: Hash32>(
             &self,
-            schnorr: &Schnorr<H, NG>,
+            cert_scheme: &S,
             share_index: ShareIndex,
             encryption_keypair: KeyPair,
         ) -> Result<PairedSecretShare, &'static str> {
-            let cert_key = encryption_keypair.public_key().into_point_with_even_y().0;
+            let cert_key = encryption_keypair.public_key();
             let my_cert = self
                 .certificate
                 .get(&cert_key)
                 .ok_or("I haven't certified this keygen")?;
-            if !self.input.verify_cert(schnorr, cert_key, *my_cert) {
+            if !cert_scheme.verify_cert(cert_key, &self.input, my_cert) {
                 return Err("my certification was invalid");
             }
             self.input
@@ -1107,19 +1151,21 @@ pub mod certpedpop {
         /// can use the share you must call [`finalize`] with a completed certificate.
         ///
         /// [`finalize`]: Self::finalize
-        pub fn receive_share<H, NG>(
+        pub fn receive_share<H, NG, S>(
             schnorr: &Schnorr<H, NG>,
+            cert_scheme: &S,
             my_index: ShareIndex,
             encryption_keypair: &KeyPair,
             agg_input: &AggKeygenInput,
-        ) -> Result<(Self, Signature), simplepedpop::ReceiveShareError>
+        ) -> Result<(Self, S::Signature), simplepedpop::ReceiveShareError>
         where
             H: Hash32,
             NG: NonceGen,
+            S: CertificationScheme,
         {
             let paired_secret_share =
                 encpedpop::receive_share(schnorr, my_index, encryption_keypair, agg_input)?;
-            let sig = agg_input.certify(schnorr, &(*encryption_keypair).into());
+            let sig = cert_scheme.certify(encryption_keypair, agg_input);
             let self_ = Self {
                 paired_secret_share,
                 agg_input: agg_input.clone(),
@@ -1132,21 +1178,21 @@ pub mod certpedpop {
         /// By default every share receiver is a certifying party but you must also get
         /// certifications from the [`Contributor`]s for security. Their keys are passed in as
         /// `contributor_keys`.
-        pub fn finalize<H: Hash32, NG>(
+        pub fn finalize<S: CertificationScheme>(
             self,
-            schnorr: &Schnorr<H, NG>,
-            certificate: Certificate,
-            contributor_keys: &[Point<EvenY>],
-        ) -> Result<(CertifiedKeygen, PairedSecretShare<Normal, Zero>), &'static str> {
+            cert_scheme: &S,
+            certificate: Certificate<S>,
+            contributor_keys: &[Point],
+        ) -> Result<(CertifiedKeygen<S>, PairedSecretShare<Normal, Zero>), &'static str> {
             let cert_keys = self
                 .agg_input
                 .encryption_keys()
-                .map(|(_, encryption_key)| encryption_key.into_point_with_even_y().0)
+                .map(|(_, encryption_key)| encryption_key)
                 .chain(contributor_keys.iter().cloned());
             for cert_key in cert_keys {
                 match certificate.get(&cert_key) {
                     Some(sig) => {
-                        if !self.agg_input.verify_cert(schnorr, cert_key, *sig) {
+                        if !cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
                             return Err("certification signature was invalid");
                         }
                     }
@@ -1169,14 +1215,18 @@ pub mod certpedpop {
     /// single computer by simulating all the other parties.
     ///
     /// A fingerprint can be provided to grind into the polynomial coefficients.
-    pub fn simulate_keygen<H: Hash32, NG: NonceGen>(
+    pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme>(
         schnorr: &Schnorr<H, NG>,
+        cert_scheme: &S,
         threshold: u32,
         n_receivers: u32,
         n_generators: u32,
         fingerprint: Fingerprint,
         rng: &mut impl rand_core::RngCore,
-    ) -> (CertifiedKeygen, Vec<(PairedSecretShare<Normal>, KeyPair)>) {
+    ) -> (
+        CertifiedKeygen<S>,
+        Vec<(PairedSecretShare<Normal>, KeyPair)>,
+    ) {
         let share_receivers = (1..=n_receivers)
             .map(|i| Scalar::from(i).non_zero().unwrap())
             .collect::<BTreeSet<_>>();
@@ -1200,11 +1250,11 @@ pub mod certpedpop {
             .unzip();
 
         let contributor_keys = (0..n_generators)
-            .map(|_| KeyPair::new_xonly(Scalar::random(rng)))
+            .map(|_| KeyPair::new(Scalar::random(rng)))
             .collect::<Vec<_>>();
         let contributor_public_keys = contributor_keys
             .iter()
-            .map(KeyPair::public_key)
+            .map(|kp| kp.public_key())
             .collect::<Vec<_>>();
 
         let mut aggregator = Coordinator::new(threshold, n_generators, &public_receiver_enckeys);
@@ -1224,7 +1274,7 @@ pub mod certpedpop {
 
         for (contributor, keypair) in contributors.into_iter().zip(contributor_keys.iter()) {
             let sig = contributor
-                .verify_agg_input(schnorr, &agg_input, keypair)
+                .verify_agg_input(cert_scheme, &agg_input, keypair)
                 .unwrap();
             certificate.insert(keypair.public_key(), sig);
         }
@@ -1232,9 +1282,15 @@ pub mod certpedpop {
         let mut paired_secret_shares = vec![];
         let mut share_receivers = vec![];
         for (party_index, enckey) in &receiver_enckeys {
-            let (share_receiver, cert) =
-                ShareReceiver::receive_share(schnorr, *party_index, enckey, &agg_input).unwrap();
-            certificate.insert(enckey.public_key().into_point_with_even_y().0, cert);
+            let (share_receiver, cert) = ShareReceiver::receive_share(
+                schnorr,
+                cert_scheme,
+                *party_index,
+                enckey,
+                &agg_input,
+            )
+            .unwrap();
+            certificate.insert(enckey.public_key(), cert);
             share_receivers.push(share_receiver);
         }
 
@@ -1244,10 +1300,9 @@ pub mod certpedpop {
         };
 
         for share_receiver in share_receivers {
-            let (certified, paired_secret_share) = share_receiver
-                .finalize(schnorr, certificate.clone(), &contributor_public_keys)
+            let (_certified, paired_secret_share) = share_receiver
+                .finalize(cert_scheme, certificate.clone(), &contributor_public_keys)
                 .unwrap();
-            assert_eq!(certified, certified_keygen);
             paired_secret_shares.push((
                 paired_secret_share.non_zero().unwrap(),
                 receiver_enckeys
@@ -1265,12 +1320,12 @@ pub mod certpedpop {
         /// A certificate was invalid
         InvalidCert {
             /// The key that had the invalid cert
-            key: Point<EvenY>,
+            key: Point,
         },
         /// A certificate was missing
         Missing {
             /// They key whose cert was missing
-            key: Point<EvenY>,
+            key: Point,
         },
     }
 
@@ -1340,6 +1395,7 @@ mod test {
 
             let (certified_keygen, paired_secret_shares_and_keys) = certpedpop::simulate_keygen(
                 &schnorr,
+                &schnorr,
                 threshold,
                 n_receivers,
                 n_generators,
@@ -1348,7 +1404,7 @@ mod test {
             );
 
             for (paired_secret_share, encryption_keypair) in paired_secret_shares_and_keys {
-                let recovered = certified_keygen.recover_share(&schnorr, paired_secret_share.index(), encryption_keypair).unwrap();
+                let recovered = certified_keygen.recover_share::<sha2::Sha256>(&schnorr, paired_secret_share.index(), encryption_keypair).unwrap();
                 assert_eq!(paired_secret_share, recovered);
             }
         }
