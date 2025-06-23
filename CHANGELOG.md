@@ -5,6 +5,7 @@
 - Add From/TryFrom conversions for `Scalar` to all unsigned integer types
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
+- **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
 
 ## v0.11.0
 
