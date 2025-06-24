@@ -310,7 +310,7 @@ fn sswu_map(u: FieldElement) -> (FieldElement, FieldElement) {
 
     let mut tv4 = gxd.square();
     tv2 = gx1 * gxd;
-    tv4 = tv4 * tv2;
+    tv4 *= tv2;
 
     let y1 = pow_c1(&tv4) * tv2;
     let x2n = tv3 * x1n;
