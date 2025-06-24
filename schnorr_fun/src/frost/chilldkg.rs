@@ -55,21 +55,25 @@ pub trait CertificationScheme {
     /// The signature type produced by this scheme
     type Signature: Clone + core::fmt::Debug;
 
+    /// The output produced by successful verification
+    type Output: Clone + core::fmt::Debug;
+
     /// Sign the AggKeygenInput with the given keypair
     fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature;
 
-    /// Verify a certification signature
+    /// Verify a certification signature and return the output
     fn verify_cert(
         &self,
         cert_key: Point,
         agg_input: &encpedpop::AggKeygenInput,
         signature: &Self::Signature,
-    ) -> bool;
+    ) -> Option<Self::Output>;
 }
 
 /// Standard Schnorr (BIP340) implementation of the CertificationScheme trait
 impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
     type Signature = crate::Signature;
+    type Output = ();
 
     fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature {
         let cert_bytes = agg_input.cert_bytes();
@@ -83,11 +87,15 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
         cert_key: Point,
         agg_input: &encpedpop::AggKeygenInput,
         signature: &Self::Signature,
-    ) -> bool {
+    ) -> Option<Self::Output> {
         let cert_bytes = agg_input.cert_bytes();
         let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
         let cert_key_even_y = cert_key.into_point_with_even_y().0;
-        self.verify(&cert_key_even_y, message, signature)
+        if self.verify(&cert_key_even_y, message, signature) {
+            Some(())
+        } else {
+            None
+        }
     }
 }
 
@@ -97,29 +105,20 @@ pub mod vrf_cert {
     use super::*;
     use vrf_fun::VrfProof;
 
-    /// A wrapper type for using VRF as a certification scheme
-    pub struct VrfCertifier<V> {
-        /// The underlying VRF instance
-        pub vrf: V,
+    /// VRF certification scheme using SSWU VRF
+    pub struct VrfCertifier;
+
+    /// The output from VRF verification containing the gamma point
+    #[derive(Clone, Debug)]
+    pub struct VrfOutput {
+        /// The VRF output point (gamma)
+        pub gamma: Point,
     }
 
-    /// Create a VRF certification scheme with the RFC 9381 SSWU suite using SHA256
-    pub fn sswu_vrf_sha256() -> VrfCertifier<vrf_fun::Rfc9381SswuVrf<sha2::Sha256>> {
-        VrfCertifier {
-            vrf: vrf_fun::Rfc9381SswuVrf::default(),
-        }
-    }
-
-    /// Create a VRF certification scheme with the RFC 9381 TAI suite using SHA256
-    pub fn tai_vrf_sha256() -> VrfCertifier<vrf_fun::Rfc9381TaiVrf<sha2::Sha256>> {
-        VrfCertifier {
-            vrf: vrf_fun::Rfc9381TaiVrf::default(),
-        }
-    }
-
-    /// Implement CertificationScheme for VrfCertifier wrapping the SSWU VRF
-    impl CertificationScheme for VrfCertifier<vrf_fun::Rfc9381SswuVrf<sha2::Sha256>> {
+    /// Implement CertificationScheme for VrfCertifier
+    impl CertificationScheme for VrfCertifier {
         type Signature = VrfProof;
+        type Output = VrfOutput;
 
         fn certify(
             &self,
@@ -136,67 +135,15 @@ pub mod vrf_cert {
             cert_key: Point,
             agg_input: &encpedpop::AggKeygenInput,
             signature: &Self::Signature,
-        ) -> bool {
+        ) -> Option<Self::Output> {
             // Use the certification bytes as the VRF input
             let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::sswu::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature)
-                .is_some()
+            vrf_fun::rfc9381::sswu::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature).map(
+                |output| VrfOutput {
+                    gamma: output.gamma,
+                },
+            )
         }
-    }
-
-    /// Implement CertificationScheme for VrfCertifier wrapping the TAI VRF
-    impl CertificationScheme for VrfCertifier<vrf_fun::Rfc9381TaiVrf<sha2::Sha256>> {
-        type Signature = VrfProof;
-
-        fn certify(
-            &self,
-            keypair: &KeyPair,
-            agg_input: &encpedpop::AggKeygenInput,
-        ) -> Self::Signature {
-            // Use the certification bytes as the VRF input
-            let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::tai::prove::<sha2::Sha256>(keypair, &cert_bytes)
-        }
-
-        fn verify_cert(
-            &self,
-            cert_key: Point,
-            agg_input: &encpedpop::AggKeygenInput,
-            signature: &Self::Signature,
-        ) -> bool {
-            // Use the certification bytes as the VRF input
-            let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::tai::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature)
-                .is_some()
-        }
-    }
-
-    /// Compute a randomness beacon from a set of VRF outputs
-    ///
-    /// This function takes all the VRF outputs (gamma points) from the certificate
-    /// and hashes them together to produce unpredictable randomness that no single
-    /// party could have controlled (as long as at least one party is honest).
-    pub fn compute_randomness_beacon<S>(certificate: &certpedpop::Certificate<S>) -> [u8; 32]
-    where
-        S: CertificationScheme,
-        S::Signature: AsRef<VrfProof>,
-    {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::new();
-
-        // Sort by public key to ensure deterministic ordering
-        let mut sorted_entries: Vec<_> = certificate.iter().collect();
-        sorted_entries.sort_by_key(|(pk, _)| pk.to_bytes());
-
-        // Hash all the VRF gamma points
-        for (_, vrf_proof) in sorted_entries {
-            let gamma = vrf_proof.as_ref().gamma;
-            hasher.update(gamma.to_bytes());
-        }
-
-        // Get the hash output
-        hasher.finalize().into()
     }
 }
 
@@ -1166,8 +1113,37 @@ pub mod certpedpop {
     pub type KeygenInput = encpedpop::KeygenInput;
     /// Key generation inputs after being aggregated by the coordinator
     pub type AggKeygenInput = encpedpop::AggKeygenInput;
-    /// The certification signatures from each certifying party (both contributors and share receivers).
-    pub type Certificate<S> = BTreeMap<Point, <S as CertificationScheme>::Signature>;
+    /// A certificate containing signatures or proofs from certifying parties
+    #[derive(Clone, Debug)]
+    pub struct Certificate<Sig>(BTreeMap<Point, Sig>);
+
+    impl<Sig> Default for Certificate<Sig> {
+        fn default() -> Self {
+            Self(BTreeMap::new())
+        }
+    }
+
+    impl<Sig> Certificate<Sig> {
+        /// Create a new empty certificate
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// Insert a signature/proof for a public key
+        pub fn insert(&mut self, key: Point, sig: Sig) {
+            self.0.insert(key, sig);
+        }
+
+        /// Get the signature/proof for a public key
+        pub fn get(&self, key: &Point) -> Option<&Sig> {
+            self.0.get(key)
+        }
+
+        /// Iterate over all entries in the certificate
+        pub fn iter(&self) -> impl Iterator<Item = (&Point, &Sig)> {
+            self.0.iter()
+        }
+    }
 
     impl Contributor {
         /// Generates the keygen input for a party at `my_index`. Note that `my_index`
@@ -1215,7 +1191,9 @@ pub mod certpedpop {
     #[derive(Clone, Debug)]
     pub struct CertifiedKeygen<S: CertificationScheme> {
         input: AggKeygenInput,
-        certificate: Certificate<S>,
+        certificate: Certificate<S::Signature>,
+        /// The outputs from successful verification, indexed by certifying party's public key
+        outputs: BTreeMap<Point, S::Output>,
     }
 
     impl<S: CertificationScheme> CertifiedKeygen<S> {
@@ -1233,7 +1211,10 @@ pub mod certpedpop {
                 .certificate
                 .get(&cert_key)
                 .ok_or("I haven't certified this keygen")?;
-            if !cert_scheme.verify_cert(cert_key, &self.input, my_cert) {
+            if cert_scheme
+                .verify_cert(cert_key, &self.input, my_cert)
+                .is_none()
+            {
                 return Err("my certification was invalid");
             }
             self.input.recover_share::<H>(share_index, &keypair)
@@ -1242,6 +1223,37 @@ pub mod certpedpop {
         /// Gets the inner `encpedpop::AggKeygenInput`.
         pub fn inner(&self) -> &AggKeygenInput {
             &self.input
+        }
+
+        /// Gets the certificate.
+        pub fn certificate(&self) -> &Certificate<S::Signature> {
+            &self.certificate
+        }
+
+        /// Gets the verification outputs.
+        pub fn outputs(&self) -> &BTreeMap<Point, S::Output> {
+            &self.outputs
+        }
+    }
+
+    #[cfg(feature = "vrf_cert_keygen")]
+    impl CertifiedKeygen<vrf_cert::VrfCertifier> {
+        /// Compute a randomness beacon from the VRF outputs
+        ///
+        /// This function hashes all the VRF gamma points together to produce
+        /// unpredictable randomness that no single party could have controlled
+        /// (as long as at least one party is honest).
+        pub fn compute_randomness_beacon(&self) -> [u8; 32] {
+            use sha2::{Digest, Sha256};
+
+            let mut hasher = Sha256::new();
+
+            // BTreeMap already maintains sorted order by key
+            for output in self.outputs.values() {
+                hasher.update(output.gamma.to_bytes());
+            }
+
+            hasher.finalize().into()
         }
     }
 
@@ -1289,9 +1301,10 @@ pub mod certpedpop {
         pub fn finalize<S: CertificationScheme>(
             self,
             cert_scheme: &S,
-            certificate: Certificate<S>,
+            certificate: Certificate<S::Signature>,
             contributor_keys: &[Point],
         ) -> Result<(CertifiedKeygen<S>, PairedSecretShare<Normal, Zero>), &'static str> {
+            let mut outputs = BTreeMap::new();
             let cert_keys = self
                 .agg_input
                 .encryption_keys()
@@ -1299,11 +1312,12 @@ pub mod certpedpop {
                 .chain(contributor_keys.iter().cloned());
             for cert_key in cert_keys {
                 match certificate.get(&cert_key) {
-                    Some(sig) => {
-                        if !cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
-                            return Err("certification signature was invalid");
+                    Some(sig) => match cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
+                        Some(output) => {
+                            outputs.insert(cert_key, output);
                         }
-                    }
+                        None => return Err("certification signature was invalid"),
+                    },
                     None => return Err("missing certification signature"),
                 }
             }
@@ -1311,6 +1325,7 @@ pub mod certpedpop {
             let certified_keygen = CertifiedKeygen {
                 input: self.agg_input,
                 certificate,
+                outputs,
             };
 
             Ok((certified_keygen, self.paired_secret_share))
@@ -1377,8 +1392,7 @@ pub mod certpedpop {
 
         // Apply fingerprint grinding
         agg_input.grind_fingerprint::<H>(fingerprint);
-
-        let mut certificate = BTreeMap::default();
+        let mut certificate = Certificate::new();
 
         for (contributor, keypair) in contributors.into_iter().zip(contributor_keys.iter()) {
             let sig = contributor
@@ -1402,9 +1416,18 @@ pub mod certpedpop {
             share_receivers.push(share_receiver);
         }
 
+        // Collect outputs by verifying all certificates
+        let mut outputs = BTreeMap::new();
+        for (key, sig) in certificate.iter() {
+            if let Some(output) = cert_scheme.verify_cert(*key, &agg_input, sig) {
+                outputs.insert(*key, output);
+            }
+        }
+
         let certified_keygen = CertifiedKeygen {
             input: agg_input.clone(),
             certificate: certificate.clone(),
+            outputs,
         };
 
         for share_receiver in share_receivers {
@@ -1548,5 +1571,42 @@ mod test {
 
             assert!(shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint), "fingerprint was grinded correctly");
         }
+    }
+
+    #[test]
+    #[cfg(feature = "vrf_cert_keygen")]
+    fn vrf_certified_keygen_randomness_beacon() {
+        use proptest::test_runner::{RngAlgorithm, TestRng};
+
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let vrf_certifier = vrf_cert::VrfCertifier;
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+        let threshold = 2;
+        let n_receivers = 3;
+        let n_generators = 2;
+
+        let (certified_keygen, _) = certpedpop::simulate_keygen(
+            &schnorr,
+            &vrf_certifier,
+            threshold,
+            n_receivers,
+            n_generators,
+            Fingerprint::none(),
+            &mut rng,
+        );
+
+        // Compute randomness beacon from the VRF outputs
+        let randomness = certified_keygen.compute_randomness_beacon();
+
+        // Verify the randomness is deterministic
+        let randomness2 = certified_keygen.compute_randomness_beacon();
+        assert_eq!(randomness, randomness2);
+
+        // Verify we have the expected number of VRF outputs
+        assert_eq!(
+            certified_keygen.outputs().len(),
+            (n_receivers + n_generators) as usize
+        );
     }
 }
