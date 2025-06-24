@@ -371,6 +371,29 @@ impl core::fmt::Display for ContributionDidntMatch {
 #[cfg(feature = "std")]
 impl std::error::Error for ContributionDidntMatch {}
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    use proptest::{
+        prelude::*,
+        test_runner::{RngAlgorithm, TestRng},
+    };
+    use secp256kfun::proptest;
+
+    proptest! {
+        #[test]
+        fn run_simulate_keygen(
+            (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
+            n_generators in 1u32..5,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+        }
+    }
+}
+
 /// The [`AggKeygenInput`] was invalid so a valid secret share couldn't be extracted.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ReceiveShareError {

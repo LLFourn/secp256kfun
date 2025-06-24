@@ -453,3 +453,26 @@ where
     let shared_key = agg_input.shared_key().non_zero().unwrap();
     (shared_key, paired_secret_shares)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use proptest::{
+        prelude::*,
+        test_runner::{RngAlgorithm, TestRng},
+    };
+    use secp256kfun::proptest;
+
+    proptest! {
+        #[test]
+        fn run_simulate_keygen(
+            (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
+            n_generators in 1u32..5,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+        }
+    }
+}
