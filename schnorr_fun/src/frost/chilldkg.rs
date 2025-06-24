@@ -53,7 +53,7 @@ use secp256kfun::{
 /// certifying the aggregated keygen input in certpedpop.
 pub trait CertificationScheme {
     /// The signature type produced by this scheme
-    type Signature: Clone + core::fmt::Debug + PartialEq;
+    type Signature: Clone + core::fmt::Debug;
 
     /// Sign the AggKeygenInput with the given keypair
     fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature;
@@ -88,6 +88,115 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
         let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
         let cert_key_even_y = cert_key.into_point_with_even_y().0;
         self.verify(&cert_key_even_y, message, signature)
+    }
+}
+
+/// VRF-based implementation of CertificationScheme
+#[cfg(feature = "vrf_cert_keygen")]
+pub mod vrf_cert {
+    use super::*;
+    use vrf_fun::VrfProof;
+
+    /// A wrapper type for using VRF as a certification scheme
+    pub struct VrfCertifier<V> {
+        /// The underlying VRF instance
+        pub vrf: V,
+    }
+
+    /// Create a VRF certification scheme with the RFC 9381 SSWU suite using SHA256
+    pub fn sswu_vrf_sha256() -> VrfCertifier<vrf_fun::Rfc9381SswuVrf<sha2::Sha256>> {
+        VrfCertifier {
+            vrf: vrf_fun::Rfc9381SswuVrf::default(),
+        }
+    }
+
+    /// Create a VRF certification scheme with the RFC 9381 TAI suite using SHA256
+    pub fn tai_vrf_sha256() -> VrfCertifier<vrf_fun::Rfc9381TaiVrf<sha2::Sha256>> {
+        VrfCertifier {
+            vrf: vrf_fun::Rfc9381TaiVrf::default(),
+        }
+    }
+
+    /// Implement CertificationScheme for VrfCertifier wrapping the SSWU VRF
+    impl CertificationScheme for VrfCertifier<vrf_fun::Rfc9381SswuVrf<sha2::Sha256>> {
+        type Signature = VrfProof;
+
+        fn certify(
+            &self,
+            keypair: &KeyPair,
+            agg_input: &encpedpop::AggKeygenInput,
+        ) -> Self::Signature {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::sswu::prove::<sha2::Sha256>(keypair, &cert_bytes)
+        }
+
+        fn verify_cert(
+            &self,
+            cert_key: Point,
+            agg_input: &encpedpop::AggKeygenInput,
+            signature: &Self::Signature,
+        ) -> bool {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::sswu::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature)
+                .is_some()
+        }
+    }
+
+    /// Implement CertificationScheme for VrfCertifier wrapping the TAI VRF
+    impl CertificationScheme for VrfCertifier<vrf_fun::Rfc9381TaiVrf<sha2::Sha256>> {
+        type Signature = VrfProof;
+
+        fn certify(
+            &self,
+            keypair: &KeyPair,
+            agg_input: &encpedpop::AggKeygenInput,
+        ) -> Self::Signature {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::tai::prove::<sha2::Sha256>(keypair, &cert_bytes)
+        }
+
+        fn verify_cert(
+            &self,
+            cert_key: Point,
+            agg_input: &encpedpop::AggKeygenInput,
+            signature: &Self::Signature,
+        ) -> bool {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::tai::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature)
+                .is_some()
+        }
+    }
+
+    /// Compute a randomness beacon from a set of VRF outputs
+    ///
+    /// This function takes all the VRF outputs (gamma points) from the certificate
+    /// and hashes them together to produce unpredictable randomness that no single
+    /// party could have controlled (as long as at least one party is honest).
+    pub fn compute_randomness_beacon<S>(certificate: &certpedpop::Certificate<S>) -> [u8; 32]
+    where
+        S: CertificationScheme,
+        S::Signature: AsRef<VrfProof>,
+    {
+        use sha2::{Digest, Sha256};
+
+        let mut hasher = Sha256::new();
+
+        // Sort by public key to ensure deterministic ordering
+        let mut sorted_entries: Vec<_> = certificate.iter().collect();
+        sorted_entries.sort_by_key(|(pk, _)| pk.to_bytes());
+
+        // Hash all the VRF gamma points
+        for (_, vrf_proof) in sorted_entries {
+            let gamma = vrf_proof.as_ref().gamma;
+            hasher.update(gamma.to_bytes());
+        }
+
+        // Get the hash output
+        hasher.finalize().into()
     }
 }
 
@@ -1103,7 +1212,7 @@ pub mod certpedpop {
     }
 
     /// A key generation session that has been certified by each certifying party (contributors and share receivers).
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug)]
     pub struct CertifiedKeygen<S: CertificationScheme> {
         input: AggKeygenInput,
         certificate: Certificate<S>,
