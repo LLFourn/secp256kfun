@@ -761,7 +761,7 @@ mod test {
             assert_eq!(agg_key1.agg_public_key(), agg_key3.agg_public_key());
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::<Public>::new("test", b"Chancellor on brink of second bailout for banks");
 
             let session_id = message.bytes.into();
 
@@ -856,7 +856,7 @@ mod test {
             ]).into_xonly_key();
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::<Public>::new("test", b"Chancellor on brink of second bailout for banks");
 
             let session_id = message.bytes.into();
 

@@ -606,7 +606,7 @@ pub mod encpedpop {
         {
             schnorr.sign(
                 keypair,
-                Message::<Public>::plain("BIP DKG/cert", self.cert_bytes().as_ref()),
+                Message::<Public>::new("BIP DKG/cert", self.cert_bytes().as_ref()),
             )
         }
 
@@ -620,7 +620,7 @@ pub mod encpedpop {
         ) -> bool {
             schnorr.verify(
                 &cert_key,
-                Message::<Public>::plain("BIP DKG/cert", self.cert_bytes().as_ref()),
+                Message::<Public>::new("BIP DKG/cert", self.cert_bytes().as_ref()),
                 &signature,
             )
         }
