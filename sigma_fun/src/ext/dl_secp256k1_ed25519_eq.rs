@@ -70,7 +70,10 @@ pub struct CrossCurveDLEQProof {
     pub commitments: Vec<(PointP, PointQ)>,
     /// The core proof which shows the pairs of commitments commit to the same bit and the resulting
     /// sum is the claimed points.
-    pub proof: crate::CompactProof<CoreProof>,
+    pub proof: crate::CompactProof<
+        <CoreProof as crate::Sigma>::Response,
+        <CoreProof as crate::Sigma>::ChallengeLength,
+    >,
 }
 
 /// The proof system which prepares the high level statement to be proved/verified with
