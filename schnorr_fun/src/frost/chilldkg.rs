@@ -101,7 +101,7 @@ pub mod simplepedpop {
             let secret_poly = poly::scalar::generate(threshold as usize, rng);
             let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
             // XXX The thing that's singed differs from the spec
-            let pop = schnorr.sign(&pop_keypair, Message::<Public>::empty());
+            let pop = schnorr.sign(&pop_keypair, Message::empty());
             let com = poly::scalar::to_point_poly(&secret_poly);
 
             let shares = share_receivers
@@ -201,7 +201,7 @@ pub mod simplepedpop {
             }
 
             let (first_coeff_even_y, _) = input.com[0].into_point_with_even_y();
-            if !schnorr.verify(&first_coeff_even_y, Message::<Public>::empty(), &input.pop) {
+            if !schnorr.verify(&first_coeff_even_y, Message::empty(), &input.pop) {
                 return Err("☠ pop didn't verify");
             }
             *entry = Some(input);
@@ -324,7 +324,7 @@ pub mod simplepedpop {
     {
         for (key_contrib, pop) in &agg_input.key_contrib {
             let (first_coeff_even_y, _) = key_contrib.into_point_with_even_y();
-            if !schnorr.verify(&first_coeff_even_y, Message::<Public>::empty(), pop) {
+            if !schnorr.verify(&first_coeff_even_y, Message::empty(), pop) {
                 return Err(ReceiveShareError::InvalidPop);
             }
         }
@@ -606,7 +606,7 @@ pub mod encpedpop {
         {
             schnorr.sign(
                 keypair,
-                Message::<Public>::new("BIP DKG/cert", self.cert_bytes().as_ref()),
+                Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
             )
         }
 
@@ -620,7 +620,7 @@ pub mod encpedpop {
         ) -> bool {
             schnorr.verify(
                 &cert_key,
-                Message::<Public>::new("BIP DKG/cert", self.cert_bytes().as_ref()),
+                Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
                 &signature,
             )
         }

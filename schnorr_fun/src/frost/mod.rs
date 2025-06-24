@@ -446,7 +446,7 @@ mod test {
         let session = frost.coordinator_sign_session(
             &frost_poly.into_xonly(),
             BTreeMap::from_iter([(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)]),
-            Message::<Public>::new("test", b"hello"),
+            Message::new("test", b"hello"),
         );
 
         assert_eq!(session.final_nonce(), *G);

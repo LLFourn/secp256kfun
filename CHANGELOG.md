@@ -7,6 +7,7 @@
 - MSRV 1.63 -> 1.85
 - Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
 - Deprecate `Message::plain` which uses non-standard 64-byte prefix
+- Remove type parameters from `Message` and `Signature` types (always public now)
 
 ## v0.11.0
 
