@@ -39,12 +39,7 @@ pub mod encpedpop;
 pub mod simplepedpop;
 
 use crate::Schnorr;
-use secp256kfun::{
-    KeyPair,
-    hash::Hash32,
-    nonce::NonceGen,
-    prelude::*,
-};
+use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, prelude::*};
 
 /// A trait for signature schemes that can be used to certify the DKG output.
 ///

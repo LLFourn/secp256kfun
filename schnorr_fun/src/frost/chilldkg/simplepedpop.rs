@@ -12,14 +12,7 @@ use alloc::{
     vec::Vec,
 };
 use core::num::NonZeroU32;
-use secp256kfun::{
-    KeyPair,
-    hash::Hash32,
-    nonce::NonceGen,
-    poly,
-    prelude::*,
-    rand_core,
-};
+use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, poly, prelude::*, rand_core};
 
 /// A party that generates secret input to the key generation. You need at least one of these
 /// and if at least one of these parties is honest then the final secret key will not be known by an
