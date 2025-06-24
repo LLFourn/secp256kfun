@@ -662,8 +662,10 @@ pub mod encpedpop {
         /// Grinds all polynomial coefficients to achieve a fingerprint by rejection sampling.
         /// This is meant to be run by the coordinator.
         ///
-        /// This method modifies each non-constant coefficient of the polynomial through group addition
-        /// until the hash of all coefficients up to that point has the required number of leading zero bits.
+        /// This method modifies each non-constant coefficient of the polynomial through group
+        /// addition until the running hash (computed by sequentially incorporating coefficients)
+        /// has the required number of leading zero bits at each step.
+        ///
         /// The fingerprint is tied to the specific public key by including it in the hash.
         ///
         /// ## Parameters
@@ -695,7 +697,8 @@ pub mod encpedpop {
 
             let mut tweaks = Vec::with_capacity(self.inner.agg_poly.len());
 
-            // Grind each coefficient in sequence
+            // Grind each coefficient in sequence, note that agg_poly only
+            // contains the non-constant coefficients.
             for coeff_index in 0..self.inner.agg_poly.len() {
                 let mut total_tweak = Scalar::<Public, Zero>::zero();
                 let original_coeff = self.inner.agg_poly[coeff_index];
@@ -920,7 +923,7 @@ pub mod encpedpop {
     /// This calls all the other functions defined in this module to get the whole job done on a
     /// single computer by simulating all the other parties.
     ///
-    /// A fingerprint can be provided to grind the polynomial coefficients.
+    /// A fingerprint can be provided to grind into the polynomial coefficients.
     pub fn simulate_keygen<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
@@ -1165,7 +1168,7 @@ pub mod certpedpop {
     /// This calls all the other functions defined in this module to get the whole job done on a
     /// single computer by simulating all the other parties.
     ///
-    /// A fingerprint can be provided to grind the polynomial coefficients.
+    /// A fingerprint can be provided to grind into the polynomial coefficients.
     pub fn simulate_keygen<H: Hash32, NG: NonceGen>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
