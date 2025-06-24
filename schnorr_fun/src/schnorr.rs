@@ -91,7 +91,9 @@ where
     CH: Default + Tag,
     NG: Default + Tag,
 {
-    /// Returns a Schnorr instance tagged in the default way according to BIP340.
+    /// Returns a Schnorr instance tagged in the default way according to [BIP340].
+    ///
+    /// [BIP340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
     ///
     /// # Examples
     ///
@@ -122,7 +124,7 @@ where
     /// # };
     /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-    /// let message = Message::<Public>::plain(
+    /// let message = Message::<Public>::new(
     ///     "times-of-london",
     ///     b"Chancellor on brink of second bailout for banks",
     /// );
@@ -171,7 +173,7 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
     /// ```
     /// use schnorr_fun::{Message, Schnorr, Signature, fun::prelude::*};
     /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
-    /// let message = Message::<Public>::plain("my-app", b"we rolled our own schnorr!");
+    /// let message = Message::<Public>::new("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
     /// let R = Point::even_y_from_scalar_mul(G, &mut r);
@@ -300,24 +302,25 @@ mod test {
             Scalar::from_str("18451f9e08af9530814243e202a4a977130e672079f5c14dcf15bd4dee723072")
                 .unwrap();
         let keypair = schnorr.new_keypair(x);
+
+        // Test new method for domain separation
         assert_ne!(
             schnorr.sign(&keypair, Message::<Public>::raw(b"foo")).R,
             schnorr
-                .sign(&keypair, Message::<Public>::plain("one", b"foo"))
+                .sign(&keypair, Message::<Public>::new("one", b"foo"))
                 .R
         );
         assert_ne!(
             schnorr
-                .sign(&keypair, Message::<Public>::plain("one", b"foo"))
+                .sign(&keypair, Message::<Public>::new("one", b"foo"))
                 .R,
             schnorr
-                .sign(&keypair, Message::<Public>::plain("two", b"foo"))
+                .sign(&keypair, Message::<Public>::new("two", b"foo"))
                 .R
         );
 
         // make sure deterministic signatures don't change
         assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
-        assert_eq!(schnorr.sign(&keypair, Message::<Public>::plain("one", b"foo")), Signature::<Public>::from_str("2fcf6fd140bbc4048e802c62f028e24f6534e0d15d450963265b67eead774d8b4aa7638bec9d70aa60b97e86bc4a60bf43ad2ff58e981ee1bba4f45ce02ff2c0").unwrap());
     }
 
     proptest! {
@@ -326,7 +329,7 @@ mod test {
         fn anticipated_signature_on_should_correspond_to_actual_signature(sk in any::<Scalar>()) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair = schnorr.new_keypair(sk);
-            let msg = Message::<Public>::plain(
+            let msg = Message::<Public>::new(
                 "test",
                 b"Chancellor on brink of second bailout for banks",
             );
@@ -349,8 +352,8 @@ mod test {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair_1 = schnorr.new_keypair(s1);
             let keypair_2 = schnorr.new_keypair(s2);
-            let msg_atkdwn = Message::<Public>::plain("test", b"attack at dawn");
-            let msg_rtrtnoon = Message::<Public>::plain("test", b"retreat at noon");
+            let msg_atkdwn = Message::<Public>::new("test", b"attack at dawn");
+            let msg_rtrtnoon = Message::<Public>::new("test", b"retreat at noon");
             let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
             let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
             let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);

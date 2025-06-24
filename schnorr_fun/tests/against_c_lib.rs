@@ -12,10 +12,12 @@ use secp256kfun::{
 };
 use sha2::Sha256;
 
-/// Compliance type for no aux BIP340 libsecp256k1 implementation.
+/// Compliance type for no aux [BIP340] libsecp256k1 implementation.
 ///
 /// This type is expected to be used in [`Schnorr`] context and receive a tag "BIP0340" to be
-/// compatible with BIP 340 no auxiliary data, i.e. aux is set to null 32-bytes array.
+/// compatible with [BIP340] no auxiliary data, i.e. aux is set to null 32-bytes array.
+///
+/// [BIP340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #[derive(Clone, Debug, Default)]
 struct Bip340NoAux {
     nonce_hash: Sha256,

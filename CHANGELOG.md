@@ -6,6 +6,8 @@
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
 - **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
+- Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
+- Deprecate `Message::plain` which uses non-standard 64-byte prefix
 
 ## v0.11.0
 
