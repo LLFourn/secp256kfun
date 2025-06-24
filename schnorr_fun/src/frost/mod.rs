@@ -96,9 +96,8 @@ mod session;
 pub use session::*;
 pub mod chilldkg;
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{Message, Schnorr, Signature, binonce};
+use crate::{Message, Schnorr, binonce};
 use alloc::collections::{BTreeMap, BTreeSet};
-use core::num::NonZeroU32;
 use secp256kfun::{
     KeyPair, derive_nonce_rng,
     hash::{Hash32, HashAdd, Tag},
@@ -446,7 +445,7 @@ mod test {
         let session = frost.coordinator_sign_session(
             &frost_poly.into_xonly(),
             BTreeMap::from_iter([(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)]),
-            Message::<Public>::plain("test", b"hello"),
+            Message::new("test", b"hello"),
         );
 
         assert_eq!(session.final_nonce(), *G);

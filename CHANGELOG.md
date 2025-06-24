@@ -5,6 +5,9 @@
 - Add From/TryFrom conversions for `Scalar` to all unsigned integer types
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
+- Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
+- Deprecate `Message::plain` which uses non-standard 64-byte prefix
+- Remove type parameters from `Message` and `Signature` types (always public now)
 - **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
 
 ## v0.11.0

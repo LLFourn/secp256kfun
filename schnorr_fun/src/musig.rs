@@ -444,7 +444,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
     ) -> SignSession {
         let (b, c, public_nonces, R, nonce_needs_negation) =
             self._start_sign_session(agg_key, nonces, message, Point::<Normal, Public, _>::zero());
@@ -482,7 +482,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
         encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> Option<SignSession<Adaptor>> {
         let (b, c, public_nonces, R, nonce_needs_negation) =
@@ -504,7 +504,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         mut nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
         encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> (
         Scalar<Public>,
@@ -761,9 +761,9 @@ mod test {
             assert_eq!(agg_key1.agg_public_key(), agg_key3.agg_public_key());
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::new("test", b"Chancellor on brink of second bailout for banks");
 
-            let session_id = message.bytes.into();
+            let session_id = message.bytes;
 
             let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);
@@ -856,9 +856,9 @@ mod test {
             ]).into_xonly_key();
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::new("test", b"Chancellor on brink of second bailout for banks");
 
-            let session_id = message.bytes.into();
+            let session_id = message.bytes;
 
             let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);
