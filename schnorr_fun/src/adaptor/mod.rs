@@ -298,7 +298,7 @@ mod test {
         let signing_keypair = schnorr.new_keypair(secret_key);
         let verification_key = signing_keypair.public_key();
         let encryption_key = schnorr.encryption_key_for(&decryption_key);
-        let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
+        let message = Message::<Public>::new("test", b"give 100 coins to Bob".as_ref());
 
         let encrypted_signature =
             schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);
