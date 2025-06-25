@@ -37,7 +37,7 @@
 //! # let p3_public_nonce = p3_nonce.public();
 //! // collect the public nonces from the other two parties
 //! let nonces = vec![my_public_nonce, p2_public_nonce, p3_public_nonce];
-//! let message = Message::plain("my-app", b"chancellor on brink of second bailout for banks");
+//! let message = Message::new("my-app", b"chancellor on brink of second bailout for banks");
 //! // start the signing session
 //! let session = musig.start_sign_session(&agg_key, nonces, message);
 //! // sign with our single local keypair
@@ -190,10 +190,10 @@ impl<T: Copy> AggKey<T> {
 }
 
 impl AggKey<Normal> {
-    /// Convert the key into a BIP340 AggKey.
+    /// Convert the key into a [BIP340] AggKey.
     ///
     /// This is the [BIP340] x-only version of the key which you can put in a segwitv1 output
-    /// and create/verify BIP340 signatures under.
+    /// and create/verify [BIP340] signatures under.
     ///
     /// [BIP340]: https://bips.xyz/340
     pub fn into_xonly_key(self) -> AggKey<EvenY> {
@@ -215,12 +215,14 @@ impl AggKey<Normal> {
     /// public key while still allowing the original set of signers to sign under the new key.
     /// This function is appropriate for doing [BIP32] tweaks before calling `into_xonly_key`.
     /// It **is not** appropriate for doing taproot tweaking which must be done on an [`AggKey`]
-    /// with [`EvenY`] public key in BIP340 form, see [`into_xonly_key`].
+    /// with [`EvenY`] public key in [BIP340] form, see [`into_xonly_key`].
     ///
     /// ## Return value
     ///
     /// In the erroneous case that the tweak is exactly equal to the negation of the aggregate
     /// secret key it returns `None`.
+    ///
+    /// [BIP340]: https://bips.xyz/340
     ///
     /// [BIP32]: https://bips.xyz/32
     /// [`AggKey`]: crate::musig::AggKey
@@ -444,7 +446,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
     ) -> SignSession {
         let (b, c, public_nonces, R, nonce_needs_negation) =
             self._start_sign_session(agg_key, nonces, message, Point::<Normal, Public, _>::zero());
@@ -482,7 +484,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
         encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> Option<SignSession<Adaptor>> {
         let (b, c, public_nonces, R, nonce_needs_negation) =
@@ -504,7 +506,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         &self,
         agg_key: &AggKey<EvenY>,
         mut nonces: Vec<binonce::Nonce>,
-        message: Message<'_, Public>,
+        message: Message<'_>,
         encryption_key: Point<impl PointType, impl Secrecy, impl ZeroChoice>,
     ) -> (
         Scalar<Public>,
@@ -761,9 +763,9 @@ mod test {
             assert_eq!(agg_key1.agg_public_key(), agg_key3.agg_public_key());
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::new("test", b"Chancellor on brink of second bailout for banks");
 
-            let session_id = message.bytes.into();
+            let session_id = message.bytes;
 
             let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);
@@ -856,9 +858,9 @@ mod test {
             ]).into_xonly_key();
 
             let message =
-                Message::<Public>::plain("test", b"Chancellor on brink of second bailout for banks");
+                Message::new("test", b"Chancellor on brink of second bailout for banks");
 
-            let session_id = message.bytes.into();
+            let session_id = message.bytes;
 
             let mut nonce_rng: ChaCha20Rng = musig.seed_nonce_rng(&agg_key1, keypair1.secret_key(), session_id);
             let p1_nonce = musig.gen_nonce(&mut nonce_rng);

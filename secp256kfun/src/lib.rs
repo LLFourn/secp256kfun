@@ -28,7 +28,6 @@ pub use subtle;
 mod keypair;
 mod point;
 mod scalar;
-mod slice;
 
 mod vendor;
 
@@ -41,7 +40,6 @@ pub mod op;
 pub use keypair::*;
 pub use point::Point;
 pub use scalar::Scalar;
-pub use slice::Slice;
 
 /// Re-export `serde`
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
