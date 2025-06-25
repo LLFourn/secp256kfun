@@ -231,7 +231,7 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
 }
 
 impl SharedKey<Normal> {
-    /// Convert the key into a BIP340 "x-only" SharedKey.
+    /// Convert the key into a [BIP340] "x-only" SharedKey.
     ///
     /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
     ///

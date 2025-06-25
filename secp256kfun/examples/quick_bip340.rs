@@ -1,4 +1,6 @@
-//! A quick and dirty (but working) implementation of BIP340 Schnorr signatures.
+//! A quick and dirty (but working) implementation of [BIP340] Schnorr signatures.
+//!
+//! [BIP340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #![allow(non_snake_case)]
 use rand::thread_rng;
 use secp256kfun::{

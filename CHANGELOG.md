@@ -8,6 +8,8 @@
 - **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
 - Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
 - Deprecate `Message::plain` which uses non-standard 64-byte prefix
+- Remove type parameters from `Message` and `Signature` types (always public now)
+- Remove unused `Slice` type from secp256kfun
 
 ## v0.11.0
 
