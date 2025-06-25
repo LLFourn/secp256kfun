@@ -52,8 +52,8 @@ fn signing_test_vectors() {
         let keypair = bip340.new_keypair(secret_key);
         assert_eq!(keypair.public_key(), expected_public_key);
         let message = hex::decode(line[4]).unwrap();
-        let signature = bip340.sign(&keypair, Message::<Public>::raw(&message));
-        let expected_signature = Signature::<Public>::from_str(line[5]).unwrap();
+        let signature = bip340.sign(&keypair, Message::raw(&message));
+        let expected_signature = Signature::from_str(line[5]).unwrap();
         assert_eq!(signature, expected_signature);
     }
 }
@@ -77,7 +77,7 @@ fn verification_test_vectors() {
             }
         };
         let message = hex::decode(line[4]).unwrap();
-        let signature = match Signature::<Public>::from_str(line[5]) {
+        let signature = match Signature::from_str(line[5]) {
             Ok(signature) => signature,
             Err(e) => {
                 if line[6] == "TRUE" {
@@ -90,8 +90,7 @@ fn verification_test_vectors() {
 
         println!("{line:?}");
         assert!(
-            bip340.verify(&public_key, Message::<Public>::raw(&message), &signature)
-                == (line[6] == "TRUE")
+            bip340.verify(&public_key, Message::raw(&message), &signature) == (line[6] == "TRUE")
         );
     }
 }

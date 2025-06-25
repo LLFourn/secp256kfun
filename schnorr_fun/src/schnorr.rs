@@ -124,14 +124,14 @@ where
     /// # };
     /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-    /// let message = Message::<Public>::new(
+    /// let message = Message::new(
     ///     "times-of-london",
     ///     b"Chancellor on brink of second bailout for banks",
     /// );
     /// let signature = schnorr.sign(&keypair, message);
     /// assert!(schnorr.verify(&keypair.public_key(), message, &signature));
     /// ```
-    pub fn sign(&self, keypair: &KeyPair<EvenY>, message: Message<'_, impl Secrecy>) -> Signature {
+    pub fn sign(&self, keypair: &KeyPair<EvenY>, message: Message<'_>) -> Signature {
         let (x, X) = keypair.as_tuple();
 
         let mut r = derive_nonce!(
@@ -173,24 +173,23 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
     /// ```
     /// use schnorr_fun::{Message, Schnorr, Signature, fun::prelude::*};
     /// let schnorr = schnorr_fun::new_with_deterministic_nonces::<sha2::Sha256>();
-    /// let message = Message::<Public>::new("my-app", b"we rolled our own schnorr!");
+    /// let message = Message::new("my-app", b"we rolled our own schnorr!");
     /// let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     /// let mut r = Scalar::random(&mut rand::thread_rng());
     /// let R = Point::even_y_from_scalar_mul(G, &mut r);
     /// let challenge = schnorr.challenge(&R, &keypair.public_key(), message);
-    /// let s = s!(r + challenge * { keypair.secret_key() });
+    /// let s = s!(r + challenge * { keypair.secret_key() }).public();
     /// let signature = Signature { R, s };
     /// assert!(schnorr.verify(&keypair.public_key(), message, &signature));
     /// ```
     ///
     /// [BIP-340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-    /// [`Secrecy`]: secp256kfun::marker::Secrecy
-    pub fn challenge<S: Secrecy>(
+    pub fn challenge(
         &self,
         R: &Point<EvenY, impl Secrecy>,
         X: &Point<EvenY, impl Secrecy>,
-        m: Message<'_, S>,
-    ) -> Scalar<S, Zero> {
+        m: Message<'_>,
+    ) -> Scalar<Public, Zero> {
         let hash = self.challenge_hash.clone();
         let challenge = Scalar::from_hash(hash.add(R).add(X).add(m));
 
@@ -198,8 +197,7 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
             // Since the challenge pre-image is adversarially controlled we
             // conservatively allow for it to be zero
             .mark_zero()
-            // The resulting challenge should take the secrecy of the message
-            .set_secrecy::<S>()
+            .public()
     }
 
     /// Verifies a signature on a message under a given public key.
@@ -216,19 +214,16 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
     ///
     /// let schnorr = Schnorr::<Sha256>::verify_only();
     /// let public_key = Point::<EvenY, Public>::from_str("d69c3509bb99e412e68b0fe8544e72837dfa30746d8be2aa65975f29d22dc7b9").unwrap();
-    /// let signature = Signature::<Public>::from_str("00000000000000000000003b78ce563f89a0ed9414f5aa28ad0d96d6795f9c6376afb1548af603b3eb45c9f8207dee1060cb71c04e80f593060b07d28308d7f4").unwrap();
+    /// let signature = Signature::from_str("00000000000000000000003b78ce563f89a0ed9414f5aa28ad0d96d6795f9c6376afb1548af603b3eb45c9f8207dee1060cb71c04e80f593060b07d28308d7f4").unwrap();
     /// let message = hex::decode("4df3c3f68fcc83b27e9d42c90431a72499f17875c81a599b566c9889b9696703").unwrap();
-    /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
-    ///
-    /// // We could also say the message is secret if we want to use a constant time algorithm to verify the signature.
-    /// assert!(schnorr.verify(&public_key, Message::<Secret>::raw(&message), &signature));
+    /// assert!(schnorr.verify(&public_key, Message::raw(&message), &signature));
     /// ```
     #[must_use]
     pub fn verify(
         &self,
         public_key: &Point<EvenY, impl Secrecy>,
-        message: Message<'_, impl Secrecy>,
-        signature: &Signature<impl Secrecy>,
+        message: Message<'_>,
+        signature: &Signature,
     ) -> bool {
         let X = public_key;
         let (R, s) = signature.as_tuple();
@@ -244,7 +239,7 @@ impl<NG, CH: Hash32> Schnorr<CH, NG> {
         &self,
         X: &Point<EvenY, impl Secrecy>,
         R: &Point<EvenY, impl Secrecy>,
-        m: Message<'_, impl Secrecy>,
+        m: Message<'_>,
     ) -> Point<NonNormal, Public, Zero> {
         let c = self.challenge(R, X, m);
         g!(R + c * X)
@@ -305,22 +300,16 @@ mod test {
 
         // Test new method for domain separation
         assert_ne!(
-            schnorr.sign(&keypair, Message::<Public>::raw(b"foo")).R,
-            schnorr
-                .sign(&keypair, Message::<Public>::new("one", b"foo"))
-                .R
+            schnorr.sign(&keypair, Message::raw(b"foo")).R,
+            schnorr.sign(&keypair, Message::new("one", b"foo")).R
         );
         assert_ne!(
-            schnorr
-                .sign(&keypair, Message::<Public>::new("one", b"foo"))
-                .R,
-            schnorr
-                .sign(&keypair, Message::<Public>::new("two", b"foo"))
-                .R
+            schnorr.sign(&keypair, Message::new("one", b"foo")).R,
+            schnorr.sign(&keypair, Message::new("two", b"foo")).R
         );
 
         // make sure deterministic signatures don't change
-        assert_eq!(schnorr.sign(&keypair, Message::<Public>::raw(b"foo")), Signature::<Public>::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
+        assert_eq!(schnorr.sign(&keypair, Message::raw(b"foo")), Signature::from_str("fe9e5d0319d5d221988d6fd7fe1c4bedd2fb4465f592f1002f461503332a266977bb4a0b00c00d07072c796212cbea0957ebaaa5139143761c45d997ebe36cbe").unwrap());
     }
 
     proptest! {
@@ -329,7 +318,7 @@ mod test {
         fn anticipated_signature_on_should_correspond_to_actual_signature(sk in any::<Scalar>()) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair = schnorr.new_keypair(sk);
-            let msg = Message::<Public>::new(
+            let msg = Message::new(
                 "test",
                 b"Chancellor on brink of second bailout for banks",
             );
@@ -352,8 +341,8 @@ mod test {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let keypair_1 = schnorr.new_keypair(s1);
             let keypair_2 = schnorr.new_keypair(s2);
-            let msg_atkdwn = Message::<Public>::new("test", b"attack at dawn");
-            let msg_rtrtnoon = Message::<Public>::new("test", b"retreat at noon");
+            let msg_atkdwn = Message::new("test", b"attack at dawn");
+            let msg_rtrtnoon = Message::new("test", b"retreat at noon");
             let signature_1 = schnorr.sign(&keypair_1, msg_atkdwn);
             let signature_2 = schnorr.sign(&keypair_1, msg_atkdwn);
             let signature_3 = schnorr.sign(&keypair_1, msg_rtrtnoon);

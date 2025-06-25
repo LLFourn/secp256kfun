@@ -12,6 +12,8 @@
   - `hash_to_curve_rfc9381_tai` - RFC 9381 VRF try-and-increment format
 - Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
 - Deprecate `Message::plain` which uses non-standard 64-byte prefix
+- Remove type parameters from `Message` and `Signature` types (always public now)
+- Remove unused `Slice` type from secp256kfun
 
 ## v0.11.0
 

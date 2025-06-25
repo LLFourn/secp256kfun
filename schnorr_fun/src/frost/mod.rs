@@ -30,7 +30,7 @@
 //! let xonly_shared_key = shared_key.into_xonly(); // this is the key signatures will be valid under
 //! let xonly_my_secret_share = my_secret_share.into_xonly();
 //! # let xonly_secret_share3 = secret_share3.into_xonly();
-//! let message =  Message::plain("my-app", b"chancellor on brink of second bailout for banks");
+//! let message =  Message::new("my-app", b"chancellor on brink of second bailout for banks");
 //! // Generate nonces for this signing session (and send them to coordinator somehow)
 //! // ⚠ session_id MUST be different for every signing attempt to avoid nonce reuse (if using deterministic nonces).
 //! let session_id = b"signing-ominous-message-about-banks-attempt-1".as_slice();
@@ -446,7 +446,7 @@ mod test {
         let session = frost.coordinator_sign_session(
             &frost_poly.into_xonly(),
             BTreeMap::from_iter([(s!(1).public(), nonce), (s!(2).public(), malicious_nonce)]),
-            Message::<Public>::new("test", b"hello"),
+            Message::new("test", b"hello"),
         );
 
         assert_eq!(session.final_nonce(), *G);

@@ -20,7 +20,7 @@ fn sign_schnorr(c: &mut Criterion) {
     {
         let keypair = schnorr.new_keypair(*SK);
         group.bench_function("fun::schnorr_sign", |b| {
-            b.iter(|| schnorr.sign(&keypair, Message::<Public>::raw(MESSAGE)))
+            b.iter(|| schnorr.sign(&keypair, Message::raw(MESSAGE)))
         });
     }
 
@@ -40,19 +40,14 @@ fn verify_schnorr(c: &mut Criterion) {
     let mut group = c.benchmark_group("schnorr_verify");
     let keypair = schnorr.new_keypair(*SK);
     {
-        let message = Message::<Public>::raw(MESSAGE);
+        let message = Message::raw(MESSAGE);
         let sig = schnorr.sign(&keypair, message);
         let verification_key = &keypair.public_key();
         group.bench_function("fun::schnorr_verify", |b| {
             b.iter(|| schnorr.verify(verification_key, message, &sig))
         });
 
-        {
-            let sig = sig.set_secrecy::<Secret>();
-            group.bench_function("fun::schnorr_verify_ct", |b| {
-                b.iter(|| schnorr.verify(verification_key, message, &sig))
-            });
-        }
+        // Constant-time verification is no longer supported after removing type parameters
     }
 
     {

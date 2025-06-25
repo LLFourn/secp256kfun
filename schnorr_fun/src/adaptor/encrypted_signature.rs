@@ -47,11 +47,8 @@ mod test {
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
         let encryption_key = Point::random(&mut rand::thread_rng());
-        let encrypted_signature = schnorr.encrypted_sign(
-            &kp,
-            &encryption_key,
-            Message::<Public>::plain("test", b"foo"),
-        );
+        let encrypted_signature =
+            schnorr.encrypted_sign(&kp, &encryption_key, Message::new("test", b"foo"));
         let serialized = bincode::encode_to_vec(
             bincode::serde::Compat(&encrypted_signature),
             bincode::config::standard(),

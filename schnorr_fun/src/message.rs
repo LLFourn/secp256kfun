@@ -1,18 +1,13 @@
 use secp256kfun::{
-    Slice,
     digest::{self},
     hash::HashInto,
-    marker::*,
 };
 
 /// A message to be signed.
-///
-/// The `S` parameter is a [`Secrecy`] which is used when signing a verifying to check whether the
-/// challenge scalar produced with the message should be secret.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Message<'a, S = Public> {
+pub struct Message<'a> {
     /// The message bytes
-    pub bytes: Slice<'a, S>,
+    pub bytes: &'a [u8],
     /// The optional application tag to separate the signature from other applications.
     #[deprecated(
         since = "0.11.0",
@@ -26,12 +21,12 @@ pub struct Message<'a, S = Public> {
 }
 
 #[allow(deprecated)]
-impl<'a, S: Secrecy> Message<'a, S> {
+impl<'a> Message<'a> {
     /// Create a raw message with no domain separation. The message bytes will be passed straight into the
     /// challenge hash. Usually, you only use this when signing a pre-hashed message.
     pub fn raw(bytes: &'a [u8]) -> Self {
         Message {
-            bytes: Slice::from(bytes),
+            bytes,
             app_tag: None,
             bip340_domain_sep: None,
         }
@@ -51,8 +46,8 @@ impl<'a, S: Secrecy> Message<'a, S> {
     ///
     /// # Example
     /// ```
-    /// use schnorr_fun::{Message, fun::marker::Public};
-    /// let message = Message::<Public>::new("my-app/sign", b"hello world");
+    /// use schnorr_fun::Message;
+    /// let message = Message::new("my-app/sign", b"hello world");
     /// ```
     pub fn new(domain_sep: &'static str, bytes: &'a [u8]) -> Self {
         assert!(!domain_sep.is_empty(), "domain separator must not be empty");
@@ -61,7 +56,7 @@ impl<'a, S: Secrecy> Message<'a, S> {
             "domain separator must be 33 bytes or less"
         );
         Message {
-            bytes: Slice::from(bytes),
+            bytes,
             app_tag: None,
             bip340_domain_sep: Some(domain_sep),
         }
@@ -88,7 +83,7 @@ impl<'a, S: Secrecy> Message<'a, S> {
         assert!(app_tag.len() <= 64, "tag must be 64 bytes or less");
         assert!(!app_tag.is_empty(), "tag must not be empty");
         Message {
-            bytes: Slice::from(bytes),
+            bytes,
             app_tag: Some(app_tag),
             bip340_domain_sep: None,
         }
@@ -102,15 +97,15 @@ impl<'a, S: Secrecy> Message<'a, S> {
     /// Length of the message as it is hashed
     pub fn len(&self) -> usize {
         match (self.app_tag, self.bip340_domain_sep) {
-            (Some(_), _) => 64 + self.bytes.as_inner().len(),
-            (_, Some(_)) => 33 + self.bytes.as_inner().len(), // BIP340 style uses 33-byte prefix
-            (None, None) => self.bytes.as_inner().len(),
+            (Some(_), _) => 64 + self.bytes.len(),
+            (_, Some(_)) => 33 + self.bytes.len(), // BIP340 style uses 33-byte prefix
+            (None, None) => self.bytes.len(),
         }
     }
 }
 
 #[allow(deprecated)]
-impl<S> HashInto for Message<'_, S> {
+impl HashInto for Message<'_> {
     fn hash_into(self, hash: &mut impl digest::Update) {
         if let Some(prefix) = self.app_tag {
             let mut padded_prefix = [0u8; 64];
@@ -122,7 +117,7 @@ impl<S> HashInto for Message<'_, S> {
             padded_prefix[..domain_sep.len()].copy_from_slice(domain_sep.as_bytes());
             hash.update(&padded_prefix);
         }
-        hash.update(self.bytes.as_inner());
+        hash.update(self.bytes);
     }
 }
 
@@ -134,13 +129,13 @@ mod test {
     #[test]
     fn bip340_domain_separation() {
         // Test that BIP340 domain separation uses 33-byte prefix
-        let msg = Message::<Public>::new("test", b"hello");
+        let msg = Message::new("test", b"hello");
 
         // Expected: "test" padded to 33 bytes + "hello"
         let mut expected_hash = Sha256::default();
         let mut padded_prefix = [0u8; 33];
         padded_prefix[..4].copy_from_slice(b"test");
-        expected_hash.update(&padded_prefix);
+        expected_hash.update(padded_prefix);
         expected_hash.update(b"hello");
 
         let mut actual_hash = Sha256::default();
@@ -154,7 +149,7 @@ mod test {
 
     #[test]
     fn message_new_fixed_key_signature() {
-        use crate::{fun::s, new_with_deterministic_nonces};
+        use crate::{Signature, fun::prelude::*, new_with_deterministic_nonces};
         use core::str::FromStr;
 
         // Fixed test to ensure Message::new domain separation doesn't accidentally change
@@ -162,12 +157,12 @@ mod test {
         let secret_key = s!(42);
         let keypair = schnorr.new_keypair(secret_key);
 
-        let message = Message::<Public>::new("test-app", b"test message");
+        let message = Message::new("test-app", b"test message");
         let signature = schnorr.sign(&keypair, message);
 
         // This signature was generated with the current implementation and should never change
         // to ensure backwards compatibility
-        let expected_sig = crate::Signature::<Public>::from_str(
+        let expected_sig = Signature::from_str(
             "5c49762df465f21993af631caedb3e478793142e15f200e70511e5af71387e52a3b9b6af189fa4b28a767254f2a8977f2e9db1866ad4dfbb083bb4fbd8dfe82e"
         ).unwrap();
 

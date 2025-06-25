@@ -1,24 +1,17 @@
 use crate::fun::{Point, Scalar, marker::*, rand_core::RngCore};
 
 /// A Schnorr signature.
-#[derive(Clone, Eq, Copy)]
-pub struct Signature<S = Public> {
+#[derive(Clone, Eq, PartialEq, Copy)]
+pub struct Signature {
     /// The signature's public nonce
     ///
     /// [`Point`]: secp256kfun::Point
     pub R: Point<EvenY>,
     /// The challenge _response_ part of the signature.
-    pub s: Scalar<S, Zero>,
+    pub s: Scalar<Public, Zero>,
 }
 
-impl<S1, S2> PartialEq<Signature<S2>> for Signature<S1> {
-    fn eq(&self, rhs: &Signature<S2>) -> bool {
-        //TODO figure out how do the conjunction as CT or VT dynamically
-        self.R == rhs.R && self.s == rhs.s
-    }
-}
-
-impl<S> Signature<S> {
+impl Signature {
     /// Serializes the signature as 64 bytes -- First the 32-byte nonce
     /// x-coordinate and then the 32-byte challenge response scalar.
     /// # Examples
@@ -42,29 +35,9 @@ impl<S> Signature<S> {
     /// # let signature = schnorr_fun::Signature::random(&mut rand::thread_rng());
     /// let (R, s) = signature.as_tuple();
     /// ```
-    pub fn as_tuple(&self) -> (Point<EvenY>, &Scalar<S, Zero>) {
+    pub fn as_tuple(&self) -> (Point<EvenY>, &Scalar<Public, Zero>) {
         (self.R, &self.s)
     }
-
-    /// Marks the signature with a [`Secrecy`]. If it is marked as `Secret` the
-    /// operations (e.g. verification) on the signature should be done in constant
-    /// time.
-    ///
-    /// # Examples
-    /// ```
-    /// use schnorr_fun::{Signature, fun::marker::*};
-    /// let signature = Signature::random(&mut rand::thread_rng());
-    /// let secret_sig = signature.set_secrecy::<Secret>();
-    /// ```
-    pub fn set_secrecy<M: Secrecy>(self) -> Signature<M> {
-        Signature {
-            R: self.R,
-            s: self.s.set_secrecy(),
-        }
-    }
-}
-
-impl Signature<Public> {
     /// Generates a uniformly distributed signature. It will be valid for an
     /// infinite number of messages on every key but computationally you will
     /// never be able to find one! Useful for testing.
@@ -111,13 +84,13 @@ impl Signature<Public> {
 
 secp256kfun::impl_fromstr_deserialize! {
     name => "secp256k1 Schnorr signature",
-    fn from_bytes<S: Secrecy>(bytes: [u8;64]) -> Option<Signature<S>> {
-        Signature::from_bytes(bytes).map(|sig| sig.set_secrecy::<S>())
+    fn from_bytes(bytes: [u8;64]) -> Option<Signature> {
+        Signature::from_bytes(bytes)
     }
 }
 
 secp256kfun::impl_display_debug_serialize! {
-    fn to_bytes<S>(signature: &Signature<S>) -> [u8;64] {
+    fn to_bytes(signature: &Signature) -> [u8;64] {
         signature.to_bytes()
     }
 }
@@ -132,7 +105,8 @@ mod test {
         use crate::{Message, fun::Scalar};
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
         let kp = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-        let signature = schnorr.sign(&kp, Message::<Public>::plain("test", b"foo"));
+        #[allow(deprecated)]
+        let signature = schnorr.sign(&kp, Message::new("test", b"foo"));
         let serialized = bincode::encode_to_vec(
             bincode::serde::Compat(&signature),
             bincode::config::standard(),
