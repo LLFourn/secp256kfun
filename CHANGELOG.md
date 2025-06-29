@@ -6,6 +6,10 @@
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
 - **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
+- Add hash-to-curve methods to `Point`:
+  - `hash_to_curve` - Simple try-and-increment with uniform distribution (recommended)
+  - `hash_to_curve_sswu` - RFC 9380 compliant constant-time hashing
+  - `hash_to_curve_rfc9381_tai` - RFC 9381 VRF try-and-increment format
 
 ## v0.11.0
 
