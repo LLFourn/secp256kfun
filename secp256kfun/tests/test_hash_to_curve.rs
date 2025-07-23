@@ -44,14 +44,12 @@ fn test_hash_to_curve_sswu_test_vectors() {
         assert_eq!(
             &x_bytes[..],
             &expected_x[..],
-            "Test vector {} failed: x coordinate mismatch",
-            i
+            "Test vector {i} failed: x coordinate mismatch",
         );
         assert_eq!(
             &y_bytes[..],
             &expected_y[..],
-            "Test vector {} failed: y coordinate mismatch",
-            i
+            "Test vector {i} failed: y coordinate mismatch",
         );
     }
 }
@@ -149,8 +147,7 @@ fn test_hash_to_curve_test_vectors() {
 
         assert_eq!(
             actual_bytes, expected_bytes,
-            "Test vector {} failed: msg={:?}",
-            i, msg
+            "Test vector {i} failed: msg={msg:?}",
         );
 
         // Verify determinism
@@ -209,8 +206,7 @@ fn test_hash_to_curve_rfc9381_tai() {
 
         assert_eq!(
             actual_bytes, expected_bytes,
-            "Test vector {} failed: msg={:?}, salt={:?}",
-            i, msg, salt
+            "Test vector {i} failed: msg={msg:?}, salt={salt:?}",
         );
 
         // Verify determinism

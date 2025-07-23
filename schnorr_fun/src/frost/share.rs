@@ -489,7 +489,7 @@ mod share_backup {
                 if share_index_u32 >= HUMAN_READABLE_THRESHOLD {
                     prop_assert!(backup.starts_with("frost1"));
                 } else {
-                    assert!(backup.starts_with(&format!("frost[{}]", share_index_u32)));
+                    assert!(backup.starts_with(&format!("frost[{share_index_u32}]")));
                 }
 
                 prop_assert_eq!(SecretShare::from_bech32_backup(&backup), Ok(secret_share))
