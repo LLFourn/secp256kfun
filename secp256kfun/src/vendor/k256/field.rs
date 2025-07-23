@@ -125,7 +125,7 @@ impl FieldElement {
     }
 
     /// Raises the scalar to the power `2^k`
-    fn pow2k(&self, k: usize) -> Self {
+    pub(crate) fn pow2k(&self, k: usize) -> Self {
         let mut x = *self;
         for _j in 0..k {
             x = x.square();
