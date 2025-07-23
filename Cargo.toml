@@ -5,7 +5,8 @@ members = [
     "schnorr_fun",
     "ecdsa_fun",
     "sigma_fun",
-    "arithmetic_macros"
+    "arithmetic_macros",
+    "vrf_fun"
 ]
 resolver = "2"
 
