@@ -10,6 +10,10 @@
   - `hash_to_curve` - Simple try-and-increment with uniform distribution (recommended)
   - `hash_to_curve_sswu` - RFC 9380 compliant constant-time hashing
   - `hash_to_curve_rfc9381_tai` - RFC 9381 VRF try-and-increment format
+- Add `Message::new` for BIP340-compliant domain separation using 33-byte padded prefix
+- Deprecate `Message::plain` which uses non-standard 64-byte prefix
+- Remove type parameters from `Message` and `Signature` types (always public now)
+- Remove unused `Slice` type from secp256kfun
 
 ## v0.11.0
 
@@ -20,7 +24,6 @@
 - Large changes to FROST api as usual
 - Add `Hash32` trait to collect all the useful hash traits we use all over the place
 - Add our own take on [chill-dkg](ttps://github.com/BlockstreamResearch/bip-frost-dkg/tree/master) WIP BIP
-
 
 ## v0.10.0
 
@@ -67,7 +70,6 @@
 - Change the `from_bytes` type commands to not assume secrecy in `Scalar` and `Point`.
 - Update to rust-secp256k1 v0.25.0
 
-
 ## 0.7.1
 
 - Fix critical bug in MuSig2 implementation where multiple tweaks would break it
@@ -88,4 +90,3 @@
 ## 0.6.1
 
 - Fix serialization of `Point<EvenY>`
-

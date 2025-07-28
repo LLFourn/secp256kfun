@@ -12,10 +12,12 @@ use secp256kfun::{
 };
 use sha2::Sha256;
 
-/// Compliance type for no aux BIP340 libsecp256k1 implementation.
+/// Compliance type for no aux [BIP340] libsecp256k1 implementation.
 ///
 /// This type is expected to be used in [`Schnorr`] context and receive a tag "BIP0340" to be
-/// compatible with BIP 340 no auxiliary data, i.e. aux is set to null 32-bytes array.
+/// compatible with [BIP340] no auxiliary data, i.e. aux is set to null 32-bytes array.
+///
+/// [BIP340]: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 #[derive(Clone, Debug, Default)]
 struct Bip340NoAux {
     nonce_hash: Sha256,
@@ -67,7 +69,7 @@ proptest! {
         let sig = secp.sign_schnorr_no_aux_rand(&msg, &keypair);
         let schnorr = Schnorr::<Sha256,Bip340NoAux>::default();
         let fun_keypair = schnorr.new_keypair(key);
-        let fun_msg = Message::<Public>::raw(&msg);
+        let fun_msg = Message::raw(&msg);
         let fun_sig: secp256k1::schnorr::Signature = schnorr.sign(&fun_keypair, fun_msg).into();
         prop_assert_eq!(fun_sig, sig, "they produce the same signatures");
     }
@@ -80,7 +82,7 @@ proptest! {
         let fun_pk = secp256k1::XOnlyPublicKey::from_keypair(&keypair).0.into();
         let sig = secp.sign_schnorr_with_aux_rand(&msg, &keypair, &aux_rand);
         let schnorr = Schnorr::<Sha256,_>::verify_only();
-        let fun_msg = Message::<Public>::raw(&msg);
+        let fun_msg = Message::raw(&msg);
         prop_assert!(schnorr.verify(&fun_pk, fun_msg, &sig.into()));
     }
 }

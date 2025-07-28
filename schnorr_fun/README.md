@@ -39,7 +39,7 @@ let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
 // Generate your public/private key-pair
 let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
 // Sign a variable length message
-let message = Message::<Public>::plain("the-times-of-london", b"Chancellor on brink of second bailout for banks");
+let message = Message::new("the-times-of-london", b"Chancellor on brink of second bailout for banks");
 // Sign the message with our keypair
 let signature = schnorr.sign(&keypair, message);
 // Get the verifier's key

@@ -23,7 +23,7 @@
 //! let verification_key = signing_keypair.public_key();
 //! let decryption_key = Scalar::random(&mut rand::thread_rng());
 //! let encryption_key = schnorr.encryption_key_for(&decryption_key);
-//! let message = Message::<Public>::plain("text-bitcoin", b"send 1 BTC to Bob");
+//! let message = Message::new("text-bitcoin", b"send 1 BTC to Bob");
 //!
 //! // Alice knows: signing_keypair, encryption_key
 //! // Bob knows: decryption_key, verification_key
@@ -68,7 +68,7 @@ pub trait EncryptedSign {
         &self,
         signing_keypair: &KeyPair<EvenY>,
         encryption_key: &Point<Normal, impl Secrecy>,
-        message: Message<'_, impl Secrecy>,
+        message: Message<'_>,
     ) -> EncryptedSignature;
 }
 
@@ -81,7 +81,7 @@ where
         &self,
         signing_key: &KeyPair<EvenY>,
         encryption_key: &Point<Normal, impl Secrecy>,
-        message: Message<'_, impl Secrecy>,
+        message: Message<'_>,
     ) -> EncryptedSignature {
         let (x, X) = signing_key.as_tuple();
         let Y = encryption_key;
@@ -139,7 +139,7 @@ pub trait Adaptor {
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl PointType, impl Secrecy>,
-        message: Message<'_, impl Secrecy>,
+        message: Message<'_>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool;
 
@@ -179,7 +179,7 @@ pub trait Adaptor {
         &self,
         encryption_key: &Point<impl Normalized, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
-        signature: &Signature<impl Secrecy>,
+        signature: &Signature,
     ) -> Option<Scalar>;
 }
 
@@ -195,7 +195,7 @@ where
         &self,
         verification_key: &Point<EvenY, impl Secrecy>,
         encryption_key: &Point<impl PointType, impl Secrecy>,
-        message: Message<'_, impl Secrecy>,
+        message: Message<'_>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
     ) -> bool {
         let EncryptedSignature {
@@ -236,7 +236,7 @@ where
         &self,
         encryption_key: &Point<impl PointType, impl Secrecy>,
         encrypted_signature: &EncryptedSignature<impl Secrecy>,
-        signature: &Signature<impl Secrecy>,
+        signature: &Signature,
     ) -> Option<Scalar> {
         if signature.R != encrypted_signature.R {
             return None;
@@ -298,7 +298,7 @@ mod test {
         let signing_keypair = schnorr.new_keypair(secret_key);
         let verification_key = signing_keypair.public_key();
         let encryption_key = schnorr.encryption_key_for(&decryption_key);
-        let message = Message::<Public>::plain("test", b"give 100 coins to Bob".as_ref());
+        let message = Message::new("test", b"give 100 coins to Bob".as_ref());
 
         let encrypted_signature =
             schnorr.encrypted_sign(&signing_keypair, &encryption_key, message);

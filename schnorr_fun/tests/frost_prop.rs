@@ -82,7 +82,7 @@ proptest! {
 
 
         let sid = b"frost-prop-test".as_slice();
-        let message = Message::plain("test", b"test");
+        let message = Message::new("test", b"test");
 
         let secret_nonces: BTreeMap<_, _> = secret_shares_of_signers.iter().map(|paired_secret_share| {
             (paired_secret_share.secret_share().index, frost.gen_nonce::<ChaCha20Rng>(
