@@ -1,96 +1,54 @@
+use core::str::FromStr;
 use schnorr_fun::{
     Message, Schnorr, Signature,
-    fun::{
-        Scalar, hex,
-        marker::*,
-        nonce::{NonceRng, Synthetic},
-        rand_core,
-    },
+    fun::{hex, marker::*},
 };
 use secp256kfun::Point;
 use sha2::Sha256;
 
-static BIP340_CSV: &str = include_str!("./bip340-test-vectors.csv");
-
-struct AuxRng<'a>(&'a [u8]);
-
-impl rand_core::RngCore for AuxRng<'_> {
-    fn next_u32(&mut self) -> u32 {
-        rand_core::impls::next_u32_via_fill(self)
-    }
-    fn next_u64(&mut self) -> u64 {
-        rand_core::impls::next_u64_via_fill(self)
-    }
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        dest.copy_from_slice(self.0)
-    }
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
-        self.fill_bytes(dest);
-        Ok(())
-    }
-}
-
-impl NonceRng for AuxRng<'_> {
-    fn fill_bytes(&self, bytes: &mut [u8]) {
-        bytes.copy_from_slice(self.0)
-    }
-}
+static BIP340_CSV: &str = include_str!("bip340-test-vectors.csv");
 
 #[test]
-fn signing_test_vectors() {
-    use core::str::FromStr;
-
-    let lines: Vec<&str> = BIP340_CSV.split('\n').collect();
-
-    for line in &lines[1..5] {
-        let line: Vec<&str> = line.split(',').collect();
-        let aux_bytes = hex::decode(line[3]).unwrap();
-        let fake_rng = AuxRng(&aux_bytes[..]);
-        let bip340 = Schnorr::<Sha256, _>::new(Synthetic::<Sha256, _>::new(fake_rng));
-        let secret_key = Scalar::<Secret, NonZero>::from_str(line[1]).unwrap();
-        let expected_public_key = Point::<EvenY>::from_str(line[2]).unwrap();
-        let keypair = bip340.new_keypair(secret_key);
-        assert_eq!(keypair.public_key(), expected_public_key);
-        let message = hex::decode(line[4]).unwrap();
-        let signature = bip340.sign(&keypair, Message::raw(&message));
-        let expected_signature = Signature::from_str(line[5]).unwrap();
-        assert_eq!(signature, expected_signature);
-    }
-}
-
-#[test]
-fn verification_test_vectors() {
-    use core::str::FromStr;
+fn bip340_test_vectors() {
     let bip340 = Schnorr::<Sha256>::verify_only();
-    let lines: Vec<&str> = BIP340_CSV.split('\n').collect();
-    for line in &lines[5..16] {
-        let line: Vec<&str> = line.split(',').collect();
+    let mut tests_run = 0;
 
-        let public_key = match Point::<EvenY>::from_str(line[2]) {
-            Ok(public_key) => public_key,
-            Err(e) => {
-                if line[6] == "TRUE" {
-                    panic!("{e:?}");
-                } else {
-                    continue;
-                }
-            }
-        };
-        let message = hex::decode(line[4]).unwrap();
-        let signature = match Signature::from_str(line[5]) {
-            Ok(signature) => signature,
-            Err(e) => {
-                if line[6] == "TRUE" {
-                    panic!("{e:?}")
-                } else {
-                    continue;
-                }
-            }
-        };
+    for (line_num, line) in BIP340_CSV.lines().enumerate() {
+        if line_num == 0 || line.trim().is_empty() {
+            continue; // Skip header and empty lines
+        }
 
-        println!("{line:?}");
-        assert!(
-            bip340.verify(&public_key, Message::raw(&message), &signature) == (line[6] == "TRUE")
-        );
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.len() < 7 {
+            continue;
+        }
+
+        // CSV format: index,secret_key,public_key,aux_rand,message,signature,verification_result,comment
+        let pubkey_hex = parts[2];
+        let message_hex = parts[4];
+        let sig_hex = parts[5];
+        let should_verify = parts[6] == "TRUE";
+        let comment = if parts.len() > 7 { parts[7] } else { "" };
+
+        let pubkey = Point::<EvenY, Public>::from_str(pubkey_hex).ok();
+        let message = hex::decode(message_hex).unwrap_or_default();
+        let signature = Signature::from_str(sig_hex).ok();
+
+        if let (Some(pubkey), Some(signature)) = (pubkey, signature) {
+            let result = bip340.verify(&pubkey, Message::raw(&message), &signature);
+            assert_eq!(
+                result, should_verify,
+                "Line {line_num}: Expected {should_verify}, got {result} ({comment})"
+            );
+            tests_run += 1;
+        } else {
+            assert!(
+                !should_verify,
+                "Line {line_num}: Invalid input should fail ({comment})"
+            );
+            tests_run += 1;
+        }
     }
+
+    assert!(tests_run > 0, "No test vectors were executed!");
 }

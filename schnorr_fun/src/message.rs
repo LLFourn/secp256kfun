@@ -10,7 +10,7 @@ pub struct Message<'a> {
     pub bytes: &'a [u8],
     /// The optional application tag to separate the signature from other applications.
     #[deprecated(
-        since = "0.11.0",
+        since = "0.12.0",
         note = "Use Message::new for BIP340-style domain separation"
     )]
     pub app_tag: Option<&'static str>,
