@@ -358,7 +358,7 @@ pub mod simplepedpop {
     /// [`collect_secret_inputs`] and getting the `AggKeygenInput` from the coordinator.
     ///
     /// This also validates `agg_input`.
-    pub fn receive_share<H, NG>(
+    pub fn receive_secret_share<H, NG>(
         schnorr: &Schnorr<H, NG>,
         agg_input: &AggKeygenInput,
         secret_share: SecretShare,
@@ -444,7 +444,7 @@ pub mod simplepedpop {
         for receiver in share_receivers {
             let secret_share =
                 collect_secret_inputs(receiver, secret_inputs.remove(&receiver).unwrap());
-            let paired_share = receive_share(schnorr, &agg_input, secret_share).unwrap();
+            let paired_share = receive_secret_share(schnorr, &agg_input, secret_share).unwrap();
             paired_shares.push(paired_share.non_zero().unwrap());
         }
 
@@ -673,19 +673,19 @@ pub mod encpedpop {
         pub fn recover_share<H: Hash32>(
             &self,
             share_index: ShareIndex,
-            encryption_keypair: &KeyPair,
+            keypair: &KeyPair,
         ) -> Result<PairedSecretShare, &'static str> {
             let (expected_public_key, agg_ciphertext) = self
                 .encrypted_shares
                 .get(&share_index)
                 .ok_or("No party at party_index existed")?;
 
-            if *expected_public_key != encryption_keypair.public_key() {
+            if *expected_public_key != keypair.public_key() {
                 return Err("this isn't the right encryption keypair for this share");
             }
             let secret_share = decrypt::<H>(
                 share_index,
-                encryption_keypair,
+                keypair,
                 &self.encryption_nonces,
                 *agg_ciphertext,
             );
@@ -897,10 +897,10 @@ pub mod encpedpop {
     /// Extract our secret share from the `AggKeygenInput`.
     ///
     /// This also validates `agg_input`.
-    pub fn receive_share<H, NG>(
+    pub fn receive_secret_share<H, NG>(
         schnorr: &Schnorr<H, NG>,
         my_index: ShareIndex,
-        encryption_keypair: &KeyPair,
+        keypair: &KeyPair,
         agg_input: &AggKeygenInput,
     ) -> Result<PairedSecretShare<Normal, Zero>, simplepedpop::ReceiveShareError>
     where
@@ -913,7 +913,7 @@ pub mod encpedpop {
             .unwrap_or_default();
         let share_scalar = decrypt::<H>(
             my_index,
-            encryption_keypair,
+            keypair,
             &agg_input.encryption_nonces,
             encrypted_share,
         );
@@ -922,7 +922,7 @@ pub mod encpedpop {
             share: share_scalar,
         };
         let paired_secret_share =
-            simplepedpop::receive_share(schnorr, &agg_input.inner, secret_share)?;
+            simplepedpop::receive_secret_share(schnorr, &agg_input.inner, secret_share)?;
 
         Ok(paired_secret_share)
     }
@@ -945,16 +945,16 @@ pub mod encpedpop {
 
     fn decrypt<H: Hash32>(
         my_index: ShareIndex,
-        encryption_keypair: &KeyPair<Normal>,
+        keypair: &KeyPair<Normal>,
         multi_nocnes: &[Point],
         mut agg_ciphertext: Scalar<Public, Zero>,
     ) -> Scalar<Secret, Zero> {
         for nonce in multi_nocnes {
-            let dh_key = g!(encryption_keypair.secret_key() * nonce).normalize();
+            let dh_key = g!(keypair.secret_key() * nonce).normalize();
             let pad = Scalar::from_hash(
                 H::default()
                     .add(dh_key)
-                    .add(encryption_keypair.public_key())
+                    .add(keypair.public_key())
                     .add(my_index),
             );
             agg_ciphertext -= pad;
@@ -1022,7 +1022,7 @@ pub mod encpedpop {
         let mut paired_secret_shares = vec![];
         for (party_index, enckey) in receiver_enckeys {
             let paired_secret_share =
-                receive_share(schnorr, party_index, &enckey, &agg_input).unwrap();
+                receive_secret_share(schnorr, party_index, &enckey, &agg_input).unwrap();
             paired_secret_shares.push(paired_secret_share.non_zero().unwrap());
         }
 
@@ -1112,14 +1112,14 @@ pub mod certpedpop {
     impl<S: CertificationScheme> CertifiedKeygen<S> {
         /// Recover a share from a certified key generation with the decryption key.
         ///
-        /// This checks that the `encryption_keypair` has signed the key generation first.
+        /// This checks that the `keypair` has signed the key generation first.
         pub fn recover_share<H: Hash32>(
             &self,
             cert_scheme: &S,
             share_index: ShareIndex,
-            encryption_keypair: KeyPair,
+            keypair: KeyPair,
         ) -> Result<PairedSecretShare, &'static str> {
-            let cert_key = encryption_keypair.public_key();
+            let cert_key = keypair.public_key();
             let my_cert = self
                 .certificate
                 .get(&cert_key)
@@ -1127,8 +1127,7 @@ pub mod certpedpop {
             if !cert_scheme.verify_cert(cert_key, &self.input, my_cert) {
                 return Err("my certification was invalid");
             }
-            self.input
-                .recover_share::<H>(share_index, &encryption_keypair)
+            self.input.recover_share::<H>(share_index, &keypair)
         }
 
         /// Gets the inner `encpedpop::AggKeygenInput`.
@@ -1141,21 +1140,21 @@ pub mod certpedpop {
 
     /// Stores the state of share recipient who first receives their share and then waits to get
     /// signatures from all the certifying parties on the keygeneration before accepting it.
-    pub struct ShareReceiver {
+    pub struct SecretShareReceiver {
         paired_secret_share: PairedSecretShare<Normal, Zero>,
         agg_input: AggKeygenInput,
     }
 
-    impl ShareReceiver {
-        /// Extract your `encryption_keypair` and certify the key generation. Before you actually
+    impl SecretShareReceiver {
+        /// Extract your `keypair` and certify the key generation. Before you actually
         /// can use the share you must call [`finalize`] with a completed certificate.
         ///
         /// [`finalize`]: Self::finalize
-        pub fn receive_share<H, NG, S>(
+        pub fn receive_secret_share<H, NG, S>(
             schnorr: &Schnorr<H, NG>,
             cert_scheme: &S,
             my_index: ShareIndex,
-            encryption_keypair: &KeyPair,
+            keypair: &KeyPair,
             agg_input: &AggKeygenInput,
         ) -> Result<(Self, S::Signature), simplepedpop::ReceiveShareError>
         where
@@ -1164,8 +1163,8 @@ pub mod certpedpop {
             S: CertificationScheme,
         {
             let paired_secret_share =
-                encpedpop::receive_share(schnorr, my_index, encryption_keypair, agg_input)?;
-            let sig = cert_scheme.certify(encryption_keypair, agg_input);
+                encpedpop::receive_secret_share(schnorr, my_index, keypair, agg_input)?;
+            let sig = cert_scheme.certify(keypair, agg_input);
             let self_ = Self {
                 paired_secret_share,
                 agg_input: agg_input.clone(),
@@ -1282,7 +1281,7 @@ pub mod certpedpop {
         let mut paired_secret_shares = vec![];
         let mut share_receivers = vec![];
         for (party_index, enckey) in &receiver_enckeys {
-            let (share_receiver, cert) = ShareReceiver::receive_share(
+            let (share_receiver, cert) = SecretShareReceiver::receive_secret_share(
                 schnorr,
                 cert_scheme,
                 *party_index,
@@ -1403,8 +1402,8 @@ mod test {
                 &mut rng
             );
 
-            for (paired_secret_share, encryption_keypair) in paired_secret_shares_and_keys {
-                let recovered = certified_keygen.recover_share::<sha2::Sha256>(&schnorr, paired_secret_share.index(), encryption_keypair).unwrap();
+            for (paired_secret_share, keypair) in paired_secret_shares_and_keys {
+                let recovered = certified_keygen.recover_share::<sha2::Sha256>(&schnorr, paired_secret_share.index(), keypair).unwrap();
                 assert_eq!(paired_secret_share, recovered);
             }
         }
