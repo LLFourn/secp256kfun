@@ -6,7 +6,7 @@
 //! - How to secretly transport secret share contribution from each contributor to their intended destination
 //! - Checking that each party got the correct output by comparing [`AggKeygenInput::cert_bytes`] on each of them.
 //!
-//! [`AggKeygenInput::cert_bytes`]: simplepedpop::AggKeygenInput::cert_bytes
+//! [`AggKeygenInput::cert_bytes`]: AggKeygenInput::cert_bytes
 use crate::{Message, Schnorr, Signature, frost::*};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
@@ -392,5 +392,29 @@ impl core::fmt::Display for ReceiveShareError {
                     "The share extracted from the key generation was invalid",
             }
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::frost::chilldkg::simplepedpop;
+
+    use proptest::{
+        prelude::*,
+        test_runner::{RngAlgorithm, TestRng},
+    };
+    use secp256kfun::proptest;
+
+    proptest! {
+        #[test]
+        fn simplepedpop_run_simulate_keygen(
+            (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
+            n_generators in 1u32..5,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+        }
     }
 }

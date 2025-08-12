@@ -8,7 +8,7 @@
 //! The application still must figure out when all parties agree on the [`AggKeygenInput`] before
 //! using it.
 //!
-//! [`AggKeygenInput`]: encpedpop::AggKeygenInput
+//! [`AggKeygenInput`]: AggKeygenInput
 use super::simplepedpop;
 use crate::{Message, Schnorr, Signature, frost::*};
 use alloc::{
@@ -541,4 +541,65 @@ where
 
     let shared_key = agg_input.shared_key().non_zero().unwrap();
     (shared_key, paired_secret_shares)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::frost::{Fingerprint, chilldkg::encpedpop};
+
+    use proptest::{
+        prelude::*,
+        test_runner::{RngAlgorithm, TestRng},
+    };
+    use secp256kfun::proptest;
+
+    proptest! {
+        #[test]
+        fn encpedpop_run_simulate_keygen(
+            (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
+            n_generators in 1u32..5,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            encpedpop::simulate_keygen(
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                Fingerprint::none(),
+                &mut rng,
+            );
+        }
+
+        #[test]
+        fn encpedpop_simulate_keygen_with_fingerprint(
+            (n_receivers, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
+            n_generators in 1u32..5,
+            difficulty in 0u8..10,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            let fingerprint = crate::frost::shared_key::Fingerprint {
+                bit_length: difficulty,
+                tag: "test-fingerprint",
+            };
+
+            let (shared_key, paired_shares) = encpedpop::simulate_keygen(
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                fingerprint,
+                &mut rng,
+            );
+
+            for share in paired_shares {
+                assert_eq!(shared_key.pair_secret_share(*share.secret_share()), Some(share));
+            }
+
+            assert!(shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint), "fingerprint was grinded correctly");
+        }
+    }
 }

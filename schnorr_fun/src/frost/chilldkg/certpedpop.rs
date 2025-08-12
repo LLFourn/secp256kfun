@@ -7,13 +7,113 @@
 //! can finally output the key.
 //!
 //! Certificates are collected from other share receivers as well as `Contributor`s.
-use super::{CertificationScheme, encpedpop, simplepedpop, vrf_cert};
+use super::{encpedpop, simplepedpop};
 use crate::{Schnorr, frost::*};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
 };
 use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, prelude::*, rand_core};
+
+/// A trait for signature schemes that can be used to certify the DKG output.
+///
+/// This allows applications to choose their preferred signature scheme for
+/// certifying the aggregated keygen input in certpedpop.
+pub trait CertificationScheme {
+    /// The signature type produced by this scheme
+    type Signature: Clone + core::fmt::Debug;
+
+    /// The output produced by successful verification
+    type Output: Clone + core::fmt::Debug;
+
+    /// Sign the AggKeygenInput with the given keypair
+    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature;
+
+    /// Verify a certification signature and return the output
+    fn verify_cert(
+        &self,
+        cert_key: Point,
+        agg_input: &encpedpop::AggKeygenInput,
+        signature: &Self::Signature,
+    ) -> Option<Self::Output>;
+}
+
+/// Standard Schnorr (BIP340) implementation of the CertificationScheme trait
+impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
+    type Signature = crate::Signature;
+    type Output = ();
+
+    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature {
+        let cert_bytes = agg_input.cert_bytes();
+        let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
+        let keypair_even_y = (*keypair).into();
+        self.sign(&keypair_even_y, message)
+    }
+
+    fn verify_cert(
+        &self,
+        cert_key: Point,
+        agg_input: &encpedpop::AggKeygenInput,
+        signature: &Self::Signature,
+    ) -> Option<Self::Output> {
+        let cert_bytes = agg_input.cert_bytes();
+        let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
+        let cert_key_even_y = cert_key.into_point_with_even_y().0;
+        if self.verify(&cert_key_even_y, message, signature) {
+            Some(())
+        } else {
+            None
+        }
+    }
+}
+
+/// VRF-based implementation of CertificationScheme
+#[cfg(feature = "vrf_cert_keygen")]
+pub mod vrf_cert {
+    use super::*;
+    use vrf_fun::VrfProof;
+
+    /// VRF certification scheme using SSWU VRF
+    pub struct VrfCertifier;
+
+    /// The output from VRF verification containing the gamma point
+    #[derive(Clone, Debug)]
+    pub struct VrfOutput {
+        /// The VRF output point (gamma)
+        pub gamma: Point,
+    }
+
+    /// Implement CertificationScheme for VrfCertifier
+    impl CertificationScheme for VrfCertifier {
+        type Signature = VrfProof;
+        type Output = VrfOutput;
+
+        fn certify(
+            &self,
+            keypair: &KeyPair,
+            agg_input: &encpedpop::AggKeygenInput,
+        ) -> Self::Signature {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::sswu::prove::<sha2::Sha256>(keypair, &cert_bytes)
+        }
+
+        fn verify_cert(
+            &self,
+            cert_key: Point,
+            agg_input: &encpedpop::AggKeygenInput,
+            signature: &Self::Signature,
+        ) -> Option<Self::Output> {
+            // Use the certification bytes as the VRF input
+            let cert_bytes = agg_input.cert_bytes();
+            vrf_fun::rfc9381::sswu::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature).map(
+                |output| VrfOutput {
+                    gamma: output.gamma,
+                },
+            )
+        }
+    }
+}
 
 /// A party that generates secret input to the key generation. You need at least one of these
 /// and if at least one of these parties is honest then the final secret key will not be known by an
@@ -158,6 +258,25 @@ impl CertifiedKeygen<vrf_cert::VrfCertifier> {
     /// This function hashes all the VRF gamma points together to produce
     /// unpredictable randomness that no single party could have controlled
     /// (as long as at least one party is honest).
+    ///
+    /// ## Use for Manual Verification
+    ///
+    /// In settings where participants must manually verify the keygen succeeded
+    /// and there's no trusted public key infrastructure, the randomness beacon
+    /// serves as a compact fingerprint of the entire protocol execution.
+    ///
+    /// Participants can verify they all have the same view of the protocol by
+    /// comparing just a few bytes of the beacon (e.g., the first 4 bytes shown
+    /// on device screens). This works because:
+    ///
+    /// 1. Each honest participant verifies their VRF contribution is included
+    /// 2. VRFs are deterministic - malicious parties cannot adapt their
+    ///    contribution after seeing honest contributions
+    /// 3. No party can predict the final beacon value before the protocol runs
+    ///
+    /// This prevents malicious parties from giving different participants
+    /// different views of the keygen outcome without detection, achieving similar
+    /// security to comparing a full 32-byte hash but with better usability.
     pub fn compute_randomness_beacon(&self) -> [u8; 32] {
         use sha2::{Digest, Sha256};
 
@@ -390,3 +509,78 @@ impl core::fmt::Display for CertificateError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for CertificateError {}
+
+#[cfg(test)]
+mod test {
+    use crate::frost::chilldkg::certpedpop;
+
+    use super::*;
+    use proptest::{
+        prelude::*,
+        test_runner::{RngAlgorithm, TestRng},
+    };
+    use secp256kfun::proptest;
+
+    proptest! {
+        #[test]
+        fn certified_run_simulate_keygen(
+            (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
+            n_generators in 1u32..5,
+        ) {
+            let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+            let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+            let (certified_keygen, paired_secret_shares_and_keys) = certpedpop::simulate_keygen(
+                &schnorr,
+                &schnorr,
+                threshold,
+                n_receivers,
+                n_generators,
+                Fingerprint::none(),
+                &mut rng
+            );
+
+            for (paired_secret_share, keypair) in paired_secret_shares_and_keys {
+                let recovered = certified_keygen.recover_share::<sha2::Sha256>(&schnorr, paired_secret_share.index(), keypair).unwrap();
+                assert_eq!(paired_secret_share, recovered);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "vrf_cert_keygen")]
+    fn vrf_certified_keygen_randomness_beacon() {
+        use proptest::test_runner::{RngAlgorithm, TestRng};
+
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let vrf_certifier = vrf_cert::VrfCertifier;
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+
+        let threshold = 2;
+        let n_receivers = 3;
+        let n_generators = 2;
+
+        let (certified_keygen, _) = certpedpop::simulate_keygen(
+            &schnorr,
+            &vrf_certifier,
+            threshold,
+            n_receivers,
+            n_generators,
+            Fingerprint::none(),
+            &mut rng,
+        );
+
+        // Compute randomness beacon from the VRF outputs
+        let randomness = certified_keygen.compute_randomness_beacon();
+
+        // Verify the randomness is deterministic
+        let randomness2 = certified_keygen.compute_randomness_beacon();
+        assert_eq!(randomness, randomness2);
+
+        // Verify we have the expected number of VRF outputs
+        assert_eq!(
+            certified_keygen.outputs().len(),
+            (n_receivers + n_generators) as usize
+        );
+    }
+}
