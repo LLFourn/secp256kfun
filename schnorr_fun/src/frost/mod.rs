@@ -96,9 +96,8 @@ mod session;
 pub use session::*;
 pub mod chilldkg;
 pub use crate::binonce::{Nonce, NonceKeyPair};
-use crate::{Message, Schnorr, Signature, binonce};
+use crate::{Message, Schnorr, binonce};
 use alloc::collections::{BTreeMap, BTreeSet};
-use core::num::NonZeroU32;
 use secp256kfun::{
     KeyPair, derive_nonce_rng,
     hash::{Hash32, HashAdd, Tag},
