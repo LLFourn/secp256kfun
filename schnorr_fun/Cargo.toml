@@ -17,6 +17,8 @@ keywords = ["bitcoin", "schnorr"]
 secp256kfun = { path = "../secp256kfun", version = "0.11",  default-features = false }
 bech32 = { version = "0.11", optional = true, default-features = false, features = ["alloc"] }
 bincode = { workspace =  true, optional = true }
+vrf_fun = { path = "../vrf_fun", version = "0.11", optional = true, default-features = false }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.11",  features = ["proptest", "bincode", "alloc"] }
@@ -49,6 +51,7 @@ libsecp_compat_0_29 = ["secp256kfun/libsecp_compat_0_29"]
 libsecp_compat_0_30 = ["secp256kfun/libsecp_compat_0_30"]
 proptest = ["secp256kfun/proptest"]
 share_backup = ["dep:bech32"]
+vrf_cert_keygen = ["dep:vrf_fun", "dep:sha2", "alloc", "secp256kfun/std", "vrf_fun/std"]
 
 [package.metadata.docs.rs]
 all-features = true
