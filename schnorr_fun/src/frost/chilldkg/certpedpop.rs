@@ -226,6 +226,7 @@ impl<S: CertificationScheme> CertifiedKeygen<S> {
             .certificate
             .get(&cert_key)
             .ok_or("I haven't certified this keygen")?;
+        // We may have gotten this certificate from *somewhere* so must verify we certified it
         if cert_scheme
             .verify_cert(cert_key, &self.input, my_cert)
             .is_none()
@@ -337,7 +338,7 @@ impl SecretShareReceiver {
         cert_scheme: &S,
         certificate: Certificate<S::Signature>,
         contributor_keys: &[Point],
-    ) -> Result<(CertifiedKeygen<S>, PairedSecretShare<Normal, Zero>), &'static str> {
+    ) -> Result<(CertifiedKeygen<S>, PairedSecretShare<Normal, Zero>), CertificateError> {
         let mut outputs = BTreeMap::new();
         let cert_keys = self
             .agg_input
@@ -350,9 +351,9 @@ impl SecretShareReceiver {
                     Some(output) => {
                         outputs.insert(cert_key, output);
                     }
-                    None => return Err("certification signature was invalid"),
+                    None => return Err(CertificateError::InvalidCert { key: cert_key }),
                 },
-                None => return Err("missing certification signature"),
+                None => return Err(CertificateError::Missing { key: cert_key }),
             }
         }
 
