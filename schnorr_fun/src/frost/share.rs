@@ -1,3 +1,4 @@
+use super::ShareIndex;
 use secp256kfun::{poly, prelude::*};
 /// A *[Shamir secret share]*.
 ///
@@ -87,8 +88,11 @@ impl SecretShare {
     }
 
     /// Get the image of the secret share.
-    pub fn share_image(&self) -> Point<NonNormal, Public, Zero> {
-        g!(self.share * G)
+    pub fn share_image(&self) -> ShareImage {
+        ShareImage {
+            index: self.index,
+            image: g!(self.share * G).normalize(),
+        }
     }
 }
 
@@ -265,12 +269,12 @@ impl PairedSecretShare<Normal> {
 
 impl PairedSecretShare<EvenY> {
     /// Get the verification for the inner secret share.
-    pub fn verification_share(&self) -> VerificationShare<NonNormal> {
-        VerificationShare {
+    pub fn verification_share(&self) -> VerificationShare {
+        VerificationShare(ShareImage {
             index: self.index(),
-            share_image: self.secret_share.share_image(),
-            public_key: self.public_key,
-        }
+            // we don't use SecretShare::share_image because it normalizes which is unecessary here
+            image: g!(self.secret_share.share * G),
+        })
     }
 }
 
@@ -286,14 +290,7 @@ impl PairedSecretShare<EvenY> {
 ///
 /// [`share_image`]: SecretShare::share_image
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct VerificationShare<T: PointType> {
-    /// The index of the share in the secret sharing
-    pub index: ShareIndex,
-    /// The image of the secret share
-    pub share_image: Point<T, Public, Zero>,
-    /// The public key that this is a share of
-    pub public_key: Point<EvenY>,
-}
+pub struct VerificationShare(pub(crate) ShareImage<NonNormal>);
 
 #[cfg(feature = "share_backup")]
 mod share_backup {
@@ -501,7 +498,45 @@ mod share_backup {
 #[cfg(feature = "share_backup")]
 pub use share_backup::BackupDecodeError;
 
-use super::ShareIndex;
+/// The public image of a secret share, consisting of an index and the corresponding point.
+///
+/// A `ShareImage` represents the public information about a share: the index at
+/// which the polynomial was evaluated and the image of the secret share. This
+/// can be shared publicly and used to reconstruct the shared public key and the polynomial
+/// from a threshold number of share images using [`SharedKey::from_share_images`].
+///
+/// [`SharedKey::from_share_images`]: crate::frost::SharedKey::from_share_images
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(bincode::Encode, bincode::Decode),
+    bincode(
+        encode_bounds = "Point<T, Public, Zero>: bincode::Encode",
+        decode_bounds = "Point<T, Public, Zero>: bincode::Decode<__Context>",
+        borrow_decode_bounds = "Point<T, Public, Zero>: bincode::BorrowDecode<'__de, __Context>"
+    )
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde"),
+    serde(bound(
+        serialize = "Point<T, Public, Zero>: crate::fun::serde::Serialize",
+        deserialize = "Point<T, Public, Zero>: crate::fun::serde::Deserialize<'de>"
+    ))
+)]
+pub struct ShareImage<T = Normal> {
+    /// The index where the polynomial was evaluated
+    pub index: ShareIndex,
+    /// The image of the secret share (G * share_scalar)
+    pub image: Point<T, Public, Zero>,
+}
+
+impl<T: PointType> PartialEq for ShareImage<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.image == other.image
+    }
+}
 
 #[cfg(test)]
 mod test {
