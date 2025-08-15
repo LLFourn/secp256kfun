@@ -532,9 +532,45 @@ pub struct ShareImage<T = Normal> {
     pub image: Point<T, Public, Zero>,
 }
 
-impl<T: PointType> PartialEq for ShareImage<T> {
+impl<T> PartialEq for ShareImage<T>
+where
+    Point<T, Public, Zero>: PartialEq,
+{
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index && self.image == other.image
+    }
+}
+
+impl<T> Eq for ShareImage<T> where Point<T, Public, Zero>: Eq {}
+
+impl<T> PartialOrd for ShareImage<T>
+where
+    Point<T, Public, Zero>: Ord,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> Ord for ShareImage<T>
+where
+    Point<T, Public, Zero>: Ord,
+{
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        match self.index.cmp(&other.index) {
+            core::cmp::Ordering::Equal => self.image.cmp(&other.image),
+            ord => ord,
+        }
+    }
+}
+
+impl<T> core::hash::Hash for ShareImage<T>
+where
+    Point<T, Public, Zero>: core::hash::Hash,
+{
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
+        self.image.hash(state);
     }
 }
 
