@@ -55,23 +55,21 @@ impl CoordinatorSignSession {
     ///
     /// The `verification_share` is usually derived from either [`SharedKey::verification_share`] or
     /// [`PairedSecretShare::verification_share`].
+    ///
+    /// **Important**: The verification share must come from the same `SharedKey` that this session
+    /// was created for. If the key has been tweaked or modified since the session was created,
+    /// the verification will fail. Each verification share is tied to a specific polynomial and
+    /// cannot be reused across different keys or tweaked versions of the same key.
     pub fn verify_signature_share(
         &self,
-        verification_share: VerificationShare<impl PointType>,
+        verification_share: VerificationShare,
         signature_share: SignatureShare,
     ) -> Result<(), SignatureShareInvalid> {
-        let X = verification_share.share_image;
-        let index = verification_share.index;
-
-        // We need to know the verification share was generated against the session's key for
-        // further validity to have any meaning.
-        if verification_share.public_key != self.public_key() {
-            return Err(SignatureShareInvalid { index });
-        }
+        let X = verification_share.0.image;
+        let index = verification_share.0.index;
 
         let s = signature_share;
-        let lambda =
-            poly::eval_basis_poly_at_0(verification_share.index, self.nonces.keys().cloned());
+        let lambda = poly::eval_basis_poly_at_0(index, self.nonces.keys().cloned());
         let c = &self.challenge;
         let b = &self.binding_coeff;
         let [R1, R2] = self

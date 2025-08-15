@@ -1,4 +1,4 @@
-use super::{PairedSecretShare, SecretShare, ShareIndex, VerificationShare};
+use super::{PairedSecretShare, SecretShare, ShareImage, ShareIndex, VerificationShare};
 use alloc::vec::Vec;
 use core::{marker::PhantomData, ops::Deref};
 use secp256kfun::{poly, prelude::*};
@@ -179,8 +179,11 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     /// contains a share image).
     ///
     /// [`verification_share`]: Self::verification_share
-    pub fn share_image(&self, index: ShareIndex) -> Point<NonNormal, Public, Zero> {
-        poly::point::eval(&self.point_polynomial, index)
+    pub fn share_image(&self, index: ShareIndex) -> ShareImage {
+        ShareImage {
+            index,
+            image: poly::point::eval(&self.point_polynomial, index).normalize(),
+        }
     }
 
     /// Checks if the polynomial coefficients contain a fingerprint by verifying that
@@ -268,7 +271,7 @@ impl SharedKey<Normal, Zero> {
     ///
     /// If all the share images are correct and you have at least a threshold of them then you'll
     /// get the original shared key. If you put in a wrong share you won't get the right answer and
-    /// there will be no error.
+    /// there will be **no error**.
     ///
     /// Note that a "share image" is not a concept that we really use in the core of this library
     /// but you can get one from a share with [`SecretShare::share_image`].
@@ -277,26 +280,29 @@ impl SharedKey<Normal, Zero> {
     ///
     /// ⚠ You can't just take any points you want and pass them in here and hope it's secure.
     /// They need to be from a securely generated key.
-    pub fn from_share_images(
-        shares: &[(ShareIndex, Point<impl PointType, Public, impl ZeroChoice>)],
-    ) -> Self {
-        let poly = poly::point::interpolate(shares);
+    pub fn from_share_images(share_images: impl IntoIterator<Item = ShareImage>) -> Self {
+        let shares: Vec<(ShareIndex, Point<Normal, Public, Zero>)> = share_images
+            .into_iter()
+            .map(|img| (img.index, img.image))
+            .collect();
+        let poly = poly::point::interpolate(&shares);
         let poly = poly::point::normalize(poly);
         SharedKey::from_inner(poly.collect())
     }
 }
 
 impl SharedKey<EvenY> {
-    /// The verification shares of each party in the key.
+    /// Creates a verification share for a party at the given index.
     ///
-    /// The verification share is the image of their secret share.
-    pub fn verification_share(&self, index: ShareIndex) -> VerificationShare<NonNormal> {
-        let share_image = poly::point::eval(&self.point_polynomial, index);
-        VerificationShare {
-            index,
-            share_image,
-            public_key: self.public_key(),
-        }
+    /// The verification share is the image of the party's secret share evaluated from this key's polynomial.
+    ///
+    /// **Important**: The returned `VerificationShare` can only be used to verify signatures
+    /// against the specific `SharedKey` that created it. You must ensure you're verifying
+    /// against the correct shared key. If the polynomial has been tweaked or modified,
+    /// you'll need to get a new verification share from the modified key.
+    pub fn verification_share(&self, index: ShareIndex) -> VerificationShare {
+        let image = poly::point::eval(&self.point_polynomial, index);
+        VerificationShare(ShareImage { index, image })
     }
 }
 
