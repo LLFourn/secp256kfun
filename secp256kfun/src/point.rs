@@ -79,6 +79,12 @@ impl<T, S, Z> AsRef<backend::Point> for Point<T, S, Z> {
     }
 }
 
+impl<T, S, Z> AsRef<Point<T, S, Z>> for Point<T, S, Z> {
+    fn as_ref(&self) -> &Point<T, S, Z> {
+        self
+    }
+}
+
 impl<T: Copy, S, Z> Copy for Point<T, S, Z> {}
 
 impl Point<Normal, Public, NonZero> {

@@ -35,8 +35,13 @@ pub mod scalar {
     ///     .collect::<Vec<_>>();
     /// let point_poly = poly::scalar::to_point_poly(&secret_poly);
     /// ```
-    pub fn to_point_poly(scalar_poly: &[Scalar]) -> Vec<Point> {
-        scalar_poly.iter().map(|a| g!(a * G).normalize()).collect()
+    pub fn to_point_poly<S: Secrecy, Z: ZeroChoice>(
+        scalar_poly: impl IntoIterator<Item = impl AsRef<Scalar<S, Z>>>,
+    ) -> Vec<Point<Normal, Public, Z>> {
+        scalar_poly
+            .into_iter()
+            .map(|a| g!(a.as_ref() * G).normalize())
+            .collect()
     }
 
     /// Generate a [`Scalar`] polynomial with `length` coefficients.

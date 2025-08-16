@@ -233,7 +233,7 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
     }
 }
 
-impl SharedKey<Normal> {
+impl SharedKey {
     /// Convert the key into a [BIP340] "x-only" SharedKey.
     ///
     /// This is the [BIP340] compatible version of the key which you can put in a segwitv1 output.
@@ -247,6 +247,18 @@ impl SharedKey<Normal> {
         }
 
         SharedKey::from_inner(self.point_polynomial)
+    }
+
+    /// Creates a non-zero `SharedKey` from a known `NonZero` first coefficient the other coefficients in `rest`.
+    pub fn from_non_zero_poly<Z>(
+        first_coef: Point,
+        rest: impl IntoIterator<Item = Point<Normal, Public, Z>>,
+    ) -> Self {
+        let mut poly = vec![first_coef.mark_zero()];
+        for point in rest.into_iter() {
+            poly.push(point.mark_zero());
+        }
+        Self::from_inner(poly)
     }
 }
 
