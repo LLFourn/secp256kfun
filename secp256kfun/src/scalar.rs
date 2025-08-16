@@ -59,6 +59,12 @@ impl<S, Z> AsRef<backend::Scalar> for Scalar<S, Z> {
     }
 }
 
+impl<S, Z> AsRef<Scalar<S, Z>> for Scalar<S, Z> {
+    fn as_ref(&self) -> &Scalar<S, Z> {
+        self
+    }
+}
+
 impl<S, Z> Clone for Scalar<S, Z> {
     fn clone(&self) -> Self {
         *self
