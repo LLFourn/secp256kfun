@@ -2,6 +2,7 @@
 
 ## UNRELEASED
 
+- Add `SharedKey::from_non_zero_poly`
 - Change `poly::scalar::to_point_poly` to make it less opinionated 
 - Add From/TryFrom conversions for `Scalar` to all unsigned integer types
 - Upgrade to bincode v2
