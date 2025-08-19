@@ -11,7 +11,7 @@ use sigma_fun::{
 };
 
 /// VRF proof structure
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
@@ -61,7 +61,21 @@ where
     }
 }
 
+#[cfg(feature = "bincode")]
+impl<'a, L, Context> bincode::BorrowDecode<'a, Context> for VrfProof<L>
+where
+    L: ArrayLength<u8> + IsLessOrEqual<U32>,
+    <L as IsLessOrEqual<U32>>::Output: NonZero,
+{
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'a, Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        <Self as bincode::Decode<Context>>::decode(decoder)
+    }
+}
+
 /// Verified random output that ensures gamma has been verified
+#[derive(Debug, Clone)]
 pub struct VerifiedRandomOutput {
     pub gamma: Point,
 }
