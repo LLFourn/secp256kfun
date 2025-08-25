@@ -21,7 +21,7 @@ use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, prelude::*, rand_core}
 /// certifying the aggregated keygen input in certpedpop.
 pub trait CertificationScheme {
     /// The signature type produced by this scheme
-    type Signature: Clone + core::fmt::Debug;
+    type Signature: Clone + core::fmt::Debug + PartialEq;
 
     /// The output produced by successful verification
     type Output: Clone + core::fmt::Debug;
@@ -146,7 +146,7 @@ impl<Sig> Default for Certificate<Sig> {
     }
 }
 
-impl<Sig> Certificate<Sig> {
+impl<Sig: PartialEq + core::fmt::Debug> Certificate<Sig> {
     /// Create a new empty certificate
     pub fn new() -> Self {
         Self::default()
@@ -154,6 +154,9 @@ impl<Sig> Certificate<Sig> {
 
     /// Insert a signature/proof for a public key
     pub fn insert(&mut self, key: Point, sig: Sig) {
+        if let Some(existing) = self.0.get(&key) {
+            assert_eq!(existing, &sig, "certification should not change");
+        }
         self.0.insert(key, sig);
     }
 
@@ -402,27 +405,39 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme>(
     cert_scheme: &S,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_extra_generators: u32,
     fingerprint: Fingerprint,
     rng: &mut impl rand_core::RngCore,
 ) -> (
     CertifiedKeygen<S>,
     Vec<(PairedSecretShare<Normal>, KeyPair)>,
 ) {
-    let share_receivers = (1..=n_receivers)
-        .map(|i| Scalar::from(i).non_zero().unwrap())
-        .collect::<BTreeSet<_>>();
-
-    let mut receiver_enckeys = share_receivers
-        .iter()
-        .cloned()
-        .map(|party_index| (party_index, KeyPair::new(Scalar::random(rng))))
+    let mut receiver_enckeys = (1..=n_receivers)
+        .map(|i| {
+            let party_index = Scalar::from(i).non_zero().unwrap();
+            (party_index, KeyPair::new(Scalar::random(rng)))
+        })
         .collect::<BTreeMap<_, _>>();
 
     let public_receiver_enckeys = receiver_enckeys
         .iter()
         .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
         .collect::<BTreeMap<ShareIndex, Point>>();
+
+    // Total number of generators is receivers + extra generators
+    let n_generators = n_receivers + n_extra_generators;
+
+    // Generate keypairs for contributors - receivers will use their existing keypairs
+    let contributor_keys: Vec<_> = (1..=n_receivers)
+        .map(|i| {
+            let party_index = Scalar::from(i).non_zero().unwrap();
+            receiver_enckeys[&party_index]
+        })
+        .chain(core::iter::repeat_n(
+            KeyPair::new(Scalar::random(rng)),
+            n_extra_generators as _,
+        ))
+        .collect();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
         ..n_generators)
@@ -431,9 +446,6 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme>(
         })
         .unzip();
 
-    let contributor_keys = (0..n_generators)
-        .map(|_| KeyPair::new(Scalar::random(rng)))
-        .collect::<Vec<_>>();
     let contributor_public_keys = contributor_keys
         .iter()
         .map(|kp| kp.public_key())
@@ -550,7 +562,7 @@ mod test {
         #[test]
         fn certified_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_extra_generators in 0u32..=3,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
@@ -560,7 +572,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_extra_generators,
                 Fingerprint::none(),
                 &mut rng
             );
@@ -583,14 +595,14 @@ mod test {
 
         let threshold = 2;
         let n_receivers = 3;
-        let n_generators = 2;
+        let n_extra_generators = 0; // All receivers are also generators
 
         let (certified_keygen, _) = certpedpop::simulate_keygen(
             &schnorr,
             &vrf_certifier,
             threshold,
             n_receivers,
-            n_generators,
+            n_extra_generators,
             Fingerprint::none(),
             &mut rng,
         );
@@ -605,107 +617,7 @@ mod test {
         // Verify we have the expected number of VRF outputs
         assert_eq!(
             certified_keygen.outputs().len(),
-            (n_receivers + n_generators) as usize
+            (n_receivers + n_extra_generators) as usize
         );
-    }
-
-    #[test]
-    fn contributors_are_receivers() {
-        use proptest::test_runner::{RngAlgorithm, TestRng};
-        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
-        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-
-        let threshold = 3;
-        let n_receivers = 5;
-        let n_contributors = 2; // First 2 receivers will also be contributors
-
-        // Create receiver keypairs
-        let share_receivers = (1..=n_receivers)
-            .map(|i| Scalar::from(i as u32).non_zero().unwrap())
-            .collect::<BTreeSet<_>>();
-
-        let receiver_enckeys = share_receivers
-            .iter()
-            .cloned()
-            .map(|party_index| (party_index, KeyPair::new(Scalar::random(&mut rng))))
-            .collect::<BTreeMap<_, _>>();
-
-        let public_receiver_enckeys = receiver_enckeys
-            .iter()
-            .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
-            .collect::<BTreeMap<ShareIndex, Point>>();
-
-        // Generate contributors
-        let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
-            ..n_contributors)
-            .map(|i| {
-                Contributor::gen_keygen_input(
-                    &schnorr,
-                    threshold,
-                    &public_receiver_enckeys,
-                    i,
-                    &mut rng,
-                )
-            })
-            .unzip();
-
-        // Contributors use the first n_contributors receiver keypairs
-        let contributor_keys: Vec<KeyPair> = receiver_enckeys
-            .values()
-            .take(n_contributors as usize)
-            .cloned()
-            .collect();
-
-        let contributor_public_keys = contributor_keys
-            .iter()
-            .map(|kp| kp.public_key())
-            .collect::<Vec<_>>();
-
-        // Aggregate inputs
-        let mut aggregator = Coordinator::new(threshold, n_contributors, &public_receiver_enckeys);
-
-        for (i, to_coordinator_message) in to_coordinator_messages.into_iter().enumerate() {
-            aggregator
-                .add_input(&schnorr, i as u32, to_coordinator_message)
-                .unwrap();
-        }
-
-        let agg_input = aggregator.finish().unwrap();
-        let mut certificate = Certificate::new();
-
-        // Contributors certify
-        for (contributor, keypair) in contributors.into_iter().zip(contributor_keys.iter()) {
-            let sig = contributor
-                .verify_agg_input(&schnorr, &agg_input, keypair)
-                .unwrap();
-            certificate.insert(keypair.public_key(), sig);
-        }
-
-        // Receivers certify
-        let mut paired_secret_shares = vec![];
-        let mut share_receivers = vec![];
-        for (party_index, enckey) in &receiver_enckeys {
-            let (share_receiver, cert) = SecretShareReceiver::receive_secret_share(
-                &schnorr,
-                &schnorr,
-                *party_index,
-                enckey,
-                &agg_input,
-            )
-            .unwrap();
-            certificate.insert(enckey.public_key(), cert);
-            share_receivers.push(share_receiver);
-        }
-
-        // Finalize
-        for share_receiver in share_receivers {
-            let (_certified_keygen, paired_secret_share) = share_receiver
-                .finalize(&schnorr, certificate.clone(), &contributor_public_keys)
-                .unwrap();
-            paired_secret_shares.push(paired_secret_share.non_zero().unwrap());
-        }
-
-        // Verify we have the expected number of unique shares
-        assert_eq!(paired_secret_shares.len(), n_receivers as usize);
     }
 }
