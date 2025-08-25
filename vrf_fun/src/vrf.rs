@@ -1,6 +1,5 @@
 //! Generic VRF implementation that can work with different transcript types
 
-use core::marker::PhantomData;
 use secp256kfun::{KeyPair, Scalar, prelude::*};
 use sigma_fun::{
     CompactProof, FiatShamir, ProverTranscript, Transcript,
@@ -15,12 +14,23 @@ use sigma_fun::{
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
-    serde(bound(serialize = "", deserialize = ""))
+    serde(bound(
+        deserialize = "L: ArrayLength<u8>, CompactProof<Scalar<Public, Zero>, L>: serde::Deserialize<'de>",
+        serialize = "L: ArrayLength<u8>, CompactProof<Scalar<Public, Zero>, L>: serde::Serialize",
+    ))
+)]
+#[cfg_attr(
+    feature = "bincode",
+    derive(bincode::Encode, bincode::Decode),
+    bincode(
+        encode_bounds = "L: ArrayLength<u8>, CompactProof<Scalar<Public, Zero>, L>: bincode::Encode",
+        decode_bounds = "L: ArrayLength<u8>, CompactProof<Scalar<Public, Zero>, L>: bincode::Decode<__Context>",
+        borrow_decode_bounds = "L: ArrayLength<u8>, CompactProof<Scalar<Public, Zero>, L>: bincode::BorrowDecode<'__de, __Context>"
+    )
 )]
 pub struct VrfProof<L = U16>
 where
-    L: ArrayLength<u8> + IsLessOrEqual<U32>,
-    <L as IsLessOrEqual<U32>>::Output: NonZero,
+    L: ArrayLength<u8>,
 {
     /// The VRF output point.
     ///
@@ -30,50 +40,6 @@ where
     pub proof: CompactProof<Scalar<Public, Zero>, L>,
 }
 
-#[cfg(feature = "bincode")]
-impl<L> bincode::Encode for VrfProof<L>
-where
-    L: ArrayLength<u8> + IsLessOrEqual<U32>,
-    <L as IsLessOrEqual<U32>>::Output: NonZero,
-{
-    fn encode<E: bincode::enc::Encoder>(
-        &self,
-        encoder: &mut E,
-    ) -> Result<(), bincode::error::EncodeError> {
-        self.gamma.encode(encoder)?;
-        self.proof.encode(encoder)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "bincode")]
-impl<L, Context> bincode::Decode<Context> for VrfProof<L>
-where
-    L: ArrayLength<u8> + IsLessOrEqual<U32>,
-    <L as IsLessOrEqual<U32>>::Output: NonZero,
-{
-    fn decode<D: bincode::de::Decoder<Context = Context>>(
-        decoder: &mut D,
-    ) -> Result<Self, bincode::error::DecodeError> {
-        let gamma = Point::decode(decoder)?;
-        let proof = CompactProof::<Scalar<Public, Zero>, L>::decode(decoder)?;
-        Ok(VrfProof { gamma, proof })
-    }
-}
-
-#[cfg(feature = "bincode")]
-impl<'a, L, Context> bincode::BorrowDecode<'a, Context> for VrfProof<L>
-where
-    L: ArrayLength<u8> + IsLessOrEqual<U32>,
-    <L as IsLessOrEqual<U32>>::Output: NonZero,
-{
-    fn borrow_decode<D: bincode::de::BorrowDecoder<'a, Context = Context>>(
-        decoder: &mut D,
-    ) -> Result<Self, bincode::error::DecodeError> {
-        <Self as bincode::Decode<Context>>::decode(decoder)
-    }
-}
-
 /// Verified random output that ensures gamma has been verified
 #[derive(Debug, Clone)]
 pub struct VerifiedRandomOutput {
@@ -81,14 +47,9 @@ pub struct VerifiedRandomOutput {
 }
 
 /// Generic VRF implementation
-pub struct Vrf<T, ChallengeLength = U16>
-where
-    ChallengeLength: ArrayLength<u8> + IsLessOrEqual<U32>,
-    <ChallengeLength as IsLessOrEqual<U32>>::Output: NonZero,
-{
+pub struct Vrf<T, ChallengeLength = U16> {
     dleq: crate::VrfDleq<ChallengeLength>,
     pub transcript: T,
-    _phantom: PhantomData<ChallengeLength>,
 }
 
 impl<T: Clone, ChallengeLength> Vrf<T, ChallengeLength>
@@ -103,7 +64,6 @@ where
         Self {
             dleq: Eq::new(DLG::default(), DL::default()),
             transcript,
-            _phantom: PhantomData,
         }
     }
 }
