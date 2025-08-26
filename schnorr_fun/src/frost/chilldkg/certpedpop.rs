@@ -21,7 +21,7 @@ use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, prelude::*, rand_core}
 /// certifying the aggregated keygen input in certpedpop.
 pub trait CertificationScheme {
     /// The signature type produced by this scheme
-    type Signature: Clone + core::fmt::Debug;
+    type Signature: Clone + core::fmt::Debug + PartialEq;
 
     /// The output produced by successful verification
     type Output: Clone + core::fmt::Debug;
@@ -74,10 +74,11 @@ pub mod vrf_cert {
     use vrf_fun::VrfProof;
 
     /// VRF certification scheme using SSWU VRF
+    #[derive(Clone, Debug, PartialEq)]
     pub struct VrfCertifier;
 
     /// The output from VRF verification containing the gamma point
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq)]
     pub struct VrfOutput {
         /// The VRF output point (gamma)
         pub gamma: Point,
@@ -118,6 +119,7 @@ pub mod vrf_cert {
 /// A party that generates secret input to the key generation. You need at least one of these
 /// and if at least one of these parties is honest then the final secret key will not be known by an
 /// attacker (unless they obtain `t` shares!).
+#[derive(Clone, Debug, PartialEq)]
 pub struct Contributor {
     inner: encpedpop::Contributor,
 }
@@ -128,7 +130,13 @@ pub type KeygenInput = encpedpop::KeygenInput;
 /// Key generation inputs after being aggregated by the coordinator
 pub type AggKeygenInput = encpedpop::AggKeygenInput;
 /// A certificate containing signatures or proofs from certifying parties
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "serde",
+    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
+    serde(crate = "crate::fun::serde")
+)]
 pub struct Certificate<Sig>(BTreeMap<Point, Sig>);
 
 /// A certificate containing signatures or proofs from certifying parties
@@ -138,7 +146,7 @@ impl<Sig> Default for Certificate<Sig> {
     }
 }
 
-impl<Sig> Certificate<Sig> {
+impl<Sig: PartialEq + core::fmt::Debug> Certificate<Sig> {
     /// Create a new empty certificate
     pub fn new() -> Self {
         Self::default()
@@ -146,6 +154,9 @@ impl<Sig> Certificate<Sig> {
 
     /// Insert a signature/proof for a public key
     pub fn insert(&mut self, key: Point, sig: Sig) {
+        if let Some(existing) = self.0.get(&key) {
+            assert_eq!(existing, &sig, "certification should not change");
+        }
         self.0.insert(key, sig);
     }
 
@@ -157,6 +168,17 @@ impl<Sig> Certificate<Sig> {
     /// Iterate over all entries in the certificate
     pub fn iter(&self) -> impl Iterator<Item = (&Point, &Sig)> {
         self.0.iter()
+    }
+
+    /// The number of certificates stored
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Have any certificates been collected
+    pub fn is_empty(&self) -> bool {
+        // clippy::len_without_is_empty wanted this method
+        self.0.is_empty()
     }
 }
 
@@ -203,12 +225,14 @@ impl Contributor {
 }
 
 /// A key generation session that has been certified by each certifying party (contributors and share receivers).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CertifiedKeygen<S: CertificationScheme> {
-    input: AggKeygenInput,
-    certificate: Certificate<S::Signature>,
+    /// The aggregated inputs to keygen
+    pub input: AggKeygenInput,
+    /// The collected certificates from each party
+    pub certificate: Certificate<S::Signature>,
     /// The outputs from successful verification, indexed by certifying party's public key
-    outputs: BTreeMap<Point, S::Output>,
+    pub outputs: BTreeMap<Point, S::Output>,
 }
 
 impl<S: CertificationScheme> CertifiedKeygen<S> {
@@ -296,6 +320,7 @@ pub use encpedpop::Coordinator;
 
 /// Stores the state of share recipient who first receives their share and then waits to get
 /// signatures from all the certifying parties on the keygeneration before accepting it.
+#[derive(Debug, Clone, PartialEq)]
 pub struct SecretShareReceiver {
     paired_secret_share: PairedSecretShare<Normal, Zero>,
     agg_input: AggKeygenInput,
@@ -344,7 +369,9 @@ impl SecretShareReceiver {
             .agg_input
             .encryption_keys()
             .map(|(_, encryption_key)| encryption_key)
-            .chain(contributor_keys.iter().cloned());
+            .chain(contributor_keys.iter().cloned())
+            .collect::<BTreeSet<_>>(); // dedupe as some contributers may have also be receivers
+
         for cert_key in cert_keys {
             match certificate.get(&cert_key) {
                 Some(sig) => match cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
@@ -378,27 +405,39 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme>(
     cert_scheme: &S,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_extra_generators: u32,
     fingerprint: Fingerprint,
     rng: &mut impl rand_core::RngCore,
 ) -> (
     CertifiedKeygen<S>,
     Vec<(PairedSecretShare<Normal>, KeyPair)>,
 ) {
-    let share_receivers = (1..=n_receivers)
-        .map(|i| Scalar::from(i).non_zero().unwrap())
-        .collect::<BTreeSet<_>>();
-
-    let mut receiver_enckeys = share_receivers
-        .iter()
-        .cloned()
-        .map(|party_index| (party_index, KeyPair::new(Scalar::random(rng))))
+    let mut receiver_enckeys = (1..=n_receivers)
+        .map(|i| {
+            let party_index = Scalar::from(i).non_zero().unwrap();
+            (party_index, KeyPair::new(Scalar::random(rng)))
+        })
         .collect::<BTreeMap<_, _>>();
 
     let public_receiver_enckeys = receiver_enckeys
         .iter()
         .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
         .collect::<BTreeMap<ShareIndex, Point>>();
+
+    // Total number of generators is receivers + extra generators
+    let n_generators = n_receivers + n_extra_generators;
+
+    // Generate keypairs for contributors - receivers will use their existing keypairs
+    let contributor_keys: Vec<_> = (1..=n_receivers)
+        .map(|i| {
+            let party_index = Scalar::from(i).non_zero().unwrap();
+            receiver_enckeys[&party_index]
+        })
+        .chain(core::iter::repeat_n(
+            KeyPair::new(Scalar::random(rng)),
+            n_extra_generators as _,
+        ))
+        .collect();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
         ..n_generators)
@@ -407,9 +446,6 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme>(
         })
         .unzip();
 
-    let contributor_keys = (0..n_generators)
-        .map(|_| KeyPair::new(Scalar::random(rng)))
-        .collect::<Vec<_>>();
     let contributor_public_keys = contributor_keys
         .iter()
         .map(|kp| kp.public_key())
@@ -526,7 +562,7 @@ mod test {
         #[test]
         fn certified_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_extra_generators in 0u32..=3,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
@@ -536,7 +572,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_extra_generators,
                 Fingerprint::none(),
                 &mut rng
             );
@@ -559,14 +595,14 @@ mod test {
 
         let threshold = 2;
         let n_receivers = 3;
-        let n_generators = 2;
+        let n_extra_generators = 0; // All receivers are also generators
 
         let (certified_keygen, _) = certpedpop::simulate_keygen(
             &schnorr,
             &vrf_certifier,
             threshold,
             n_receivers,
-            n_generators,
+            n_extra_generators,
             Fingerprint::none(),
             &mut rng,
         );
@@ -581,7 +617,7 @@ mod test {
         // Verify we have the expected number of VRF outputs
         assert_eq!(
             certified_keygen.outputs().len(),
-            (n_receivers + n_generators) as usize
+            (n_receivers + n_extra_generators) as usize
         );
     }
 }

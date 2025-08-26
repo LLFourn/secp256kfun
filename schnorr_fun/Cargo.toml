@@ -18,7 +18,7 @@ secp256kfun = { path = "../secp256kfun", version = "0.11",  default-features = f
 bech32 = { version = "0.11", optional = true, default-features = false, features = ["alloc"] }
 bincode = { workspace =  true, optional = true }
 vrf_fun = { path = "../vrf_fun", version = "0.11", optional = true, default-features = false }
-sha2 = { version = "0.10", optional = true }
+sha2 = { version = "0.10", optional = true, default-features = false }
 
 [dev-dependencies]
 secp256kfun = { path = "../secp256kfun", version = "0.11",  features = ["proptest", "bincode", "alloc"] }
@@ -40,10 +40,10 @@ required-features = ["libsecp_compat"]
 
 [features]
 default = ["std"]
-alloc = ["secp256kfun/alloc" ]
-std = ["alloc", "secp256kfun/std"]
-bincode = [ "dep:bincode", "secp256kfun/bincode"]
-serde = ["secp256kfun/serde"]
+alloc = ["secp256kfun/alloc"]
+std = ["alloc", "secp256kfun/std", "vrf_fun?/std"]
+bincode = [ "dep:bincode", "secp256kfun/bincode", "vrf_fun?/bincode"]
+serde = ["secp256kfun/serde", "vrf_fun?/serde"]
 libsecp_compat = ["libsecp_compat_0_30", "secp256kfun/libsecp_compat"]
 libsecp_compat_0_27 = ["secp256kfun/libsecp_compat_0_27"]
 libsecp_compat_0_28 = ["secp256kfun/libsecp_compat_0_28"]
@@ -51,7 +51,7 @@ libsecp_compat_0_29 = ["secp256kfun/libsecp_compat_0_29"]
 libsecp_compat_0_30 = ["secp256kfun/libsecp_compat_0_30"]
 proptest = ["secp256kfun/proptest"]
 share_backup = ["dep:bech32"]
-vrf_cert_keygen = ["dep:vrf_fun", "dep:sha2", "alloc", "secp256kfun/std", "vrf_fun/std"]
+vrf_cert_keygen = ["dep:vrf_fun", "dep:sha2"]
 
 [package.metadata.docs.rs]
 all-features = true
