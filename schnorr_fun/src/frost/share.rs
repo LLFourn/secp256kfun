@@ -50,12 +50,12 @@ use secp256kfun::{poly, prelude::*};
 /// [`bech32m`]: https://bips.xyz/350
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct SecretShare {
+pub struct SecretShare<S = Secret> {
     /// The scalar index for this secret share, usually this is a small number but it can take any
     /// value (other than 0).
     pub index: ShareIndex,
     /// The secret scalar which is the output of the polynomial evaluated at `index`
-    pub share: Scalar<Secret, Zero>,
+    pub share: Scalar<S, Zero>,
 }
 
 impl SecretShare {
@@ -68,7 +68,9 @@ impl SecretShare {
 
         poly::scalar::interpolate_and_eval_poly_at_0(&index_and_secret[..])
     }
+}
 
+impl<S: Secrecy> SecretShare<S> {
     /// Encodes the secret share to 64 bytes. The first 32 is the index and the second 32 is the
     /// secret.
     pub fn to_bytes(&self) -> [u8; 64] {
@@ -94,10 +96,26 @@ impl SecretShare {
             image: g!(self.share * G).normalize(),
         }
     }
+
+    /// Homomorphically adds a scalar polynomial to this secret share.
+    ///
+    /// Given a scalar polynomial, evaluates it at this share's index and adds
+    /// the result to the share value. This operation preserves the polynomial
+    /// relationship between shares due to the homomorphic properties of
+    /// Shamir's secret sharing.
+    ///
+    /// Afterwards the share so that it's no longer valid with original
+    /// [`SharedKey`] polynomial but is valid instead for the sum of the
+    /// original polynomial and the new one.
+    ///
+    /// [`Sharedkey`]: crate::frost::SharedKey
+    pub fn homomorphic_poly_add(&mut self, poly: &[Scalar<Public, Zero>]) {
+        self.share += poly::scalar::eval(poly, self.index);
+    }
 }
 
 secp256kfun::impl_fromstr_deserialize! {
-    name => "secp256k1 FROST share",
+    name => "secp256k1 FROST secret share",
     fn from_bytes(bytes: [u8;64]) -> Option<SecretShare> {
         SecretShare::from_bytes(bytes)
     }
@@ -231,6 +249,27 @@ impl<Z: ZeroChoice, T: PointType> PairedSecretShare<T, Z> {
         PairedSecretShare {
             secret_share,
             public_key: shared_key,
+        }
+    }
+
+    /// Homomorphically adds a scalar polynomial to this paired secret share.
+    ///
+    /// See [`SecretShare::homomorphic_poly_add`] for more info.
+    #[must_use]
+    pub fn homomorphic_poly_add(
+        mut self,
+        poly: &[Scalar<Public, Zero>],
+    ) -> PairedSecretShare<Normal, Zero> {
+        // Apply the polynomial to the secret share
+        self.secret_share.homomorphic_poly_add(poly);
+        let pk_tweak = poly.first().copied().unwrap_or(Scalar::zero());
+
+        // Update the public key by the constant term
+        let public_key = g!(self.public_key + pk_tweak * G).normalize();
+
+        PairedSecretShare {
+            secret_share: self.secret_share,
+            public_key,
         }
     }
 

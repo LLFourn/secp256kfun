@@ -1,7 +1,7 @@
 use super::{PairedSecretShare, SecretShare, ShareImage, ShareIndex, VerificationShare};
 use alloc::vec::Vec;
 use core::{marker::PhantomData, ops::Deref};
-use secp256kfun::{poly, prelude::*};
+use secp256kfun::{hash::Hash32, poly, prelude::*};
 
 /// A polynomial where the first coefficient (constant term) is the image of a secret `Scalar` that
 /// has been shared in a [Shamir's secret sharing] structure.
@@ -21,7 +21,7 @@ pub struct SharedKey<T = Normal, Z = NonZero> {
     ty: PhantomData<(T, Z)>,
 }
 
-impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
+impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
     /// "pair" a secret share that belongs to this shared key so you can keep track of tweaks to the
     /// public key and the secret share together.
     ///
@@ -186,35 +186,32 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         }
     }
 
-    /// Checks if the polynomial coefficients contain a fingerprint by verifying that
-    /// each coefficient (when hashed with all previous coefficients) has the required
-    /// number of leading zero bits.
+    /// Checks if the polynomial coefficients contain the specified `fingerprint`.
     ///
-    /// This is useful for detecting if shares come from the same DKG session or if
-    /// they have been corrupted.
+    /// Verifies that each non-constant coefficient, when hashed together with all
+    /// previous coefficients, produces a hash with at least `fingerprint.bit_length`
+    /// leading zero bits. This allows detection of shares from the same DKG session
+    /// and helps identify corrupted or mismatched shares.
     ///
-    /// ## Parameters
-    /// - `fingerprint`: The expected fingerprint configuration
-    ///
-    /// ## Returns
-    /// `true` if all coefficients match the fingerprint pattern, `false` otherwise
+    /// Returns `true` if all coefficients match the fingerprint pattern, `false`
+    /// if any coefficient fails to meet the difficulty requirement.
     pub fn check_fingerprint<H: crate::fun::hash::Hash32>(
         &self,
         fingerprint: &Fingerprint,
     ) -> bool {
         use crate::fun::hash::HashAdd;
 
-        if self.point_polynomial.is_empty() {
+        // the fingerprint is only placed on the non-constant coefficients so it
+        // can't be detected with a length 1 polynomial
+        if self.point_polynomial.len() <= 1 {
             return true;
         }
 
-        // Start with hash including the tag with length prefix
-        let mut hash_state = H::default();
-        if !fingerprint.tag.is_empty() {
-            hash_state = hash_state.add([fingerprint.tag.len() as u8]);
-            hash_state = hash_state.add(fingerprint.tag.as_bytes());
-        }
-        hash_state = hash_state.add(self.point_polynomial[0]);
+        let mut hash_state = H::default()
+            .add([fingerprint.tag.len() as u8])
+            .add(fingerprint.tag.as_bytes())
+            // the public key is unmolested by the fingerprint
+            .add(self.point_polynomial[0]);
 
         // Check each non-constant coefficient
         for i in 1..self.point_polynomial.len() {
@@ -230,6 +227,72 @@ impl<T: PointType, Z: ZeroChoice> SharedKey<T, Z> {
         }
 
         true
+    }
+
+    /// Grinds polynomial coefficients to embed the specified `fingerprint` through
+    /// proof-of-work.
+    ///
+    /// For each non-constant coefficient, repeatedly adds the generator point `G`
+    /// until the cumulative hash (including the tag, public key, and all previous
+    /// coefficients) has at least `fingerprint.bit_length` leading zero bits.
+    /// This process modifies the polynomial while preserving the shared secret.
+    ///
+    /// Returns a scalar polynomial where the constant term is always zero
+    /// and the remaining coefficients indicate how many times `G` was added
+    /// to each polynomial coefficient. This polynomial can be added to secret
+    /// shares using [`SecretShare::homomorphic_poly_add`] to maintain consistency.
+    ///
+    /// The computational cost increases exponentially with `bit_length`: each
+    /// additional bit doubles the expected work required.
+    pub fn grind_fingerprint<H: Hash32>(
+        &mut self,
+        fingerprint: Fingerprint,
+    ) -> Vec<Scalar<Public, Zero>> {
+        let mut tweaks = Vec::with_capacity(self.threshold());
+        // We don't mutate the first coefficient
+        tweaks.push(Scalar::<Public, _>::zero());
+
+        if self.point_polynomial.len() <= 1 {
+            // only mutate non-constant terms
+            return tweaks;
+        }
+
+        use secp256kfun::hash::HashAdd;
+        let mut hash_state = H::default()
+            .add([fingerprint.tag.len() as u8])
+            .add(fingerprint.tag.as_bytes())
+            // the public key is unmolested from the fingerprint grinding
+            .add(self.point_polynomial[0]);
+
+        for coeff in &mut self.point_polynomial[1..] {
+            let mut total_tweak = Scalar::<Public, Zero>::zero();
+            let mut current_coeff = *coeff;
+
+            loop {
+                // Clone the hash state from previous coefficients and add current one
+                let hash = hash_state.clone().add(current_coeff);
+                // Check if hash has required number of leading zero bits
+                let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
+                if Fingerprint::leading_zero_bits(&hash_bytes[..])
+                    >= fingerprint.bit_length as usize
+                {
+                    // Update hash_state for next coefficient because the next coefficient hash
+                    // includes the current one.
+                    hash_state = hash;
+                    break;
+                }
+
+                // Add one more G to the coefficient
+                total_tweak += s!(1);
+                current_coeff = g!(current_coeff + G).normalize();
+            }
+
+            // Apply the final tweak to the polynomial coefficient
+            *coeff = current_coeff;
+            tweaks.push(total_tweak);
+        }
+
+        tweaks
     }
 }
 
@@ -376,8 +439,13 @@ bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
 
 /// Configuration for polynomial fingerprinting in DKG protocols.
 ///
-/// This allows coordinators to embed identifying information into polynomial coefficients
-/// to help detect when shares from different DKG sessions are mixed.
+/// A `Fingerprint` allows coordinators to embed proof-of-work into polynomial
+/// coefficients during distributed key generation. This helps detect when shares
+/// from different DKG sessions are accidentally mixed and provides resistance
+/// against resource exhaustion attacks.
+///
+/// The fingerprint is computed by hashing the public key with each subsequent
+/// coefficient, requiring each hash to have a minimum number of leading zero bits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fingerprint {
     /// Number of leading zero bits required in the hash

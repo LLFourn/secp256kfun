@@ -216,82 +216,45 @@ impl AggKeygenInput {
             .ok_or("the shared secret was zero")
     }
 
-    /// Grinds all polynomial coefficients to achieve a fingerprint by rejection sampling.
-    /// This is meant to be run by the coordinator.
+    /// Embeds a proof-of-work `fingerprint` into the aggregated polynomial.
     ///
-    /// This method modifies each non-constant coefficient of the polynomial through group
-    /// addition until the running hash (computed by sequentially incorporating coefficients)
-    /// has the required number of leading zero bits at each step.
+    /// This coordinator-only operation modifies the DKG output to include
+    /// a verifiable proof of work by grinding the polynomial coefficients.
+    /// The `fingerprint` specifies the required difficulty (number of leading
+    /// zero bits) and an optional tag to include in the hash.
     ///
-    /// The fingerprint is tied to the specific public key by including it in the hash.
+    /// The process:
+    /// 1. Grinds the shared key's polynomial to achieve the fingerprint
+    /// 2. Updates the aggregated polynomial with the ground coefficients
+    /// 3. Homomorphically applies the same tweaks to all encrypted shares
     ///
-    /// ## Parameters
-    /// - `fingerprint`: The fingerprint configuration specifying difficulty and tag
-    ///
-    /// ## Security
-    /// This modification does not affect the security of the DKG as it only modifies
-    /// non-constant polynomial coefficients which are malleable by the coordinator.
+    /// This modification preserves the security of the DKG because:
+    /// - The shared secret (constant term) remains unchanged
+    /// - Only non-constant coefficients are modified, which are already
+    ///   malleable by the coordinator
+    /// - The homomorphic property ensures all shares remain consistent
+    /// - Participants can verify the fingerprint matches the claimed difficulty
     pub fn grind_fingerprint<H: Hash32>(&mut self, fingerprint: Fingerprint) {
         if self.inner.agg_poly.is_empty() {
             return;
         }
 
-        // Get the public key (first coefficient) by aggregating key contributions
-        let public_key = self
-            .inner
-            .key_contrib
-            .iter()
-            .fold(Point::zero(), |agg, (point, _)| g!(agg + point))
-            .normalize();
+        let mut shared_key = self.shared_key();
+        let tweak_poly = shared_key.grind_fingerprint::<H>(fingerprint);
+        // replace our poly with the one that has the fingerprint
+        self.inner.agg_poly = shared_key.point_polynomial()[1..].to_vec();
+        debug_assert!(self.shared_key().check_fingerprint::<H>(&fingerprint));
 
-        // Start with hash including the tag with length prefix
-        let mut hash_state = H::default();
-        if !fingerprint.tag.is_empty() {
-            hash_state = hash_state.add([fingerprint.tag.len() as u8]);
-            hash_state = hash_state.add(fingerprint.tag.as_bytes());
-        }
-        hash_state = hash_state.add(public_key);
-
-        let mut tweaks = Vec::with_capacity(self.inner.agg_poly.len());
-
-        // Grind each coefficient in sequence, note that agg_poly only
-        // contains the non-constant coefficients.
-        for coeff_index in 0..self.inner.agg_poly.len() {
-            let mut total_tweak = Scalar::<Public, Zero>::zero();
-            let original_coeff = self.inner.agg_poly[coeff_index];
-            let mut current_coeff = original_coeff;
-
-            loop {
-                // Clone the hash state from previous coefficients and add current one
-                let hash = hash_state.clone().add(current_coeff);
-                // Check if hash has required number of leading zero bits
-                let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
-                if Fingerprint::leading_zero_bits(&hash_bytes[..])
-                    >= fingerprint.bit_length as usize
-                {
-                    // Update hash_state for next coefficient because the next coefficient hash
-                    // includes the current one.
-                    hash_state = hash;
-                    break;
-                }
-
-                // Add one more G to the coefficient
-                total_tweak += s!(1);
-                current_coeff = g!(current_coeff + G).normalize();
-            }
-
-            // Apply the final tweak to the polynomial coefficient
-            self.inner.agg_poly[coeff_index] = current_coeff;
-            tweaks.push(total_tweak);
-        }
-
-        // Apply all tweaks to encrypted shares at once
-        for (share_index, (_enc_key, encrypted_share)) in &mut self.encrypted_shares {
-            let mut power = *share_index;
-            for tweak in &tweaks {
-                *encrypted_share += s!(tweak * power).public();
-                power *= share_index;
-            }
+        for (share_index, (_encryption_key, encrypted_secret_share)) in &mut self.encrypted_shares {
+            // 💡 The share encryption is homomorphic so we can apply the tweak
+            // operations the same way as if the coordinator had a local copy of
+            // the the unencrypted secret share.
+            let mut tmp = SecretShare {
+                index: *share_index,
+                share: *encrypted_secret_share,
+            };
+            tmp.homomorphic_poly_add(&tweak_poly);
+            *encrypted_secret_share = tmp.share;
         }
     }
 }
