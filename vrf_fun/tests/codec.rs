@@ -1,3 +1,5 @@
+#![cfg(feature = "bincode")]
+
 use secp256kfun::{KeyPair, prelude::*};
 use vrf_fun::VrfProof;
 
