@@ -71,11 +71,14 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
 #[cfg(feature = "vrf_cert_keygen")]
 pub mod vrf_cert {
     use super::*;
+    use secp256kfun::digest::core_api::BlockSizeUser;
     use vrf_fun::VrfProof;
 
     /// VRF certification scheme using SSWU VRF
-    #[derive(Clone, Debug, PartialEq)]
-    pub struct VrfCertifier;
+    #[derive(Clone, Copy, Debug, PartialEq, Default)]
+    pub struct VrfCertifier<H> {
+        hash: core::marker::PhantomData<H>,
+    }
 
     /// The output from VRF verification containing the gamma point
     #[derive(Clone, Debug, PartialEq)]
@@ -85,7 +88,7 @@ pub mod vrf_cert {
     }
 
     /// Implement CertificationScheme for VrfCertifier
-    impl CertificationScheme for VrfCertifier {
+    impl<H: Hash32 + BlockSizeUser> CertificationScheme for VrfCertifier<H> {
         type Signature = VrfProof;
         type Output = VrfOutput;
 
@@ -96,7 +99,7 @@ pub mod vrf_cert {
         ) -> Self::Signature {
             // Use the certification bytes as the VRF input
             let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::sswu::prove::<sha2::Sha256>(keypair, &cert_bytes)
+            vrf_fun::rfc9381::sswu::prove::<H>(keypair, &cert_bytes)
         }
 
         fn verify_cert(
@@ -107,11 +110,11 @@ pub mod vrf_cert {
         ) -> Option<Self::Output> {
             // Use the certification bytes as the VRF input
             let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::sswu::verify::<sha2::Sha256>(cert_key, &cert_bytes, signature).map(
-                |output| VrfOutput {
+            vrf_fun::rfc9381::sswu::verify::<H>(cert_key, &cert_bytes, signature).map(|output| {
+                VrfOutput {
                     gamma: output.gamma,
-                },
-            )
+                }
+            })
         }
     }
 }
@@ -277,7 +280,9 @@ impl<S: CertificationScheme> CertifiedKeygen<S> {
 }
 
 #[cfg(feature = "vrf_cert_keygen")]
-impl CertifiedKeygen<vrf_cert::VrfCertifier> {
+impl<H: Hash32 + secp256kfun::digest::crypto_common::BlockSizeUser>
+    CertifiedKeygen<vrf_cert::VrfCertifier<H>>
+{
     /// Compute a randomness beacon from the VRF outputs
     ///
     /// This function hashes all the VRF gamma points together to produce
@@ -303,16 +308,14 @@ impl CertifiedKeygen<vrf_cert::VrfCertifier> {
     /// different views of the keygen outcome without detection, achieving similar
     /// security to comparing a full 32-byte hash but with better usability.
     pub fn compute_randomness_beacon(&self) -> [u8; 32] {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::new();
+        let mut hasher = H::default();
 
         // BTreeMap already maintains sorted order by key
         for output in self.outputs.values() {
-            hasher.update(output.gamma.to_bytes());
+            hasher.update(output.gamma.to_bytes().as_ref());
         }
 
-        hasher.finalize().into()
+        hasher.finalize_fixed().into()
     }
 }
 
@@ -590,7 +593,7 @@ mod test {
         use proptest::test_runner::{RngAlgorithm, TestRng};
 
         let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
-        let vrf_certifier = vrf_cert::VrfCertifier;
+        let vrf_certifier = vrf_cert::VrfCertifier::<sha2::Sha256>::default();
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
         let threshold = 2;
