@@ -6,6 +6,11 @@ on:
       - master
   pull_request:
 
+# Cancel in-progress jobs when a new commit is pushed to the same PR or branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Make sure CI fails on all warnings, including Clippy lints
 env:
   RUSTFLAGS: "-Dwarnings"
@@ -23,6 +28,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy_check:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +39,17 @@ jobs:
       - run: cargo clippy --all-targets --all-features --tests
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
-      - run: cargo tree --all-features # to debug deps issues
       - run: cargo build --release --all-features
 
   # We want to test stable on multiple platforms with --all-features
   test:
+    name: Test on ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -50,23 +57,27 @@ jobs:
         target: ["x86_64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: Swatinem/rust-cache@v2.0.0
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
 
-      - name: test-on-target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
-          command: test
-          args: --all-features --release --target ${{ matrix.target }}
+      # Use cross for non-x86_64 targets
+      - name: Install cross
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        uses: taiki-e/install-action@cross
+
+      - name: Test
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ]; then
+            cargo test --all-features --release --target ${{ matrix.target }}
+          else
+            cross test --all-features --release --target ${{ matrix.target }}
+          fi
 
   # test nightly build/test
   test-nightly:
+    name: Test Nightly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,18 +87,21 @@ jobs:
 
   # test without default features
   test-minimal:
+    name: Test Minimal (${{ matrix.package }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun"]
+        package:
+          ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun", "vrf_fun"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2.0.0
+      - uses: Swatinem/rust-cache@v2
       - run: cargo test --release --no-default-features -p ${{ matrix.package }}
 
   # test with alloc feature only
   test-alloc:
+    name: Test Alloc (${{ matrix.package }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,11 +109,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2.0.0
+      - uses: Swatinem/rust-cache@v2
       - run: cargo test --release --no-default-features --features alloc -p ${{ matrix.package }}
 
   doc-build:
-    name: doc-build
+    name: Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -11,9 +11,9 @@ serde = ["dep:serde", "secp256kfun/serde", "sigma_fun/serde", "generic-array/ser
 bincode = ["secp256kfun/bincode", "sigma_fun/bincode", "dep:bincode"]
 
 [dependencies]
-secp256kfun = { path = "../secp256kfun", default-features = false }
-sigma_fun = { path = "../sigma_fun", default-features = false, features = ["secp256k1"] }
-rand_chacha = { version = "0.3", default-features = false }
+secp256kfun = { workspace = true }
+sigma_fun = { workspace = true, features = ["secp256k1"] }
+rand_chacha = { workspace = true }
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", default-features = false }
 bincode = { workspace = true, optional = true }
