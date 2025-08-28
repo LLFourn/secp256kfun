@@ -147,10 +147,7 @@ const YDEN: [FieldElement; 4] = [
 
 /// Hash to curve implementation for secp256k1 following the IETF draft
 /// https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/
-pub fn hash_to_curve<H: Hash32 + digest::Update + BlockSizeUser>(
-    msg: &[u8],
-    dst: &[u8],
-) -> ProjectivePoint {
+pub fn hash_to_curve<H: Hash32 + BlockSizeUser>(msg: &[u8], dst: &[u8]) -> ProjectivePoint {
     let u = hash_to_field::<H>(msg, dst);
     let q0 = map_to_curve(u[0]);
     let q1 = map_to_curve(u[1]);
@@ -159,7 +156,7 @@ pub fn hash_to_curve<H: Hash32 + digest::Update + BlockSizeUser>(
 
 /// Expand message using XMD (expand_message_xmd)
 /// Implements the algorithm from Section 5.4.1 of draft-irtf-cfrg-hash-to-curve
-fn expand_message_xmd<H: Hash32 + digest::Update + BlockSizeUser>(
+fn expand_message_xmd<H: Hash32 + BlockSizeUser>(
     msg: &[u8],
     dst: &[u8],
     len_in_bytes: usize,

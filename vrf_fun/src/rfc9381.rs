@@ -199,6 +199,7 @@ pub mod sswu {
     use crate::{Rfc9381SswuVrf, VerifiedRandomOutput, VrfProof};
     use secp256kfun::{
         KeyPair,
+        digest::crypto_common::BlockSizeUser,
         hash::{Hash32, HashAdd},
         prelude::*,
     };
@@ -246,7 +247,7 @@ pub mod sswu {
     /// [RFC 9380]: https://datatracker.ietf.org/doc/html/rfc9380
     pub fn prove<H>(keypair: &KeyPair, alpha: &[u8]) -> VrfProof<U16>
     where
-        H: Hash32 + secp256kfun::digest::crypto_common::BlockSizeUser,
+        H: Hash32 + BlockSizeUser,
     {
         let vrf = Rfc9381SswuVrf::<H>::default();
         let dst = Dst.as_ref();
@@ -269,7 +270,7 @@ pub mod sswu {
         proof: &VrfProof<U16>,
     ) -> Option<VerifiedRandomOutput>
     where
-        H: Hash32 + secp256kfun::digest::crypto_common::BlockSizeUser,
+        H: Hash32 + BlockSizeUser,
     {
         let vrf = Rfc9381SswuVrf::<H>::default();
         let h = Point::hash_to_curve_sswu::<H>(alpha, Dst.as_ref()).normalize();

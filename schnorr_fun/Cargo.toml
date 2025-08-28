@@ -18,7 +18,6 @@ secp256kfun = { workspace = true }
 bech32 = { version = "0.11", optional = true, default-features = false, features = ["alloc"] }
 bincode = { workspace =  true, optional = true }
 vrf_fun = { workspace = true, optional = true }
-sha2 = { version = "0.10", optional = true, default-features = false }
 
 [dev-dependencies]
 secp256kfun = { workspace = true, features = ["proptest", "bincode", "alloc"] }
@@ -51,7 +50,7 @@ libsecp_compat_0_29 = ["secp256kfun/libsecp_compat_0_29"]
 libsecp_compat_0_30 = ["secp256kfun/libsecp_compat_0_30"]
 proptest = ["secp256kfun/proptest"]
 share_backup = ["dep:bech32"]
-vrf_cert_keygen = ["dep:vrf_fun", "dep:sha2"]
+vrf_cert_keygen = ["dep:vrf_fun"]
 
 [package.metadata.docs.rs]
 all-features = true
