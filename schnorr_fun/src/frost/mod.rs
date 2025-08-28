@@ -426,6 +426,12 @@ where
 /// A Frost signature share.
 pub type SignatureShare = Scalar<Public, Zero>;
 
+/// The default fingerprint used for share generation in production
+pub const FROST_V0_FINGERPRINT: Fingerprint = Fingerprint {
+    bit_length: 18,
+    tag: "frost-v0",
+};
+
 #[cfg(test)]
 mod test {
 
