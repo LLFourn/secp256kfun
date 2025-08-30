@@ -31,7 +31,7 @@ proptest! {
 
         // // create some scalar polynomial for each party
         let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
-        let (mut shared_key, mut secret_shares) = encpedpop::simulate_keygen(&frost.schnorr, threshold, n_parties, n_parties, Fingerprint::none(), &mut rng);
+        let (mut shared_key, mut secret_shares) = encpedpop::simulate_keygen(&frost.schnorr, threshold, n_parties, n_parties, Fingerprint::NONE, &mut rng);
 
         if let Some(tweak) = add_tweak {
             for secret_share in &mut secret_shares {

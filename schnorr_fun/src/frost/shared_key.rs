@@ -455,13 +455,17 @@ pub struct Fingerprint {
 }
 
 impl Fingerprint {
-    /// Creates a fingerprint with no difficulty (no grinding required)
-    pub fn none() -> Self {
-        Self {
-            bit_length: 0,
-            tag: "",
-        }
-    }
+    /// The default fingerprint used for share generation in production
+    pub const FROST_V0: Self = Self {
+        bit_length: 18,
+        tag: "frost-v0",
+    };
+
+    /// a 0-bit fingerprint which means it will have no affect.
+    pub const NONE: Self = Self {
+        bit_length: 0,
+        tag: "",
+    };
 
     /// Count leading zero bits across a byte slice
     pub(crate) fn leading_zero_bits(bytes: &[u8]) -> usize {
@@ -480,10 +484,7 @@ impl Fingerprint {
 
 impl Default for Fingerprint {
     fn default() -> Self {
-        Self {
-            bit_length: 8,
-            tag: "frost-dkg",
-        }
+        Self::FROST_V0
     }
 }
 
