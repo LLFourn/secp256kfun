@@ -530,7 +530,7 @@ mod test {
                 threshold,
                 n_receivers,
                 n_generators,
-                Fingerprint::none(),
+                Fingerprint::NONE,
                 &mut rng,
             );
         }
