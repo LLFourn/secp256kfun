@@ -71,13 +71,14 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
 #[cfg(feature = "vrf_cert_keygen")]
 pub mod vrf_cert {
     use super::*;
-    use secp256kfun::digest::core_api::BlockSizeUser;
-    use vrf_fun::VrfProof;
+    use secp256kfun::digest::typenum::U32;
+    use secp256kfun::{Tag, digest::core_api::BlockSizeUser, hash::HashAdd};
+    use vrf_fun::{SimpleVrf, VrfProof};
 
-    /// VRF certification scheme using SSWU VRF
+    /// VRF certification scheme using SimpleVrf
     #[derive(Clone, Copy, Debug, PartialEq, Default)]
     pub struct VrfCertifier<H> {
-        hash: core::marker::PhantomData<H>,
+        _hash: core::marker::PhantomData<H>,
     }
 
     /// The output from VRF verification containing the gamma point
@@ -88,8 +89,13 @@ pub mod vrf_cert {
     }
 
     /// Implement CertificationScheme for VrfCertifier
-    impl<H: Hash32 + BlockSizeUser> CertificationScheme for VrfCertifier<H> {
-        type Signature = VrfProof;
+    impl<H> CertificationScheme for VrfCertifier<H>
+    where
+        H: Hash32 + BlockSizeUser + Clone + Tag,
+        // This constraint ensures the hash has a 512-bit block size (required for HashTranscript)
+        H: BlockSizeUser<BlockSize = secp256kfun::digest::typenum::U64>,
+    {
+        type Signature = VrfProof<U32>;
         type Output = VrfOutput;
 
         fn certify(
@@ -99,7 +105,9 @@ pub mod vrf_cert {
         ) -> Self::Signature {
             // Use the certification bytes as the VRF input
             let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::sswu::prove::<H>(keypair, &cert_bytes)
+            let h = Point::hash_to_curve(H::default().add(&cert_bytes[..])).normalize();
+            let vrf = SimpleVrf::<H>::default().with_name("chilldkg-vrf");
+            vrf.prove(keypair, h)
         }
 
         fn verify_cert(
@@ -110,10 +118,10 @@ pub mod vrf_cert {
         ) -> Option<Self::Output> {
             // Use the certification bytes as the VRF input
             let cert_bytes = agg_input.cert_bytes();
-            vrf_fun::rfc9381::sswu::verify::<H>(cert_key, &cert_bytes, signature).map(|output| {
-                VrfOutput {
-                    gamma: output.gamma,
-                }
+            let h = Point::hash_to_curve(H::default().add(&cert_bytes[..])).normalize();
+            let vrf = SimpleVrf::<H>::default().with_name("chilldkg-vrf");
+            vrf.verify(cert_key, h, signature).map(|output| VrfOutput {
+                gamma: output.dangerously_access_gamma(),
             })
         }
     }
@@ -280,8 +288,12 @@ impl<S: CertificationScheme> CertifiedKeygen<S> {
 }
 
 #[cfg(feature = "vrf_cert_keygen")]
-impl<H: Hash32 + secp256kfun::digest::crypto_common::BlockSizeUser>
-    CertifiedKeygen<vrf_cert::VrfCertifier<H>>
+impl<H> CertifiedKeygen<vrf_cert::VrfCertifier<H>>
+where
+    H: Hash32 + secp256kfun::digest::crypto_common::BlockSizeUser + Clone + Tag,
+    H: secp256kfun::digest::crypto_common::BlockSizeUser<
+            BlockSize = secp256kfun::digest::typenum::U64,
+        >,
 {
     /// Compute a randomness beacon from the VRF outputs
     ///

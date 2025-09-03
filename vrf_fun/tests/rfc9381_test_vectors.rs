@@ -105,7 +105,7 @@ fn verify_tai_test_vector(tv: &TestVector) {
         .expect("Proof verification failed");
 
     // Check VRF output matches
-    let output = rfc9381::tai::output::<sha2::Sha256>(&verified);
+    let output = rfc9381::tai::output::<sha2::Sha256>(verified);
     let expected_output = hex::decode_array::<32>(tv.beta).expect("Invalid beta hex");
     assert_eq!(output, expected_output);
 
@@ -119,7 +119,7 @@ fn verify_tai_test_vector(tv: &TestVector) {
         rfc9381::tai::verify::<sha2::Sha256>(keypair.public_key(), tv.alpha, &proof_generated)
             .expect("Generated proof verification failed");
     assert_eq!(
-        rfc9381::tai::output::<sha2::Sha256>(&verified_generated),
+        rfc9381::tai::output::<sha2::Sha256>(verified_generated),
         expected_output
     );
 }
@@ -207,7 +207,7 @@ fn verify_sswu_test_vector(tv: &TestVector) {
         .expect("Proof verification failed");
 
     // Check VRF output matches
-    let output = rfc9381::sswu::output::<sha2::Sha256>(&verified);
+    let output = rfc9381::sswu::output::<sha2::Sha256>(verified);
     let expected_output = hex::decode_array::<32>(tv.beta).expect("Invalid beta hex");
     assert_eq!(output, expected_output);
 
@@ -221,7 +221,7 @@ fn verify_sswu_test_vector(tv: &TestVector) {
         rfc9381::sswu::verify::<sha2::Sha256>(keypair.public_key(), tv.alpha, &proof_generated)
             .expect("Generated proof verification failed");
     assert_eq!(
-        rfc9381::sswu::output::<sha2::Sha256>(&verified_generated),
+        rfc9381::sswu::output::<sha2::Sha256>(verified_generated),
         expected_output
     );
 }

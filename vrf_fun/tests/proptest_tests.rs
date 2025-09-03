@@ -27,8 +27,8 @@ proptest! {
         let verified1_again = rfc9381::tai::verify::<sha2::Sha256>(keypair.public_key(), &alpha1, &proof1_again)
             .expect("Proof should verify again");
         assert_eq!(
-            rfc9381::tai::output::<sha2::Sha256>(&verified1),
-            rfc9381::tai::output::<sha2::Sha256>(&verified1_again),
+            rfc9381::tai::output::<sha2::Sha256>(verified1),
+            rfc9381::tai::output::<sha2::Sha256>(verified1_again),
             "VRF output should be deterministic"
         );
 
@@ -46,8 +46,8 @@ proptest! {
                 .expect("Second proof should verify");
 
             assert_ne!(
-                rfc9381::tai::output::<sha2::Sha256>(&verified1),
-                rfc9381::tai::output::<sha2::Sha256>(&verified2),
+                rfc9381::tai::output::<sha2::Sha256>(verified1),
+                rfc9381::tai::output::<sha2::Sha256>(verified2),
                 "Different inputs should produce different outputs"
             );
 
@@ -87,8 +87,8 @@ proptest! {
         let verified1_again = rfc9381::sswu::verify::<sha2::Sha256>(keypair.public_key(), &alpha1, &proof1_again)
             .expect("Proof should verify again");
         assert_eq!(
-            rfc9381::sswu::output::<sha2::Sha256>(&verified1),
-            rfc9381::sswu::output::<sha2::Sha256>(&verified1_again),
+            rfc9381::sswu::output::<sha2::Sha256>(verified1),
+            rfc9381::sswu::output::<sha2::Sha256>(verified1_again),
             "VRF output should be deterministic"
         );
 
@@ -106,8 +106,8 @@ proptest! {
                 .expect("Second proof should verify");
 
             assert_ne!(
-                rfc9381::sswu::output::<sha2::Sha256>(&verified1),
-                rfc9381::sswu::output::<sha2::Sha256>(&verified2),
+                rfc9381::sswu::output::<sha2::Sha256>(verified1),
+                rfc9381::sswu::output::<sha2::Sha256>(verified2),
                 "Different inputs should produce different outputs"
             );
 
@@ -143,7 +143,7 @@ proptest! {
         // Test basic verify
         let verified1 = vrf.verify(keypair.public_key(), h1, &proof1)
             .expect("Proof should verify with correct public key");
-        assert_eq!(proof1.gamma, verified1.gamma);
+        assert_eq!(proof1.gamma, verified1.dangerously_access_gamma());
 
         // Test deterministic output
         let proof1_again = vrf.prove(&keypair, h1);
@@ -170,7 +170,7 @@ proptest! {
             let verified2 = vrf.verify(keypair.public_key(), h2, &proof2)
                 .expect("Second proof should verify");
 
-            assert_ne!(verified1.gamma, verified2.gamma, "Different inputs should produce different gamma");
+            assert_ne!(verified1.dangerously_access_gamma(), verified2.dangerously_access_gamma(), "Different inputs should produce different gamma");
 
             // Cross-verification should fail
             assert!(
