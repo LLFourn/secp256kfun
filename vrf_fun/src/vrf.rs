@@ -41,9 +41,38 @@ where
     ///
     /// After verification, use the `HashInto` implementation on `VerifiedRandomOutput`
     /// to safely extract randomness.
-    pub gamma: Point,
+    gamma: Point,
     /// The proof that `gamma` is correct.
-    pub proof: CompactProof<Scalar<Public, Zero>, L>,
+    proof: CompactProof<Scalar<Public, Zero>, L>,
+}
+
+impl<L> VrfProof<L>
+where
+    L: ArrayLength<u8>,
+{
+    /// Create a new VrfProof from its components.
+    ///
+    /// This is primarily for testing purposes. In production, proofs should
+    /// be created through the VRF prove method.
+    pub fn from_parts(gamma: Point, proof: CompactProof<Scalar<Public, Zero>, L>) -> Self {
+        Self { gamma, proof }
+    }
+
+    /// Access the gamma point without verifying the proof.
+    ///
+    /// # Security Warning
+    ///
+    /// This method accesses gamma WITHOUT verifying the proof is valid. You MUST
+    /// have already verified this proof before using this method. Additionally,
+    /// the gamma point should be hashed before being used.
+    ///
+    /// This method exists for cases where the proof has already been verified
+    /// and stored.
+    ///
+    /// If you haven't verified the proof, use the `Vrf::verify` method instead.
+    pub fn dangerously_access_gamma_without_verifying(&self) -> Point {
+        self.gamma
+    }
 }
 
 /// Verified random output that ensures gamma has been verified
@@ -70,11 +99,11 @@ impl VerifiedRandomOutput {
     /// properties. The paper notes that "the VRF output is the hash of the unique point
     /// on the curve" to ensure proper domain separation and pseudorandomness.
     ///
-    /// **You should use the `HashInto` implementation instead**, which properly hashes
-    /// gamma to produce secure randomness:
+    /// **You should use the `HashInto` implementation instead** which allows
+    /// you to put it into a hash. e.g.
     ///
     /// ```ignore
-    /// use sha2::Sha256;
+    /// # use sha2::Sha256;
     /// let randomness = Sha256::default().add(&verified_output).finalize_fixed();
     /// ```
     pub fn dangerously_access_gamma(&self) -> Point {

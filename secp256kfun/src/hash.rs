@@ -163,6 +163,35 @@ impl<T: HashInto + Ord> HashInto for alloc::collections::BTreeSet<T> {
 pub trait HashAdd {
     /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
     fn add<HI: HashInto>(self, data: HI) -> Self;
+
+    /// Adds a domain separator to the hash. This works to make sure the results
+    /// of whatever you are hashing is different from other contexts. You should
+    /// put this at the start of the hash.
+    ///
+    /// ## Panics
+    ///
+    /// If the length of `domain_separator` is greater than 255.
+    fn ds(self, domain_separator: &'static str) -> Self
+    where
+        Self: Sized,
+    {
+        self.add(domain_separator.len() as u8).add(domain_separator)
+    }
+
+    /// Adds a list of static domain separators. This works to make sure the
+    /// results of whatever you are hashing is different from other contexts.
+    /// You should put this at the start of the hash.
+    ///
+    /// ## Panics
+    ///
+    /// If the total byte length of the `separators` is greater than 255.
+    fn ds_vectored(self, separators: &[&'static str]) -> Self
+    where
+        Self: Sized,
+    {
+        let total_len: usize = separators.iter().map(|sep| sep.len()).sum();
+        self.add(total_len as u8).add(separators)
+    }
 }
 
 impl<D: digest::Update> HashAdd for D {

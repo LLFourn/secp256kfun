@@ -92,13 +92,13 @@ fn verify_tai_test_vector(tv: &TestVector) {
     let response = Scalar::from_bytes_mod_order(response_bytes);
 
     // Construct proof
-    let proof = VrfProof {
+    let proof = VrfProof::from_parts(
         gamma,
-        proof: CompactProof {
+        CompactProof {
             challenge,
             response,
         },
-    };
+    );
 
     // Verify proof using high-level API
     let verified = rfc9381::tai::verify::<sha2::Sha256>(keypair.public_key(), tv.alpha, &proof)
@@ -111,7 +111,10 @@ fn verify_tai_test_vector(tv: &TestVector) {
 
     // Also test proving with the same inputs
     let proof_generated = rfc9381::tai::prove::<sha2::Sha256>(&keypair, tv.alpha);
-    assert_eq!(proof_generated.gamma, gamma);
+    assert_eq!(
+        proof_generated.dangerously_access_gamma_without_verifying(),
+        gamma
+    );
 
     // The challenge and response will be different due to different nonce generation,
     // but the proof should still verify
@@ -194,13 +197,13 @@ fn verify_sswu_test_vector(tv: &TestVector) {
     let response = Scalar::from_bytes_mod_order(response_bytes);
 
     // Construct proof
-    let proof = VrfProof {
+    let proof = VrfProof::from_parts(
         gamma,
-        proof: CompactProof {
+        CompactProof {
             challenge,
             response,
         },
-    };
+    );
 
     // Verify proof using high-level API
     let verified = rfc9381::sswu::verify::<sha2::Sha256>(keypair.public_key(), tv.alpha, &proof)
@@ -213,7 +216,10 @@ fn verify_sswu_test_vector(tv: &TestVector) {
 
     // Also test proving with the same inputs
     let proof_generated = rfc9381::sswu::prove::<sha2::Sha256>(&keypair, tv.alpha);
-    assert_eq!(proof_generated.gamma, gamma);
+    assert_eq!(
+        proof_generated.dangerously_access_gamma_without_verifying(),
+        gamma
+    );
 
     // The challenge and response will be different due to different nonce generation,
     // but the proof should still verify

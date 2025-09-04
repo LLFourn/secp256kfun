@@ -23,7 +23,7 @@ proptest! {
 
         // Test deterministic output
         let proof1_again = rfc9381::tai::prove::<sha2::Sha256>(&keypair, &alpha1);
-        assert_eq!(proof1.gamma, proof1_again.gamma, "Gamma should be deterministic");
+        assert_eq!(proof1.dangerously_access_gamma_without_verifying(), proof1_again.dangerously_access_gamma_without_verifying(), "Gamma should be deterministic");
         let verified1_again = rfc9381::tai::verify::<sha2::Sha256>(keypair.public_key(), &alpha1, &proof1_again)
             .expect("Proof should verify again");
         assert_eq!(
@@ -83,7 +83,7 @@ proptest! {
 
         // Test deterministic output
         let proof1_again = rfc9381::sswu::prove::<sha2::Sha256>(&keypair, &alpha1);
-        assert_eq!(proof1.gamma, proof1_again.gamma, "Gamma should be deterministic");
+        assert_eq!(proof1.dangerously_access_gamma_without_verifying(), proof1_again.dangerously_access_gamma_without_verifying(), "Gamma should be deterministic");
         let verified1_again = rfc9381::sswu::verify::<sha2::Sha256>(keypair.public_key(), &alpha1, &proof1_again)
             .expect("Proof should verify again");
         assert_eq!(
@@ -143,11 +143,11 @@ proptest! {
         // Test basic verify
         let verified1 = vrf.verify(keypair.public_key(), h1, &proof1)
             .expect("Proof should verify with correct public key");
-        assert_eq!(proof1.gamma, verified1.dangerously_access_gamma());
+        assert_eq!(proof1.dangerously_access_gamma_without_verifying(), verified1.dangerously_access_gamma());
 
         // Test deterministic output
         let proof1_again = vrf.prove(&keypair, h1);
-        assert_eq!(proof1.gamma, proof1_again.gamma, "Gamma should be deterministic");
+        assert_eq!(proof1.dangerously_access_gamma_without_verifying(), proof1_again.dangerously_access_gamma_without_verifying(), "Gamma should be deterministic");
 
         // Test wrong public key
         let wrong_keypair = KeyPair::new(Scalar::random(&mut rand::thread_rng()));
