@@ -170,34 +170,6 @@ impl AggKeygenInput {
             .map(|(party_index, (ek, _))| (*party_index, *ek))
     }
 
-    /// Certify the `AggKeygenInput`. If all parties certify this then the keygen was
-    /// successful.
-    pub fn certify<H, NG>(&self, schnorr: &Schnorr<H, NG>, keypair: &KeyPair<EvenY>) -> Signature
-    where
-        H: Hash32,
-        NG: NonceGen,
-    {
-        schnorr.sign(
-            keypair,
-            Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
-        )
-    }
-
-    /// Verify that another party has certified the keygen. If you collect certifications from
-    /// all parties then the keygen was successful
-    pub fn verify_cert<H: Hash32, NG>(
-        &self,
-        schnorr: &Schnorr<H, NG>,
-        cert_key: Point<EvenY>,
-        signature: Signature,
-    ) -> bool {
-        schnorr.verify(
-            &cert_key,
-            Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
-            &signature,
-        )
-    }
-
     /// Recover a share with the decryption key from the `AggKeygenInput`.
     pub fn recover_share<H: Hash32>(
         &self,
