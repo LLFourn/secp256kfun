@@ -188,10 +188,10 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
 
     /// Checks if the polynomial coefficients contain the specified `fingerprint`.
     ///
-    /// Verifies that each non-constant coefficient, when hashed together with all
-    /// previous coefficients, produces a hash with at least `fingerprint.bit_length`
-    /// leading zero bits. This allows detection of shares from the same DKG session
-    /// and helps identify corrupted or mismatched shares.
+    /// Verifies that the running hash of coefficients has the required number
+    /// of leading zero bits, respecting both per-coefficient and total limits.
+    /// This allows detection of shares from the same DKG session and helps
+    /// identify corrupted or mismatched shares.
     ///
     /// Returns `true` if all coefficients match the fingerprint pattern, `false`
     /// if any coefficient fails to meet the difficulty requirement.
@@ -213,6 +213,8 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             // the public key is unmolested by the fingerprint
             .add(self.point_polynomial[0]);
 
+        let mut verified_bits = 0usize;
+
         // Check each non-constant coefficient
         for i in 1..self.point_polynomial.len() {
             // Update hash state with next coefficient
@@ -221,9 +223,26 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             let hash_result = hash_state.clone().finalize_fixed();
             let hash_bytes: &[u8] = hash_result.as_ref();
 
-            if Fingerprint::leading_zero_bits(hash_bytes) < fingerprint.bit_length as usize {
+            let remaining_total = fingerprint
+                .max_bits_total
+                .saturating_sub(verified_bits as u8) as usize;
+            if remaining_total == 0 {
+                // We've verified enough bits total
+                break;
+            }
+
+            // NOTE: we don't get the zero bits and just substract it from the
+            // total and move on -- we need to make sure each coefficient has at
+            // least the required number of bits to make sure it really was part
+            // of a fingerprint. Extra bits don't count either.
+            let expected_bits = remaining_total.min(fingerprint.bits_per_coeff as usize);
+            let actual_bits = Fingerprint::leading_zero_bits(hash_bytes);
+
+            if actual_bits < expected_bits {
                 return false;
             }
+
+            verified_bits += expected_bits;
         }
 
         true
@@ -233,7 +252,7 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
     /// proof-of-work.
     ///
     /// For each non-constant coefficient, repeatedly adds the generator point `G`
-    /// until the cumulative hash (including the tag, public key, and all previous
+    /// until the running hash (including the tag, public key, and all previous
     /// coefficients) has at least `fingerprint.bit_length` leading zero bits.
     /// This process modifies the polynomial while preserving the shared secret.
     ///
@@ -264,21 +283,32 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             // the public key is unmolested from the fingerprint grinding
             .add(self.point_polynomial[0]);
 
+        let mut grinded_bits = 0usize;
+
         for coeff in &mut self.point_polynomial[1..] {
             let mut total_tweak = Scalar::<Public, Zero>::zero();
             let mut current_coeff = *coeff;
+            let remaining_total = fingerprint
+                .max_bits_total
+                .saturating_sub(grinded_bits as u8) as usize;
+
+            if remaining_total == 0 {
+                break;
+            }
+
+            // Each coefficient should have at most max_bits_per_coeff bits
+            let needed_bits = remaining_total.min(fingerprint.bits_per_coeff as usize);
 
             loop {
                 // Clone the hash state from previous coefficients and add current one
                 let hash = hash_state.clone().add(current_coeff);
                 // Check if hash has required number of leading zero bits
                 let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
-                if Fingerprint::leading_zero_bits(&hash_bytes[..])
-                    >= fingerprint.bit_length as usize
-                {
+                if Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits {
                     // Update hash_state for next coefficient because the next coefficient hash
                     // includes the current one.
                     hash_state = hash;
+                    grinded_bits += needed_bits;
                     break;
                 }
 
@@ -449,22 +479,26 @@ bincode::impl_borrow_decode!(SharedKey<EvenY, NonZero>);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fingerprint {
     /// Number of leading zero bits required in the hash
-    pub bit_length: u8,
+    pub bits_per_coeff: u8,
     /// Domain separator tag to include in the hash
     pub tag: &'static str,
+    /// Max number of bits for the total
+    pub max_bits_total: u8,
 }
 
 impl Fingerprint {
     /// The default fingerprint used for share generation in production
     pub const FROST_V0: Self = Self {
-        bit_length: 18,
+        bits_per_coeff: 18,
+        max_bits_total: 18 * 2,
         tag: "frost-v0",
     };
 
     /// a 0-bit fingerprint which means it will have no affect.
     pub const NONE: Self = Self {
-        bit_length: 0,
+        bits_per_coeff: 0,
         tag: "",
+        max_bits_total: 0,
     };
 
     /// Count leading zero bits across a byte slice
@@ -491,6 +525,82 @@ impl Default for Fingerprint {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn fingerprint_grinding_respects_max_bits_total() {
+        // Create a polynomial with 4 coefficients (1 constant + 3 non-constant)
+        // This gives us a threshold-3 scheme
+        let mut shared_key = SharedKey::<Normal, Zero>::from_poly(
+            poly::point::normalize(vec![
+                g!(1 * G).mark_zero(), // Public key (constant term)
+                g!(2 * G).mark_zero(), // First non-constant
+                g!(3 * G).mark_zero(), // Second non-constant
+                g!(4 * G).mark_zero(), // Third non-constant
+            ])
+            .collect(),
+        );
+
+        let original_coeffs = shared_key.point_polynomial.clone();
+
+        let fingerprint = Fingerprint {
+            bits_per_coeff: 5,
+            max_bits_total: 10,
+            tag: "test",
+        };
+
+        // Grind the fingerprint
+        let tweaks = shared_key.grind_fingerprint::<sha2::Sha256>(fingerprint);
+
+        // Check that we got 3 tweaks (one for constant + two for the grinded non-constant coefficients)
+        // The function stops early when max_bits_total is reached, so the vector is shorter
+        // Missing elements implicitly mean zero tweaks
+        assert_eq!(
+            tweaks.len(),
+            3,
+            "Should only have tweaks for coefficients that were processed"
+        );
+
+        // First tweak should be zero (constant coefficient is not mutated)
+        assert_eq!(tweaks[0], Scalar::<Public, Zero>::zero());
+
+        // First two non-constant coefficients should be mutated (have non-zero tweaks)
+        assert_ne!(
+            tweaks[1],
+            Scalar::<Public, Zero>::zero(),
+            "First non-constant coefficient should be mutated"
+        );
+        assert_ne!(
+            tweaks[2],
+            Scalar::<Public, Zero>::zero(),
+            "Second non-constant coefficient should be mutated"
+        );
+
+        // The absence of tweaks[3] means the third coefficient wasn't mutated (implicitly zero)
+
+        // Verify the polynomial was actually modified
+        assert_eq!(
+            shared_key.point_polynomial[0], original_coeffs[0],
+            "Constant coefficient should be unchanged"
+        );
+        assert_ne!(
+            shared_key.point_polynomial[1], original_coeffs[1],
+            "First coefficient should be changed"
+        );
+        assert_ne!(
+            shared_key.point_polynomial[2], original_coeffs[2],
+            "Second coefficient should be changed"
+        );
+        assert_eq!(
+            shared_key.point_polynomial[3], original_coeffs[3],
+            "Third coefficient should be unchanged"
+        );
+
+        // Verify the fingerprint is valid
+        assert!(
+            shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint),
+            "Grinded fingerprint should be valid"
+        );
+    }
 
     #[cfg(feature = "bincode")]
     #[test]

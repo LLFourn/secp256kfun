@@ -539,14 +539,18 @@ mod test {
         fn encpedpop_simulate_keygen_with_fingerprint(
             (n_receivers, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
             n_generators in 1u32..5,
-            difficulty in 0u8..10,
+            (bits_per_coeff, max_bits_total) in (0u8..10).prop_flat_map(|per_coeff| {
+                // max_bits_total should be at least max_bits_per_coeff but can be larger
+                (Just(per_coeff), per_coeff..25)
+            }),
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
             let fingerprint = crate::frost::shared_key::Fingerprint {
-                bit_length: difficulty,
+                bits_per_coeff,
                 tag: "test-fingerprint",
+                max_bits_total,
             };
 
             let (shared_key, paired_shares) = encpedpop::simulate_keygen(
