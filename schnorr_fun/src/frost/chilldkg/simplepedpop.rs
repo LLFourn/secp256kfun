@@ -87,6 +87,11 @@ impl Contributor {
 
         Ok(())
     }
+
+    /// Get the index for the contributor
+    pub fn contributor_index(&self) -> u32 {
+        self.my_index
+    }
 }
 
 /// Produced by [`Contributor::gen_keygen_input`]. This is sent from the each

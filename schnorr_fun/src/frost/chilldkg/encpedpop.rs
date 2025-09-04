@@ -10,7 +10,7 @@
 //!
 //! [`AggKeygenInput`]: AggKeygenInput
 use super::simplepedpop;
-use crate::{Message, Schnorr, Signature, frost::*};
+use crate::{Schnorr, frost::*};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
@@ -35,6 +35,7 @@ use secp256kfun::{
 )]
 pub struct Contributor {
     inner: simplepedpop::Contributor,
+    my_nonce: Point,
 }
 
 impl Contributor {
@@ -83,7 +84,13 @@ impl Contributor {
             encryption_nonce: multi_nonce_keypair.public_key(),
         };
 
-        (Contributor { inner: inner_state }, keygen_input)
+        (
+            Contributor {
+                inner: inner_state,
+                my_nonce: multi_nonce_keypair.public_key(),
+            },
+            keygen_input,
+        )
     }
 
     /// Verifies that the coordinator has honestly included this party's input into the
@@ -96,6 +103,15 @@ impl Contributor {
         self,
         agg_keygen_input: &AggKeygenInput,
     ) -> Result<(), simplepedpop::ContributionDidntMatch> {
+        // check the encryption nonce we provided was still in the
+        // AggKeygenInput. This may not be necessary for security but we do it
+        // for completeness.
+        let my_index = self.inner.contributor_index();
+        let expected = self.my_nonce;
+        let got = agg_keygen_input.encryption_nonces[my_index as usize];
+        if got != expected {
+            return Err(simplepedpop::ContributionDidntMatch);
+        }
         self.inner.verify_agg_input(&agg_keygen_input.inner)?;
         Ok(())
     }
