@@ -195,10 +195,7 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
     ///
     /// Returns `true` if all coefficients match the fingerprint pattern, `false`
     /// if any coefficient fails to meet the difficulty requirement.
-    pub fn check_fingerprint<H: crate::fun::hash::Hash32>(
-        &self,
-        fingerprint: &Fingerprint,
-    ) -> bool {
+    pub fn check_fingerprint<H: crate::fun::hash::Hash32>(&self, fingerprint: Fingerprint) -> bool {
         use crate::fun::hash::HashAdd;
 
         // the fingerprint is only placed on the non-constant coefficients so it
@@ -597,7 +594,7 @@ mod test {
 
         // Verify the fingerprint is valid
         assert!(
-            shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint),
+            shared_key.check_fingerprint::<sha2::Sha256>(fingerprint),
             "Grinded fingerprint should be valid"
         );
     }
