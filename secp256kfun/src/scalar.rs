@@ -482,6 +482,30 @@ mod conversion_impls {
     #[cfg(feature = "std")]
     impl<T> std::error::Error for ScalarTooLarge<T> {}
 
+    /// Error returned when trying to convert a zero value into a NonZero scalar
+    pub struct ZeroScalar<T>(PhantomData<T>);
+
+    impl<T> core::fmt::Display for ZeroScalar<T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "cannot convert zero {} to NonZero scalar",
+                type_name::<T>()
+            )
+        }
+    }
+
+    impl<T> core::fmt::Debug for ZeroScalar<T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_tuple("ZeroScalar")
+                .field(&type_name::<T>())
+                .finish()
+        }
+    }
+
+    #[cfg(feature = "std")]
+    impl<T> std::error::Error for ZeroScalar<T> {}
+
     /// Implements `From<$t> for $scalar` **and**
     /// `TryFrom<$scalar> for $t` for every `$t` supplied.
     macro_rules! impl_scalar_conversions {
@@ -496,6 +520,27 @@ mod conversion_impls {
                         Scalar::<S, Zero>::from_bytes(bytes).unwrap()
                     }
                 }
+
+                impl<S> TryFrom<$t> for Scalar<S, NonZero> {
+                    type Error = ZeroScalar<$t>;
+
+                    fn try_from(value: $t) -> Result<Self, Self::Error> {
+                        // big-endian integer → 32-byte array
+                        let mut bytes = [0u8; 32];
+                        let int_bytes = value.to_be_bytes();
+                        bytes[32 - int_bytes.len() ..].copy_from_slice(&int_bytes);
+                        let scalar = Scalar::<S, Zero>::from_bytes(bytes).unwrap();
+
+                        // Check if value is zero
+                        if value == 0 {
+                            Err(ZeroScalar(PhantomData))
+                        } else {
+                            Ok(scalar.non_zero().unwrap())
+                        }
+                    }
+                }
+
+
 
                 impl<S, Z> TryFrom<Scalar<S, Z>> for $t {
                     type Error = ScalarTooLarge<$t>;
@@ -758,5 +803,35 @@ mod test {
         assert!(Scalar::<Public, _>::from(42u32) < Scalar::<Public, _>::from(1337u16));
         assert!(Scalar::<Public, _>::from(41u32) < Scalar::<Public, _>::from(42u32));
         assert!(Scalar::<Public, _>::from(42u32) <= Scalar::<Public, _>::from(42u32));
+    }
+
+    #[test]
+    fn try_from_zero_to_nonzero() {
+        use core::convert::TryFrom;
+
+        // Test that converting zero to NonZero fails
+        let result = Scalar::<Secret, NonZero>::try_from(0u32);
+        assert!(result.is_err());
+
+        // Test that converting non-zero to NonZero succeeds
+        let result = Scalar::<Secret, NonZero>::try_from(42u32);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Scalar::<Secret, Zero>::from(42u32).non_zero().unwrap()
+        );
+
+        // Test with different integer types
+        assert!(Scalar::<Public, NonZero>::try_from(0u8).is_err());
+        assert!(Scalar::<Public, NonZero>::try_from(0u16).is_err());
+        assert!(Scalar::<Public, NonZero>::try_from(0u64).is_err());
+
+        assert!(Scalar::<Public, NonZero>::try_from(1u8).is_ok());
+        assert!(Scalar::<Public, NonZero>::try_from(1u16).is_ok());
+        assert!(Scalar::<Public, NonZero>::try_from(1u64).is_ok());
+
+        // Test that infallible From still works for Zero
+        let _zero_scalar: Scalar<Secret, Zero> = 0u32.into();
+        let _nonzero_scalar: Scalar<Secret, Zero> = 42u32.into();
     }
 }
