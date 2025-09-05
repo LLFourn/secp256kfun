@@ -254,18 +254,23 @@ pub mod vrf_cert {
         ///
         /// ## Security
         ///
-        /// This is secure because from the view of the honest party the
-        /// certpedpop acts as a secure coin tossing protocol, where if no
-        /// parties controlled my the adversary **do not** abort the output will
-        /// be uniformly distributed. Observe that:
+        /// If no parties controlled by the adversary abort, the output will
+        /// be uniformly distributed. The VRF outputs effectively act as a "randomness beacon" -
+        /// a source of verifiable randomness that all parties can compute deterministically
+        /// from the certificates. Observe that:
         ///
         /// 1. The malicious party must commit to all the VRF public keys up front.
-        /// 2. The honest party verifies its contribution to the keygen is included (which are always rampled randomly)
-        /// 3. The VRF is over the transcript and every transcript with the honest party can never happen twice (because of #2).
+        /// 2. The honest party verifies its contribution to the keygen is included (which are always sampled randomly)
+        /// 3. The VRF is over the transcript and every transcript with an honest party will always be unique (because of #2).
         /// 4. The honest party's VRF output will be both hidden and uniformly distributed.
-        pub fn compute_randomness_beacon(&self, hasher: impl Hash32) -> [u8; 32] {
-            // BTreeMap already maintains sorted order by key
-            let mut hasher = hasher;
+        /// 5. All honest parties with the same `AggKeygenInput::cert_bytes` will output the same check
+        /// 6. All honest parties with a different `AggKeygenInput::cert_bytes` are statistically likely to output different bytes.
+        ///
+        /// This check is *statistically* secure -- per keygen the attacker only
+        /// has 1/2ⁿ chance of succeeding to collide the checks where `n` is the
+        /// number of bits the honest parties check among each other. **It is up
+        /// to the application to limit the number of attempts the adversary can make.**
+        pub fn vrf_security_check(&self, mut hasher: impl Hash32) -> [u8; 32] {
             for vrf_proof in self.certificate.values() {
                 let gamma = vrf_proof.dangerously_access_gamma_without_verifying();
                 hasher.update(gamma.to_bytes().as_ref());

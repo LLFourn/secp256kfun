@@ -42,7 +42,7 @@ impl Contributor {
     /// has nothing to do with the "receiver" index (the `ShareIndex` of share receivers). If
     /// there are `n` `KeyGenInputParty`s then each party must be assigned an index from `0` to `n-1`.
     ///
-    /// This method return `Self` to retain the state of the protocol which is needded to verify
+    /// This method returns `Self` to retain the state of the protocol which is needed to verify
     /// the aggregated input later on.
     pub fn gen_keygen_input<H, NG>(
         schnorr: &Schnorr<H, NG>,

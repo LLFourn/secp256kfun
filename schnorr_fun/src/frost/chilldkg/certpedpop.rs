@@ -168,7 +168,7 @@ impl SecretShareReceiver {
             .encryption_keys()
             .map(|(_, encryption_key)| encryption_key)
             .chain(contributor_keys.iter().cloned())
-            .collect::<BTreeSet<_>>(); // dedupe as some contributers may have also be receivers
+            .collect::<BTreeSet<_>>(); // dedupe as some contributors may also be receivers
 
         for cert_key in cert_keys {
             match certificate.get(&cert_key) {
@@ -436,10 +436,10 @@ mod test {
                 .expect("CertifiedKeygen should be valid");
 
             // Compute randomness beacon from the VRF outputs
-            let randomness = output.certified_keygen.compute_randomness_beacon(sha2::Sha256::default());
+            let randomness = output.certified_keygen.vrf_security_check(sha2::Sha256::default());
 
             // Verify the randomness is deterministic
-            let randomness2 = output.certified_keygen.compute_randomness_beacon(sha2::Sha256::default());
+            let randomness2 = output.certified_keygen.vrf_security_check(sha2::Sha256::default());
             assert_eq!(randomness, randomness2);
 
             // Verify we have the expected number of VRF certificates
