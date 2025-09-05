@@ -1,6 +1,6 @@
 //! Generic VRF implementation that can work with different transcript types
 
-use secp256kfun::{KeyPair, Scalar, prelude::*};
+use secp256kfun::{KeyPair, Scalar, hash::HashInto, prelude::*};
 use sigma_fun::{
     CompactProof, FiatShamir, ProverTranscript, Transcript,
     generic_array::{
@@ -32,24 +32,96 @@ pub struct VrfProof<L = U16>
 where
     L: ArrayLength<u8>,
 {
-    /// The VRF output point.
+    /// The VRF output point (gamma).
     ///
-    /// Usually you don't use this directly but hash it.
-    pub gamma: Point,
+    /// **Security Warning**: According to VRF security proofs (see
+    /// ["Making NSEC5 Practical for DNSSEC"](https://eprint.iacr.org/2017/099.pdf)),
+    /// this point must be hashed before being used as randomness. Direct use of gamma
+    /// may compromise the pseudorandomness properties of the VRF.
+    ///
+    /// After verification, use the `HashInto` implementation on `VerifiedRandomOutput`
+    /// to safely extract randomness.
+    gamma: Point,
     /// The proof that `gamma` is correct.
-    pub proof: CompactProof<Scalar<Public, Zero>, L>,
+    proof: CompactProof<Scalar<Public, Zero>, L>,
+}
+
+impl<L> VrfProof<L>
+where
+    L: ArrayLength<u8>,
+{
+    /// Create a new VrfProof from its components.
+    ///
+    /// This is primarily for testing purposes. In production, proofs should
+    /// be created through the VRF prove method.
+    pub fn from_parts(gamma: Point, proof: CompactProof<Scalar<Public, Zero>, L>) -> Self {
+        Self { gamma, proof }
+    }
+
+    /// Access the gamma point without verifying the proof.
+    ///
+    /// # Security Warning
+    ///
+    /// This method accesses gamma WITHOUT verifying the proof is valid. You MUST
+    /// have already verified this proof before using this method. Additionally,
+    /// the gamma point should be hashed before being used.
+    ///
+    /// This method exists for cases where the proof has already been verified
+    /// and stored.
+    ///
+    /// If you haven't verified the proof, use the `Vrf::verify` method instead.
+    pub fn dangerously_access_gamma_without_verifying(&self) -> Point {
+        self.gamma
+    }
 }
 
 /// Verified random output that ensures gamma has been verified
-#[derive(Debug, Clone)]
+///
+/// The gamma point is kept private to enforce proper usage. VRF security proofs
+/// require hashing gamma before use as randomness. Use the `HashInto` implementation
+/// to safely extract randomness from this output.
+#[derive(Debug, Clone, Copy)]
 pub struct VerifiedRandomOutput {
-    pub gamma: Point,
+    gamma: Point,
+}
+
+impl VerifiedRandomOutput {
+    /// Access the raw gamma point directly.
+    ///
+    /// # Security Warning
+    ///
+    /// The VRF security proofs require that gamma be hashed before being used as randomness.
+    /// Using the gamma point directly without hashing may compromise the pseudorandomness
+    /// properties of the VRF.
+    ///
+    /// According to ["Making NSEC5 Practical for DNSSEC"](https://eprint.iacr.org/2017/099.pdf),
+    /// the VRF output must be the hash of gamma, not gamma itself, to maintain security
+    /// properties. The paper notes that "the VRF output is the hash of the unique point
+    /// on the curve" to ensure proper domain separation and pseudorandomness.
+    ///
+    /// **You should use the `HashInto` implementation instead** which allows
+    /// you to put it into a hash. e.g.
+    ///
+    /// ```ignore
+    /// # use sha2::Sha256;
+    /// let randomness = Sha256::default().add(&verified_output).finalize_fixed();
+    /// ```
+    pub fn dangerously_access_gamma(&self) -> Point {
+        self.gamma
+    }
+}
+
+impl HashInto for VerifiedRandomOutput {
+    fn hash_into(self, hash: &mut impl secp256kfun::digest::Update) {
+        self.gamma.hash_into(hash)
+    }
 }
 
 /// Generic VRF implementation
 pub struct Vrf<T, ChallengeLength = U16> {
     dleq: crate::VrfDleq<ChallengeLength>,
     pub transcript: T,
+    name: Option<&'static str>,
 }
 
 impl<T: Clone, ChallengeLength> Vrf<T, ChallengeLength>
@@ -64,7 +136,19 @@ where
         Self {
             dleq: Eq::new(DLG::default(), DL::default()),
             transcript,
+            name: None,
         }
+    }
+
+    /// Set a custom name for domain separation
+    ///
+    /// The name is used in the Fiat-Shamir transform to provide domain separation.
+    ///
+    /// Note: For RFC 9381 VRFs, setting a name has no effect as they use their own
+    /// transcript mechanism that doesn't support custom names.
+    pub fn with_name(mut self, name: &'static str) -> Self {
+        self.name = Some(name);
+        self
     }
 }
 
@@ -92,7 +176,7 @@ where
     {
         let (secret_key, public_key) = keypair.as_tuple();
         let gamma = g!(secret_key * h).normalize();
-        let fs = FiatShamir::new(self.dleq.clone(), self.transcript.clone(), None);
+        let fs = FiatShamir::new(self.dleq.clone(), self.transcript.clone(), self.name);
         let witness = secret_key;
         let statement = (public_key, (h, gamma));
         let proof = fs.prove::<R>(&witness, &statement, None);
@@ -106,7 +190,7 @@ where
         h: Point,
         proof: &VrfProof<ChallengeLength>,
     ) -> Option<VerifiedRandomOutput> {
-        let fs = FiatShamir::new(self.dleq.clone(), self.transcript.clone(), None);
+        let fs = FiatShamir::new(self.dleq.clone(), self.transcript.clone(), self.name);
         let statement = (public_key.normalize(), (h, proof.gamma));
 
         if !fs.verify(&statement, &proof.proof) {

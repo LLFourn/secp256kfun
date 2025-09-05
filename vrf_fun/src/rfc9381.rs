@@ -178,11 +178,11 @@ pub mod tai {
     /// Compute [RFC 9381] compliant output with TAI suite string (0xFE)
     ///
     /// [RFC 9381]: https://datatracker.ietf.org/doc/html/rfc9381
-    pub fn output<H: Hash32>(verified: &VerifiedRandomOutput) -> [u8; 32] {
+    pub fn output<H: Hash32>(verified: VerifiedRandomOutput) -> [u8; 32] {
         H::default()
             .add([SUITE_STRING_TAI])
             .add(0x03u8) // Hash mode domain separator
-            .add(verified.gamma.to_bytes())
+            .add(verified)
             .add(0x00u8) // Hash mode trailer
             .finalize_fixed()
             .into()
@@ -281,11 +281,11 @@ pub mod sswu {
     ///
     /// [RFC 9381]: https://datatracker.ietf.org/doc/html/rfc9381
     /// [RFC 9380]: https://datatracker.ietf.org/doc/html/rfc9380
-    pub fn output<H: Hash32>(verified: &VerifiedRandomOutput) -> [u8; 32] {
+    pub fn output<H: Hash32>(verified: VerifiedRandomOutput) -> [u8; 32] {
         H::default()
             .add([SUITE_STRING_RFC9380])
             .add(0x03u8) // Hash mode domain separator
-            .add(verified.gamma.to_bytes())
+            .add(verified)
             .add(0x00u8) // Hash mode trailer
             .finalize_fixed()
             .into()
