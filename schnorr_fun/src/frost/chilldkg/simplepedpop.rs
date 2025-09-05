@@ -87,6 +87,11 @@ impl Contributor {
 
         Ok(())
     }
+
+    /// Get the index for the contributor
+    pub fn contributor_index(&self) -> u32 {
+        self.my_index
+    }
 }
 
 /// Produced by [`Contributor::gen_keygen_input`]. This is sent from the each
@@ -250,12 +255,14 @@ impl AggKeygenInput {
     ///
     /// In `simplepedpop` this is just the coefficients of the polynomial.
     pub fn cert_bytes(&self) -> Vec<u8> {
-        let mut cert_bytes = vec![];
-        cert_bytes.extend((self.agg_poly.len() as u32).to_be_bytes());
-        for coeff in self.shared_key().point_polynomial() {
-            cert_bytes.extend(coeff.to_bytes());
-        }
-        cert_bytes
+        let shared_key = self.shared_key();
+        let poly = shared_key.point_polynomial();
+        let cert_bytes = (poly.len() as u32)
+            .to_be_bytes()
+            .into_iter()
+            .chain(poly.iter().flat_map(|coeff| coeff.to_bytes()));
+
+        cert_bytes.collect()
     }
 }
 

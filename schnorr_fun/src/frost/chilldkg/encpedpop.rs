@@ -10,7 +10,7 @@
 //!
 //! [`AggKeygenInput`]: AggKeygenInput
 use super::simplepedpop;
-use crate::{Message, Schnorr, Signature, frost::*};
+use crate::{Schnorr, frost::*};
 use alloc::{
     collections::{BTreeMap, BTreeSet},
     vec::Vec,
@@ -35,6 +35,7 @@ use secp256kfun::{
 )]
 pub struct Contributor {
     inner: simplepedpop::Contributor,
+    my_nonce: Point,
 }
 
 impl Contributor {
@@ -83,7 +84,13 @@ impl Contributor {
             encryption_nonce: multi_nonce_keypair.public_key(),
         };
 
-        (Contributor { inner: inner_state }, keygen_input)
+        (
+            Contributor {
+                inner: inner_state,
+                my_nonce: multi_nonce_keypair.public_key(),
+            },
+            keygen_input,
+        )
     }
 
     /// Verifies that the coordinator has honestly included this party's input into the
@@ -96,6 +103,15 @@ impl Contributor {
         self,
         agg_keygen_input: &AggKeygenInput,
     ) -> Result<(), simplepedpop::ContributionDidntMatch> {
+        // check the encryption nonce we provided was still in the
+        // AggKeygenInput. This may not be necessary for security but we do it
+        // for completeness.
+        let my_index = self.inner.contributor_index();
+        let expected = self.my_nonce;
+        let got = agg_keygen_input.encryption_nonces[my_index as usize];
+        if got != expected {
+            return Err(simplepedpop::ContributionDidntMatch);
+        }
         self.inner.verify_agg_input(&agg_keygen_input.inner)?;
         Ok(())
     }
@@ -152,34 +168,6 @@ impl AggKeygenInput {
         self.encrypted_shares
             .iter()
             .map(|(party_index, (ek, _))| (*party_index, *ek))
-    }
-
-    /// Certify the `AggKeygenInput`. If all parties certify this then the keygen was
-    /// successful.
-    pub fn certify<H, NG>(&self, schnorr: &Schnorr<H, NG>, keypair: &KeyPair<EvenY>) -> Signature
-    where
-        H: Hash32,
-        NG: NonceGen,
-    {
-        schnorr.sign(
-            keypair,
-            Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
-        )
-    }
-
-    /// Verify that another party has certified the keygen. If you collect certifications from
-    /// all parties then the keygen was successful
-    pub fn verify_cert<H: Hash32, NG>(
-        &self,
-        schnorr: &Schnorr<H, NG>,
-        cert_key: Point<EvenY>,
-        signature: Signature,
-    ) -> bool {
-        schnorr.verify(
-            &cert_key,
-            Message::new("BIP DKG/cert", self.cert_bytes().as_ref()),
-            &signature,
-        )
     }
 
     /// Recover a share with the decryption key from the `AggKeygenInput`.
@@ -303,7 +291,7 @@ impl Coordinator {
         Self {
             inner: simplepedpop::Coordinator::new(threshold, n_contribtors),
             agg_encrypted_shares,
-            encryption_nonces: Default::default(),
+            encryption_nonces: vec![Point::default(); n_contribtors as usize],
         }
     }
 
@@ -340,8 +328,7 @@ impl Coordinator {
             *agg_encrypted_share += encrypted_share_contrib;
         }
 
-        self.encryption_nonces.push(input.encryption_nonce);
-
+        self.encryption_nonces[from as usize] = input.encryption_nonce;
         Ok(())
     }
 
@@ -508,13 +495,17 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::frost::{Fingerprint, chilldkg::encpedpop};
+    use alloc::{collections::BTreeMap, vec::Vec};
+
+    use crate::frost::{Fingerprint, ShareIndex, chilldkg::encpedpop};
 
     use proptest::{
         prelude::*,
         test_runner::{RngAlgorithm, TestRng},
     };
-    use secp256kfun::proptest;
+    use secp256kfun::{KeyPair, Scalar, proptest};
+
+    use super::{Contributor, Coordinator};
 
     proptest! {
         #[test]
@@ -568,5 +559,42 @@ mod test {
 
             assert!(shared_key.check_fingerprint::<sha2::Sha256>(&fingerprint), "fingerprint was grinded correctly");
         }
+    }
+
+    #[test]
+    fn test_input_arrival_order() {
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let threshold = 2u32;
+
+        let receiver_enckeys = [(
+            ShareIndex::from(core::num::NonZeroU32::new(1).unwrap()),
+            KeyPair::new(Scalar::random(&mut rng)).public_key(),
+        )]
+        .into_iter()
+        .collect::<BTreeMap<_, _>>();
+
+        let mut coordinator = Coordinator::new(threshold, 3, &receiver_enckeys);
+
+        // Create contributors with indices 0, 1, 2
+        let contributors_and_inputs: Vec<_> = (0..3)
+            .map(|i| {
+                Contributor::gen_keygen_input(&schnorr, threshold, &receiver_enckeys, i, &mut rng)
+            })
+            .collect();
+
+        // Add them to coordinator in different order
+        let arrival_order = [2, 0, 1];
+        for &contributor_idx in arrival_order.iter() {
+            let (_, input) = &contributors_and_inputs[contributor_idx as usize];
+            coordinator
+                .add_input(&schnorr, contributor_idx, input.clone())
+                .unwrap();
+        }
+
+        let agg_input = coordinator.finish().unwrap();
+
+        let (contributor_1, _) = &contributors_and_inputs[1];
+        contributor_1.clone().verify_agg_input(&agg_input).unwrap(); // This should fail
     }
 }
