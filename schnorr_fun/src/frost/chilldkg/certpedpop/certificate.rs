@@ -177,10 +177,16 @@ pub mod vrf_cert {
     pub type CertVrfProof = VrfProof<U32>;
 
     /// VRF certification scheme using SimpleVrf
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug)]
     pub struct VrfCertScheme<H> {
         name: &'static str,
         _hash: core::marker::PhantomData<H>,
+    }
+
+    impl<H> PartialEq for VrfCertScheme<H> {
+        fn eq(&self, other: &Self) -> bool {
+            self.name == other.name
+        }
     }
 
     impl<H> VrfCertScheme<H> {
@@ -270,6 +276,7 @@ pub mod vrf_cert {
 }
 
 /// A certifier that validates certificates as they are received
+#[derive(Clone, Debug, PartialEq)]
 pub struct Certifier<S: CertificationScheme> {
     cert_scheme: S,
     agg_input: encpedpop::AggKeygenInput,
@@ -391,5 +398,21 @@ impl core::fmt::Display for CertifierError {
             CertifierError::InvalidSignature => write!(f, "Invalid certificate signature"),
             CertifierError::IncompleteCertificates => write!(f, "Not all certificates received"),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    #[cfg(feature = "vrf_cert_keygen")]
+    fn test_certifier_with_vrf_cert_scheme_is_partial_eq() {
+        use super::*;
+        use sha2::Sha256;
+
+        // Function that requires T to implement PartialEq
+        fn assert_partial_eq<T: PartialEq>() {}
+
+        // This will only compile if Certifier<VrfCertScheme<Sha256>> implements PartialEq
+        assert_partial_eq::<Certifier<vrf_cert::VrfCertScheme<Sha256>>>();
     }
 }
