@@ -352,6 +352,16 @@ impl<S: CertificationScheme> Certifier<S> {
         Ok(())
     }
 
+    /// Get the aggregated keygen input
+    pub fn agg_input(&self) -> &encpedpop::AggKeygenInput {
+        &self.agg_input
+    }
+
+    /// Get the set of required keys for certification
+    pub fn required_keys(&self) -> &BTreeSet<Point> {
+        &self.required_keys
+    }
+
     /// Check if all required certificates have been received
     pub fn is_finished(&self) -> bool {
         self.certificates.len() == self.required_keys.len()
