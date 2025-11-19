@@ -1,8 +1,14 @@
 [package]
 name = "vrf_fun"
-version = "0.11.0"
+version = "0.12.0"
+authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2024"
 rust-version = "1.85.0"
+license = "0BSD"
+description = "RFC 9381 compliant Verifiable Random Function (VRF) for secp256k1"
+homepage = "https://github.com/LLFourn/secp256kfun/tree/master/vrf_fun"
+repository = "https://github.com/LLFourn/secp256kfun"
+documentation = "https://docs.rs/vrf_fun"
 
 [features]
 default = ["std"]

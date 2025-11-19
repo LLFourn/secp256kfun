@@ -1,6 +1,6 @@
 [package]
 name = "ecdsa_fun"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["LLFourn <lloyd.fourn@gmail.com>"]
 edition = "2024"
 rust-version = "1.85.0"
