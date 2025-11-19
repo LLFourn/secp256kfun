@@ -231,7 +231,11 @@ impl AggKeygenInput {
         let tweak_poly = shared_key.grind_fingerprint::<H>(fingerprint);
         // replace our poly with the one that has the fingerprint
         self.inner.agg_poly = shared_key.point_polynomial()[1..].to_vec();
-        debug_assert!(self.shared_key().check_fingerprint::<H>(fingerprint));
+        debug_assert!(
+            self.shared_key()
+                .check_fingerprint::<H>(fingerprint)
+                .is_some()
+        );
 
         for (share_index, (_encryption_key, encrypted_secret_share)) in &mut self.encrypted_shares {
             // 💡 The share encryption is homomorphic so we can apply the tweak
@@ -556,8 +560,10 @@ mod test {
             for share in paired_shares {
                 assert_eq!(shared_key.pair_secret_share(*share.secret_share()), Some(share));
             }
+            let bits_matched = shared_key.check_fingerprint::<sha2::Sha256>(fingerprint).unwrap();
 
-            assert!(shared_key.check_fingerprint::<sha2::Sha256>(fingerprint), "fingerprint was grinded correctly");
+            let should_have_matched = ((threshold - 1) * bits_per_coeff as u32).min(max_bits_total as u32);
+            assert_eq!(bits_matched, should_have_matched as usize, "fingerprint was grinded correctly");
         }
     }
 
