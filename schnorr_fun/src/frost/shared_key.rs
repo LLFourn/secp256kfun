@@ -193,15 +193,21 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
     /// This allows detection of shares from the same DKG session and helps
     /// identify corrupted or mismatched shares.
     ///
-    /// Returns `true` if all coefficients match the fingerprint pattern, `false`
-    /// if any coefficient fails to meet the difficulty requirement.
-    pub fn check_fingerprint<H: crate::fun::hash::Hash32>(&self, fingerprint: Fingerprint) -> bool {
+    /// Returns `Some(n)` where `n` is the number of bits verified if
+    /// successful, or `None` if verification failed. Returns `Some(0)` if the
+    /// polynomial is too short (≤1 coefficients) to contain a fingerprint. It
+    /// will never return more than `max_bits_total` which indicates a complete
+    /// match.
+    pub fn check_fingerprint<H: crate::fun::hash::Hash32>(
+        &self,
+        fingerprint: Fingerprint,
+    ) -> Option<usize> {
         use crate::fun::hash::HashAdd;
 
         // the fingerprint is only placed on the non-constant coefficients so it
         // can't be detected with a length 1 polynomial
         if self.point_polynomial.len() <= 1 {
-            return true;
+            return Some(0);
         }
 
         let mut hash_state = H::default()
@@ -214,19 +220,18 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
 
         // Check each non-constant coefficient
         for i in 1..self.point_polynomial.len() {
+            let remaining_total = fingerprint
+                .max_bits_total
+                .saturating_sub(verified_bits as u8) as usize;
+            if remaining_total == 0 {
+                break;
+            }
+
             // Update hash state with next coefficient
             hash_state = hash_state.add(self.point_polynomial[i]);
 
             let hash_result = hash_state.clone().finalize_fixed();
             let hash_bytes: &[u8] = hash_result.as_ref();
-
-            let remaining_total = fingerprint
-                .max_bits_total
-                .saturating_sub(verified_bits as u8) as usize;
-            if remaining_total == 0 {
-                // We've verified enough bits total
-                break;
-            }
 
             // NOTE: we don't get the zero bits and just substract it from the
             // total and move on -- we need to make sure each coefficient has at
@@ -236,13 +241,13 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             let actual_bits = Fingerprint::leading_zero_bits(hash_bytes);
 
             if actual_bits < expected_bits {
-                return false;
+                return None;
             }
 
             verified_bits += expected_bits;
         }
 
-        true
+        Some(verified_bits)
     }
 
     /// Grinds polynomial coefficients to embed the specified `fingerprint` through
@@ -594,7 +599,9 @@ mod test {
 
         // Verify the fingerprint is valid
         assert!(
-            shared_key.check_fingerprint::<sha2::Sha256>(fingerprint),
+            shared_key
+                .check_fingerprint::<sha2::Sha256>(fingerprint)
+                .is_some(),
             "Grinded fingerprint should be valid"
         );
     }
