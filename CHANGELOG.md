@@ -2,12 +2,20 @@
 
 ## UNRELEASED
 
+## v0.12.0
+
+- **SECURITY FIX**: Fix `from_bytes_uncompressed` to validate points are on curve
 - Add `SharedKey::from_non_zero_poly`
-- Change `poly::scalar::to_point_poly` to make it less opinionated 
+- Add `SharedKey::grind_fingerprint` method
+- Add `ShareImage` type
+- Add FROST_V0_FINGERPRINT export
+- Change `poly::scalar::to_point_poly` to make it less opinionated
 - Add From/TryFrom conversions for `Scalar` to all unsigned integer types
+- Add Shamir secret sharing helpers for scalar polynomials
 - Upgrade to bincode v2
 - MSRV 1.63 -> 1.85
-- **BREAKING**: Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
+- Refactor `CompactProof` in `sigma_fun` to use two type parameters `CompactProof<R, L>` instead of `CompactProof<S: Sigma>` to enable serde support
+- Update `secp256kfun_arithmetic_macros` to use generic `NonZero<T>` type instead of `NonZeroU32`
 - Add hash-to-curve methods to `Point`:
   - `hash_to_curve` - Simple try-and-increment with uniform distribution (recommended)
   - `hash_to_curve_sswu` - RFC 9380 compliant constant-time hashing
@@ -16,6 +24,12 @@
 - Deprecate `Message::plain` which uses non-standard 64-byte prefix
 - Remove type parameters from `Message` and `Signature` types (always public now)
 - Remove unused `Slice` type from secp256kfun
+- `SharedKey::check_fingerprint` now returns `Option<usize>` instead of `bool`, indicating number of bits verified
+- Rename `PartyIndex` to `ShareIndex`
+- Add `vrf_fun` crate
+- `Point<_, _, Zero>` implements `Hash`
+- Add VRF-based certification for certpedpop
+- Make certpedpop signature scheme configurable
 
 ## v0.11.0
 

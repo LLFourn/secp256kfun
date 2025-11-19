@@ -16,8 +16,8 @@ bincode = { version = "2", default-features = false, features = ["derive"] }
 rand_chacha = { version = "0.3", default-features = false }
 
 # Local crates
-secp256kfun = { path = "./secp256kfun", version = "0.11", default-features = false }
-schnorr_fun = { path = "./schnorr_fun", version = "0.11", default-features = false }
-ecdsa_fun = { path = "./ecdsa_fun", version = "0.11", default-features = false }
-sigma_fun = { path = "./sigma_fun", version = "0.8", default-features = false }
-vrf_fun = { path = "./vrf_fun", version = "0.11", default-features = false }
+secp256kfun = { path = "./secp256kfun", version = "0.12", default-features = false }
+schnorr_fun = { path = "./schnorr_fun", version = "0.12", default-features = false }
+ecdsa_fun = { path = "./ecdsa_fun", version = "0.12", default-features = false }
+sigma_fun = { path = "./sigma_fun", version = "0.9", default-features = false }
+vrf_fun = { path = "./vrf_fun", version = "0.12", default-features = false }

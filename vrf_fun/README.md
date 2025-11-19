@@ -2,6 +2,15 @@
 
 Verifiable Random Function (VRF) implementation for secp256k1.
 
+## Use
+
+```toml
+[dependencies]
+vrf_fun = "0.12"
+secp256kfun = "0.12"
+sha2 = "0.10"
+```
+
 ## Overview
 
 This crate provides RFC 9381 compliant VRF implementations for secp256k1, supporting both:

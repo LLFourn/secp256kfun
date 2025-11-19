@@ -1,6 +1,6 @@
 [package]
 name = "secp256kfun_arithmetic_macros"
-version = "0.1.0"
+version = "0.2.0"
 documentation = "https://docs.rs/secp256kfun_arithmetic_macros"
 description = "Helper macros for secp256kfun's aritmetic macros"
 license = "0BSD"
