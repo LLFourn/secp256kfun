@@ -162,6 +162,7 @@ impl<T: HashInto + Ord> HashInto for alloc::collections::BTreeSet<T> {
 /// Extension trait for [`digest::Update`] to make adding things to the hash convenient.
 pub trait HashAdd {
     /// Converts something that implements [`HashInto`] to bytes and then incorporate the result into the digest (`self`).
+    #[must_use]
     fn add<HI: HashInto>(self, data: HI) -> Self;
 
     /// Adds a domain separator to the hash. This works to make sure the results
@@ -171,6 +172,7 @@ pub trait HashAdd {
     /// ## Panics
     ///
     /// If the length of `domain_separator` is greater than 255.
+    #[must_use]
     fn ds(self, domain_separator: &'static str) -> Self
     where
         Self: Sized,
@@ -185,6 +187,7 @@ pub trait HashAdd {
     /// ## Panics
     ///
     /// If the total byte length of the `separators` is greater than 255.
+    #[must_use]
     fn ds_vectored(self, separators: &[&'static str]) -> Self
     where
         Self: Sized,
