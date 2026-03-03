@@ -132,11 +132,16 @@ impl<H: Hash32, const SUITE_STRING: u8> ProverTranscript<crate::VrfDleq<U16>>
         &self,
         _sigma: &crate::VrfDleq<U16>,
         witness: &Scalar,
-        _in_rng: Option<&mut R>,
+        in_rng: Option<&mut R>,
     ) -> Self::Rng {
-        let mut hasher = H::default();
-        hasher = hasher.add(b"vrf-nonce-gen");
-        hasher = hasher.add(witness.to_bytes());
+        let mut hasher = self.hasher.clone();
+        hasher.update(b"vrf-nonce-gen");
+        hasher.update(&witness.to_bytes());
+        if let Some(rng) = in_rng {
+            let mut randomness = [0u8; 32];
+            rng.fill_bytes(&mut randomness);
+            hasher.update(&randomness);
+        }
         let seed = hasher.finalize_fixed();
         ChaCha20Rng::from_seed(seed.into())
     }
