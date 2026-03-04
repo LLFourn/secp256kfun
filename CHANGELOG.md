@@ -2,6 +2,10 @@
 
 ## UNRELEASED
 
+## vrf_fun v0.12.1
+
+- **SECURITY FIX**: Fix nonce reuse in RFC 9381 VRF proving. The `Rfc9381Transcript` nonce derivation did not include the transcript state (VRF input, public key, gamma), producing identical nonces across different VRF inputs with the same key. This enables full secret key recovery from any two proofs. Found by Mathias Hall-Andersen (@rot256) of zkSecurity. See [#244](https://github.com/LLFourn/secp256kfun/pull/244).
+
 ## v0.12.0
 
 - **SECURITY FIX**: Fix `from_bytes_uncompressed` to validate points are on curve
