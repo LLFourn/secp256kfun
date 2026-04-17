@@ -87,7 +87,7 @@ impl<Sig> CertifiedKeygen<Sig> {
         S: CertificationScheme<Signature = Sig>,
         Sig: Clone,
     {
-        let mut certifier = Certifier::new(cert_scheme, self.input.clone(), contributor_keys);
+        let mut certifier = Certifier::new(cert_scheme, self.input.clone(), contributor_keys)?;
 
         // Add all certificates to the certifier
         for (key, sig) in &self.certificate {
@@ -290,12 +290,21 @@ pub struct Certifier<S: CertificationScheme> {
 }
 
 impl<S: CertificationScheme> Certifier<S> {
-    /// Create a new certifier that expects certificates from contributors and receivers
+    /// Create a new certifier that expects certificates from contributors and receivers.
+    ///
+    /// Returns [`CertifierError::ContributorCountMismatch`] if the `agg_input` claims
+    /// a different number of contributors than `contributor_keys.len()`.
     pub fn new(
         cert_scheme: S,
         agg_input: encpedpop::AggKeygenInput,
         contributor_keys: &[Point],
-    ) -> Self {
+    ) -> Result<Self, CertifierError> {
+        if agg_input.n_encryption_nonces() != contributor_keys.len()
+            || agg_input.inner().n_contributors() != contributor_keys.len()
+        {
+            return Err(CertifierError::ContributorCountMismatch);
+        }
+
         // Collect all expected keys - deduplicate since some parties may be both contributors and receivers
         let mut required_keys = BTreeSet::new();
 
@@ -309,12 +318,12 @@ impl<S: CertificationScheme> Certifier<S> {
             required_keys.insert(encryption_key);
         }
 
-        Self {
+        Ok(Self {
             cert_scheme,
             agg_input,
             required_keys,
             certificates: BTreeMap::new(),
-        }
+        })
     }
 
     /// Receive and validate a certificate from a party
@@ -398,6 +407,9 @@ pub enum CertifierError {
     InvalidSignature,
     /// Not all required certificates have been received
     IncompleteCertificates,
+    /// The aggregated keygen input has a different number of contributors than
+    /// the provided `contributor_keys` list.
+    ContributorCountMismatch,
 }
 
 #[cfg(feature = "std")]
@@ -409,6 +421,10 @@ impl core::fmt::Display for CertifierError {
             CertifierError::UnknownParty => write!(f, "Certificate from unknown party"),
             CertifierError::InvalidSignature => write!(f, "Invalid certificate signature"),
             CertifierError::IncompleteCertificates => write!(f, "Not all certificates received"),
+            CertifierError::ContributorCountMismatch => write!(
+                f,
+                "aggregated input has a different number of contributors than expected"
+            ),
         }
     }
 }

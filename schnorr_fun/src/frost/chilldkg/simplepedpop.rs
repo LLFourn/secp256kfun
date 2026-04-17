@@ -28,6 +28,7 @@ use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, poly, prelude::*, rand
 pub struct Contributor {
     my_key_contrib: Point,
     my_index: u32,
+    n_contributors: u32,
 }
 
 impl Contributor {
@@ -40,6 +41,7 @@ impl Contributor {
     pub fn gen_keygen_input<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         share_receivers: &BTreeSet<ShareIndex>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -49,6 +51,7 @@ impl Contributor {
         NG: NonceGen,
     {
         assert!(threshold > 0);
+        assert!(my_index < n_contributors);
         let secret_poly = poly::scalar::generate(threshold as usize, rng);
         let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
         // XXX The thing that's signed differs from the spec
@@ -62,6 +65,7 @@ impl Contributor {
         let self_ = Self {
             my_key_contrib: com[0],
             my_index,
+            n_contributors,
         };
         let msg = KeygenInput { com, pop };
         (self_, msg, shares)
@@ -77,6 +81,9 @@ impl Contributor {
         self,
         agg_input: &AggKeygenInput,
     ) -> Result<(), ContributionDidntMatch> {
+        if agg_input.key_contrib.len() != self.n_contributors as usize {
+            return Err(ContributionDidntMatch);
+        }
         let my_got_contrib = agg_input
             .key_contrib
             .get(self.my_index as usize)
@@ -92,6 +99,11 @@ impl Contributor {
     /// Get the index for the contributor
     pub fn contributor_index(&self) -> u32 {
         self.my_index
+    }
+
+    /// Get the number of contributors this contributor was configured for.
+    pub fn n_contributors(&self) -> u32 {
+        self.n_contributors
     }
 }
 
@@ -235,6 +247,11 @@ pub struct AggKeygenInput {
 }
 
 impl AggKeygenInput {
+    /// The number of contributors whose key contributions are aggregated into this input.
+    pub fn n_contributors(&self) -> usize {
+        self.key_contrib.len()
+    }
+
     /// Gets the `SharedKey` that this aggregated input produces.
     ///
     /// ## Security
@@ -322,7 +339,7 @@ pub fn simulate_keygen<H, NG>(
     schnorr: &Schnorr<H, NG>,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_contributors: u32,
     rng: &mut impl rand_core::RngCore,
 ) -> (SharedKey<Normal>, Vec<PairedSecretShare<Normal>>)
 where
@@ -333,13 +350,19 @@ where
         .map(|i| ShareIndex::from(NonZeroU32::new(i).unwrap()))
         .collect::<BTreeSet<_>>();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators);
+    let mut aggregator = Coordinator::new(threshold, n_contributors);
     let mut contributors = vec![];
     let mut secret_inputs = BTreeMap::<ShareIndex, Vec<Scalar<Secret, Zero>>>::default();
 
-    for i in 0..n_generators {
-        let (contributor, to_coordinator, shares) =
-            Contributor::gen_keygen_input(schnorr, threshold, &share_receivers, i, rng);
+    for i in 0..n_contributors {
+        let (contributor, to_coordinator, shares) = Contributor::gen_keygen_input(
+            schnorr,
+            threshold,
+            n_contributors,
+            &share_receivers,
+            i,
+            rng,
+        );
 
         contributors.push(contributor);
         aggregator.add_input(schnorr, i, to_coordinator).unwrap();
@@ -467,12 +490,12 @@ mod test {
         #[test]
         fn simplepedpop_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
-            simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+            simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_contributors, &mut rng);
         }
     }
 }

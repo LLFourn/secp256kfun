@@ -48,6 +48,7 @@ impl Contributor {
     pub fn gen_keygen_input<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -63,6 +64,7 @@ impl Contributor {
             simplepedpop::Contributor::gen_keygen_input(
                 schnorr,
                 threshold,
+                n_contributors,
                 &share_receivers,
                 my_index,
                 rng,
@@ -103,6 +105,9 @@ impl Contributor {
         self,
         agg_keygen_input: &AggKeygenInput,
     ) -> Result<(), simplepedpop::ContributionDidntMatch> {
+        if agg_keygen_input.encryption_nonces.len() != self.inner.n_contributors() as usize {
+            return Err(simplepedpop::ContributionDidntMatch);
+        }
         // check the encryption nonce we provided was still in the
         // AggKeygenInput. This may not be necessary for security but we do it
         // for completeness.
@@ -118,6 +123,11 @@ impl Contributor {
         }
         self.inner.verify_agg_input(&agg_keygen_input.inner)?;
         Ok(())
+    }
+
+    /// Get the number of contributors this contributor was configured for.
+    pub fn n_contributors(&self) -> u32 {
+        self.inner.n_contributors()
     }
 }
 
@@ -136,6 +146,16 @@ pub struct AggKeygenInput {
 }
 
 impl AggKeygenInput {
+    /// The inner simplepedpop aggregated input.
+    pub fn inner(&self) -> &simplepedpop::AggKeygenInput {
+        &self.inner
+    }
+
+    /// The number of encryption nonces in this aggregated input (one per contributor).
+    pub fn n_encryption_nonces(&self) -> usize {
+        self.encryption_nonces.len()
+    }
+
     /// Gets the `SharedKey` that this aggregated input produces.
     ///
     /// ## Security
@@ -443,7 +463,7 @@ pub fn simulate_keygen<H, NG>(
     schnorr: &Schnorr<H, NG>,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_contributors: u32,
     fingerprint: Fingerprint,
     rng: &mut impl rand_core::RngCore,
 ) -> (SharedKey<Normal>, Vec<PairedSecretShare<Normal>>)
@@ -467,13 +487,20 @@ where
         .collect::<BTreeMap<ShareIndex, Point>>();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
-        ..n_generators)
+        ..n_contributors)
         .map(|i| {
-            Contributor::gen_keygen_input(schnorr, threshold, &public_receiver_enckeys, i, rng)
+            Contributor::gen_keygen_input(
+                schnorr,
+                threshold,
+                n_contributors,
+                &public_receiver_enckeys,
+                i,
+                rng,
+            )
         })
         .unzip();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators, &public_receiver_enckeys);
+    let mut aggregator = Coordinator::new(threshold, n_contributors, &public_receiver_enckeys);
 
     for (i, to_coordinator_message) in to_coordinator_messages.into_iter().enumerate() {
         aggregator
@@ -596,7 +623,7 @@ mod test {
         #[test]
         fn encpedpop_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
@@ -605,7 +632,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_contributors,
                 Fingerprint::NONE,
                 &mut rng,
             );
@@ -614,7 +641,7 @@ mod test {
         #[test]
         fn encpedpop_simulate_keygen_with_fingerprint(
             (n_receivers, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
             (bits_per_coeff, max_bits_total) in (0u8..10).prop_flat_map(|per_coeff| {
                 // max_bits_total should be at least max_bits_per_coeff but can be larger
                 (Just(per_coeff), per_coeff..25)
@@ -633,7 +660,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_contributors,
                 fingerprint,
                 &mut rng,
             );
@@ -666,7 +693,14 @@ mod test {
         // Create contributors with indices 0, 1, 2
         let contributors_and_inputs: Vec<_> = (0..3)
             .map(|i| {
-                Contributor::gen_keygen_input(&schnorr, threshold, &receiver_enckeys, i, &mut rng)
+                Contributor::gen_keygen_input(
+                    &schnorr,
+                    threshold,
+                    3,
+                    &receiver_enckeys,
+                    i,
+                    &mut rng,
+                )
             })
             .collect();
 

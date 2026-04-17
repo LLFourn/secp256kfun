@@ -56,6 +56,7 @@ impl Contributor {
     pub fn gen_keygen_input<H: Hash32, NG: NonceGen>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -63,6 +64,7 @@ impl Contributor {
         let (inner, message) = encpedpop::Contributor::gen_keygen_input(
             schnorr,
             threshold,
+            n_contributors,
             receiver_encryption_keys,
             my_index,
             rng,
@@ -248,7 +250,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
         .collect::<BTreeMap<ShareIndex, Point>>();
 
-    let n_generators = n_receivers + n_extra_generators;
+    let n_contributors = n_receivers + n_extra_generators;
 
     // Generate keypairs for contributors - receivers will use their existing keypairs
     let contributor_keys: Vec<_> = (1..=n_receivers)
@@ -263,9 +265,16 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .collect();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
-        ..n_generators)
+        ..n_contributors)
         .map(|i| {
-            Contributor::gen_keygen_input(schnorr, threshold, &public_receiver_enckeys, i, rng)
+            Contributor::gen_keygen_input(
+                schnorr,
+                threshold,
+                n_contributors,
+                &public_receiver_enckeys,
+                i,
+                rng,
+            )
         })
         .unzip();
 
@@ -274,7 +283,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .map(|kp| kp.public_key())
         .collect::<Vec<_>>();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators, &public_receiver_enckeys);
+    let mut aggregator = Coordinator::new(threshold, n_contributors, &public_receiver_enckeys);
 
     for (i, to_coordinator_message) in to_coordinator_messages.into_iter().enumerate() {
         aggregator
@@ -290,7 +299,8 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         cert_scheme.clone(),
         agg_input.clone(),
         &contributor_public_keys,
-    );
+    )
+    .expect("simulate_keygen produces matching contributor counts");
 
     let mut paired_secret_shares = vec![];
 
@@ -321,7 +331,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
     }
 
     // Handle extra contributors that are only contributors (not receivers)
-    for i in n_receivers as usize..n_generators as usize {
+    for i in n_receivers as usize..n_contributors as usize {
         let sig = contributors[i]
             .clone()
             .verify_agg_input(&cert_scheme, &agg_input, &contributor_keys[i])
