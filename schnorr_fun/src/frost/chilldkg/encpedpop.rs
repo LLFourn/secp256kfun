@@ -108,7 +108,11 @@ impl Contributor {
         // for completeness.
         let my_index = self.inner.contributor_index();
         let expected = self.my_nonce;
-        let got = agg_keygen_input.encryption_nonces[my_index as usize];
+        let got = agg_keygen_input
+            .encryption_nonces
+            .get(my_index as usize)
+            .copied()
+            .ok_or(simplepedpop::ContributionDidntMatch)?;
         if got != expected {
             return Err(simplepedpop::ContributionDidntMatch);
         }

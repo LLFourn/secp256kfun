@@ -48,6 +48,7 @@ impl Contributor {
         H: Hash32,
         NG: NonceGen,
     {
+        assert!(threshold > 0);
         let secret_poly = poly::scalar::generate(threshold as usize, rng);
         let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
         // XXX The thing that's signed differs from the spec
