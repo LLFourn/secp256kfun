@@ -15,6 +15,8 @@ use alloc::{
 use core::num::NonZeroU32;
 use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, poly, prelude::*, rand_core};
 
+const POP_DOMAIN_SEP: &str = "BIP DKG/pop";
+
 /// A party that generates secret input to the key generation. You need at least one of these
 /// and if at least one of these parties is honest then the final secret key will not be known by an
 /// attacker (unless they obtain `t` shares!).
@@ -53,10 +55,12 @@ impl Contributor {
         assert!(threshold > 0);
         assert!(my_index < n_contributors);
         let secret_poly = poly::scalar::generate(threshold as usize, rng);
-        let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
-        // XXX The thing that's signed differs from the spec
-        let pop = schnorr.sign(&pop_keypair, Message::empty());
         let com = poly::scalar::to_point_poly(&secret_poly);
+        let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
+        let pop = schnorr.sign(
+            &pop_keypair,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(com[0], my_index)),
+        );
 
         let shares = share_receivers
             .iter()
@@ -172,7 +176,11 @@ impl Coordinator {
         }
 
         let (first_coeff_even_y, _) = input.com[0].into_point_with_even_y();
-        if !schnorr.verify(&first_coeff_even_y, Message::empty(), &input.pop) {
+        if !schnorr.verify(
+            &first_coeff_even_y,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(input.com[0], from)),
+            &input.pop,
+        ) {
             return Err(AddInputError::InvalidProofOfPossession);
         }
         *entry = Some(input);
@@ -299,9 +307,13 @@ pub fn receive_secret_share<H, NG>(
 where
     H: Hash32,
 {
-    for (key_contrib, pop) in &agg_input.key_contrib {
+    for (i, (key_contrib, pop)) in agg_input.key_contrib.iter().enumerate() {
         let (first_coeff_even_y, _) = key_contrib.into_point_with_even_y();
-        if !schnorr.verify(&first_coeff_even_y, Message::empty(), pop) {
+        if !schnorr.verify(
+            &first_coeff_even_y,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(*key_contrib, i as u32)),
+            pop,
+        ) {
             return Err(ReceiveShareError::InvalidPop);
         }
     }
@@ -476,8 +488,24 @@ impl core::fmt::Display for AddInputError {
 #[cfg(feature = "std")]
 impl std::error::Error for AddInputError {}
 
+/// Build the bytes that the proof-of-possession signs.
+///
+/// Binding format is `parity_byte || contributor_index_be`, where `parity_byte`
+/// is `0` if `com[0]` has even y and `1` otherwise. Including the parity closes
+/// the BIP340 x-only gap: a replay of `(A, pop)` under the negated key `-A`
+/// reconstructs a different message and so fails PoP verification.
+///
+/// SPEC DEVIATION: we add the parity byte where as the spec only has the contribution_index.
+fn pop_message_bytes(first_coeff: Point, contributor_index: u32) -> [u8; 5] {
+    let mut bytes = [0u8; 5];
+    bytes[0] = u8::from(!first_coeff.is_y_even());
+    bytes[1..].copy_from_slice(&contributor_index.to_be_bytes());
+    bytes
+}
+
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::frost::chilldkg::simplepedpop;
 
     use proptest::{
@@ -497,5 +525,56 @@ mod test {
 
             simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_contributors, &mut rng);
         }
+    }
+
+    // The PoP must bind both the slot index and the y-parity of com[0]:
+    //   (1) Alice's pop for slot 0 must not verify at another slot.
+    //   (2) A replay of Alice's pop with the negated first coefficient (-A) must
+    //       not verify at any slot, including slot 0.
+    #[test]
+    fn pop_bound_to_slot_and_parity_rejects_replay() {
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let threshold = 2u32;
+        let n_contributors = 2u32;
+        let share_receivers: BTreeSet<ShareIndex> = [ShareIndex::from(NonZeroU32::new(1).unwrap())]
+            .into_iter()
+            .collect();
+
+        let (_alice_state, alice_msg, _alice_shares) = simplepedpop::Contributor::gen_keygen_input(
+            &schnorr,
+            threshold,
+            n_contributors,
+            &share_receivers,
+            0,
+            &mut rng,
+        );
+
+        let mut coord_replay_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_replay_slot.add_input(&schnorr, 1, alice_msg.clone()),
+            Err(AddInputError::InvalidProofOfPossession),
+            "Alice's pop for slot 0 must not verify at slot 1"
+        );
+
+        let negated_msg = KeygenInput {
+            com: core::iter::once(-alice_msg.com[0])
+                .chain(alice_msg.com[1..].iter().copied())
+                .collect(),
+            pop: alice_msg.pop,
+        };
+        let mut coord_negate_same_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_negate_same_slot.add_input(&schnorr, 0, negated_msg.clone()),
+            Err(AddInputError::InvalidProofOfPossession),
+            "negated-key replay at the original slot must now be rejected by the PoP check"
+        );
+
+        let mut coord_negate_other_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_negate_other_slot.add_input(&schnorr, 1, negated_msg),
+            Err(AddInputError::InvalidProofOfPossession),
+            "negated-key replay at a different slot must be rejected by the PoP check"
+        );
     }
 }
