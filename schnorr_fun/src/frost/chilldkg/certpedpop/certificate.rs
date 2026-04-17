@@ -326,28 +326,21 @@ impl<S: CertificationScheme> Certifier<S> {
         })
     }
 
-    /// Receive and validate a certificate from a party
+    /// Receive and validate a certificate from a party.
+    ///
+    /// Always verifies the supplied signature. Calling this more than once for
+    /// the same `from` is idempotent — any signature that fails to verify is
+    /// rejected, and a verified signature that arrives after a previously
+    /// stored one is simply discarded (the first stored signature wins).
     pub fn receive_certificate(
         &mut self,
         from: Point,
         signature: S::Signature,
     ) -> Result<(), CertifierError> {
-        // Check if we're expecting this party
         if !self.required_keys.contains(&from) {
             return Err(CertifierError::UnknownParty);
         }
 
-        // Check for duplicate - if we already have a cert from this key, it must be identical
-        if let Some(existing_sig) = self.certificates.get(&from) {
-            debug_assert_eq!(
-                existing_sig, &signature,
-                "Conflicting certificates from same party"
-            );
-            // Same signature, this is fine - party is certifying multiple times with same key
-            return Ok(());
-        }
-
-        // Verify the certificate
         if !self
             .cert_scheme
             .verify_cert(from, &self.agg_input, &signature)
@@ -355,8 +348,7 @@ impl<S: CertificationScheme> Certifier<S> {
             return Err(CertifierError::InvalidSignature);
         }
 
-        // Store the validated certificate
-        self.certificates.insert(from, signature);
+        self.certificates.entry(from).or_insert(signature);
 
         Ok(())
     }
