@@ -397,16 +397,18 @@ pub fn receive_secret_share<H, NG>(
 where
     H: Hash32,
 {
-    let encrypted_share = agg_input
+    let (expected_encryption_key, encrypted_share) = agg_input
         .encrypted_shares
         .get(&my_index)
-        .map(|(_pk, share)| *share)
-        .unwrap_or_default();
+        .ok_or(simplepedpop::ReceiveShareError::UnknownShareIndex)?;
+    if *expected_encryption_key != keypair.public_key() {
+        return Err(simplepedpop::ReceiveShareError::WrongEncryptionKey);
+    }
     let share_scalar = decrypt::<H>(
         my_index,
         keypair,
         &agg_input.encryption_nonces,
-        encrypted_share,
+        *encrypted_share,
     );
     let secret_share = SecretShare {
         index: my_index,

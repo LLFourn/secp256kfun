@@ -425,6 +425,10 @@ pub enum ReceiveShareError {
     InvalidPop,
     /// The secret share we got was invalid
     InvalidSecretShare,
+    /// No encrypted share exists at the receiver's share index.
+    UnknownShareIndex,
+    /// The supplied keypair isn't the encryption key registered for this share.
+    WrongEncryptionKey,
 }
 
 impl core::fmt::Display for ReceiveShareError {
@@ -436,6 +440,10 @@ impl core::fmt::Display for ReceiveShareError {
                 ReceiveShareError::InvalidPop => "Invalid POP for one of the contributions",
                 ReceiveShareError::InvalidSecretShare =>
                     "The share extracted from the key generation was invalid",
+                ReceiveShareError::UnknownShareIndex =>
+                    "no encrypted share exists at the requested share index",
+                ReceiveShareError::WrongEncryptionKey =>
+                    "keypair is not the encryption key registered for this share",
             }
         )
     }
