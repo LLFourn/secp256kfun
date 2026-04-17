@@ -52,14 +52,14 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
     }
 }
 
-/// The result of a certified key generation
+/// The result of a certified key generation.
+///
+/// This type is deliberately not serializable: every `CertifiedKeygen` reaches a
+/// user only through [`Certifier::finish`], where every cert was verified on the
+/// way in. If you need to persist or transport the result, serialize the
+/// underlying [`AggKeygenInput`] and the certificate map separately and
+/// re-run certification on the receiving side.
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
-#[cfg_attr(
-    feature = "serde",
-    derive(crate::fun::serde::Deserialize, crate::fun::serde::Serialize),
-    serde(crate = "crate::fun::serde")
-)]
 pub struct CertifiedKeygen<Sig> {
     /// The aggregated inputs to keygen
     input: AggKeygenInput,
@@ -73,11 +73,11 @@ impl<Sig> CertifiedKeygen<Sig> {
         Self { input, certificate }
     }
 
-    /// Verify that all certificates are valid for the given certification scheme and contributor keys.
+    /// Re-verify every stored certificate against the scheme and contributor keys.
     ///
-    /// This type should normally be impossible to construct in an invalid state through the API,
-    /// but since it supports serialization, this method allows validating instances that have been
-    /// deserialized or received from untrusted sources.
+    /// `CertifiedKeygen` can only be constructed via [`Certifier::finish`], which
+    /// verifies each certificate as it is received, so this method is a sanity check
+    /// rather than a safety gate.
     pub fn verify<S>(
         &self,
         cert_scheme: S,
