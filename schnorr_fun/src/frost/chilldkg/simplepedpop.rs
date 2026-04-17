@@ -143,21 +143,24 @@ impl Coordinator {
         schnorr: &Schnorr<H, NG>,
         from: u32,
         input: KeygenInput,
-    ) -> Result<(), &'static str> {
+    ) -> Result<(), AddInputError> {
         let entry = match self.inputs.get_mut(&from) {
             Some(maybe_input) => match maybe_input {
-                Some(_) => return Err("we already have input from this party"),
+                Some(_) => return Err(AddInputError::DuplicateInput { from }),
                 none => none,
             },
-            None => return Err("no input expected from this party"),
+            None => return Err(AddInputError::UnknownContributor { from }),
         };
         if input.com.len() != self.threshold as usize {
-            return Err("input has the wrong threshold");
+            return Err(AddInputError::WrongThreshold {
+                expected: self.threshold,
+                got: input.com.len() as u32,
+            });
         }
 
         let (first_coeff_even_y, _) = input.com[0].into_point_with_even_y();
         if !schnorr.verify(&first_coeff_even_y, Message::empty(), &input.pop) {
-            return Err("☠ pop didn't verify");
+            return Err(AddInputError::InvalidProofOfPossession);
         }
         *entry = Some(input);
 
@@ -401,6 +404,53 @@ impl core::fmt::Display for ReceiveShareError {
         )
     }
 }
+
+/// Reasons [`Coordinator::add_input`] may reject a contributor's input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddInputError {
+    /// Input from this contributor has already been recorded.
+    DuplicateInput {
+        /// The contributor index that already has an input recorded.
+        from: u32,
+    },
+    /// No contributor is expected at this index.
+    UnknownContributor {
+        /// The unexpected contributor index.
+        from: u32,
+    },
+    /// Polynomial commitment length doesn't match the configured threshold.
+    WrongThreshold {
+        /// The threshold the coordinator was configured with.
+        expected: u32,
+        /// The number of coefficients we actually received.
+        got: u32,
+    },
+    /// Proof-of-possession signature failed to verify.
+    InvalidProofOfPossession,
+}
+
+impl core::fmt::Display for AddInputError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AddInputError::DuplicateInput { from } => {
+                write!(f, "already have input from contributor {from}")
+            }
+            AddInputError::UnknownContributor { from } => {
+                write!(f, "no input expected from contributor {from}")
+            }
+            AddInputError::WrongThreshold { expected, got } => write!(
+                f,
+                "input polynomial has {got} coefficients but threshold is {expected}"
+            ),
+            AddInputError::InvalidProofOfPossession => {
+                write!(f, "proof-of-possession signature did not verify")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for AddInputError {}
 
 #[cfg(test)]
 mod test {

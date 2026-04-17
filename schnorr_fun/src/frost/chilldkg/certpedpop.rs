@@ -13,6 +13,7 @@ pub mod certificate;
 pub use certificate::vrf_cert;
 pub use certificate::{
     CertificateError, CertificationScheme, CertifiedKeygen, Certifier, CertifierError,
+    RecoverShareError,
 };
 
 use super::{encpedpop, simplepedpop};

@@ -110,17 +110,17 @@ impl<Sig> CertifiedKeygen<Sig> {
         cert_scheme: &S,
         share_index: ShareIndex,
         keypair: KeyPair,
-    ) -> Result<PairedSecretShare, &'static str> {
+    ) -> Result<PairedSecretShare, RecoverShareError> {
         let cert_key = keypair.public_key();
         let my_cert = self
             .certificate
             .get(&cert_key)
-            .ok_or("I haven't certified this keygen")?;
+            .ok_or(RecoverShareError::NotCertifiedByKey)?;
         // We may have gotten this certificate from *somewhere* so must verify we certified it
         if !cert_scheme.verify_cert(cert_key, &self.input, my_cert) {
-            return Err("my certification was invalid");
+            return Err(RecoverShareError::InvalidCertification);
         }
-        self.input.recover_share::<H>(share_index, &keypair)
+        Ok(self.input.recover_share::<H>(share_index, &keypair)?)
     }
 
     /// Gets the aggregated keygen input.
@@ -394,8 +394,6 @@ impl<S: CertificationScheme> Certifier<S> {
 pub enum CertifierError {
     /// Party is not in the expected keyset
     UnknownParty,
-    /// Certificate already received from this party
-    DuplicateCertificate,
     /// Certificate signature is invalid
     InvalidSignature,
     /// Not all required certificates have been received
@@ -409,12 +407,45 @@ impl core::fmt::Display for CertifierError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             CertifierError::UnknownParty => write!(f, "Certificate from unknown party"),
-            CertifierError::DuplicateCertificate => write!(f, "Duplicate certificate"),
             CertifierError::InvalidSignature => write!(f, "Invalid certificate signature"),
             CertifierError::IncompleteCertificates => write!(f, "Not all certificates received"),
         }
     }
 }
+
+/// Reasons [`CertifiedKeygen::recover_share`] may fail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecoverShareError {
+    /// The supplied keypair didn't sign a certificate for this keygen.
+    NotCertifiedByKey,
+    /// The certificate stored for this key doesn't verify under the scheme.
+    InvalidCertification,
+    /// Underlying share recovery from the encrypted aggregate failed.
+    Recovery(encpedpop::RecoverShareError),
+}
+
+impl From<encpedpop::RecoverShareError> for RecoverShareError {
+    fn from(err: encpedpop::RecoverShareError) -> Self {
+        RecoverShareError::Recovery(err)
+    }
+}
+
+impl core::fmt::Display for RecoverShareError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            RecoverShareError::NotCertifiedByKey => {
+                write!(f, "this keypair has not certified the keygen")
+            }
+            RecoverShareError::InvalidCertification => {
+                write!(f, "our stored certificate did not verify")
+            }
+            RecoverShareError::Recovery(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for RecoverShareError {}
 
 #[cfg(test)]
 mod test {

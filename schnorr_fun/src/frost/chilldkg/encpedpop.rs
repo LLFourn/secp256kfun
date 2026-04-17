@@ -175,14 +175,14 @@ impl AggKeygenInput {
         &self,
         share_index: ShareIndex,
         keypair: &KeyPair,
-    ) -> Result<PairedSecretShare, &'static str> {
+    ) -> Result<PairedSecretShare, RecoverShareError> {
         let (expected_public_key, agg_ciphertext) = self
             .encrypted_shares
             .get(&share_index)
-            .ok_or("No party at party_index existed")?;
+            .ok_or(RecoverShareError::UnknownShareIndex)?;
 
         if *expected_public_key != keypair.public_key() {
-            return Err("this isn't the right encryption keypair for this share");
+            return Err(RecoverShareError::WrongEncryptionKey);
         }
         let secret_share = decrypt::<H>(
             share_index,
@@ -197,11 +197,11 @@ impl AggKeygenInput {
                 index: share_index,
                 share: secret_share,
             })
-            .ok_or("the secret share recovered didn't match what was expected")?;
+            .ok_or(RecoverShareError::InvalidShare)?;
 
         paired_secret_share
             .non_zero()
-            .ok_or("the shared secret was zero")
+            .ok_or(RecoverShareError::ZeroSharedSecret)
     }
 
     /// Embeds a proof-of-work `fingerprint` into the aggregated polynomial.
@@ -307,21 +307,21 @@ impl Coordinator {
         schnorr: &Schnorr<H, NG>,
         from: u32,
         input: KeygenInput,
-    ) -> Result<(), &'static str> {
+    ) -> Result<(), AddInputError> {
         if self.inner.is_finished() {
-            return Err("all inputs have already been collected");
+            return Err(AddInputError::AlreadyFinished);
         }
         let mut check_missing = self.agg_encrypted_shares.keys().collect::<BTreeSet<_>>();
 
         for dest in input.encrypted_shares.keys() {
             if !self.agg_encrypted_shares.contains_key(dest) {
-                return Err("included share for unknown party");
+                return Err(AddInputError::UnknownShareReceiver { receiver: *dest });
             }
             check_missing.remove(dest);
         }
 
         if !check_missing.is_empty() {
-            return Err("didn't have share for all parties");
+            return Err(AddInputError::IncompleteShares);
         }
 
         // ⚠ only do mutations after we're sure everything is OK
@@ -496,6 +496,83 @@ where
     let shared_key = agg_input.shared_key().non_zero().unwrap();
     (shared_key, paired_secret_shares)
 }
+
+/// Reasons [`Coordinator::add_input`] may reject a contributor's input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddInputError {
+    /// All contributor inputs have already been collected.
+    AlreadyFinished,
+    /// Input contains a share encrypted for a receiver not in the configured set.
+    UnknownShareReceiver {
+        /// The share index that wasn't in the configured receiver set.
+        receiver: ShareIndex,
+    },
+    /// Input is missing shares for some configured receivers.
+    IncompleteShares,
+    /// The underlying simplepedpop `add_input` failed.
+    Inner(simplepedpop::AddInputError),
+}
+
+impl From<simplepedpop::AddInputError> for AddInputError {
+    fn from(err: simplepedpop::AddInputError) -> Self {
+        AddInputError::Inner(err)
+    }
+}
+
+impl core::fmt::Display for AddInputError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AddInputError::AlreadyFinished => {
+                write!(f, "all contributor inputs have already been collected")
+            }
+            AddInputError::UnknownShareReceiver { receiver } => {
+                write!(f, "input included share for unknown receiver {receiver}")
+            }
+            AddInputError::IncompleteShares => {
+                write!(f, "input did not have a share for all receivers")
+            }
+            AddInputError::Inner(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for AddInputError {}
+
+/// Reasons [`AggKeygenInput::recover_share`] may fail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecoverShareError {
+    /// No encrypted share exists at the given index.
+    UnknownShareIndex,
+    /// The supplied keypair isn't the encryption key registered for this share.
+    WrongEncryptionKey,
+    /// The decrypted share didn't pair with the shared key.
+    InvalidShare,
+    /// The resulting shared secret was zero.
+    ZeroSharedSecret,
+}
+
+impl core::fmt::Display for RecoverShareError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            RecoverShareError::UnknownShareIndex => {
+                write!(f, "no share exists at the requested index")
+            }
+            RecoverShareError::WrongEncryptionKey => {
+                write!(f, "keypair is not the encryption key for this share")
+            }
+            RecoverShareError::InvalidShare => {
+                write!(f, "recovered secret share did not match the shared key")
+            }
+            RecoverShareError::ZeroSharedSecret => {
+                write!(f, "recovered shared secret was zero")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for RecoverShareError {}
 
 #[cfg(test)]
 mod test {
