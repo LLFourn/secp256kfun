@@ -147,6 +147,13 @@ pub enum CertificateError {
         /// They key whose cert was missing
         key: Point,
     },
+    /// The supplied certificate map contained an entry for a key that isn't an
+    /// expected certifying party. Unverified entries would otherwise pollute
+    /// downstream consumers (e.g. the VRF beacon).
+    Unexpected {
+        /// One of the unexpected keys in the supplied map.
+        key: Point,
+    },
 }
 
 impl core::fmt::Display for CertificateError {
@@ -157,6 +164,12 @@ impl core::fmt::Display for CertificateError {
             }
             CertificateError::Missing { key } => {
                 write!(f, "certificate for key {key} was missing")
+            }
+            CertificateError::Unexpected { key } => {
+                write!(
+                    f,
+                    "certificate map contained unexpected entry for key {key}"
+                )
             }
         }
     }

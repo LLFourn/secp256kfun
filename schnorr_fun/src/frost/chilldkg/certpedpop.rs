@@ -160,6 +160,12 @@ impl SecretShareReceiver {
     /// By default every share receiver is a certifying party but you must also get
     /// certifications from the [`Contributor`]s for security. Their keys are passed in as
     /// `contributor_keys`.
+    ///
+    /// The supplied `certificate` map must contain exactly one entry per
+    /// certifying party — any extras are rejected with
+    /// [`CertificateError::Unexpected`]. This avoids unverified entries
+    /// landing in the resulting [`CertifiedKeygen`] (where downstream
+    /// consumers like the VRF beacon would otherwise pick them up).
     pub fn finalize<S: CertificationScheme>(
         self,
         cert_scheme: &S,
@@ -173,18 +179,23 @@ impl SecretShareReceiver {
             .chain(contributor_keys.iter().cloned())
             .collect::<BTreeSet<_>>(); // dedupe as some contributors may also be receivers
 
+        let mut remaining = certificate;
+        let mut verified = BTreeMap::new();
         for cert_key in cert_keys {
-            match certificate.get(&cert_key) {
-                Some(sig) => {
-                    if !cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
-                        return Err(CertificateError::InvalidCert { key: cert_key });
-                    }
-                }
-                None => return Err(CertificateError::Missing { key: cert_key }),
+            let sig = remaining
+                .remove(&cert_key)
+                .ok_or(CertificateError::Missing { key: cert_key })?;
+            if !cert_scheme.verify_cert(cert_key, &self.agg_input, &sig) {
+                return Err(CertificateError::InvalidCert { key: cert_key });
             }
+            verified.insert(cert_key, sig);
         }
 
-        let certified_keygen = CertifiedKeygen::new(self.agg_input, certificate);
+        if let Some((extra_key, _)) = remaining.into_iter().next() {
+            return Err(CertificateError::Unexpected { key: extra_key });
+        }
+
+        let certified_keygen = CertifiedKeygen::new(self.agg_input, verified);
 
         Ok(CertifiedSecretShare {
             certified_keygen,
@@ -459,5 +470,60 @@ mod test {
                 (n_receivers + n_extra_generators) as usize
             );
         }
+    }
+
+    // SecretShareReceiver::finalize must reject any caller-supplied certificate
+    // map that contains entries for keys outside the expected certifying set.
+    // Otherwise the extras would land in CertifiedKeygen.certificate and
+    // pollute downstream consumers (e.g. the VRF beacon).
+    #[test]
+    fn finalize_rejects_unexpected_cert_entries() {
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let threshold = 2u32;
+        let n_receivers = 2u32;
+        let n_extra_generators = 0u32;
+
+        let output = certpedpop::simulate_keygen(
+            &schnorr,
+            schnorr.clone(),
+            threshold,
+            n_receivers,
+            n_extra_generators,
+            Fingerprint::NONE,
+            &mut rng,
+        );
+
+        // Pick the first receiver as our honest party for the finalize test.
+        let (paired_share, keypair) = output.paired_shares_with_keys[0];
+        let agg_input = output.certified_keygen.agg_input().clone();
+        let contributor_keys = output.contributor_public_keys.clone();
+
+        // Build the receiver state via the receiver-only entry point so we
+        // can drive `finalize` directly.
+        let (receiver, _own_sig) = SecretShareReceiver::receive_secret_share(
+            &schnorr,
+            &schnorr,
+            paired_share.index(),
+            &keypair,
+            &agg_input,
+        )
+        .expect("receive_secret_share");
+
+        // Honest cert map from the simulated keygen, plus an extra valid cert
+        // signed by an unrelated keypair (not in contributor_keys ∪ receivers).
+        let mut malicious_cert_map = output.certified_keygen.certificate().clone();
+        let unrelated_keypair = KeyPair::new(Scalar::random(&mut rng));
+        let unrelated_sig = schnorr.certify(&unrelated_keypair, &agg_input);
+        malicious_cert_map.insert(unrelated_keypair.public_key(), unrelated_sig);
+
+        let result = receiver.finalize(&schnorr, malicious_cert_map, &contributor_keys);
+        assert_eq!(
+            result.err(),
+            Some(CertificateError::Unexpected {
+                key: unrelated_keypair.public_key()
+            }),
+            "finalize must reject unknown-key entries in the supplied map"
+        );
     }
 }
