@@ -95,6 +95,12 @@ impl Contributor {
     /// This method is used when a party acts as both a contributor (providing entropy)
     /// and a receiver (getting a secret share), using the same keypair for both
     /// encryption/decryption and certification.
+    ///
+    /// Returns the same shape as the receiver-only entry point
+    /// [`SecretShareReceiver::receive_secret_share`]: a [`SecretShareReceiver`]
+    /// that *holds* the share until [`SecretShareReceiver::finalize`] is
+    /// called with a complete cert map. Callers must not use the share before
+    /// finalize succeeds — otherwise they're trusting an uncertified keygen.
     pub fn verify_receive_share_and_certify<H: Hash32, NG: NonceGen, S: CertificationScheme>(
         self,
         pop_schnorr: &Schnorr<H, NG>,
@@ -102,7 +108,7 @@ impl Contributor {
         share_index: ShareIndex,
         keypair: &KeyPair,
         agg_input: &AggKeygenInput,
-    ) -> Result<(PairedSecretShare<Normal, Zero>, S::Signature), CombinedRoleError> {
+    ) -> Result<(SecretShareReceiver, S::Signature), CombinedRoleError> {
         // First verify my contribution was included
         self.inner
             .verify_agg_input(agg_input)
@@ -116,7 +122,13 @@ impl Contributor {
         // Finally certify the result
         let sig = cert_scheme.certify(keypair, agg_input);
 
-        Ok((paired_secret_share, sig))
+        Ok((
+            SecretShareReceiver {
+                paired_secret_share,
+                agg_input: agg_input.clone(),
+            },
+            sig,
+        ))
     }
 }
 
@@ -313,7 +325,9 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
     )
     .expect("simulate_keygen produces matching contributor counts");
 
-    let mut paired_secret_shares = vec![];
+    // Hold dual-role receiver state until certification finishes; only then
+    // can we release the paired share via finalize.
+    let mut dual_role_receivers: Vec<(SecretShareReceiver, KeyPair)> = vec![];
 
     // Handle parties that are both contributors and receivers using the combined API
     for (i, (party_index, enckey)) in receiver_enckeys
@@ -322,7 +336,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .take(n_receivers as usize)
     {
         // This party is both a contributor and receiver - use combined method
-        let (paired_secret_share, sig) = contributors[i]
+        let (receiver, sig) = contributors[i]
             .clone()
             .verify_receive_share_and_certify(
                 schnorr,
@@ -338,7 +352,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
             .receive_certificate(enckey.public_key(), sig)
             .unwrap();
 
-        paired_secret_shares.push((paired_secret_share.non_zero().unwrap(), *enckey));
+        dual_role_receivers.push((receiver, *enckey));
     }
 
     // Handle extra contributors that are only contributors (not receivers)
@@ -356,6 +370,18 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
     let certified_keygen = certifier
         .finish()
         .expect("Certifier should have all required certificates");
+
+    // Now that certification is done, release each dual-role party's share.
+    let cert_map = certified_keygen.certificate().clone();
+    let paired_secret_shares: Vec<(PairedSecretShare<Normal>, KeyPair)> = dual_role_receivers
+        .into_iter()
+        .map(|(receiver, enckey)| {
+            let CertifiedSecretShare { paired_share, .. } = receiver
+                .finalize(&cert_scheme, cert_map.clone(), &contributor_public_keys)
+                .expect("simulate_keygen finalize");
+            (paired_share.non_zero().unwrap(), enckey)
+        })
+        .collect();
 
     SimulatedKeygenOutput {
         certified_keygen,
