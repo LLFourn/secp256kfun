@@ -1,39 +1,50 @@
-//! Certificate types and certification schemes for ChillDKG
+//! Certificate types and certification schemes for [`certpedpop`].
 //!
-//! This module contains:
-//! - Certificate: A collection of certification signatures
-//! - CertifiedKeygen: The result of a successfully certified key generation
-//! - CertificationScheme: Trait for certification methods
-//! - Certifier: A stateful validator that checks certificates as they are received
+//! [`certpedpop`]: super
 
-use super::{AggKeygenInput, encpedpop};
+use super::{VerifiedAggKeygenInput, encpedpop};
 use crate::{Schnorr, frost::*};
 use alloc::collections::{BTreeMap, BTreeSet};
 use secp256kfun::{hash::*, prelude::*};
 
-/// A trait for different ways of certifying the aggregated keygen input in certpedpop.
-pub trait CertificationScheme {
-    /// The signature type produced by this scheme
+/// How a [`certpedpop`] party signs a [`VerifiedAggKeygenInput`] and how others
+/// verify that signature. The default implementation is BIP340 Schnorr; the
+/// `vrf_cert_keygen` feature provides a VRF variant whose certificates double
+/// as a randomness beacon.
+///
+/// [`certpedpop`]: super
+pub trait CertificationScheme: Clone {
+    /// Signature type produced by this scheme.
     type Signature: Clone + core::fmt::Debug + PartialEq;
 
-    /// Sign the AggKeygenInput with the given keypair
-    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature;
+    /// Sign the verified aggregate's [`cert_bytes`] with `keypair`.
+    ///
+    /// [`cert_bytes`]: VerifiedAggKeygenInput::cert_bytes
+    fn certify(
+        &self,
+        keypair: &KeyPair,
+        verified_input: &VerifiedAggKeygenInput,
+    ) -> Self::Signature;
 
-    /// Verify a certification signature
+    /// Verify a certification signature against the verified aggregate.
     fn verify_cert(
         &self,
         cert_key: Point,
-        agg_input: &encpedpop::AggKeygenInput,
+        verified_input: &VerifiedAggKeygenInput,
         signature: &Self::Signature,
     ) -> bool;
 }
 
-/// Standard Schnorr (BIP340) implementation of the CertificationScheme trait
-impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
+/// BIP340 Schnorr certification.
+impl<H: Hash32, NG: NonceGen + Clone> CertificationScheme for Schnorr<H, NG> {
     type Signature = crate::Signature;
 
-    fn certify(&self, keypair: &KeyPair, agg_input: &encpedpop::AggKeygenInput) -> Self::Signature {
-        let cert_bytes = agg_input.cert_bytes();
+    fn certify(
+        &self,
+        keypair: &KeyPair,
+        verified_input: &VerifiedAggKeygenInput,
+    ) -> Self::Signature {
+        let cert_bytes = verified_input.cert_bytes();
         let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
         let keypair_even_y = (*keypair).into();
         self.sign(&keypair_even_y, message)
@@ -42,69 +53,72 @@ impl<H: Hash32, NG: NonceGen> CertificationScheme for Schnorr<H, NG> {
     fn verify_cert(
         &self,
         cert_key: Point,
-        agg_input: &encpedpop::AggKeygenInput,
+        verified_input: &VerifiedAggKeygenInput,
         signature: &Self::Signature,
     ) -> bool {
-        let cert_bytes = agg_input.cert_bytes();
+        let cert_bytes = verified_input.cert_bytes();
         let message = crate::Message::new("BIP DKG/cert", cert_bytes.as_ref());
         let cert_key_even_y = cert_key.into_point_with_even_y().0;
         self.verify(&cert_key_even_y, message, signature)
     }
 }
 
-/// The result of a certified key generation.
+/// Final output of a `certpedpop` keygen — the verified aggregate paired with
+/// every party's certificate. Hold this; it proves the whole group certified
+/// the same result. Use [`recover_share`] to re-derive a share later from a
+/// stored decryption keypair.
 ///
-/// This type is deliberately not serializable: every `CertifiedKeygen` reaches a
-/// user only through [`Certifier::finish`], where every cert was verified on the
-/// way in. If you need to persist or transport the result, serialize the
-/// underlying [`AggKeygenInput`] and the certificate map separately and
-/// re-run certification on the receiving side.
+/// Not serializable: a `CertifiedKeygen` is only ever produced through paths
+/// that re-verify every certificate ([`Certifier::finish`] or [`new`]).
+///
+/// [`recover_share`]: Self::recover_share
+/// [`new`]: Self::new
 #[derive(Clone, Debug, PartialEq)]
 pub struct CertifiedKeygen<Sig> {
-    /// The aggregated inputs to keygen
-    input: AggKeygenInput,
-    /// The collected certificates from each party
+    verified_input: VerifiedAggKeygenInput,
     certificate: BTreeMap<Point, Sig>,
 }
 
 impl<Sig> CertifiedKeygen<Sig> {
-    /// Internal constructor for use within the crate.
-    pub(crate) fn new(input: AggKeygenInput, certificate: BTreeMap<Point, Sig>) -> Self {
-        Self { input, certificate }
+    fn from_verified(
+        verified_input: VerifiedAggKeygenInput,
+        certificate: BTreeMap<Point, Sig>,
+    ) -> Self {
+        Self {
+            verified_input,
+            certificate,
+        }
     }
 
-    /// Re-verify every stored certificate against the scheme and contributor keys.
-    ///
-    /// `CertifiedKeygen` can only be constructed via [`Certifier::finish`], which
-    /// verifies each certificate as it is received, so this method is a sanity check
-    /// rather than a safety gate.
-    pub fn verify<S>(
-        &self,
-        cert_scheme: S,
-        contributor_keys: &[Point],
-    ) -> Result<(), CertifierError>
+    /// Build a `CertifiedKeygen` from a verified aggregate and complete
+    /// certificate map; every signature is verified on the way in. Use this
+    /// when you have all the certificates at once; otherwise build a
+    /// [`Certifier`] and feed them in incrementally.
+    pub fn new<S>(
+        cert_scheme: &S,
+        verified_input: VerifiedAggKeygenInput,
+        certificates: BTreeMap<Point, Sig>,
+    ) -> Result<Self, CertificateError>
     where
         S: CertificationScheme<Signature = Sig>,
-        Sig: Clone,
     {
-        let mut certifier = Certifier::new(cert_scheme, self.input.clone(), contributor_keys)?;
-
-        // Add all certificates to the certifier
-        for (key, sig) in &self.certificate {
-            certifier.receive_certificate(*key, sig.clone())?;
+        let mut certifier = Certifier::new(cert_scheme.clone(), verified_input);
+        for (key, sig) in certificates {
+            certifier
+                .receive_certificate(key, sig)
+                .map_err(|err| match err {
+                    ReceiveCertError::UnknownParty => CertificateError::Unexpected { key },
+                    ReceiveCertError::InvalidSignature => CertificateError::InvalidCert { key },
+                })?;
         }
-
-        // Check if all required certificates are present
-        if !certifier.is_finished() {
-            return Err(CertifierError::IncompleteCertificates);
+        if let Some(key) = certifier.first_missing() {
+            return Err(CertificateError::Missing { key });
         }
-
-        Ok(())
+        Ok(certifier.finish().expect("just verified completeness"))
     }
 
-    /// Recover a share from a certified key generation with the decryption key.
-    ///
-    /// This checks that the `keypair` has signed the key generation first.
+    /// Recover a share with `keypair`'s decryption key. Confirms `keypair`
+    /// itself certified this keygen before decrypting.
     pub fn recover_share<H: Hash32, S: CertificationScheme<Signature = Sig>>(
         &self,
         cert_scheme: &S,
@@ -117,39 +131,43 @@ impl<Sig> CertifiedKeygen<Sig> {
             .get(&cert_key)
             .ok_or(RecoverShareError::NotCertifiedByKey)?;
         // We may have gotten this certificate from *somewhere* so must verify we certified it
-        if !cert_scheme.verify_cert(cert_key, &self.input, my_cert) {
+        if !cert_scheme.verify_cert(cert_key, self.verified_agg_input(), my_cert) {
             return Err(RecoverShareError::InvalidCertification);
         }
-        Ok(self.input.recover_share::<H>(share_index, &keypair)?)
+        Ok(self
+            .verified_agg_input()
+            .recover_share::<H>(share_index, &keypair)?)
     }
 
-    /// Gets the aggregated keygen input.
-    pub fn agg_input(&self) -> &AggKeygenInput {
-        &self.input
+    /// The verified aggregated keygen input this certificate covers.
+    pub fn verified_agg_input(&self) -> &VerifiedAggKeygenInput {
+        &self.verified_input
     }
 
-    /// Gets the certificate.
+    /// The certificate map: one signature per certifying party.
     pub fn certificate(&self) -> &BTreeMap<Point, Sig> {
         &self.certificate
     }
 }
 
-/// There was a problem with the keygen certificate so the key generation can't be trusted.
-#[derive(Clone, Debug, Copy, PartialEq)]
+/// Reasons a caller-supplied certificate map can be rejected by [`CertifiedKeygen::new`]
+/// or [`SecretShareReceiver::finalize`].
+///
+/// [`SecretShareReceiver::finalize`]: super::SecretShareReceiver::finalize
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum CertificateError {
-    /// A certificate was invalid
+    /// A certificate was present but did not verify.
     InvalidCert {
-        /// The key that had the invalid cert
+        /// The key whose certificate failed verification.
         key: Point,
     },
-    /// A certificate was missing
+    /// A certifying party's certificate is missing.
     Missing {
-        /// They key whose cert was missing
+        /// The key whose certificate is missing.
         key: Point,
     },
-    /// The supplied certificate map contained an entry for a key that isn't an
-    /// expected certifying party. Unverified entries would otherwise pollute
-    /// downstream consumers (e.g. the VRF beacon).
+    /// The certificate map contained an entry for a key outside the expected
+    /// certifying set.
     Unexpected {
         /// One of the unexpected keys in the supplied map.
         key: Point,
@@ -223,10 +241,10 @@ pub mod vrf_cert {
         fn certify(
             &self,
             keypair: &KeyPair,
-            agg_input: &encpedpop::AggKeygenInput,
+            verified_input: &VerifiedAggKeygenInput,
         ) -> Self::Signature {
             // Use the certification bytes as the VRF input
-            let cert_bytes = agg_input.cert_bytes();
+            let cert_bytes = verified_input.cert_bytes();
             let h =
                 Point::hash_to_curve(H::default().ds(self.name).add(&cert_bytes[..])).normalize();
             let vrf = SimpleVrf::<H>::default().with_name(self.name);
@@ -236,11 +254,11 @@ pub mod vrf_cert {
         fn verify_cert(
             &self,
             cert_key: Point,
-            agg_input: &encpedpop::AggKeygenInput,
+            verified_input: &VerifiedAggKeygenInput,
             signature: &Self::Signature,
         ) -> bool {
             // Use the certification bytes as the VRF input
-            let cert_bytes = agg_input.cert_bytes();
+            let cert_bytes = verified_input.cert_bytes();
             let h =
                 Point::hash_to_curve(H::default().ds(self.name).add(&cert_bytes[..])).normalize();
             let vrf = SimpleVrf::<H>::default().with_name(self.name);
@@ -276,8 +294,8 @@ pub mod vrf_cert {
         /// 2. The honest party verifies its contribution to the keygen is included (which are always sampled randomly)
         /// 3. The VRF is over the transcript and every transcript with an honest party will always be unique (because of #2).
         /// 4. The honest party's VRF output will be both hidden and uniformly distributed.
-        /// 5. All honest parties with the same `AggKeygenInput::cert_bytes` will output the same check
-        /// 6. All honest parties with a different `AggKeygenInput::cert_bytes` are statistically likely to output different bytes.
+        /// 5. All honest parties with the same `VerifiedAggKeygenInput::cert_bytes` will output the same check
+        /// 6. All honest parties with a different `VerifiedAggKeygenInput::cert_bytes` are statistically likely to output different bytes.
         ///
         /// This check is *statistically* secure -- per keygen the attacker only
         /// has 1/2ⁿ chance of succeeding to collide the checks where `n` is the
@@ -293,72 +311,49 @@ pub mod vrf_cert {
     }
 }
 
-/// A certifier that validates certificates as they are received
+/// Collects certificates from each certifying party and yields a
+/// [`CertifiedKeygen`] once they're all in. Construct after
+/// `Contributor::<R>::verify_agg_input` and feed each incoming certificate
+/// through [`receive_certificate`].
+///
+/// [`receive_certificate`]: Self::receive_certificate
 #[derive(Clone, Debug, PartialEq)]
 pub struct Certifier<S: CertificationScheme> {
     cert_scheme: S,
-    agg_input: encpedpop::AggKeygenInput,
-    required_keys: BTreeSet<Point>,
+    verified_agg_input: VerifiedAggKeygenInput,
     certificates: BTreeMap<Point, S::Signature>,
 }
 
 impl<S: CertificationScheme> Certifier<S> {
-    /// Create a new certifier that expects certificates from contributors and receivers.
+    /// Build a certifier from a verified aggregated input. Feed each
+    /// party's certificate (including your own) via [`receive_certificate`].
     ///
-    /// Returns [`CertifierError::ContributorCountMismatch`] if the `agg_input` claims
-    /// a different number of contributors than `contributor_keys.len()`.
-    pub fn new(
-        cert_scheme: S,
-        agg_input: encpedpop::AggKeygenInput,
-        contributor_keys: &[Point],
-    ) -> Result<Self, CertifierError> {
-        if agg_input.n_encryption_nonces() != contributor_keys.len()
-            || agg_input.inner().n_contributors() != contributor_keys.len()
-        {
-            return Err(CertifierError::ContributorCountMismatch);
-        }
-
-        // Collect all expected keys - deduplicate since some parties may be both contributors and receivers
-        let mut required_keys = BTreeSet::new();
-
-        // Add contributor certification keys
-        for key in contributor_keys {
-            required_keys.insert(*key);
-        }
-
-        // Add receiver encryption keys from the agg_input
-        for (_, encryption_key) in agg_input.encryption_keys() {
-            required_keys.insert(encryption_key);
-        }
-
-        Ok(Self {
+    /// [`receive_certificate`]: Self::receive_certificate
+    pub fn new(cert_scheme: S, verified_agg_input: VerifiedAggKeygenInput) -> Self {
+        Self {
             cert_scheme,
-            agg_input,
-            required_keys,
+            verified_agg_input,
             certificates: BTreeMap::new(),
-        })
+        }
     }
 
-    /// Receive and validate a certificate from a party.
-    ///
-    /// Always verifies the supplied signature. Calling this more than once for
-    /// the same `from` is idempotent — any signature that fails to verify is
-    /// rejected, and a verified signature that arrives after a previously
-    /// stored one is simply discarded (the first stored signature wins).
+    /// Verify and store a certificate from `from`. Idempotent: re-feeding an
+    /// already-stored certificate is a no-op (allows replaying a transport
+    /// without losing progress).
     pub fn receive_certificate(
         &mut self,
         from: Point,
         signature: S::Signature,
-    ) -> Result<(), CertifierError> {
-        if !self.required_keys.contains(&from) {
-            return Err(CertifierError::UnknownParty);
+    ) -> Result<(), ReceiveCertError> {
+        if !self.verified_agg_input.required_keys().contains(&from) {
+            return Err(ReceiveCertError::UnknownParty);
         }
 
         if !self
             .cert_scheme
-            .verify_cert(from, &self.agg_input, &signature)
+            .verify_cert(from, &self.verified_agg_input, &signature)
         {
-            return Err(CertifierError::InvalidSignature);
+            return Err(ReceiveCertError::InvalidSignature);
         }
 
         self.certificates.entry(from).or_insert(signature);
@@ -366,73 +361,90 @@ impl<S: CertificationScheme> Certifier<S> {
         Ok(())
     }
 
-    /// Get the aggregated keygen input
-    pub fn agg_input(&self) -> &encpedpop::AggKeygenInput {
-        &self.agg_input
+    /// The certification scheme this certifier uses.
+    pub fn cert_scheme(&self) -> &S {
+        &self.cert_scheme
     }
 
-    /// Get the set of required keys for certification
-    pub fn required_keys(&self) -> &BTreeSet<Point> {
-        &self.required_keys
+    /// Public keys whose certificates are required.
+    pub fn required_keys(&self) -> BTreeSet<Point> {
+        self.verified_agg_input.required_keys()
     }
 
-    /// Check if all required certificates have been received
+    /// Whether every required certificate has been received.
     pub fn is_finished(&self) -> bool {
-        self.certificates.len() == self.required_keys.len()
+        self.certificates.len() == self.verified_agg_input.required_keys().len()
     }
 
-    /// Get the number of certificates still needed
+    /// First required key still missing a certificate, if any.
+    pub fn first_missing(&self) -> Option<Point> {
+        self.verified_agg_input
+            .required_keys()
+            .iter()
+            .find(|k| !self.certificates.contains_key(k))
+            .copied()
+    }
+
+    /// How many certificates are still missing.
     pub fn missing_count(&self) -> usize {
-        self.required_keys
+        self.verified_agg_input
+            .required_keys()
             .len()
             .saturating_sub(self.certificates.len())
     }
 
-    /// Get the number of required keys
+    /// Number of required keys.
     pub fn required_count(&self) -> usize {
-        self.required_keys.len()
+        self.verified_agg_input.required_keys().len()
     }
 
-    /// Finish certification and return the certified keygen
-    pub fn finish(self) -> Result<CertifiedKeygen<S::Signature>, CertifierError> {
+    /// Yield the [`CertifiedKeygen`] if every certificate has been received.
+    pub fn finish(self) -> Result<CertifiedKeygen<S::Signature>, IncompleteCertificates> {
         if !self.is_finished() {
-            return Err(CertifierError::IncompleteCertificates);
+            return Err(IncompleteCertificates);
         }
 
-        Ok(CertifiedKeygen::new(self.agg_input, self.certificates))
+        Ok(CertifiedKeygen::from_verified(
+            self.verified_agg_input,
+            self.certificates,
+        ))
     }
 }
 
-/// Errors that can occur during certificate validation
-#[derive(Debug, Clone)]
-pub enum CertifierError {
+/// Errors from [`Certifier::receive_certificate`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReceiveCertError {
     /// Party is not in the expected keyset
     UnknownParty,
     /// Certificate signature is invalid
     InvalidSignature,
-    /// Not all required certificates have been received
-    IncompleteCertificates,
-    /// The aggregated keygen input has a different number of contributors than
-    /// the provided `contributor_keys` list.
-    ContributorCountMismatch,
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for CertifierError {}
-
-impl core::fmt::Display for CertifierError {
+impl core::fmt::Display for ReceiveCertError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CertifierError::UnknownParty => write!(f, "Certificate from unknown party"),
-            CertifierError::InvalidSignature => write!(f, "Invalid certificate signature"),
-            CertifierError::IncompleteCertificates => write!(f, "Not all certificates received"),
-            CertifierError::ContributorCountMismatch => write!(
-                f,
-                "aggregated input has a different number of contributors than expected"
-            ),
+            ReceiveCertError::UnknownParty => write!(f, "Certificate from unknown party"),
+            ReceiveCertError::InvalidSignature => write!(f, "Invalid certificate signature"),
         }
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for ReceiveCertError {}
+
+/// Returned by [`Certifier::finish`] when not all expected certificates have
+/// been collected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IncompleteCertificates;
+
+impl core::fmt::Display for IncompleteCertificates {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Not all certificates received")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for IncompleteCertificates {}
 
 /// Reasons [`CertifiedKeygen::recover_share`] may fail.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
