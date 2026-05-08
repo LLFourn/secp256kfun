@@ -15,6 +15,8 @@ use alloc::{
 use core::num::NonZeroU32;
 use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, poly, prelude::*, rand_core};
 
+const POP_DOMAIN_SEP: &str = "BIP DKG/pop message";
+
 /// A party that generates secret input to the key generation. You need at least one of these
 /// and if at least one of these parties is honest then the final secret key will not be known by an
 /// attacker (unless they obtain `t` shares!).
@@ -28,6 +30,7 @@ use secp256kfun::{KeyPair, hash::Hash32, nonce::NonceGen, poly, prelude::*, rand
 pub struct Contributor {
     my_key_contrib: Point,
     my_index: u32,
+    n_contributors: u32,
 }
 
 impl Contributor {
@@ -40,6 +43,7 @@ impl Contributor {
     pub fn gen_keygen_input<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         share_receivers: &BTreeSet<ShareIndex>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -48,11 +52,15 @@ impl Contributor {
         H: Hash32,
         NG: NonceGen,
     {
+        assert!(threshold > 0);
+        assert!(my_index < n_contributors);
         let secret_poly = poly::scalar::generate(threshold as usize, rng);
-        let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
-        // XXX The thing that's signed differs from the spec
-        let pop = schnorr.sign(&pop_keypair, Message::empty());
         let com = poly::scalar::to_point_poly(&secret_poly);
+        let pop_keypair = KeyPair::new_xonly(secret_poly[0]);
+        let pop = schnorr.sign(
+            &pop_keypair,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(com[0], my_index)),
+        );
 
         let shares = share_receivers
             .iter()
@@ -61,6 +69,7 @@ impl Contributor {
         let self_ = Self {
             my_key_contrib: com[0],
             my_index,
+            n_contributors,
         };
         let msg = KeygenInput { com, pop };
         (self_, msg, shares)
@@ -76,6 +85,9 @@ impl Contributor {
         self,
         agg_input: &AggKeygenInput,
     ) -> Result<(), ContributionDidntMatch> {
+        if agg_input.key_contrib.len() != self.n_contributors as usize {
+            return Err(ContributionDidntMatch);
+        }
         let my_got_contrib = agg_input
             .key_contrib
             .get(self.my_index as usize)
@@ -91,6 +103,11 @@ impl Contributor {
     /// Get the index for the contributor
     pub fn contributor_index(&self) -> u32 {
         self.my_index
+    }
+
+    /// Get the number of contributors this contributor was configured for.
+    pub fn n_contributors(&self) -> u32 {
+        self.n_contributors
     }
 }
 
@@ -143,21 +160,28 @@ impl Coordinator {
         schnorr: &Schnorr<H, NG>,
         from: u32,
         input: KeygenInput,
-    ) -> Result<(), &'static str> {
+    ) -> Result<(), AddInputError> {
         let entry = match self.inputs.get_mut(&from) {
             Some(maybe_input) => match maybe_input {
-                Some(_) => return Err("we already have input from this party"),
+                Some(_) => return Err(AddInputError::DuplicateInput { from }),
                 none => none,
             },
-            None => return Err("no input expected from this party"),
+            None => return Err(AddInputError::UnknownContributor { from }),
         };
         if input.com.len() != self.threshold as usize {
-            return Err("input has the wrong threshold");
+            return Err(AddInputError::WrongThreshold {
+                expected: self.threshold,
+                got: input.com.len() as u32,
+            });
         }
 
         let (first_coeff_even_y, _) = input.com[0].into_point_with_even_y();
-        if !schnorr.verify(&first_coeff_even_y, Message::empty(), &input.pop) {
-            return Err("☠ pop didn't verify");
+        if !schnorr.verify(
+            &first_coeff_even_y,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(input.com[0], from)),
+            &input.pop,
+        ) {
+            return Err(AddInputError::InvalidProofOfPossession);
         }
         *entry = Some(input);
 
@@ -231,6 +255,11 @@ pub struct AggKeygenInput {
 }
 
 impl AggKeygenInput {
+    /// The number of contributors whose key contributions are aggregated into this input.
+    pub fn n_contributors(&self) -> usize {
+        self.key_contrib.len()
+    }
+
     /// Gets the `SharedKey` that this aggregated input produces.
     ///
     /// ## Security
@@ -278,9 +307,13 @@ pub fn receive_secret_share<H, NG>(
 where
     H: Hash32,
 {
-    for (key_contrib, pop) in &agg_input.key_contrib {
+    for (i, (key_contrib, pop)) in agg_input.key_contrib.iter().enumerate() {
         let (first_coeff_even_y, _) = key_contrib.into_point_with_even_y();
-        if !schnorr.verify(&first_coeff_even_y, Message::empty(), pop) {
+        if !schnorr.verify(
+            &first_coeff_even_y,
+            Message::new(POP_DOMAIN_SEP, &pop_message_bytes(*key_contrib, i as u32)),
+            pop,
+        ) {
             return Err(ReceiveShareError::InvalidPop);
         }
     }
@@ -318,7 +351,7 @@ pub fn simulate_keygen<H, NG>(
     schnorr: &Schnorr<H, NG>,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_contributors: u32,
     rng: &mut impl rand_core::RngCore,
 ) -> (SharedKey<Normal>, Vec<PairedSecretShare<Normal>>)
 where
@@ -329,13 +362,19 @@ where
         .map(|i| ShareIndex::from(NonZeroU32::new(i).unwrap()))
         .collect::<BTreeSet<_>>();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators);
+    let mut aggregator = Coordinator::new(threshold, n_contributors);
     let mut contributors = vec![];
     let mut secret_inputs = BTreeMap::<ShareIndex, Vec<Scalar<Secret, Zero>>>::default();
 
-    for i in 0..n_generators {
-        let (contributor, to_coordinator, shares) =
-            Contributor::gen_keygen_input(schnorr, threshold, &share_receivers, i, rng);
+    for i in 0..n_contributors {
+        let (contributor, to_coordinator, shares) = Contributor::gen_keygen_input(
+            schnorr,
+            threshold,
+            n_contributors,
+            &share_receivers,
+            i,
+            rng,
+        );
 
         contributors.push(contributor);
         aggregator.add_input(schnorr, i, to_coordinator).unwrap();
@@ -386,6 +425,10 @@ pub enum ReceiveShareError {
     InvalidPop,
     /// The secret share we got was invalid
     InvalidSecretShare,
+    /// No encrypted share exists at the receiver's share index.
+    UnknownShareIndex,
+    /// The supplied keypair isn't the encryption key registered for this share.
+    WrongEncryptionKey,
 }
 
 impl core::fmt::Display for ReceiveShareError {
@@ -397,13 +440,80 @@ impl core::fmt::Display for ReceiveShareError {
                 ReceiveShareError::InvalidPop => "Invalid POP for one of the contributions",
                 ReceiveShareError::InvalidSecretShare =>
                     "The share extracted from the key generation was invalid",
+                ReceiveShareError::UnknownShareIndex =>
+                    "no encrypted share exists at the requested share index",
+                ReceiveShareError::WrongEncryptionKey =>
+                    "keypair is not the encryption key registered for this share",
             }
         )
     }
 }
 
+/// Reasons [`Coordinator::add_input`] may reject a contributor's input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddInputError {
+    /// Input from this contributor has already been recorded.
+    DuplicateInput {
+        /// The contributor index that already has an input recorded.
+        from: u32,
+    },
+    /// No contributor is expected at this index.
+    UnknownContributor {
+        /// The unexpected contributor index.
+        from: u32,
+    },
+    /// Polynomial commitment length doesn't match the configured threshold.
+    WrongThreshold {
+        /// The threshold the coordinator was configured with.
+        expected: u32,
+        /// The number of coefficients we actually received.
+        got: u32,
+    },
+    /// Proof-of-possession signature failed to verify.
+    InvalidProofOfPossession,
+}
+
+impl core::fmt::Display for AddInputError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AddInputError::DuplicateInput { from } => {
+                write!(f, "already have input from contributor {from}")
+            }
+            AddInputError::UnknownContributor { from } => {
+                write!(f, "no input expected from contributor {from}")
+            }
+            AddInputError::WrongThreshold { expected, got } => write!(
+                f,
+                "input polynomial has {got} coefficients but threshold is {expected}"
+            ),
+            AddInputError::InvalidProofOfPossession => {
+                write!(f, "proof-of-possession signature did not verify")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for AddInputError {}
+
+/// Build the bytes that the proof-of-possession signs.
+///
+/// Binding format is `parity_byte || contributor_index_be`, where `parity_byte`
+/// is `0` if `com[0]` has even y and `1` otherwise. Including the parity closes
+/// the BIP340 x-only gap: a replay of `(A, pop)` under the negated key `-A`
+/// reconstructs a different message and so fails PoP verification.
+///
+/// SPEC DEVIATION: we add the parity byte where as the spec only has the contribution_index.
+fn pop_message_bytes(first_coeff: Point, contributor_index: u32) -> [u8; 5] {
+    let mut bytes = [0u8; 5];
+    bytes[0] = u8::from(!first_coeff.is_y_even());
+    bytes[1..].copy_from_slice(&contributor_index.to_be_bytes());
+    bytes
+}
+
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::frost::chilldkg::simplepedpop;
 
     use proptest::{
@@ -416,12 +526,63 @@ mod test {
         #[test]
         fn simplepedpop_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
 
-            simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_generators, &mut rng);
+            simplepedpop::simulate_keygen(&schnorr, threshold, n_receivers, n_contributors, &mut rng);
         }
+    }
+
+    // The PoP must bind both the slot index and the y-parity of com[0]:
+    //   (1) Alice's pop for slot 0 must not verify at another slot.
+    //   (2) A replay of Alice's pop with the negated first coefficient (-A) must
+    //       not verify at any slot, including slot 0.
+    #[test]
+    fn pop_bound_to_slot_and_parity_rejects_replay() {
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let threshold = 2u32;
+        let n_contributors = 2u32;
+        let share_receivers: BTreeSet<ShareIndex> = [ShareIndex::from(NonZeroU32::new(1).unwrap())]
+            .into_iter()
+            .collect();
+
+        let (_alice_state, alice_msg, _alice_shares) = simplepedpop::Contributor::gen_keygen_input(
+            &schnorr,
+            threshold,
+            n_contributors,
+            &share_receivers,
+            0,
+            &mut rng,
+        );
+
+        let mut coord_replay_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_replay_slot.add_input(&schnorr, 1, alice_msg.clone()),
+            Err(AddInputError::InvalidProofOfPossession),
+            "Alice's pop for slot 0 must not verify at slot 1"
+        );
+
+        let negated_msg = KeygenInput {
+            com: core::iter::once(-alice_msg.com[0])
+                .chain(alice_msg.com[1..].iter().copied())
+                .collect(),
+            pop: alice_msg.pop,
+        };
+        let mut coord_negate_same_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_negate_same_slot.add_input(&schnorr, 0, negated_msg.clone()),
+            Err(AddInputError::InvalidProofOfPossession),
+            "negated-key replay at the original slot must now be rejected by the PoP check"
+        );
+
+        let mut coord_negate_other_slot = simplepedpop::Coordinator::new(threshold, n_contributors);
+        assert_eq!(
+            coord_negate_other_slot.add_input(&schnorr, 1, negated_msg),
+            Err(AddInputError::InvalidProofOfPossession),
+            "negated-key replay at a different slot must be rejected by the PoP check"
+        );
     }
 }

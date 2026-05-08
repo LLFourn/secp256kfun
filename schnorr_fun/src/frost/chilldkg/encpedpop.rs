@@ -48,6 +48,7 @@ impl Contributor {
     pub fn gen_keygen_input<H, NG>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -63,6 +64,7 @@ impl Contributor {
             simplepedpop::Contributor::gen_keygen_input(
                 schnorr,
                 threshold,
+                n_contributors,
                 &share_receivers,
                 my_index,
                 rng,
@@ -103,17 +105,29 @@ impl Contributor {
         self,
         agg_keygen_input: &AggKeygenInput,
     ) -> Result<(), simplepedpop::ContributionDidntMatch> {
+        if agg_keygen_input.encryption_nonces.len() != self.inner.n_contributors() as usize {
+            return Err(simplepedpop::ContributionDidntMatch);
+        }
         // check the encryption nonce we provided was still in the
         // AggKeygenInput. This may not be necessary for security but we do it
         // for completeness.
         let my_index = self.inner.contributor_index();
         let expected = self.my_nonce;
-        let got = agg_keygen_input.encryption_nonces[my_index as usize];
+        let got = agg_keygen_input
+            .encryption_nonces
+            .get(my_index as usize)
+            .copied()
+            .ok_or(simplepedpop::ContributionDidntMatch)?;
         if got != expected {
             return Err(simplepedpop::ContributionDidntMatch);
         }
         self.inner.verify_agg_input(&agg_keygen_input.inner)?;
         Ok(())
+    }
+
+    /// Get the number of contributors this contributor was configured for.
+    pub fn n_contributors(&self) -> u32 {
+        self.inner.n_contributors()
     }
 }
 
@@ -132,6 +146,16 @@ pub struct AggKeygenInput {
 }
 
 impl AggKeygenInput {
+    /// The inner simplepedpop aggregated input.
+    pub fn inner(&self) -> &simplepedpop::AggKeygenInput {
+        &self.inner
+    }
+
+    /// The number of encryption nonces in this aggregated input (one per contributor).
+    pub fn n_encryption_nonces(&self) -> usize {
+        self.encryption_nonces.len()
+    }
+
     /// Gets the `SharedKey` that this aggregated input produces.
     ///
     /// ## Security
@@ -175,14 +199,14 @@ impl AggKeygenInput {
         &self,
         share_index: ShareIndex,
         keypair: &KeyPair,
-    ) -> Result<PairedSecretShare, &'static str> {
+    ) -> Result<PairedSecretShare, RecoverShareError> {
         let (expected_public_key, agg_ciphertext) = self
             .encrypted_shares
             .get(&share_index)
-            .ok_or("No party at party_index existed")?;
+            .ok_or(RecoverShareError::UnknownShareIndex)?;
 
         if *expected_public_key != keypair.public_key() {
-            return Err("this isn't the right encryption keypair for this share");
+            return Err(RecoverShareError::WrongEncryptionKey);
         }
         let secret_share = decrypt::<H>(
             share_index,
@@ -197,11 +221,11 @@ impl AggKeygenInput {
                 index: share_index,
                 share: secret_share,
             })
-            .ok_or("the secret share recovered didn't match what was expected")?;
+            .ok_or(RecoverShareError::InvalidShare)?;
 
         paired_secret_share
             .non_zero()
-            .ok_or("the shared secret was zero")
+            .ok_or(RecoverShareError::ZeroSharedSecret)
     }
 
     /// Embeds a proof-of-work `fingerprint` into the aggregated polynomial.
@@ -307,21 +331,21 @@ impl Coordinator {
         schnorr: &Schnorr<H, NG>,
         from: u32,
         input: KeygenInput,
-    ) -> Result<(), &'static str> {
+    ) -> Result<(), AddInputError> {
         if self.inner.is_finished() {
-            return Err("all inputs have already been collected");
+            return Err(AddInputError::AlreadyFinished);
         }
         let mut check_missing = self.agg_encrypted_shares.keys().collect::<BTreeSet<_>>();
 
         for dest in input.encrypted_shares.keys() {
             if !self.agg_encrypted_shares.contains_key(dest) {
-                return Err("included share for unknown party");
+                return Err(AddInputError::UnknownShareReceiver { receiver: *dest });
             }
             check_missing.remove(dest);
         }
 
         if !check_missing.is_empty() {
-            return Err("didn't have share for all parties");
+            return Err(AddInputError::IncompleteShares);
         }
 
         // ⚠ only do mutations after we're sure everything is OK
@@ -373,16 +397,18 @@ pub fn receive_secret_share<H, NG>(
 where
     H: Hash32,
 {
-    let encrypted_share = agg_input
+    let (expected_encryption_key, encrypted_share) = agg_input
         .encrypted_shares
         .get(&my_index)
-        .map(|(_pk, share)| *share)
-        .unwrap_or_default();
+        .ok_or(simplepedpop::ReceiveShareError::UnknownShareIndex)?;
+    if *expected_encryption_key != keypair.public_key() {
+        return Err(simplepedpop::ReceiveShareError::WrongEncryptionKey);
+    }
     let share_scalar = decrypt::<H>(
         my_index,
         keypair,
         &agg_input.encryption_nonces,
-        encrypted_share,
+        *encrypted_share,
     );
     let secret_share = SecretShare {
         index: my_index,
@@ -439,7 +465,7 @@ pub fn simulate_keygen<H, NG>(
     schnorr: &Schnorr<H, NG>,
     threshold: u32,
     n_receivers: u32,
-    n_generators: u32,
+    n_contributors: u32,
     fingerprint: Fingerprint,
     rng: &mut impl rand_core::RngCore,
 ) -> (SharedKey<Normal>, Vec<PairedSecretShare<Normal>>)
@@ -463,13 +489,20 @@ where
         .collect::<BTreeMap<ShareIndex, Point>>();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
-        ..n_generators)
+        ..n_contributors)
         .map(|i| {
-            Contributor::gen_keygen_input(schnorr, threshold, &public_receiver_enckeys, i, rng)
+            Contributor::gen_keygen_input(
+                schnorr,
+                threshold,
+                n_contributors,
+                &public_receiver_enckeys,
+                i,
+                rng,
+            )
         })
         .unzip();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators, &public_receiver_enckeys);
+    let mut aggregator = Coordinator::new(threshold, n_contributors, &public_receiver_enckeys);
 
     for (i, to_coordinator_message) in to_coordinator_messages.into_iter().enumerate() {
         aggregator
@@ -497,6 +530,83 @@ where
     (shared_key, paired_secret_shares)
 }
 
+/// Reasons [`Coordinator::add_input`] may reject a contributor's input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddInputError {
+    /// All contributor inputs have already been collected.
+    AlreadyFinished,
+    /// Input contains a share encrypted for a receiver not in the configured set.
+    UnknownShareReceiver {
+        /// The share index that wasn't in the configured receiver set.
+        receiver: ShareIndex,
+    },
+    /// Input is missing shares for some configured receivers.
+    IncompleteShares,
+    /// The underlying simplepedpop `add_input` failed.
+    Inner(simplepedpop::AddInputError),
+}
+
+impl From<simplepedpop::AddInputError> for AddInputError {
+    fn from(err: simplepedpop::AddInputError) -> Self {
+        AddInputError::Inner(err)
+    }
+}
+
+impl core::fmt::Display for AddInputError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AddInputError::AlreadyFinished => {
+                write!(f, "all contributor inputs have already been collected")
+            }
+            AddInputError::UnknownShareReceiver { receiver } => {
+                write!(f, "input included share for unknown receiver {receiver}")
+            }
+            AddInputError::IncompleteShares => {
+                write!(f, "input did not have a share for all receivers")
+            }
+            AddInputError::Inner(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for AddInputError {}
+
+/// Reasons [`AggKeygenInput::recover_share`] may fail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecoverShareError {
+    /// No encrypted share exists at the given index.
+    UnknownShareIndex,
+    /// The supplied keypair isn't the encryption key registered for this share.
+    WrongEncryptionKey,
+    /// The decrypted share didn't pair with the shared key.
+    InvalidShare,
+    /// The resulting shared secret was zero.
+    ZeroSharedSecret,
+}
+
+impl core::fmt::Display for RecoverShareError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            RecoverShareError::UnknownShareIndex => {
+                write!(f, "no share exists at the requested index")
+            }
+            RecoverShareError::WrongEncryptionKey => {
+                write!(f, "keypair is not the encryption key for this share")
+            }
+            RecoverShareError::InvalidShare => {
+                write!(f, "recovered secret share did not match the shared key")
+            }
+            RecoverShareError::ZeroSharedSecret => {
+                write!(f, "recovered shared secret was zero")
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for RecoverShareError {}
+
 #[cfg(test)]
 mod test {
     use alloc::{collections::BTreeMap, vec::Vec};
@@ -515,7 +625,7 @@ mod test {
         #[test]
         fn encpedpop_run_simulate_keygen(
             (n_receivers, threshold) in (1u32..=4).prop_flat_map(|n| (Just(n), 1u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
         ) {
             let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
             let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
@@ -524,7 +634,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_contributors,
                 Fingerprint::NONE,
                 &mut rng,
             );
@@ -533,7 +643,7 @@ mod test {
         #[test]
         fn encpedpop_simulate_keygen_with_fingerprint(
             (n_receivers, threshold) in (2u32..=4).prop_flat_map(|n| (Just(n), 2u32..=n)),
-            n_generators in 1u32..5,
+            n_contributors in 1u32..5,
             (bits_per_coeff, max_bits_total) in (0u8..10).prop_flat_map(|per_coeff| {
                 // max_bits_total should be at least max_bits_per_coeff but can be larger
                 (Just(per_coeff), per_coeff..25)
@@ -552,7 +662,7 @@ mod test {
                 &schnorr,
                 threshold,
                 n_receivers,
-                n_generators,
+                n_contributors,
                 fingerprint,
                 &mut rng,
             );
@@ -585,7 +695,14 @@ mod test {
         // Create contributors with indices 0, 1, 2
         let contributors_and_inputs: Vec<_> = (0..3)
             .map(|i| {
-                Contributor::gen_keygen_input(&schnorr, threshold, &receiver_enckeys, i, &mut rng)
+                Contributor::gen_keygen_input(
+                    &schnorr,
+                    threshold,
+                    3,
+                    &receiver_enckeys,
+                    i,
+                    &mut rng,
+                )
             })
             .collect();
 

@@ -159,6 +159,9 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
     /// Returns `None` if the bytes don't represent points or if the first coefficient doesn't
     /// satisfy the constraints of `T` and `Z`.
     pub fn from_slice(bytes: &[u8]) -> Option<Self> {
+        if bytes.is_empty() {
+            return None;
+        }
         let mut poly = vec![];
         for point_bytes in bytes.chunks(33) {
             poly.push(Point::from_slice(point_bytes)?);
@@ -426,7 +429,11 @@ impl<Context, T: PointType, Z: ZeroChoice> bincode::Decode<Context> for SharedKe
     ) -> Result<Self, secp256kfun::bincode::error::DecodeError> {
         use secp256kfun::bincode::error::DecodeError;
         let poly = Vec::<Point<Normal, Public, Zero>>::decode(decoder)?;
-        let first_coeff = Z::cast_point(poly[0]).ok_or(DecodeError::Other(
+        let first = poly
+            .first()
+            .copied()
+            .ok_or(DecodeError::Other("empty polynomial for shared key"))?;
+        let first_coeff = Z::cast_point(first).ok_or(DecodeError::Other(
             "zero public key for non-zero shared key",
         ))?;
         let _check = T::cast_point(first_coeff)
@@ -447,7 +454,13 @@ impl<'de, T: PointType, Z: ZeroChoice> crate::fun::serde::Deserialize<'de> for S
     {
         let poly = Vec::<Point<Normal, Public, Zero>>::deserialize(deserializer)?;
 
-        let first_coeff = Z::cast_point(poly[0]).ok_or(crate::fun::serde::de::Error::custom(
+        let first = poly
+            .first()
+            .copied()
+            .ok_or(crate::fun::serde::de::Error::custom(
+                "empty polynomial for shared key",
+            ))?;
+        let first_coeff = Z::cast_point(first).ok_or(crate::fun::serde::de::Error::custom(
             "zero public key for non-zero shared key",
         ))?;
 

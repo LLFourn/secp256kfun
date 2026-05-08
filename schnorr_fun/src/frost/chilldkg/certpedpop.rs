@@ -13,6 +13,7 @@ pub mod certificate;
 pub use certificate::vrf_cert;
 pub use certificate::{
     CertificateError, CertificationScheme, CertifiedKeygen, Certifier, CertifierError,
+    RecoverShareError,
 };
 
 use super::{encpedpop, simplepedpop};
@@ -55,6 +56,7 @@ impl Contributor {
     pub fn gen_keygen_input<H: Hash32, NG: NonceGen>(
         schnorr: &Schnorr<H, NG>,
         threshold: u32,
+        n_contributors: u32,
         receiver_encryption_keys: &BTreeMap<ShareIndex, Point>,
         my_index: u32,
         rng: &mut impl rand_core::RngCore,
@@ -62,6 +64,7 @@ impl Contributor {
         let (inner, message) = encpedpop::Contributor::gen_keygen_input(
             schnorr,
             threshold,
+            n_contributors,
             receiver_encryption_keys,
             my_index,
             rng,
@@ -92,6 +95,12 @@ impl Contributor {
     /// This method is used when a party acts as both a contributor (providing entropy)
     /// and a receiver (getting a secret share), using the same keypair for both
     /// encryption/decryption and certification.
+    ///
+    /// Returns the same shape as the receiver-only entry point
+    /// [`SecretShareReceiver::receive_secret_share`]: a [`SecretShareReceiver`]
+    /// that *holds* the share until [`SecretShareReceiver::finalize`] is
+    /// called with a complete cert map. Callers must not use the share before
+    /// finalize succeeds — otherwise they're trusting an uncertified keygen.
     pub fn verify_receive_share_and_certify<H: Hash32, NG: NonceGen, S: CertificationScheme>(
         self,
         pop_schnorr: &Schnorr<H, NG>,
@@ -99,7 +108,7 @@ impl Contributor {
         share_index: ShareIndex,
         keypair: &KeyPair,
         agg_input: &AggKeygenInput,
-    ) -> Result<(PairedSecretShare<Normal, Zero>, S::Signature), CombinedRoleError> {
+    ) -> Result<(SecretShareReceiver, S::Signature), CombinedRoleError> {
         // First verify my contribution was included
         self.inner
             .verify_agg_input(agg_input)
@@ -113,7 +122,13 @@ impl Contributor {
         // Finally certify the result
         let sig = cert_scheme.certify(keypair, agg_input);
 
-        Ok((paired_secret_share, sig))
+        Ok((
+            SecretShareReceiver {
+                paired_secret_share,
+                agg_input: agg_input.clone(),
+            },
+            sig,
+        ))
     }
 }
 
@@ -157,6 +172,12 @@ impl SecretShareReceiver {
     /// By default every share receiver is a certifying party but you must also get
     /// certifications from the [`Contributor`]s for security. Their keys are passed in as
     /// `contributor_keys`.
+    ///
+    /// The supplied `certificate` map must contain exactly one entry per
+    /// certifying party — any extras are rejected with
+    /// [`CertificateError::Unexpected`]. This avoids unverified entries
+    /// landing in the resulting [`CertifiedKeygen`] (where downstream
+    /// consumers like the VRF beacon would otherwise pick them up).
     pub fn finalize<S: CertificationScheme>(
         self,
         cert_scheme: &S,
@@ -170,18 +191,23 @@ impl SecretShareReceiver {
             .chain(contributor_keys.iter().cloned())
             .collect::<BTreeSet<_>>(); // dedupe as some contributors may also be receivers
 
+        let mut remaining = certificate;
+        let mut verified = BTreeMap::new();
         for cert_key in cert_keys {
-            match certificate.get(&cert_key) {
-                Some(sig) => {
-                    if !cert_scheme.verify_cert(cert_key, &self.agg_input, sig) {
-                        return Err(CertificateError::InvalidCert { key: cert_key });
-                    }
-                }
-                None => return Err(CertificateError::Missing { key: cert_key }),
+            let sig = remaining
+                .remove(&cert_key)
+                .ok_or(CertificateError::Missing { key: cert_key })?;
+            if !cert_scheme.verify_cert(cert_key, &self.agg_input, &sig) {
+                return Err(CertificateError::InvalidCert { key: cert_key });
             }
+            verified.insert(cert_key, sig);
         }
 
-        let certified_keygen = CertifiedKeygen::new(self.agg_input, certificate);
+        if let Some((extra_key, _)) = remaining.into_iter().next() {
+            return Err(CertificateError::Unexpected { key: extra_key });
+        }
+
+        let certified_keygen = CertifiedKeygen::new(self.agg_input, verified);
 
         Ok(CertifiedSecretShare {
             certified_keygen,
@@ -247,7 +273,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .map(|(party_index, enckeypair)| (*party_index, enckeypair.public_key()))
         .collect::<BTreeMap<ShareIndex, Point>>();
 
-    let n_generators = n_receivers + n_extra_generators;
+    let n_contributors = n_receivers + n_extra_generators;
 
     // Generate keypairs for contributors - receivers will use their existing keypairs
     let contributor_keys: Vec<_> = (1..=n_receivers)
@@ -262,9 +288,16 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .collect();
 
     let (contributors, to_coordinator_messages): (Vec<Contributor>, Vec<KeygenInput>) = (0
-        ..n_generators)
+        ..n_contributors)
         .map(|i| {
-            Contributor::gen_keygen_input(schnorr, threshold, &public_receiver_enckeys, i, rng)
+            Contributor::gen_keygen_input(
+                schnorr,
+                threshold,
+                n_contributors,
+                &public_receiver_enckeys,
+                i,
+                rng,
+            )
         })
         .unzip();
 
@@ -273,7 +306,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .map(|kp| kp.public_key())
         .collect::<Vec<_>>();
 
-    let mut aggregator = Coordinator::new(threshold, n_generators, &public_receiver_enckeys);
+    let mut aggregator = Coordinator::new(threshold, n_contributors, &public_receiver_enckeys);
 
     for (i, to_coordinator_message) in to_coordinator_messages.into_iter().enumerate() {
         aggregator
@@ -289,9 +322,12 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         cert_scheme.clone(),
         agg_input.clone(),
         &contributor_public_keys,
-    );
+    )
+    .expect("simulate_keygen produces matching contributor counts");
 
-    let mut paired_secret_shares = vec![];
+    // Hold dual-role receiver state until certification finishes; only then
+    // can we release the paired share via finalize.
+    let mut dual_role_receivers: Vec<(SecretShareReceiver, KeyPair)> = vec![];
 
     // Handle parties that are both contributors and receivers using the combined API
     for (i, (party_index, enckey)) in receiver_enckeys
@@ -300,7 +336,7 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
         .take(n_receivers as usize)
     {
         // This party is both a contributor and receiver - use combined method
-        let (paired_secret_share, sig) = contributors[i]
+        let (receiver, sig) = contributors[i]
             .clone()
             .verify_receive_share_and_certify(
                 schnorr,
@@ -316,11 +352,11 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
             .receive_certificate(enckey.public_key(), sig)
             .unwrap();
 
-        paired_secret_shares.push((paired_secret_share.non_zero().unwrap(), *enckey));
+        dual_role_receivers.push((receiver, *enckey));
     }
 
     // Handle extra contributors that are only contributors (not receivers)
-    for i in n_receivers as usize..n_generators as usize {
+    for i in n_receivers as usize..n_contributors as usize {
         let sig = contributors[i]
             .clone()
             .verify_agg_input(&cert_scheme, &agg_input, &contributor_keys[i])
@@ -334,6 +370,18 @@ pub fn simulate_keygen<H: Hash32, NG: NonceGen, S: CertificationScheme + Clone>(
     let certified_keygen = certifier
         .finish()
         .expect("Certifier should have all required certificates");
+
+    // Now that certification is done, release each dual-role party's share.
+    let cert_map = certified_keygen.certificate().clone();
+    let paired_secret_shares: Vec<(PairedSecretShare<Normal>, KeyPair)> = dual_role_receivers
+        .into_iter()
+        .map(|(receiver, enckey)| {
+            let CertifiedSecretShare { paired_share, .. } = receiver
+                .finalize(&cert_scheme, cert_map.clone(), &contributor_public_keys)
+                .expect("simulate_keygen finalize");
+            (paired_share.non_zero().unwrap(), enckey)
+        })
+        .collect();
 
     SimulatedKeygenOutput {
         certified_keygen,
@@ -448,5 +496,60 @@ mod test {
                 (n_receivers + n_extra_generators) as usize
             );
         }
+    }
+
+    // SecretShareReceiver::finalize must reject any caller-supplied certificate
+    // map that contains entries for keys outside the expected certifying set.
+    // Otherwise the extras would land in CertifiedKeygen.certificate and
+    // pollute downstream consumers (e.g. the VRF beacon).
+    #[test]
+    fn finalize_rejects_unexpected_cert_entries() {
+        let schnorr = crate::new_with_deterministic_nonces::<sha2::Sha256>();
+        let mut rng = TestRng::deterministic_rng(RngAlgorithm::ChaCha);
+        let threshold = 2u32;
+        let n_receivers = 2u32;
+        let n_extra_generators = 0u32;
+
+        let output = certpedpop::simulate_keygen(
+            &schnorr,
+            schnorr.clone(),
+            threshold,
+            n_receivers,
+            n_extra_generators,
+            Fingerprint::NONE,
+            &mut rng,
+        );
+
+        // Pick the first receiver as our honest party for the finalize test.
+        let (paired_share, keypair) = output.paired_shares_with_keys[0];
+        let agg_input = output.certified_keygen.agg_input().clone();
+        let contributor_keys = output.contributor_public_keys.clone();
+
+        // Build the receiver state via the receiver-only entry point so we
+        // can drive `finalize` directly.
+        let (receiver, _own_sig) = SecretShareReceiver::receive_secret_share(
+            &schnorr,
+            &schnorr,
+            paired_share.index(),
+            &keypair,
+            &agg_input,
+        )
+        .expect("receive_secret_share");
+
+        // Honest cert map from the simulated keygen, plus an extra valid cert
+        // signed by an unrelated keypair (not in contributor_keys ∪ receivers).
+        let mut malicious_cert_map = output.certified_keygen.certificate().clone();
+        let unrelated_keypair = KeyPair::new(Scalar::random(&mut rng));
+        let unrelated_sig = schnorr.certify(&unrelated_keypair, &agg_input);
+        malicious_cert_map.insert(unrelated_keypair.public_key(), unrelated_sig);
+
+        let result = receiver.finalize(&schnorr, malicious_cert_map, &contributor_keys);
+        assert_eq!(
+            result.err(),
+            Some(CertificateError::Unexpected {
+                key: unrelated_keypair.public_key()
+            }),
+            "finalize must reject unknown-key entries in the supplied map"
+        );
     }
 }
