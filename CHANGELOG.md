@@ -2,6 +2,69 @@
 
 ## UNRELEASED
 
+## schnorr_fun v0.13.0
+
+A security audit of `chilldkg` produced a batch of fixes and an API rework.
+See PRs [#247](https://github.com/LLFourn/secp256kfun/pull/247) and
+[#248](https://github.com/LLFourn/secp256kfun/pull/248).
+
+Security fixes (chilldkg):
+
+- **PoP binding**: `simplepedpop` proofs of possession now sign the slot index
+  and `com[0]` y-parity. Closes a cross-slot replay capability where an honest
+  contributor's `(com, pop)` could be replayed at any other slot, including
+  with the public key negated under BIP340 x-only verification.
+- **Certifier signature verification**: `Certifier::receive_certificate` always
+  verifies the supplied signature. Previously a duplicate registration silently
+  swallowed an unverified second signature — for randomized/VRF schemes this
+  was the live path.
+- **CertifiedKeygen non-serializable**: `bincode`/`serde` derives removed.
+  Deserialization bypassed `Certifier::finish`'s verification, allowing
+  attacker-chosen VRF gammas to feed `vrf_security_check`.
+- **finalize rejects extras**: `SecretShareReceiver::finalize` now rejects
+  certificate-map entries from keys outside the expected certifying set,
+  preventing pollution of downstream consumers like the VRF beacon.
+- **receive_secret_share validation**: missing share index and wrong-keypair
+  cases are returned as specific errors instead of silently surfacing as
+  `InvalidSecretShare`.
+- **Contributor count enforcement**: every honest role commits to
+  `n_contributors` up-front and rejects any `AggKeygenInput` whose slot
+  count disagrees, closing the ghost-contributor padding rough edge.
+- **DoS panic fixes**: `encpedpop::Contributor::verify_agg_input` and
+  `SharedKey` decoding no longer panic on adversary-supplied inputs.
+
+API changes (chilldkg):
+
+- `Contributor` is type-parameterized by role: `Contributor<ShareReceiver>` or
+  `Contributor<AuxContributor>`. Wrong-role calls become compile errors.
+  Unified `gen_keygen_input` constructor replaces the per-role variants.
+- `verify_agg_input` is per-role. The `ShareReceiver` variant atomically pairs
+  the secret share with the verified aggregate. In `certpedpop` the share is
+  withheld in `SecretShareReceiver` until `finalize` runs with a complete
+  certificate map.
+- Each `Contributor` now saves the receiver-encryption keys (and aux
+  contributor keys at the certpedpop layer) and verifies the aggregated input
+  against that saved view rather than trusting the coordinator. `cert_bytes()`
+  binds both keysets, so a malicious coordinator showing different parties
+  different keysets produces different `cert_bytes` per victim and mutual
+  certification fails.
+- Receiver encryption keys leave the encpedpop wire form (they were embedded
+  next to each encrypted share); aux contributor keys stop being a `finalize`
+  parameter. Both move onto the contributor at `gen_keygen_input` time.
+- `Coordinator::add_input` and `missing_from` use a `Party` enum
+  (`Receiver(u32) | AuxContributor(u32)`) instead of raw absolute slot indices.
+- `encpedpop::AggKeygenInput` deserialization rejects mismatched lengths via a
+  private wire type.
+- `&'static str` errors are replaced with typed enums across chilldkg; broad
+  errors are split into per-function variants. `EncryptionCheckError` is a
+  shared sub-enum between aux and share-receiver verify paths.
+- The PoP message domain separator is now `"BIP DKG/pop message"`, matching
+  the BIP DKG draft. Wire-incompatible with older PoPs.
+
+Other:
+
+- Add `#[must_use]` to `HashAdd` trait methods.
+
 ## vrf_fun v0.12.1
 
 - **SECURITY FIX**: Fix nonce reuse in RFC 9381 VRF proving. The `Rfc9381Transcript` nonce derivation did not include the transcript state (VRF input, public key, gamma), producing identical nonces across different VRF inputs with the same key. This enables full secret key recovery from any two proofs. Found by Mathias Hall-Andersen (@rot256) of zkSecurity. See [#244](https://github.com/LLFourn/secp256kfun/pull/244).
