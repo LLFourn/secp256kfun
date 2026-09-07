@@ -16,7 +16,7 @@
 
 use crate::digest::crypto_common::BlockSizeUser;
 use crate::hash::Hash32;
-use crate::vendor::k256::{AffinePoint, FieldElement, ProjectivePoint};
+use secp256kfun_k256::{AffinePoint, FieldElement, ProjectivePoint};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 // L parameter for hash_to_field - fixed at 48 bytes for secp256k1
