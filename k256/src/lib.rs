@@ -1,3 +1,14 @@
+#![no_std]
+#![doc = include_str!("../README.md")]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+// The public API returns `Choice` and `CtOption`, so callers need this.
+pub use subtle;
+
 mod field;
 pub use field::FieldElement;
 mod affine;
@@ -9,7 +20,7 @@ pub use scalar::Scalar;
 pub mod mul;
 #[allow(unused)]
 pub mod util;
-use digest::generic_array::{GenericArray, typenum::U32};
+use generic_array::{GenericArray, typenum::U32};
 
 const CURVE_EQUATION_B_SINGLE: u32 = 7u32;
 

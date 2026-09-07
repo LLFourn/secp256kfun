@@ -57,7 +57,7 @@ impl FieldElement {
 
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     /// Does not check the result for being in the correct range.
-    pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
+    pub const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
         Self(FieldElementImpl::from_bytes_unchecked(bytes))
     }
 
@@ -125,7 +125,7 @@ impl FieldElement {
     }
 
     /// Raises the scalar to the power `2^k`
-    pub(crate) fn pow2k(&self, k: usize) -> Self {
+    pub fn pow2k(&self, k: usize) -> Self {
         let mut x = *self;
         for _j in 0..k {
             x = x.square();

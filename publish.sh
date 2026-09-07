@@ -7,6 +7,7 @@ set -e
 # Format: "directory:crate_name"
 CRATES=(
     "arithmetic_macros:secp256kfun_arithmetic_macros"
+    "k256:secp256kfun_k256"
     "secp256kfun:secp256kfun"
     "sigma_fun:sigma_fun"
     "vrf_fun:vrf_fun"

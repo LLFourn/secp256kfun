@@ -1,0 +1,21 @@
+[package]
+name = "secp256kfun_k256"
+version = "0.1.0"
+description = "secp256k1 field, scalar and point arithmetic derived from k256"
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/LLFourn/secp256kfun/tree/master/k256"
+repository = "https://github.com/LLFourn/secp256kfun"
+documentation = "https://docs.rs/secp256kfun_k256"
+edition = "2024"
+rust-version = "1.85.0"
+categories = ["cryptography", "cryptography::cryptocurrencies", "no-std"]
+keywords = ["bitcoin", "secp256k1"]
+readme = "README.md"
+
+[dependencies]
+subtle = { package = "subtle-ng", version = "2", default-features = false }
+generic-array = { version = "0.14", default-features = false }
+
+[features]
+default = []
+alloc = []
