@@ -438,7 +438,7 @@ mod share_backup {
                     }
 
                     if i == 0 {
-                        return Err(BackupDecodeError::InvalidShareIndexScalar)?;
+                        Err(BackupDecodeError::InvalidShareIndexScalar)?;
                     }
                     share_index.rotate_right(32 - i);
                     Scalar::<Public, Zero>::from_bytes(share_index)

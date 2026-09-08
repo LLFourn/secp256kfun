@@ -90,13 +90,10 @@ where
     ) -> Option<Self::Announcement> {
         self.lhs
             .implied_announcement(&statement.0, challenge, response)
-            .and_then(|lhs_implied_announcement| {
+            .zip(
                 self.rhs
-                    .implied_announcement(&statement.1, challenge, response)
-                    .map(|rhs_implied_announcement| {
-                        (lhs_implied_announcement, rhs_implied_announcement)
-                    })
-            })
+                    .implied_announcement(&statement.1, challenge, response),
+            )
     }
 
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
