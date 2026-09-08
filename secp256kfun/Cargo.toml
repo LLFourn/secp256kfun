@@ -19,6 +19,7 @@ digest = { version = "0.10", default-features = false }
 subtle = { package = "subtle-ng", version = "2", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 secp256kfun_arithmetic_macros = { version = "0.2.0", path = "../arithmetic_macros" }
+secp256kfun_k256 = { workspace = true }
 
 # optional
 serde = { version = "1.0",  optional = true, default-features = false, features = ["derive"] }
@@ -47,6 +48,7 @@ wasm-bindgen-test = "0.3"
 default = ["std"]
 libsecp_compat = ["libsecp_compat_0_30"]
 alloc = [
+"secp256kfun_k256/alloc",
 "serde?/alloc",
 "digest/alloc",
 "bincode?/alloc",

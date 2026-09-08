@@ -92,7 +92,14 @@ jobs:
     strategy:
       matrix:
         package:
-          ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun", "vrf_fun"]
+          [
+            "secp256kfun_k256",
+            "secp256kfun",
+            "sigma_fun",
+            "ecdsa_fun",
+            "schnorr_fun",
+            "vrf_fun",
+          ]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -105,7 +112,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["secp256kfun", "sigma_fun", "ecdsa_fun", "schnorr_fun"]
+        package:
+          [
+            "secp256kfun_k256",
+            "secp256kfun",
+            "sigma_fun",
+            "ecdsa_fun",
+            "schnorr_fun",
+          ]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

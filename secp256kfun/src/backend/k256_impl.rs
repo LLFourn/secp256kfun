@@ -1,8 +1,6 @@
-pub use crate::vendor::k256::Scalar;
-use crate::{
-    backend::{BackendPoint, BackendScalar, TimeSensitive},
-    vendor::k256::{AffinePoint, FieldBytes, FieldElement, ProjectivePoint, mul},
-};
+use crate::backend::{BackendPoint, BackendScalar, TimeSensitive};
+pub use secp256kfun_k256::Scalar;
+use secp256kfun_k256::{AffinePoint, FieldBytes, FieldElement, ProjectivePoint, mul};
 use subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
 pub static G_POINT: ProjectivePoint = ProjectivePoint::GENERATOR;
