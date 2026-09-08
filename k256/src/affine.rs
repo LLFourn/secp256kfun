@@ -1,6 +1,6 @@
 //! Affine points
 
-use super::{CURVE_EQUATION_B, FieldBytes, FieldElement, ProjectivePoint, Scalar};
+use super::{FieldBytes, FieldElement, ProjectivePoint, Scalar, CURVE_EQUATION_B};
 use core::ops::{Mul, Neg};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
