@@ -6,8 +6,12 @@ license = "Apache-2.0 OR MIT"
 homepage = "https://github.com/LLFourn/secp256kfun/tree/master/k256"
 repository = "https://github.com/LLFourn/secp256kfun"
 documentation = "https://docs.rs/secp256kfun_k256"
-edition = "2024"
-rust-version = "1.85.0"
+# Deliberately behind the rest of the workspace. This crate exists to be used by
+# callers that cannot depend on secp256kfun, and those callers have older MSRVs
+# than it does -- rust-bitcoin's secp256k1 is on 1.63. The arithmetic here was
+# vendored from k256 0.11 and needs nothing newer.
+edition = "2021"
+rust-version = "1.63.0"
 categories = ["cryptography", "cryptography::cryptocurrencies", "no-std"]
 keywords = ["bitcoin", "secp256k1"]
 readme = "README.md"
