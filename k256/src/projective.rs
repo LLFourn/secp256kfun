@@ -1,6 +1,6 @@
 //! Projective points
 
-use super::{AffinePoint, CURVE_EQUATION_B_SINGLE, FieldElement};
+use super::{AffinePoint, FieldElement, CURVE_EQUATION_B_SINGLE};
 use core::{
     iter::Sum,
     ops::{Add, AddAssign, Neg, Sub, SubAssign},

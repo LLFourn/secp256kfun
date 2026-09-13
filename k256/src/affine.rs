@@ -1,16 +1,16 @@
 //! Affine points
 
-use super::{CURVE_EQUATION_B, FieldBytes, FieldElement, ProjectivePoint, Scalar};
+use super::{FieldBytes, FieldElement, ProjectivePoint, Scalar, CURVE_EQUATION_B};
 use core::ops::{Mul, Neg};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[derive(Clone, Copy, Debug)]
 pub struct AffinePoint {
     /// x-coordinate
-    pub(crate) x: FieldElement,
+    pub x: FieldElement,
 
     /// y-coordinate
-    pub(crate) y: FieldElement,
+    pub y: FieldElement,
 
     /// Is this point the point at infinity? 0 = no, 1 = yes
     ///
@@ -54,7 +54,7 @@ impl AffinePoint {
 
 impl AffinePoint {
     /// Create a new [`AffinePoint`] with the given coordinates.
-    pub(crate) const fn new(x: FieldElement, y: FieldElement) -> Self {
+    pub const fn new(x: FieldElement, y: FieldElement) -> Self {
         Self { x, y, infinity: 0 }
     }
 }
