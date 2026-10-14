@@ -3,6 +3,10 @@ use alloc::vec::Vec;
 use core::{marker::PhantomData, ops::Deref};
 use secp256kfun::{hash::Hash32, poly, prelude::*};
 
+// Benchmarked against 32, 64 and 256: gains flatten past 128. Batches start small and double up to
+// this so that cheap fingerprints don't pay for a full batch.
+const GRIND_MAX_BATCH_SIZE: usize = 128;
+
 /// A polynomial where the first coefficient (constant term) is the image of a secret `Scalar` that
 /// has been shared in a [Shamir's secret sharing] structure.
 ///
@@ -292,7 +296,6 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
 
         for coeff in &mut self.point_polynomial[1..] {
             let mut total_tweak = Scalar::<Public, Zero>::zero();
-            let mut current_coeff = *coeff;
             let remaining_total = fingerprint
                 .max_bits_total
                 .saturating_sub(grinded_bits as u8) as usize;
@@ -304,26 +307,42 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             // Each coefficient should have at most max_bits_per_coeff bits
             let needed_bits = remaining_total.min(fingerprint.bits_per_coeff as usize);
 
-            loop {
-                // Clone the hash state from previous coefficients and add current one
-                let hash = hash_state.clone().add(current_coeff);
-                // Check if hash has required number of leading zero bits
+            let passes = |candidate: Point<Normal, Public, Zero>| {
+                let hash = hash_state.clone().add(candidate);
                 let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
-                if Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits {
-                    // Update hash_state for next coefficient because the next coefficient hash
-                    // includes the current one.
-                    hash_state = hash;
-                    grinded_bits += needed_bits;
-                    break;
+                (Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits).then_some(hash)
+            };
+            let (winner, hash) = 'search: {
+                // The coefficient is already normal so trying it costs no inversion, and with few
+                // bits needed a full batch would mostly be wasted.
+                if let Some(hash) = passes(*coeff) {
+                    break 'search (*coeff, hash);
                 }
+                let current = *coeff;
+                let mut next_candidate = g!(current + G);
+                let mut batch_size = 1;
+                loop {
+                    batch_size = (2 * batch_size).min(GRIND_MAX_BATCH_SIZE);
+                    let candidates = core::iter::repeat_with(|| {
+                        let candidate = next_candidate;
+                        next_candidate = g!(next_candidate + G);
+                        candidate
+                    })
+                    .take(batch_size)
+                    .collect::<Vec<_>>();
+                    for candidate in candidates.batch_normalize() {
+                        total_tweak += s!(1);
+                        if let Some(hash) = passes(candidate) {
+                            break 'search (candidate, hash);
+                        }
+                    }
+                }
+            };
+            // the next coefficient's hash commits to this one
+            hash_state = hash;
+            grinded_bits += needed_bits;
+            *coeff = winner;
 
-                // Add one more G to the coefficient
-                total_tweak += s!(1);
-                current_coeff = g!(current_coeff + G).normalize();
-            }
-
-            // Apply the final tweak to the polynomial coefficient
-            *coeff = current_coeff;
             tweaks.push(total_tweak);
         }
 
@@ -540,6 +559,119 @@ impl Default for Fingerprint {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn grind_one_by_one(
+        poly: &mut [Point<Normal, Public, Zero>],
+        fingerprint: Fingerprint,
+    ) -> Vec<Scalar<Public, Zero>> {
+        use secp256kfun::{digest::FixedOutput, hash::HashAdd};
+        let mut tweaks = vec![Scalar::<Public, Zero>::zero()];
+        if poly.len() <= 1 {
+            return tweaks;
+        }
+        let mut hash_state = sha2::Sha256::default()
+            .add([fingerprint.tag.len() as u8])
+            .add(fingerprint.tag.as_bytes())
+            .add(poly[0]);
+        let mut grinded_bits = 0usize;
+        for coeff in &mut poly[1..] {
+            let remaining_total = fingerprint
+                .max_bits_total
+                .saturating_sub(grinded_bits as u8) as usize;
+            if remaining_total == 0 {
+                break;
+            }
+            let needed_bits = remaining_total.min(fingerprint.bits_per_coeff as usize);
+            let mut total_tweak = Scalar::<Public, Zero>::zero();
+            loop {
+                let hash = hash_state.clone().add(*coeff);
+                let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
+                if Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits {
+                    hash_state = hash;
+                    grinded_bits += needed_bits;
+                    break;
+                }
+                total_tweak += s!(1);
+                let current = *coeff;
+                *coeff = g!(current + G).normalize();
+            }
+            tweaks.push(total_tweak);
+        }
+        tweaks
+    }
+
+    fn tweak_count(tweak: Scalar<Public, Zero>) -> usize {
+        u64::from_be_bytes(tweak.to_bytes()[24..].try_into().unwrap()) as usize
+    }
+
+    fn assert_grind_matches_one_by_one(
+        poly: Vec<Point<Normal, Public, Zero>>,
+        fingerprint: Fingerprint,
+    ) -> Vec<Scalar<Public, Zero>> {
+        let mut expected_poly = poly.clone();
+        let expected_tweaks = grind_one_by_one(&mut expected_poly, fingerprint);
+        let mut shared_key = SharedKey::<Normal, Zero>::from_poly(poly);
+        let tweaks = shared_key.grind_fingerprint::<sha2::Sha256>(fingerprint);
+        assert_eq!(tweaks, expected_tweaks);
+        assert_eq!(shared_key.point_polynomial, expected_poly);
+        assert!(
+            shared_key
+                .check_fingerprint::<sha2::Sha256>(fingerprint)
+                .is_some()
+        );
+        tweaks
+    }
+
+    #[test]
+    fn batched_grinding_matches_one_by_one() {
+        let mut rng = rand::thread_rng();
+        let mut tweak_counts = alloc::collections::BTreeSet::new();
+        for threshold in 1..=5 {
+            for bits_per_coeff in [0, 1, 3, 6, 8] {
+                for max_bits_total in [0, bits_per_coeff, 2 * bits_per_coeff, u8::MAX] {
+                    let poly = (0..threshold)
+                        .map(|_| Point::random(&mut rng).mark_zero())
+                        .collect::<Vec<_>>();
+                    let fingerprint = Fingerprint {
+                        bits_per_coeff,
+                        max_bits_total,
+                        tag: "test",
+                    };
+                    for tweak in assert_grind_matches_one_by_one(poly, fingerprint) {
+                        tweak_counts.insert(tweak_count(tweak));
+                    }
+                }
+            }
+        }
+        // batches cover tweaks 1..=2, 3..=6, 7..=14 ... so a batch ends where count + 2 is a power of two
+        assert!(tweak_counts.contains(&0));
+        assert!(
+            tweak_counts
+                .iter()
+                .any(|&count| count > 2 && count < 254 && !(count + 2).is_power_of_two()),
+            "some search should succeed in the middle of a batch"
+        );
+    }
+
+    #[test]
+    fn batched_grinding_passes_through_identity() {
+        let poly = vec![
+            g!(7 * G).normalize().mark_zero(),
+            g!(-2 * G).normalize().mark_zero(),
+        ];
+        let tweaks = assert_grind_matches_one_by_one(
+            poly,
+            Fingerprint {
+                bits_per_coeff: 8,
+                max_bits_total: 8,
+                tag: "identity",
+            },
+        );
+        assert!(
+            tweak_count(tweaks[1]) > 2,
+            "search should hash the identity candidate before succeeding"
+        );
+    }
 
     #[test]
     fn fingerprint_grinding_respects_max_bits_total() {

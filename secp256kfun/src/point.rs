@@ -512,6 +512,61 @@ impl<T, S, Z> Point<T, S, Z> {
     }
 }
 
+/// Normalizes a collection of points with one field inversion shared across the whole collection.
+///
+/// The result is the same as calling [`Point::normalize`] on each point, but normalizing `n`
+/// [`NonNormal`] points this way costs one inversion plus a few multiplications per point instead
+/// of `n` inversions. Secrecy and zero markers are carried over unchanged and the operation runs in
+/// constant time with respect to the points, so it is suitable for [`Secret`] points too.
+///
+/// Implemented for arrays of any length (including in `no_std`) and for `Vec` with the `alloc`
+/// feature.
+///
+/// ```
+/// use secp256kfun::{BatchNormalize, G, g, marker::*, Point};
+/// let [a, b, c] = [g!(G + G), g!(G + G + G), g!(G - G)].batch_normalize();
+/// assert_eq!(a, g!(2 * G).normalize());
+/// assert_eq!(b, g!(3 * G).normalize());
+/// assert!(c.is_zero());
+/// ```
+///
+/// [`NonNormal`]: crate::marker::NonNormal
+/// [`Secret`]: crate::marker::Secret
+pub trait BatchNormalize {
+    /// The collection with every point marked [`Normal`].
+    type Output;
+    /// Normalizes every point in the collection.
+    fn batch_normalize(self) -> Self::Output;
+}
+
+impl<T: PointType, S, Z, const N: usize> BatchNormalize for [Point<T, S, Z>; N] {
+    type Output = [Point<Normal, S, Z>; N];
+
+    fn batch_normalize(self) -> Self::Output {
+        let mut points = self.map(|point| point.0);
+        if !T::is_normalized() {
+            backend::Point::batch_normalize(&mut points);
+        }
+        points.map(|point| Point::from_inner(point, Normal))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T: PointType, S, Z> BatchNormalize for alloc::vec::Vec<Point<T, S, Z>> {
+    type Output = alloc::vec::Vec<Point<Normal, S, Z>>;
+
+    fn batch_normalize(self) -> Self::Output {
+        let mut points: alloc::vec::Vec<_> = self.into_iter().map(|point| point.0).collect();
+        if !T::is_normalized() {
+            backend::Point::batch_normalize_slice(&mut points);
+        }
+        points
+            .into_iter()
+            .map(|point| Point::from_inner(point, Normal))
+            .collect()
+    }
+}
+
 impl<Z, T> Point<T, Public, Z> {
     /// Checks if this point's x-coordiante is the equal to the scalar mod the
     /// curve order. This is only useful for ECDSA implementations.
@@ -1058,5 +1113,104 @@ mod test {
         assert_ne!(a, *G);
         a -= G;
         assert_eq!(a, a_orig);
+    }
+
+    fn assert_same_repr<T1, T2, S, Z1, Z2>(lhs: &Point<T1, S, Z1>, rhs: &Point<T2, S, Z2>) {
+        assert!(lhs.0.x == rhs.0.x && lhs.0.y == rhs.0.y && lhs.0.z == rhs.0.z);
+    }
+
+    #[cfg(feature = "alloc")]
+    fn non_normal_points(seeds: &[Option<u64>]) -> alloc::vec::Vec<Point<NonNormal, Public, Zero>> {
+        seeds
+            .iter()
+            .map(|seed| match seed {
+                Some(k) => g!({ Scalar::<Public, Zero>::from(*k) } * G + G),
+                None => g!(G - G),
+            })
+            .collect()
+    }
+
+    #[cfg(feature = "alloc")]
+    proptest! {
+        #[test]
+        fn batch_normalize_matches_normalize(seeds in proptest::collection::vec(any::<Option<u64>>(), 0..40)) {
+            let points = non_normal_points(&seeds);
+            let batched = points.clone().batch_normalize();
+            prop_assert_eq!(batched.len(), points.len());
+            for (point, batched) in points.iter().zip(&batched) {
+                let single = point.normalize();
+                assert_same_repr(&single, batched);
+                prop_assert_eq!(single, *batched);
+                prop_assert_eq!(point.is_zero(), batched.is_zero());
+            }
+        }
+    }
+
+    #[test]
+    fn batch_normalize_array_edge_cases() {
+        let empty: [Point<NonNormal, Public, NonZero>; 0] = [];
+        let _: [Point<Normal, Public, NonZero>; 0] = empty.batch_normalize();
+
+        let one = g!(7 * G);
+        let [batched] = [one].batch_normalize();
+        assert_same_repr(&batched, &one.normalize());
+
+        let zeros = [g!(G - G), g!(3 * G - 3 * G)];
+        let batched: [Point<Normal, Public, Zero>; 2] = zeros.batch_normalize();
+        for (point, batched) in zeros.iter().zip(&batched) {
+            assert!(batched.is_zero());
+            assert_same_repr(batched, &point.normalize());
+        }
+
+        let mixed = [
+            g!(G - G),
+            g!(2 * G).mark_zero(),
+            g!(G - G),
+            g!(5 * G).mark_zero(),
+        ];
+        let batched = mixed.batch_normalize();
+        for (point, batched) in mixed.iter().zip(&batched) {
+            assert_same_repr(batched, &point.normalize());
+        }
+    }
+
+    #[test]
+    fn batch_normalize_preserves_markers() {
+        let secret = Scalar::random(&mut rand::thread_rng());
+        let points: [Point<NonNormal, Secret, Zero>; 4] = [
+            g!(secret * G).mark_zero().secret(),
+            g!(secret * G - secret * G).secret(),
+            g!(secret * G + G).secret(),
+            g!(secret * G + secret * G).secret(),
+        ];
+        let batched: [Point<Normal, Secret, Zero>; 4] = points.batch_normalize();
+        for (point, batched) in points.iter().zip(&batched) {
+            assert_same_repr(batched, &point.normalize());
+        }
+
+        let already_normal = [Point::random(&mut rand::thread_rng()), G.normalize()];
+        let batched: [Point<Normal, Public, NonZero>; 2] = already_normal.batch_normalize();
+        assert_eq!(batched, already_normal);
+
+        let even_y = [Point::random(&mut rand::thread_rng())
+            .into_point_with_even_y()
+            .0];
+        let batched: [Point<Normal, Public, NonZero>; 1] = even_y.batch_normalize();
+        assert_eq!(batched[0], even_y[0].normalize());
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn batch_normalize_vec_edge_cases() {
+        let empty: alloc::vec::Vec<Point<NonNormal, Secret, Zero>> = alloc::vec![];
+        assert!(empty.batch_normalize().is_empty());
+
+        let all_zero = alloc::vec![g!(G - G); 3];
+        assert!(
+            all_zero
+                .batch_normalize()
+                .iter()
+                .all(|point| point.is_zero())
+        );
     }
 }

@@ -38,7 +38,7 @@ pub mod marker;
 pub mod op;
 
 pub use keypair::*;
-pub use point::Point;
+pub use point::{BatchNormalize, Point};
 pub use scalar::Scalar;
 
 /// Re-export `serde`
@@ -102,5 +102,5 @@ pub use secp256k1_0_30 as secp256k1;
 
 /// Convenience module to import the most frequently used tools
 pub mod prelude {
-    pub use crate::{G, Point, Scalar, g, marker::*, s};
+    pub use crate::{BatchNormalize, G, Point, Scalar, g, marker::*, s};
 }

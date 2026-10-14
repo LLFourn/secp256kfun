@@ -9,5 +9,8 @@ It is under a different license than the rest of the code base.
 This is the arithmetic backend derived from [`k256`](https://docs.rs/k256/latest/k256/). It doesn't track a particular version but the internal arithmetic should be up to date as of `11.5`. The the `Scalar` arithmetic is taken from earlier versions since in `11.*` they require the `crypto-bigint` dependency which we can't depend on here due to conflicts.
 
 
+`ProjectivePoint::batch_normalize_in_place` is adapted from `batch_normalize_generic` in `k256` 0.13
+and `invert_batch_internal` in `elliptic-curve` 0.13, which carry the same licenses.
+
 The copyright is owned by the RustCrypto Developers and is licensed to anyone under the `Apache-2.0` OR `MIT` licenses (both included in this directory).
 
