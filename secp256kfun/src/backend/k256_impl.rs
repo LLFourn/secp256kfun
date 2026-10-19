@@ -68,6 +68,18 @@ impl BackendPoint for Point {
         })
     }
 
+    fn batch_normalize<const N: usize>(points: &mut [Point; N]) {
+        ProjectivePoint::batch_normalize_in_place(points, &mut [FieldElement::ONE; N]);
+    }
+
+    #[cfg(feature = "alloc")]
+    fn batch_normalize_slice(points: &mut [Point]) {
+        ProjectivePoint::batch_normalize_in_place(
+            points,
+            &mut vec![FieldElement::ONE; points.len()],
+        );
+    }
+
     fn hash_to_curve<
         H: crate::hash::Hash32 + crate::digest::Update + crate::digest::crypto_common::BlockSizeUser,
     >(
