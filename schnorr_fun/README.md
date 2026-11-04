@@ -19,9 +19,12 @@ schnorr_fun = "0.13"
 sha2 = "0.10"
 ```
 
-### Should use?
+### Status
 
-This library and [secp256kfun] are experimental.
+This library and [secp256kfun] are maturing. They secure bitcoin in production in [Frostsnap](https://frostsnap.com)
+hardware wallets, and Frostsnap pays a bounty for vulnerabilities (see
+[SECURITY.md](https://github.com/LLFourn/secp256kfun/blob/master/SECURITY.md)). See [secp256kfun]'s README for what is
+still in progress.
 
 ## Synopsis
 

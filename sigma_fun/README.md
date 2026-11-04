@@ -20,11 +20,12 @@ rand_chacha = "0.3"
 sha2 = "0.10"
 ```
 
-### Should use?
+### Status
 
-Highly experimental and breaking changes to the API and to the backwards compatibility of the proofs may happen at any time.
-
-There could easily be implementation mistakes especially in the more complicated proofs in the `ext` module!
+sigma_fun is maturing. Frostsnap hardware wallets use its core proofs in production through `vrf_fun`, and
+[Frostsnap](https://frostsnap.com) pays a bounty for vulnerabilities (see
+[SECURITY.md](https://github.com/LLFourn/secp256kfun/blob/master/SECURITY.md)). Minor versions may still break the API
+and the encoding of proofs. The more complicated proofs in the `ext` module have had the least review.
 
 ## "Sigma" Protocols
 
