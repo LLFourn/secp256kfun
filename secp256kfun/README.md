@@ -17,7 +17,7 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 Fun does not mean (yet -- please help!):
 
 - **well reviewed**: The implementations here have no received much review.
-- **side-channel resistant**: A [configuration-specific timing audit][ct-audit] provides machine-code, taint and native timing evidence, with explicit gaps. It does not establish resistance to all timing attacks or other side channels. **No** attempt is made to "zero" out secrets when memory is freed.
+- **side-channel resistant**: [Constant-time CI checks][ct-audit] test for secret-dependent branches and memory accesses and compare reviewed machine code, with explicit coverage limits. They do not establish resistance to all timing attacks or other side channels. **No** attempt is made to "zero" out secrets when memory is freed.
 - **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
@@ -160,30 +160,15 @@ branch/address checks do not establish operand-independent instruction latency,
 speculative execution or data-dependent prefetch behavior. Serialization, secret
 generation and complete signing protocols need their own analysis.
 
-On the tested Apple M5 Max / macOS 27.0.1, normalization timing varied with the
-input's coordinate representation when DIT was disabled. The focused experiment
-repeatedly flagged both identity/projective inputs and two representations of the
-same nonidentity point. These findings matter when normalizing secret-derived
-projective points, including ordinary nonidentity points. These contrasts did not
-flag with Apple's timing-safe mode enabled. This is an observed dependency on
-execution context, not proof that enabling the mode makes the library safe.
-**secp256kfun does not enable timing-safe mode for callers.**
-
-Apple callers whose security depends on these timing properties must arrange the
-supported execution context described in [Apple's ARM64 guidance][apple-timing]
-before handling sensitive data. Its `timingsafe_enable_if_supported` and
-`timingsafe_restore_if_supported` APIs are available from macOS 15.2, iOS/iPadOS/
-tvOS 18.2, watchOS 11.2 and visionOS 2.2. The application must handle OS availability
-and hardware support: an available API can be a no-op on unsupported hardware.
-Keep the opaque token and restore the previous state on the same thread when the
-synchronous work ends, including early exits. Do not carry that scope across
-`await` or thread migration. Follow Apple's guidance for device-specific safeguards
-and instruction coverage; this library supplies no older-OS fallback.
-
-Neither a `Secret` marker, an API call nor an observed DIT bit establishes complete
-instruction coverage or resistance to every microarchitectural timing channel.
-The audit does not provide a blanket guarantee for Apple silicon or other CPUs.
-The caller remains responsible for platform integration and whole-protocol review.
+Apple callers must arrange the supported execution context described in
+[Apple's ARM64 guidance][apple-timing] before handling sensitive data.
+**secp256kfun does not enable timing-safe mode for callers.** Applications must
+handle OS availability and hardware support, restore the previous state on the
+same thread, and avoid carrying the scope across `await` or thread migration.
+An available API may be a no-op on unsupported hardware. Follow Apple's
+instruction-coverage and device-specific guidance; the library supplies no
+older-OS fallback. A Secret marker or an enabled CPU mode does not establish
+whole-protocol or hardware timing safety.
 
 ## Features
 

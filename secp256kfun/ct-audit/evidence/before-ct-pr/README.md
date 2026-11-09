@@ -1,1 +1,0 @@
-Historical static/semantic evidence for finalized audit state 37f65e1, before ct-pr removed the inversion branch and replaced the known-finding gate. These files keep their original hashes. Native Apple experiments remain under evidence/darwin with their separate original pins.

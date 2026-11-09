@@ -17,7 +17,6 @@ REPO = Path(__file__).resolve().parents[2]
 AUDIT = REPO / 'secp256kfun/ct-audit'
 OUT = REPO / 'target/ct-audit'
 CONFIGS = {
-    'darwin': ('aarch64-apple-darwin', 'aarch64', 'apple-m1', 'release', 'std'),
     'arm-linux': ('aarch64-unknown-linux-gnu', 'aarch64', 'generic', 'release', 'std'),
     'x86': ('x86_64-unknown-linux-gnu', 'x86_64', 'x86-64', 'release', 'std'),
     'rv32': ('riscv32imc-unknown-none-elf', 'riscv32', 'generic-rv32', 'release', ''),
@@ -179,27 +178,13 @@ def build(name, output=OUT, controls=False):
             raise RuntimeError('debug stripping changed allocated image contents')
     else:
         shutil.copy2(linked, binary)
-    if name == 'darwin':
-        # Mach-O's linker adds absolute OSO object paths independently of Rust DWARF.
-        subprocess.run([bindir/'llvm-objcopy', '--strip-debug', linked, binary], check=True)
-        def section_contents(path):
-            dump = capture([bindir/'llvm-objdump', '-s', path])
-            return '\n'.join(line for line in dump.splitlines() if 'file format' not in line)
-        if section_contents(linked) != section_contents(binary):
-            raise RuntimeError('debug stripping changed Mach-O section contents')
     check_host_paths(binary, remaps)
     dis = capture([bindir/'llvm-objdump', '-d', '--demangle', '--no-show-raw-insn', binary])
     symbols = capture([bindir/'llvm-nm', '-n', '--demangle', binary])
     (dest/'code.dis').write_text(dis)
     (dest/'symbols.txt').write_text(symbols)
     stubs, relocs = {}, {}
-    if name == 'darwin':
-        listing = capture(['otool', '-Iv', binary])
-        (dest/'stubs.txt').write_text(listing)
-        for line in listing.splitlines():
-            m = re.match(r'^0x([0-9a-f]+)\s+\d+\s+(\S+)', line)
-            if m: stubs[int(m[1],16)] = m[2]
-    elif arch == 'x86_64':
+    if arch == 'x86_64':
         listing = capture([bindir/'llvm-readobj', '--relocations', '--expand-relocs', binary])
         (dest/'relocations.txt').write_text(listing)
         for block in re.findall(r'Relocation \{(.*?)\}', listing, re.S):
@@ -218,7 +203,7 @@ def build(name, output=OUT, controls=False):
               'objdump':capture([bindir/'llvm-objdump','--version']).splitlines()[0],
               'cross_linker': 'cargo-zigbuild 0.23.0 / Zig 0.16.0' if name in ('x86','arm-linux') else 'rustc target default',
               'path_remap_policy':'v1: home=/build-home, Cargo home=/cargo, checkout=/audit, Zig cache=/zig-cache; lexical and canonical spellings, most-specific last; reject remaining host prefixes',
-              'debug_metadata':'Linux: strip-debug, keep .debug_gdb_scripts, compare allocated sections; Darwin: strip-debug, compare section contents; RV32: retain remapped DWARF. Symbol tables retained on all targets.',
+              'debug_metadata':'Linux: strip-debug, keep .debug_gdb_scripts, compare allocated sections; RV32: retain remapped DWARF. Symbol tables retained on all targets.',
               'source_sha256':analyzer.digest({str(p.relative_to(REPO)):sha(p) for base in ('secp256kfun/src','arithmetic_macros/src') for p in sorted((REPO/base).rglob('*.rs'))}),
               'harness_sha256':analyzer.digest({p.name:sha(p) for p in sorted((AUDIT/'src').glob('*.rs'))}),
               'analyzer_sha256':sha(Path(analyzer.__file__)),

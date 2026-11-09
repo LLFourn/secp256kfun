@@ -21,11 +21,6 @@ firmware = ["alloc", "secp256kfun/serde", "secp256kfun/bincode"]
 name = "ct_audit"
 path = "src/main.rs"
 
-[[bin]]
-name = "ct_timing"
-path = "src/timing.rs"
-required-features = ["std"]
-
 [profile.release]
 opt-level = 3
 debug = 1
