@@ -317,21 +317,15 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
                     break 'search (*coeff, hash);
                 }
                 let current = *coeff;
-                let mut candidates = core::iter::successors(Some(g!(current + G)), |candidate| {
+                let candidates = core::iter::successors(Some(g!(current + G)), |candidate| {
                     Some(g!(candidate + G))
                 });
-                loop {
-                    let batch = candidates
-                        .by_ref()
-                        .take(GRIND_BATCH_SIZE)
-                        .collect::<Vec<_>>();
-                    for candidate in batch.batch_normalize() {
+                Point::batch_normalize_iter::<GRIND_BATCH_SIZE>(candidates)
+                    .find_map(|candidate| {
                         total_tweak += s!(1);
-                        if let Some(hash) = passes(candidate) {
-                            break 'search (candidate, hash);
-                        }
-                    }
-                }
+                        passes(candidate).map(|hash| (candidate, hash))
+                    })
+                    .expect("the candidate stream is endless")
             };
             // the next coefficient's hash commits to this one
             hash_state = hash;
