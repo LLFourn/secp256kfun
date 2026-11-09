@@ -132,7 +132,7 @@
     },
     "retained_evidence": "Source and harness files, profiles, code examples and all measurement data unchanged; no binary re-record, semantic or timing rerun. method.json source_readme_sha256 remains the README at the original focused timing build."
   },
-  "history_note": "Earlier sections retain their original dates, pins and obsolete findings. ct_pr is the current branch/address gate result; native Apple timing remains separately pinned historical evidence.",
+  "history_note": "Earlier sections, including not_run and ct_pr, retain their test-time status and original pins. ct_pr is the local implementation review record; hosted_publication is the later qualification evidence. Native Apple timing remains separately pinned history.",
   "ct_pr": {
     "date": "2026-11-09",
     "plan": "ct-pr",
@@ -192,5 +192,30 @@
     "installation_budget": "No new heavyweight installation; actionlint 1.7.12 Go caches about 107 MiB. Existing opam switch about 864 MiB; within original 20-GB limit.",
     "publication": "Pending queued ct-pr-publish after peer review: clean ct-checks branch, push, real hosted passing and deliberate failing runs, PR against master. No hosted CI success/failure is claimed by these local results.",
     "limitations": "Executed-path x86 taint under local emulation; hosted native build still pending. Scoped RV32 models only. Static-only ARM/Darwin and unresolved-transfer gaps; no whole-protocol, latency, speculation/prefetch, native x86/ESP32-C3 timing or universal CPU guarantee. Empty allocating point-dot public-length panic remains a separate functional bug."
+  },
+  "hosted_publication": {
+    "date": "2026-11-09",
+    "runs": "hosted/runs.json",
+    "initial_normal_head": "fdd9a541a0521a704d4cfedb95e67c041b61f3d8",
+    "initial_normal_run": "https://github.com/LLFourn/secp256kfun/actions/runs/42547107811",
+    "initial_normal_result": "All six jobs passed: native x86 taint, four drift configurations and 48 RV32 production/control cases. Existing baselines reproduced on GitHub Linux without re-recording.",
+    "deliberate_failures": [
+      {
+        "head": "85209e82c4c194b8fc8a4404c7ba4dd6b22868e5",
+        "url": "https://github.com/LLFourn/secp256kfun/actions/runs/42547736578",
+        "inject": "branch",
+        "result": "Only native taint failed with intended CT VIOLATION and exit 99; zero production findings, public controls clean, all other jobs passed."
+      },
+      {
+        "head": "f1c7c3ebe4199e42032f06fdfc8a17623ce0acc7",
+        "url": "https://github.com/LLFourn/secp256kfun/actions/runs/42548308993",
+        "inject": "address",
+        "result": "Only native taint failed with intended CT VIOLATION and exit 99; zero production findings, public controls clean, all other jobs passed."
+      }
+    ],
+    "native_provenance": "Verified original artifact ZIP digests, exact commit switch and source pins, both executable hashes, XML/results and all completion receipts. Both native executables are unchanged across all three runs.",
+    "retention": "Small compressed native evidence bundles and initial relational job log under hosted/. Full build trees and executables remain omitted.",
+    "restoration": "ci-control.json restored to null; final restored-head and PR workflow results belong in the PR/report after they execute. This record claims only the exact qualification heads above.",
+    "unchanged_limits": "Executed fixtures, bounded scalar/fixed-generator relational models, static inspection gaps and CPU latency/speculation/prefetch assumptions remain. No new Apple timing, native x86 hardware timing or ESP32-C3 hardware timing."
   }
 }

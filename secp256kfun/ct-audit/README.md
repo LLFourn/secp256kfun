@@ -10,8 +10,9 @@ Timing statistics are report-only.
 This is scoped machine-code evidence, not a constant-time certification for every
 input, compiler or CPU. Local semantic validation on this Mac uses an emulated
 x86 VM; the hosted job builds and executes natively on Ubuntu x86_64 and records
-its own binary/compiler pins. Hosted passing/failing runs and the actual PR are
-owed by the dependent publication plan, after peer review. They have not yet run.
+its own binary/compiler pins. The hosted qualification runs below include a
+passing normal configuration and deliberate branch/address failures. Each result
+is tied to its exact tested head; later changes need their own checks.
 
 ## Fixes and remaining limits
 
@@ -144,8 +145,31 @@ three values; the switch cannot bypass production checking. Push-triggered
 workflows work before the workflow is merged into the default branch, unlike
 relying on a new workflow_dispatch trigger alone. See
 [GitHub's event documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
-Local whole-gate success and deliberate-failure logs are retained separately;
-hosted links will be added only after real runs in the publication plan.
+Local and hosted whole-gate results are retained separately.
+
+## Hosted qualification evidence
+
+| Configuration | Exact tested head | Hosted result |
+|---|---|---|
+| Normal (`inject: null`) | `fdd9a541a0521a704d4cfedb95e67c041b61f3d8` | [42547107811](https://github.com/LLFourn/secp256kfun/actions/runs/42547107811): all six jobs passed |
+| Deliberate secret branch | `85209e82c4c194b8fc8a4404c7ba4dd6b22868e5` | [42547736578](https://github.com/LLFourn/secp256kfun/actions/runs/42547736578): only native taint failed, exit 99 |
+| Deliberate secret address | `f1c7c3ebe4199e42032f06fdfc8a17623ce0acc7` | [42548308993](https://github.com/LLFourn/secp256kfun/actions/runs/42548308993): only native taint failed, exit 99 |
+
+Both failing jobs identify the selected secret-scalar control in a `CT VIOLATION`
+diagnostic and finish with exit 99. Defined/production-taint/public controls exit 0;
+secret branch and address controls exit 99. All production calls complete with
+zero findings. All four drift jobs and the relational job remain green in both
+failing runs. The switch is deliberately outside the code/configuration drift
+digest: it selects propagation of an already-checked detector failure.
+
+The native normal/control executables are byte-identical across these three
+runs; their hashes and downloaded artifact ZIP digests are recorded in
+[evidence/hosted/runs.json](evidence/hosted/runs.json). Small compressed bundles
+retain native build pins, results, XML, completion receipts and job logs without
+Cargo build trees or executables. The first hosted relational log contains all
+48 accepted production/control cases. These runs establish branch/address checks
+on the stated inputs and machine-code models, not hardware timing safety.
+The normal switch is restored in this tree. Future heads must pass their own CI.
 
 ## RV32 relational model
 
@@ -236,8 +260,11 @@ invalidate evidence; candidate re-records require fresh review notes for affecte
 roots. HOME/Cargo/checkout/Zig-cache paths are remapped, and linker-only debug
 metadata is removed with section-preservation checks. Alternate-Cargo-home builds
 must match the reviewed snapshots. The four ELF pairs are byte-identical; Darwin
-claims snapshot reproducibility only. Cross-host Zig reproducibility still needs
-the first hosted run; local equality alone cannot establish it.
+claims snapshot reproducibility only. The hosted Linux jobs reproduced the
+existing Mac-cross snapshots on all four hosted configurations, without baseline
+changes; hosted x86 also passed its relocated-Cargo-home check. This closes the
+previous cross-host snapshot gap for the pinned configuration, not for arbitrary
+compiler or linker versions.
 
 `evidence/before-ct-pr/` retains the previous static/semantic pins, snapshots,
 classifications and results. They are historical: the prior inversion invariant
@@ -285,8 +312,10 @@ strict audit Clippy and formatting, 14 detector tests, coverage and review guard
 The new workflow passes actionlint 1.7.12. No new timing run is required for this
 branch/address change; earlier native experiments remain scoped history below.
 Tool caches remain local and within the 20-GB budget; only the owned ct-x86 VM is
-used, and it is stopped after semantic checks. PR publication and hosted CI are
-the next reviewed plan; no push or PR is part of this implementation commit.
+used, and it is stopped after semantic checks. The hosted evidence above is
+separate from those local runs. The evidence tree is roughly 12 MB, including
+compressed disassembly/logs and historical pins; it is retained so consolidating
+the audit history does not discard the original scope or results.
 
 ## Historical native timing and verification research
 

@@ -1,0 +1,227 @@
+{
+  "date": "2026-11-09",
+  "repository": "LLFourn/secp256kfun",
+  "workflow": "Constant-time checks",
+  "scope": "Qualification runs at the exact heads below. Restored final-head and pull_request validation are recorded in the PR/report, not asserted by these earlier runs.",
+  "runs": [
+    {
+      "phase": "initial-native-validation",
+      "head": "fdd9a541a0521a704d4cfedb95e67c041b61f3d8",
+      "inject": null,
+      "run_id": 42547107811,
+      "url": "https://github.com/LLFourn/secp256kfun/actions/runs/42547107811",
+      "status": "completed",
+      "conclusion": "success",
+      "counts_as_deliberate_failure": false,
+      "jobs": [
+        {
+          "id": 128934370095,
+          "name": "Native x86 secret-input taint and rejection controls",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128934370279,
+          "name": "Bounded rv32 relational checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128934370296,
+          "name": "Reviewed machine-code drift (arm-linux)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128934370305,
+          "name": "Reviewed machine-code drift (x86)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128934370310,
+          "name": "Reviewed machine-code drift (rv32)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128934370427,
+          "name": "Reviewed machine-code drift (rv32-firmware)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "native_validation": {
+        "valgrind": "valgrind-3.22.0",
+        "native_build": true,
+        "runner": "",
+        "normal_binary_sha256": "1e977251a2834c6d165703a4e190f74ed8f944026439a4d842da486f3090dee5",
+        "controls_binary_sha256": "09cf4ffcc43e6fa15443b1d5dad8fb07a24f82e959ec6b1829f0b50b5f05a2c9",
+        "self_tests_passed": true,
+        "injected_control": null,
+        "gate_exits": {
+          "--defined": 0,
+          "--taint": 0,
+          "--public-control-branch": 0,
+          "--secret-control-branch": 99,
+          "--public-control-address": 0,
+          "--secret-control-address": 99
+        },
+        "production_findings": 0,
+        "artifact_id": 13643208519,
+        "job_id": 128934370095,
+        "head": "fdd9a541a0521a704d4cfedb95e67c041b61f3d8",
+        "artifact_sha256": "0bc54d946aba8d66e74b671b2dcc57fd800d6a700659902e1f177e293fed1548",
+        "whole_job_exit": 0
+      },
+      "retained_native_evidence": "initial-native.tar.gz",
+      "retained_native_evidence_sha256": "25ee98b1fa065669c9cc75a968c7ba6d9923d98b75e12097be298ef33e3faebe"
+    },
+    {
+      "phase": "deliberate-branch-failure",
+      "head": "85209e82c4c194b8fc8a4404c7ba4dd6b22868e5",
+      "inject": "branch",
+      "run_id": 42547736578,
+      "url": "https://github.com/LLFourn/secp256kfun/actions/runs/42547736578",
+      "status": "completed",
+      "conclusion": "failure",
+      "counts_as_deliberate_failure": true,
+      "jobs": [
+        {
+          "id": 128936291789,
+          "name": "Native x86 secret-input taint and rejection controls",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 128936292039,
+          "name": "Reviewed machine-code drift (x86)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128936292075,
+          "name": "Bounded rv32 relational checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128936292077,
+          "name": "Reviewed machine-code drift (rv32-firmware)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128936292154,
+          "name": "Reviewed machine-code drift (rv32)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128936292159,
+          "name": "Reviewed machine-code drift (arm-linux)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "native_validation": {
+        "valgrind": "valgrind-3.22.0",
+        "native_build": true,
+        "runner": "",
+        "normal_binary_sha256": "1e977251a2834c6d165703a4e190f74ed8f944026439a4d842da486f3090dee5",
+        "controls_binary_sha256": "09cf4ffcc43e6fa15443b1d5dad8fb07a24f82e959ec6b1829f0b50b5f05a2c9",
+        "self_tests_passed": true,
+        "injected_control": "branch",
+        "head": "85209e82c4c194b8fc8a4404c7ba4dd6b22868e5",
+        "artifact_id": 13643981885,
+        "job_id": 128936291789,
+        "artifact_sha256": "9762f620532ff9cc2906059599f24e3f17345523570e1e5bd10de7e364eecd4b",
+        "production_findings": 0,
+        "gate_exits": {
+          "--defined": 0,
+          "--taint": 0,
+          "--public-control-branch": 0,
+          "--secret-control-branch": 99,
+          "--public-control-address": 0,
+          "--secret-control-address": 99
+        },
+        "whole_job_exit": 99
+      },
+      "retained_native_evidence": "branch-native.tar.gz",
+      "retained_native_evidence_sha256": "e97798acee3238319010d6e4cb68e1e96ff94e2afb7645d2fb1ee167e61cd353"
+    },
+    {
+      "phase": "deliberate-address-failure",
+      "head": "f1c7c3ebe4199e42032f06fdfc8a17623ce0acc7",
+      "inject": "address",
+      "run_id": 42548308993,
+      "url": "https://github.com/LLFourn/secp256kfun/actions/runs/42548308993",
+      "status": "completed",
+      "conclusion": "failure",
+      "counts_as_deliberate_failure": true,
+      "jobs": [
+        {
+          "id": 128938028172,
+          "name": "Bounded rv32 relational checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128938028372,
+          "name": "Reviewed machine-code drift (arm-linux)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128938028421,
+          "name": "Reviewed machine-code drift (rv32-firmware)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128938028463,
+          "name": "Native x86 secret-input taint and rejection controls",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 128938028522,
+          "name": "Reviewed machine-code drift (rv32)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 128938028565,
+          "name": "Reviewed machine-code drift (x86)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "native_validation": {
+        "valgrind": "valgrind-3.22.0",
+        "native_build": true,
+        "runner": "",
+        "normal_binary_sha256": "1e977251a2834c6d165703a4e190f74ed8f944026439a4d842da486f3090dee5",
+        "controls_binary_sha256": "09cf4ffcc43e6fa15443b1d5dad8fb07a24f82e959ec6b1829f0b50b5f05a2c9",
+        "self_tests_passed": true,
+        "injected_control": "address",
+        "head": "f1c7c3ebe4199e42032f06fdfc8a17623ce0acc7",
+        "artifact_id": 13644580889,
+        "job_id": 128938028463,
+        "artifact_sha256": "df7f185facc07bdeb4361d6e523f7c8e6c3e2b690ffe487217e741ed9af2723c",
+        "production_findings": 0,
+        "gate_exits": {
+          "--defined": 0,
+          "--taint": 0,
+          "--public-control-branch": 0,
+          "--secret-control-branch": 99,
+          "--public-control-address": 0,
+          "--secret-control-address": 99
+        },
+        "whole_job_exit": 99
+      },
+      "retained_native_evidence": "address-native.tar.gz",
+      "retained_native_evidence_sha256": "c608d0e3e58ecd088e45cd86535ec60085bdc0f716d0e8f70d1782e0c2e22c95"
+    }
+  ]
+}
