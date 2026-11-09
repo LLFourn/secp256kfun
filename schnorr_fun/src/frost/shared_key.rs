@@ -3,6 +3,9 @@ use alloc::vec::Vec;
 use core::{marker::PhantomData, ops::Deref};
 use secp256kfun::{hash::Hash32, poly, prelude::*};
 
+// Benchmarked against 32, 64 and 256: gains flatten past 128.
+const GRIND_BATCH_SIZE: usize = 128;
+
 /// A polynomial where the first coefficient (constant term) is the image of a secret `Scalar` that
 /// has been shared in a [Shamir's secret sharing] structure.
 ///
@@ -292,7 +295,6 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
 
         for coeff in &mut self.point_polynomial[1..] {
             let mut total_tweak = Scalar::<Public, Zero>::zero();
-            let mut current_coeff = *coeff;
             let remaining_total = fingerprint
                 .max_bits_total
                 .saturating_sub(grinded_bits as u8) as usize;
@@ -304,26 +306,38 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             // Each coefficient should have at most max_bits_per_coeff bits
             let needed_bits = remaining_total.min(fingerprint.bits_per_coeff as usize);
 
-            loop {
-                // Clone the hash state from previous coefficients and add current one
-                let hash = hash_state.clone().add(current_coeff);
-                // Check if hash has required number of leading zero bits
+            let passes = |candidate: Point<Normal, Public, Zero>| {
+                let hash = hash_state.clone().add(candidate);
                 let hash_bytes: [u8; 32] = hash.clone().finalize_fixed().into();
-                if Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits {
-                    // Update hash_state for next coefficient because the next coefficient hash
-                    // includes the current one.
-                    hash_state = hash;
-                    grinded_bits += needed_bits;
-                    break;
+                (Fingerprint::leading_zero_bits(&hash_bytes[..]) >= needed_bits).then_some(hash)
+            };
+            let (winner, hash) = 'search: {
+                // The coefficient is already normal so trying it costs no inversion.
+                if let Some(hash) = passes(*coeff) {
+                    break 'search (*coeff, hash);
                 }
+                let current = *coeff;
+                let mut candidates = core::iter::successors(Some(g!(current + G)), |candidate| {
+                    Some(g!(candidate + G))
+                });
+                loop {
+                    let batch = candidates
+                        .by_ref()
+                        .take(GRIND_BATCH_SIZE)
+                        .collect::<Vec<_>>();
+                    for candidate in batch.batch_normalize() {
+                        total_tweak += s!(1);
+                        if let Some(hash) = passes(candidate) {
+                            break 'search (candidate, hash);
+                        }
+                    }
+                }
+            };
+            // the next coefficient's hash commits to this one
+            hash_state = hash;
+            grinded_bits += needed_bits;
+            *coeff = winner;
 
-                // Add one more G to the coefficient
-                total_tweak += s!(1);
-                current_coeff = g!(current_coeff + G).normalize();
-            }
-
-            // Apply the final tweak to the polynomial coefficient
-            *coeff = current_coeff;
             tweaks.push(total_tweak);
         }
 

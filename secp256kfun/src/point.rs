@@ -512,6 +512,116 @@ impl<T, S, Z> Point<T, S, Z> {
     }
 }
 
+/// Normalizes a collection of points with one field inversion shared across the whole collection.
+///
+/// The result is the same as calling [`Point::normalize`] on each point, but normalizing `n`
+/// [`NonNormal`] points this way costs one inversion plus a few multiplications per point instead
+/// of `n` inversions. Secrecy and zero markers are carried over unchanged and the operation runs in
+/// constant time with respect to the points, so it is suitable for [`Secret`] points too.
+///
+/// Implemented for arrays of any length (including in `no_std`) and for `Vec` with the `alloc`
+/// feature.
+///
+/// ```
+/// use secp256kfun::{BatchNormalize, G, g, marker::*, Point};
+/// let [a, b, c] = [g!(G + G), g!(G + G + G), g!(G - G)].batch_normalize();
+/// assert_eq!(a, g!(2 * G).normalize());
+/// assert_eq!(b, g!(3 * G).normalize());
+/// assert!(c.is_zero());
+/// ```
+///
+/// [`NonNormal`]: crate::marker::NonNormal
+/// [`Secret`]: crate::marker::Secret
+pub trait BatchNormalize {
+    /// The collection with every point marked [`Normal`].
+    type Output;
+    /// Normalizes every point in the collection.
+    fn batch_normalize(self) -> Self::Output;
+}
+
+impl<T: PointType, S, Z, const N: usize> BatchNormalize for [Point<T, S, Z>; N] {
+    type Output = [Point<Normal, S, Z>; N];
+
+    fn batch_normalize(self) -> Self::Output {
+        let mut points = self.map(|point| point.0);
+        if !T::is_normalized() {
+            backend::Point::batch_normalize(&mut points);
+        }
+        points.map(|point| Point::from_inner(point, Normal))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T: PointType, S, Z> BatchNormalize for alloc::vec::Vec<Point<T, S, Z>> {
+    type Output = alloc::vec::Vec<Point<Normal, S, Z>>;
+
+    fn batch_normalize(self) -> Self::Output {
+        let mut points: alloc::vec::Vec<_> = self.into_iter().map(|point| point.0).collect();
+        if !T::is_normalized() {
+            backend::Point::batch_normalize_slice(&mut points);
+        }
+        points
+            .into_iter()
+            .map(|point| Point::from_inner(point, Normal))
+            .collect()
+    }
+}
+
+impl<T: PointType, S, Z> Point<T, S, Z> {
+    /// Normalizes `points` lazily, `N` at a time, with one field inversion per batch.
+    ///
+    /// It pulls the next batch only when the current one runs out, so stopping early wastes at most
+    /// one batch. The output is in the same order as `points`. A final batch shorter than `N` is
+    /// normalized point by point.
+    ///
+    /// A larger `N` means fewer inversions but more memory per batch: about 160 bytes per point,
+    /// held on the heap with the `alloc` feature and on the stack without it. `N` must be non-zero:
+    ///
+    /// ```compile_fail
+    /// use secp256kfun::{G, Point, g};
+    /// let _ = Point::batch_normalize_iter::<0>([g!(2 * G)]);
+    /// ```
+    pub fn batch_normalize_iter<const N: usize>(
+        points: impl IntoIterator<Item = Self>,
+    ) -> impl Iterator<Item = Point<Normal, S, Z>> {
+        const { assert!(N > 0, "the batch size must be non-zero") };
+        // `Box::new([_; N])` would build the array on the stack first.
+        #[cfg(feature = "alloc")]
+        let mut batch: alloc::boxed::Box<[backend::Point; N]> =
+            alloc::vec![backend::Point::zero(); N]
+                .into_boxed_slice()
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("the buffer has length N"));
+        #[cfg(not(feature = "alloc"))]
+        let mut batch = [backend::Point::zero(); N];
+        let mut points = points.into_iter();
+        let (mut len, mut next) = (0, 0);
+        core::iter::from_fn(move || {
+            let batch: &mut [backend::Point; N] = &mut batch;
+            if next == len {
+                next = 0;
+                len = 0;
+                for (slot, point) in batch.iter_mut().zip(points.by_ref()) {
+                    *slot = point.0;
+                    len += 1;
+                }
+                if !T::is_normalized() {
+                    if len == N {
+                        backend::Point::batch_normalize(batch);
+                    } else {
+                        batch[..len]
+                            .iter_mut()
+                            .for_each(backend::ConstantTime::point_normalize);
+                    }
+                }
+            }
+            let point = *batch[..len].get(next)?;
+            next += 1;
+            Some(Point::from_inner(point, Normal))
+        })
+    }
+}
+
 impl<Z, T> Point<T, Public, Z> {
     /// Checks if this point's x-coordiante is the equal to the scalar mod the
     /// curve order. This is only useful for ECDSA implementations.
@@ -904,6 +1014,23 @@ mod test {
             let deser_point: Point<Normal, Public, Zero> = serde_json::from_str(&string).unwrap();
             assert_eq!(point, deser_point);
         }
+
+        #[cfg(feature = "alloc")]
+        #[test]
+        fn batch_normalize_matches_normalize(points in proptest::collection::vec(any::<Point<NonNormal, Public, Zero>>(), 0..40)) {
+            let expected = points.iter().map(|point| point.normalize()).collect::<alloc::vec::Vec<_>>();
+            prop_assert_eq!(points.batch_normalize(), expected);
+        }
+
+        #[test]
+        fn batch_normalize_iter_matches_normalize_in_order(
+            points in proptest::collection::vec(any::<Point<NonNormal, Public, Zero>>(), 0..40),
+            take in 0usize..45,
+        ) {
+            assert_iter_matches_normalize::<1>(&points, take);
+            assert_iter_matches_normalize::<3>(&points, take);
+            assert_iter_matches_normalize::<8>(&points, take);
+        }
     }
 
     #[test]
@@ -1058,5 +1185,37 @@ mod test {
         assert_ne!(a, *G);
         a -= G;
         assert_eq!(a, a_orig);
+    }
+
+    fn assert_iter_matches_normalize<const N: usize>(
+        points: &[Point<NonNormal, Public, Zero>],
+        take: usize,
+    ) {
+        let pulled = core::cell::Cell::new(0);
+        let source = points
+            .iter()
+            .inspect(|_| pulled.set(pulled.get() + 1))
+            .copied();
+        let mut batched = Point::batch_normalize_iter::<N>(source);
+        let consumed = take.min(points.len());
+        for point in &points[..consumed] {
+            assert_eq!(batched.next(), Some(point.normalize()));
+        }
+        assert!(pulled.get() <= consumed.div_ceil(N) * N);
+
+        for point in &points[consumed..] {
+            assert_eq!(batched.next(), Some(point.normalize()));
+        }
+        assert_eq!(batched.next(), None);
+    }
+
+    #[test]
+    fn batch_normalize_iter_all_identities() {
+        let identity = g!(G - G);
+        let mut batched = Point::batch_normalize_iter::<4>([identity; 4]);
+        for _ in 0..4 {
+            assert_eq!(batched.next(), Some(identity.normalize()));
+        }
+        assert_eq!(batched.next(), None);
     }
 }
