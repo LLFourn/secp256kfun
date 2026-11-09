@@ -38,7 +38,7 @@ use rand_core::RngCore;
 ///
 /// A `Scalar<S,Z>` has two markers:
 ///
-/// - `S`: A [`Secrecy`] to determine whether operations on this scalar should be done in constant time or not. By default scalars are [`Secret`] so operations run in constant-time.
+/// - `S`: A [`Secrecy`] that requires constant-time implementations for [`Secret`] values (the default) or permits variable-time algorithms for public values. The [platform requirements](crate#timing-and-platform-requirements) still apply.
 /// - `Z`: A [`ZeroChoice`] to keep track of whether the point might be zero or is guaranteed to non-zero.
 ///
 ///

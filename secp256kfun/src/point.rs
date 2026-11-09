@@ -27,7 +27,7 @@ use rand_core::RngCore;
 /// A `Point<T,S,Z>` has three types parameters.
 ///
 /// - `T`: A [`PointType`] used to reason about what the point can do and to specialize point operations.
-/// - `S`: A [`Secrecy`] to determine whether operations on this point should be done in constant-time or not. By default points are [`Public`] so operations run in variable time.
+/// - `S`: A [`Secrecy`] that requires constant-time implementations for secret values or permits variable-time algorithms for [`Public`] values (the default). The [platform requirements](crate#timing-and-platform-requirements) still apply.
 /// - `Z`: A [`ZeroChoice`] to keep track of whether the point might be zero (the point at infinity) or is guaranteed to be non-zero.
 ///
 /// ## Serialization

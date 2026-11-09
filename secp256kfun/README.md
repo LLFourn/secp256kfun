@@ -17,7 +17,7 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 Fun does not mean (yet -- please help!):
 
 - **well reviewed**: The implementations here have no received much review.
-- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc. **No** attempt is made to "zero" out secrets when memory is freed.
+- **side-channel resistant**: [Constant-time CI checks][ct-audit] test for secret-dependent branches and memory accesses and compare reviewed machine code, with explicit coverage limits. They do not establish resistance to all timing attacks or other side channels. **No** attempt is made to "zero" out secrets when memory is freed.
 - **performant**: The library is in general not as performant as [libsecp256k1][1].
 
 The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
@@ -100,19 +100,19 @@ match sum.normalize().non_zero() {
 
 ## Variable time or Constant time?
 
-**NOTE**: *As of `v0.7.0` the `Secret` and `Public` markers do very little since we changed the
-arithmetic backend to [k256] which doesn't have variable time algorithms. However this situation may
-improve in future versions.*
-
-If a cryptogrpahic function's execution time should be independent of its secret inputs.
+Cryptographic operations should avoid revealing secret inputs through their execution time.
 Otherwise, information about those inputs may leak to anyone that can measure its execution time.
 
-In secp256kfun we try and solve this problem by allowing you to mark different inputs as `Public` or `Secret`.
-Depending on the marking the rust compiler may choose different low level operations.
-Choosing faster but variable time operations for `Public` inputs and slower safer constant time ones for things marked as `Secret`.
+In secp256kfun, `Secret` marks values whose core operations must avoid secret-dependent
+control flow and memory addresses. `Public` permits variable-time algorithms; the
+current backend uses the same algorithms for many operations on either marker.
+The marker expresses an implementation obligation. Compiler output and CPU behavior
+still need verification, and [platform requirements](#timing-and-platform-requirements)
+apply. The marker does not enable a CPU timing mode or cover a whole protocol.
 
 For example, below we have a `pedersen_commitment` function which is called by the committing party with a secret value and by the verifying party when the secret value is finally revealed.
-Note that we only have to write the function once and the caller decides by marking whether the function should run in constant time or variable time.
+We write the function once; the caller's markers determine whether variable-time
+algorithms are permitted.
 
 ```rust
 use secp256kfun::prelude::*;
@@ -148,10 +148,27 @@ let commitment = pedersen_commit(A, &B, &r, &x);
 let r = r.public();
 let x = x.public();
 
-// Now he'll compute the commitment in faster variable time and check it
-// against the original
+// Public inputs permit variable-time algorithms when the backend provides them.
 assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 ```
+
+## Timing and platform requirements
+
+The [audit][ct-audit] binds its findings to particular source, compiler, target CPU,
+features and build profiles. Changing those inputs requires another audit. Its
+branch/address checks do not establish operand-independent instruction latency,
+speculative execution or data-dependent prefetch behavior. Serialization, secret
+generation and complete signing protocols need their own analysis.
+
+Apple callers must arrange the supported execution context described in
+[Apple's ARM64 guidance][apple-timing] before handling sensitive data.
+**secp256kfun does not enable timing-safe mode for callers.** Applications must
+handle OS availability and hardware support, restore the previous state on the
+same thread, and avoid carrying the scope across `await` or thread migration.
+An available API may be a no-op on unsupported hardware. Follow Apple's
+instruction-coverage and device-specific guidance; the library supplies no
+older-OS fallback. A Secret marker or an enabled CPU mode does not establish
+whole-protocol or hardware timing safety.
 
 ## Features
 
@@ -171,6 +188,8 @@ assert_eq!(commitment, pedersen_commit(A, &B, &r, &x));
 [3]: https://github.com/dalek-cryptography/curve25519-dalek
 [4]: https://github.com/paritytech/libsecp256k1
 [k256]: https://docs.rs/k256/0.10.1/k256/
+[ct-audit]: https://github.com/LLFourn/secp256kfun/blob/master/secp256kfun/ct-audit/README.md
+[apple-timing]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
 
 ## MSRV
 
