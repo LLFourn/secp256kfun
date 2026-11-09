@@ -1,0 +1,922 @@
+{
+  "schema": 1,
+  "review_date": "2026-11-06",
+  "reviewer": "codex; candidate for Clank peer review",
+  "configuration_sha256": "7bc51ef68d6265a01c0059e95ba5d875b0dbc5d46e8437c98fe94bdb7e859651",
+  "roots": {
+    "audit_mul_base": {
+      "code_sha256": "813673f2325171c88beb79ab361b89fcf7f1d2113a3387a7a5aa9491761bfd89",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check for a symbolic canonical nonzero scalar and the fixed public generator loaded from this binary. RV32 ABI inspected: a0 return pointer, a1 scalar pointer, a2 generator overwritten inside wrapper; normalized variant uses a 120-byte stack/output point. No arbitrary point or hardware claim.",
+      "memory_scope": "Fixed public, disjoint scalar/output buffers and stack; fixed public generator and readonly data from the image. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_mul_normal": {
+      "code_sha256": "f7acf760bfb7c0d7819c2734a7e8b7e2c808860051b2f63537634047a715c554",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_mul_nonnormal": {
+      "code_sha256": "f7acf760bfb7c0d7819c2734a7e8b7e2c808860051b2f63537634047a715c554",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "f7acf760bfb7c0d7819c2734a7e8b7e2c808860051b2f63537634047a715c554",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_double_mul": {
+      "code_sha256": "5db91a2b4c17325b675eb00ba3045ed7f5b106a2e9bd7bbfc7e68178c12ac6fe",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_dot_product": {
+      "code_sha256": "1b1ca69f27c7e5fa6428fe1d0d25ca9324202d7ba69ca7ee09e4445575e0645a",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_add": {
+      "code_sha256": "ba93707dd34c360d6cbbc54dcb7502552615f594fea808449a21671017d3e1cf",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "036c376c888f400deea5ae8f64c5a1d41f7512d2da0e2f48fb056dacafea1ca3",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_negate": {
+      "code_sha256": "ec42549657d18e45f29390ea3d252d14b1c9fe77755ceb0d51505b2953fd0a82",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_normal_negate": {
+      "code_sha256": "84051e77776a28a49106db4b07890092395f4ea8c24a3c64657e11add3e0084f",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "1928fb8e4832d0d44ecf54c8d55fab38a01b4900277be583dabf7af456d1e562",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_normal_cond_negate": {
+      "code_sha256": "c87df3781ff92dd871fa37f3f4e18e52f05cd111bf3078dec6d7e5ce04cab464",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_normalize": {
+      "code_sha256": "6055652ab1aba698b9944a79805ba72dab02254fcc2d2d347210a4fd982c2599",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "794d366e7e5ec96d51ef83fb18cc3b1e06819a8d669f40b3c495b69707ebc682",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check for a symbolic canonical nonzero scalar and the fixed public generator loaded from this binary. RV32 ABI inspected: a0 return pointer, a1 scalar pointer, a2 generator overwritten inside wrapper; normalized variant uses a 120-byte stack/output point. No arbitrary point or hardware claim.",
+      "memory_scope": "Fixed public, disjoint scalar/output buffers and stack; fixed public generator and readonly data from the image. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_eq": {
+      "code_sha256": "f9f7ec2f21416eaf21df62fcf4d48c10336391f35e61645fdba3ba846121995c",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "2c466148a1eacd2ba6aaa3eead4af3db2d0f6afcbb0cf214161c07e8b447649f",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_normal_eq": {
+      "code_sha256": "4538428619ffccf2bf7d66be3b61364c8004edb57c78b7a4dbc00c72f4165be0",
+      "status": "inspected-with-gaps",
+      "reason": "Equality short circuit removed. Every reached function has zero conditional branches and inspected fixed field/stack addresses. No universal input proof or hardware-latency claim.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_y_even": {
+      "code_sha256": "3cd69790b4690d4a8e0bb27a1cc0def1291187196d86231762709226eb3dc20c",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_add": {
+      "code_sha256": "4a041dbe1614c5272e1fae1728b767643ce0dfa9433a3ba0711c1a1435a76cba",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "d218de5757db5fe5a17080f0664c8284eb3490fe58aef44b8765c57acdf72157",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "c15118b532cbc68ba4ffeb009b61c268be4daad315865e5948f94e3ea8990274",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "4380469008a6756d44889ad32f05a7e51f94c895728f72437b3daaa2b60325d4",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "7272ee1c3d5d1f0296a7d9041f75ba7b65d0e1ebf24371e2edf639948fd0eab2",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "82baf46a1c3ec65b1160a79e1e3fa37724c81bf5ff0e8af2c6f92c7794b214ca",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "37435134c04969518bfcbd3d4bb5d7b2e1bd0af89c8b71cde0912b0e9c0589cd",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "1128a0083f7458d4f9f8b3aeb0dcc8e573a0c81ef61a7deed732b569fd728378",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "a0ee068eeb3db56a1aaf031c499847ea5611c85afc15d8d9d3f774942480853c",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret canonical scalar values and, where present, a valid secret boolean. No speculative/cache-content observation.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "d0f9fd0921cc88594e4bdd90f6093e992d7e941b4ad588504a554a9781b18dea",
+      "status": "bounded-relational",
+      "reason": "Completed BINSEC 0.11.3/Z3 5.3.3 check of control flow and demand addresses on this binary, with canonical scalar values, valid NonZero inversion and bool constraints. Script, completion counters and positive/negative controls retained; no instruction-latency or hardware claim.",
+      "memory_scope": "Fixed public, disjoint input/output buffers and stack; secret scalar bytes and conditional-negation flag. Scalar-dot coverage is all nine public length pairs 0..2 only; no arbitrary lengths or aliasing proof.",
+      "review_note": "ct-pr, compared with finalized Apple follow-up 37f65e1. Source changes remove scalar-invert unwrap; explicit wrapper input types, per-case taint receipts and separately gated scalar controls change the harness. Inventory/build-driver/configuration pins refreshed. All reachable deltas inspected: inversion masking/conditional-select, relocated code/data addresses, and unreachable x86 audit_y_even padding. Both RV32 suites were rerun with ten scalar-only roots (dot lengths 0..2) and two fixed-generator multiplication roots; strict x86 taint/control evidence is separately pinned. See strict-gate-changes.json for exact differences. Hardware and unresolved-transfer gaps remain. Final inventory also binds the completed fixed-generator models; code and other configuration hashes are unchanged by this metadata extension."
+    }
+  },
+  "functions": {
+    "audit_dot_product": {
+      "code_sha256": "30f8077f6460bb870963487ad4d8d171f3b761e59a324d475cac282eea4abb6d",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "30": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "58": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "132": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "audit_double_mul": {
+      "code_sha256": "05b6aef83c430e5f10985b1c22eb4de81232968220952f5d58c022b871e9a658",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_base": {
+      "code_sha256": "e7d8c7987068dbfd003ed985853a68f9f1818b63f6f77b171ad3ee6580685176",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "2155fa3439aed7b8315620eb7ed89de2d89f1e0da0b5e7b8db142d37fad0a8d5",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "6238277f0b25d417d18201d4ac2d960b16a1f5ca9da5ff3f5640a352b7a81425",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_cond_negate": {
+      "code_sha256": "03d825ca6e4c9c5bd4ef58c9ab788325802f3b781c8f95a0ecfbd0ba039bed96",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_eq": {
+      "code_sha256": "4922903178b146687e6b65eb6da289ae9c139fd8994ce4e02c6b483a154ddf11",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_negate": {
+      "code_sha256": "01b154a2549450717090b978d6404cf58524ec3d9b87134b18c4764579adaf6c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normalize": {
+      "code_sha256": "54d20c86b04d9e7cb6513d5c6e10fbe1b1c1dc0cba859b8a5dddf1abaab30ce9",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_add": {
+      "code_sha256": "144f0db566e68da0d68f7169c1179ce738e14c7ec8df80546c9a7d6292d17315",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "57264559b39e7009bbde5ee449384992541885ec4fc3b8adcdc29a45c3c5b3d0",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "03d825ca6e4c9c5bd4ef58c9ab788325802f3b781c8f95a0ecfbd0ba039bed96",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_eq": {
+      "code_sha256": "1bfda167432264f226c93757be5aa3f49ab3d8b17faada30f7ca1c91dae846cf",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "8af9c171e13c49559d2caa65fd3ade279280b048d816f524654a6fd4377dce2c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_negate": {
+      "code_sha256": "b6132845196fdea9875a3222e53db8adb007bf729c7a417dfea4269a7b68f7bb",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_add": {
+      "code_sha256": "226132123629f18f3cd3b4d895095845a89ef56de866ce5d9bd68fcceab7b3a7",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "647b414337c5b019d308d74143c7e3291d2764fab763cd3c49b649434eddb88b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "9d35f7aac615b22ad8c53a3a5261eb605da31e46355d191155d494eae05db915",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "18": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "40": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "120": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "62b494f8f1febd222f6fb42a45b77b401e167ec2ae55bb76e85c38ce0306e956",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "6052619c5d7554f38e3985f0227d92ea1c4971a9d2f1dc8318ed0c1749f734bc",
+      "branch_reason": "The secret-derived unwrap branch is removed. Zero fallback is chosen by masking/conditional selection; any remaining branches are fixed exponentiation loops.",
+      "address_reason": "Inspected fixed scalar limbs, stack temporaries, output offsets and public zero-constant addresses. The new mask/conditional-select path has no secret-indexed address; RV32 inversion additionally completes the relational model.",
+      "branches": {}
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "03601bdb114b6fbdc627f574e2470c1204eeec4b7a816cfed5f318f273cc8c89",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "1fb093d7a2cc8832e7f5ab6471ca3ea0d2a34ea01e6fbaba8b87a828d89e2842",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "f389e9bb5e33396c8d5773faa67fe057cc5bca005a8a0ab89fa19467517834ab",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "fa1222e7d416aa08953106e98437cd56f065af8335db97dab67c91b71da92649",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "f7c7900d936502c93fe37dc49dc659bd3f40ad03275245d118737d8e32f74a37",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_y_even": {
+      "code_sha256": "03cf8a7874fc64ccf5513bd1115ca71fd55eee97611a0099abba42a56cf2111a",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "secp256kfun::vendor::k256::mul::lincomb_generic::<1>": {
+      "code_sha256": "ba803c3d90debfbd4cffe926366a203b465835b544c159e9076986f218ef785b",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "3560": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add": {
+      "code_sha256": "8a5430c5e8fe190f38eefc5fda3f577a2b96f1fc85924088cd7d19d619dac585",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double": {
+      "code_sha256": "ac772cf198354f9dff93e5bdbcedd8511fd1861ed3f329a3c64fb0d306835236",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed": {
+      "code_sha256": "43356982a2ba6cbbde7ff31c73e5988ac0d5bc085a4ffa6c6466e0335d01043c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::eq_affine": {
+      "code_sha256": "a84e01d3311c514006cca4ee9131ca153a9a5c7242028477512cc2e919aaf663",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::invert": {
+      "code_sha256": "c04f0057dd4315a0403738c24870898da5909d72ddf70662c21c74dcc793b9dd",
+      "branch_reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {
+        "1346": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        },
+        "1412": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        },
+        "1462": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::square": {
+      "code_sha256": "95fd5fc37d79c33a306536a1a3ad2b8d8b02911ae30a2d8d83ead3dbb98bf6dd",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add": {
+      "code_sha256": "7fae4e95154d426c79c7027edf941870c34c2b61e5922af14fb6b72c911708bb",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul": {
+      "code_sha256": "2cc1f13d624f1923934105f953cd84df118c7c0c71f6ec348aaeb9f481832094",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::sub": {
+      "code_sha256": "e9a0f84fc7ef8302f85f50f07947879555121a64c2851a30bb86e37cb22d656b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::invert": {
+      "code_sha256": "493b3c853fbc7859d392f139dfc82cb011845250c06fb71763fb9bc9b1af7848",
+      "branch_reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {
+        "4500": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul": {
+      "code_sha256": "7c4b5fa91c3b789947883c95c328e1daea9a870cbaeabd33307f3d6a4aa2dc2b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize": {
+      "code_sha256": "f51acab9f7d63cd01b2274f6ecd6c5ad9a4d77232a760593cb265cbfcef1f60d",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add": {
+      "code_sha256": "d1f445a5d77f7691c9b2548c7007116f7a3cd3bb03757bacdec904203d62b519",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new": {
+      "code_sha256": "86cadac104e61ccd5241b79e03721a01d5ccdcfd842c0abd6bc8263b8cf5cebf",
+      "branch_reason": "Radix conversion and carry propagation traverse a fixed 32-byte / 33-digit array; loop indices, not digit values, control the comparisons.",
+      "address_reason": "Fixed array traversal and stack accesses. Secret digits become values passed to LookupTable::select, not direct table indices.",
+      "branches": {
+        "420": {
+          "class": "fixed-loop",
+          "reason": "Radix conversion and carry propagation traverse a fixed 32-byte / 33-digit array; loop indices, not digit values, control the comparisons."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable>::select": {
+      "code_sha256": "40304d26c4968ca554b4ba605c5ed5bddbb19161bb7c37d96e90e43f5a556205",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Fixed eight-entry stride traversal; secret digit only selects masked coordinate values. Fixed output/stack stores. Not a formal memory dataflow proof on this target.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var": {
+      "code_sha256": "0f42eba5c7172ae9dc0aee277ca5045c2db744265d19880f5a8761e03e2a96c8",
+      "branch_reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates.",
+      "address_reason": "Product limb selection is indexed by public shift >> log2(word_bits), with public carry/shift offsets; the call sites fix shift=384. Other accesses are fixed stack/limb offsets.",
+      "branches": {
+        "2256": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2290": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2294": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2316": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2378": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2654": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2668": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2672": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2692": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2698": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2712": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2716": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2736": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2742": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2756": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2760": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2780": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2794": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2808": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2812": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2832": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2846": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2860": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2864": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2884": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2896": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2910": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2914": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "2934": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        }
+      }
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul": {
+      "code_sha256": "515abca57988bc50be4183855d1094eb0a6c00976523b153162086a8284c3f68",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Sub>::sub": {
+      "code_sha256": "86e19ccf6f83a93cf119ff9df27876dded001152b942286fcf8c76e3d7eb0b57",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert": {
+      "code_sha256": "56afbfe5eec5136aa531af970406cd8d245aac79807853a862ed0ec65d6207dc",
+      "branch_reason": "The secret-derived unwrap branch is removed. Zero fallback is chosen by masking/conditional selection; any remaining branches are fixed exponentiation loops.",
+      "address_reason": "Inspected fixed scalar limbs, stack temporaries, output offsets and public zero-constant addresses. The new mask/conditional-select path has no secret-indexed address; RV32 inversion additionally completes the relational model.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_neg": {
+      "code_sha256": "d10fbf26b3bdd3d09832652eebbbdf5d8310dfeac8d7b511b1cdb0ba5f5a166d",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::cmp::PartialEq>::eq": {
+      "code_sha256": "c219fa230b0832996df2f9702275e133e174e85f9046fe9ffc11dfd19240d5f3",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_high": {
+      "code_sha256": "c895807bcd3fced8ed2e9b900eb962b6782f213213bb13565578485b42d58323",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_zero": {
+      "code_sha256": "d9c3bd0fa08a5c50352d23780af0ff55401fb8e70b6b88a5a5a8d8a03eff3c87",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add": {
+      "code_sha256": "1fac60252c4374c87e1d2b5a627d36ef4950accbbb3059f23234a3d544ab9062",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize": {
+      "code_sha256": "ab82402b7e4a817650f6473be12eb3d6c840e5f7abee5071597d99348609b9df",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul": {
+      "code_sha256": "c75c938c929a2fa921930752e979004ba4ae591e002e6a4d7bf8459206cc02d8",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "4192": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "5532": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "6646": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point": {
+      "code_sha256": "ef59f45229d76453c8fcdabc79c23445f742211f5301518b5d7e54c9b055909f",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate": {
+      "code_sha256": "f804c9cf19a23d0acf4ab39b049c1abcc9966afc137025f4c507b58da9cabfd2",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_eq_norm_point": {
+      "code_sha256": "18388de0f83ec8bc1e2420eadd160578291e8bbce8224b72cd72e8b9caeb1b9b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_is_y_even": {
+      "code_sha256": "183b02c92051d63f420c65452765e8e8d0eed47a1a1c06218a5815f8e79403dd",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_add_norm_point": {
+      "code_sha256": "1e6122a1d9daf5a6dc8ee88beab2c5faa2013454808ad7f9355336e385a0983a",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point": {
+      "code_sha256": "d3aa6b0c6a3fd394d838db5cb50f7ea1d79cfc5b58253bd77ef54e447fa111af",
+      "branch_reason": "Both identity predicates and coordinate comparisons execute unconditionally; no conditional branches in this body after ct-fix-normal-eq.",
+      "address_reason": "Inspected fixed x/y/z field offsets from public point pointers and fixed stack offsets; transitive comparison and subtle black_box helpers unchanged. No secret-indexed accesses.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate": {
+      "code_sha256": "0d30d689aeaea90f467d690dcbed0f2442868ad4bf35ed21a0f2e5f4bbb3a32d",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_neg": {
+      "code_sha256": "fd7b27a9a110998d92749a45fcb6ce56a580495a8d8b972b254076909e52524a",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar as core::cmp::PartialEq>::eq": {
+      "code_sha256": "fd2313b2ab1eb91b18afd445d817b20a12a19729e06af3d7a01ab8ee2d1c0257",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "14ae34734bbc9581d4a59b3e080360cdb12da039de4258595239c8cd99fbb880",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "500ebbc022267240aec40acbf0281316a4b01d810d15ad52ef19eb7218f7f2cd",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "906fd85aab11c5c38c8931620ea087a2884b45876b91ac7f3e478b2544f8a26b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "13dfc73b4b6497d9b78a7c4caba2105d50068d74e6a9c6c1b07c59a0a248f435",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "12498a10d7d006ceaef302efe9c5793e12c0e316991c2c856225b773a83cb9a9",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "subtle_ng::black_box": {
+      "code_sha256": "37e8403ee2b8b86d41fb914310be27eabaed86fffda5f5992fe8a16c7c9dc1bb",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "memset": {
+      "code_sha256": "a96abbde2917ace3be5583ee6545698fe6fb2c834c9d90016c2bcb0ea1042702",
+      "branch_reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested.",
+      "address_reason": "Sequential public source/destination ranges and stack scratch; alignment peel/word/tail paths depend on pointers/counts. External platform libc implementations are excluded.",
+      "branches": {
+        "2": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "18": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "34": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "46": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "70": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "80": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "92": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "104": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        }
+      }
+    },
+    "memcpy": {
+      "code_sha256": "4aa36457501feef38bebd263093f51fd6301cf7c85731ac21913652b6e9ae2a4",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "compiler_builtins::mem::memcpy": {
+      "code_sha256": "6c2ccc3198d2ba2f1c30724c85ae2aabb59e441c487c8f3f1642d68ce40c3e8a",
+      "branch_reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested.",
+      "address_reason": "Sequential public source/destination ranges and stack scratch; alignment peel/word/tail paths depend on pointers/counts. External platform libc implementations are excluded.",
+      "branches": {
+        "4": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "20": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "44": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "66": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "90": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "94": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "110": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "122": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "128": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "144": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "162": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "192": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "230": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "244": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "260": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "308": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "352": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        },
+        "370": {
+          "class": "public-structure",
+          "reason": "Copy/set size, pointer alignment, end addresses and loop counters control branches; copied/set byte values are not tested."
+        }
+      }
+    }
+  }
+}

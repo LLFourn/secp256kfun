@@ -1,0 +1,1286 @@
+{
+  "config": {
+    "target": "riscv32imc-unknown-none-elf",
+    "cpu": "generic-rv32",
+    "profile": "firmware",
+    "features": "firmware,negative-controls",
+    "opt_level": "s",
+    "lto": true,
+    "codegen_units": 1,
+    "panic": "abort",
+    "relocation_model": "target-default",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nrelease: 1.98.1\nLLVM version: 22.1.8",
+    "objdump": "LLVM (http://llvm.org/):",
+    "cross_linker": "rustc target default",
+    "path_remap_policy": "v1: home=/build-home, Cargo home=/cargo, checkout=/audit, Zig cache=/zig-cache; lexical and canonical spellings, most-specific last; reject remaining host prefixes",
+    "debug_metadata": "Linux: strip-debug, keep .debug_gdb_scripts, compare allocated sections; Darwin: strip-debug, compare section contents; RV32: retain remapped DWARF. Symbol tables retained on all targets.",
+    "source_sha256": "aa7c8756a8ac9d4685c5f6d9b9a5cf69f7ac670b1a62b8db0d5e55ef884ce725",
+    "harness_sha256": "12d1713703287a6576b368564d818f2600cf7aea302ce1c91125dab04deca240",
+    "analyzer_sha256": "18d27d507cdd749496b5726101802f5ec749af13320a27302907df58e0618429",
+    "build_driver_sha256": "681fcb8ba2132ef8588bcc07c0be8b14cbed8fe24c647f002586ee7a8c55ab2a",
+    "inventory_checker_sha256": "1aee47af35f0f3981044d9dffad84bcd24537655d326224f09c393705279595d",
+    "manifests_sha256": "d6910dad79659b5de9c5fb7f41ca1722164f94594d85d458819e47fa52d655b6",
+    "lock_sha256": "e2ca6d526de4f0cdb9691d058450ceeaac87fb2f7932412af43a659cd31742c2",
+    "contracts_sha256": "1472528d604b463abdf626935dfee88c503c8e2162f371f3594712e546d50a27"
+  },
+  "roots": {
+    "audit_mul_base": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+      "audit_mul_base",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_mul_normal": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+      "audit_mul_secret_point",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_mul_nonnormal": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+      "audit_mul_secret_point",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_mul_secret_point": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+      "audit_mul_secret_point",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_double_mul": [
+      "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+      "audit_double_mul",
+      "<alloc::raw_vec::RawVecInner>::grow_amortized",
+      "<alloc::raw_vec::RawVecInner>::finish_grow",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_dot_product": [
+      "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+      "audit_dot_product",
+      "<alloc::raw_vec::RawVecInner>::grow_amortized",
+      "<alloc::raw_vec::RawVecInner>::finish_grow",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_point_add": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "audit_point_add"
+    ],
+    "audit_point_add_normal": [
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "audit_point_add_normal",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_point_negate": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "audit_point_negate",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_normal_negate": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "audit_normal_negate",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_point_cond_negate": [
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "audit_point_cond_negate",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_normal_cond_negate": [
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "audit_point_cond_negate",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_normalize": [
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "audit_normalize",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_mul_normalize": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+      "audit_mul_normalize",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_point_eq": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "audit_point_eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_point_eq_normal": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "audit_point_eq_normal",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_normal_eq": [
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+      "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConstantTimeEq>::ct_eq",
+      "audit_normal_eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_y_even": [
+      "audit_y_even",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_add": [
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "audit_scalar_add",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_sub": [
+      "audit_scalar_sub",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_mul": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "audit_scalar_mul",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_invert": [
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "audit_scalar_invert",
+      "subtle_ng::black_box",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_scalar_negate": [
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "audit_scalar_negate",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_scalar_cond_negate": [
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "audit_scalar_cond_negate",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ],
+    "audit_scalar_eq": [
+      "audit_scalar_eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_is_high": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "audit_scalar_is_high",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_is_zero": [
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+      "audit_scalar_is_zero",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_dot": [
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+      "audit_scalar_dot",
+      "subtle_ng::black_box",
+      "memset",
+      "memcpy",
+      "compiler_builtins::mem::memcpy"
+    ]
+  },
+  "functions": {
+    "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc": {
+      "code_sha256": "aff608c204ce23a9b9921f279c935bbd6d9535fbdb672e9042e72bc8e0b161a8",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        42
+      ],
+      "memory_access_count": 2
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate": {
+      "code_sha256": "3da7c4a690f9052bb081ca23d559b3e93e84bff8127c8859dc74fabcc13b290d",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 6
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::negate": {
+      "code_sha256": "d9a93799a6ee44c801a09113c59916ff83ee1e385837b9ca9da63d004a20948f",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+        "memset"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "5f1084d01479b5621190a0311ac86dbe828adad4ff270102aa4f881aecf691b3",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 34
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero": {
+      "code_sha256": "a412bbba289fc9baca2e32ce75cfa934f2106dca170b75d2f9afbaa4b651b755",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 8
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize": {
+      "code_sha256": "fa4f05646cc52b28c09427177f5f6903cf6d87395e567ec16acfc7c36bdfbcc8",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::square",
+        "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        134,
+        182,
+        230,
+        294,
+        358,
+        424,
+        490,
+        540,
+        588,
+        636,
+        684,
+        732,
+        780
+      ],
+      "memory_access_count": 13
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg": {
+      "code_sha256": "a90e90435813937865f38bf4f5e5283fee847273c05bd1139149d2a99e941483",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 28
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "ba498245a728718213a82adc29c0857383b29517943857043988a16f4ed3e485",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 10
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize": {
+      "code_sha256": "a959de85e29bd622ce2daf58fd6149c59e62d6e985d90a967621630b66744830",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 40
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak": {
+      "code_sha256": "7b9afcb13ae73e0487d321ffa67937c1939e682ff7fb04ff958aa6b6a0ecf48e",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 22
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction": {
+      "code_sha256": "9ba252f1b54f4ec730ef3957c0c6ad85ab0a3ca6f8c1772879faef14ad56a40c",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 22
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "a0875a497ae02276d835a549ee9ab0fef1a585c375660177836be6cdd4d5c3de",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 52
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul": {
+      "code_sha256": "7c4b5fa91c3b789947883c95c328e1daea9a870cbaeabd33307f3d6a4aa2dc2b",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 536
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::square": {
+      "code_sha256": "95fd5fc37d79c33a306536a1a3ad2b8d8b02911ae30a2d8d83ead3dbb98bf6dd",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 160
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero": {
+      "code_sha256": "3f43beb9d51d2fac9108f8fcee7314cb191012613ff4bc1377e65bfe2d6b10b4",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize_weak",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 12
+    },
+    "secp256kfun::vendor::k256::mul::decompose_scalar": {
+      "code_sha256": "bf7e23e6b68d106cd1ce960f624355c1fba9af02e29e2e1753769ff28bb997db",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 6
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::is_high": {
+      "code_sha256": "31ec778f3d319c1badcfdf857b1e4440eed5c8521d2ca15b57323bdb9afbbdb1",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 8
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from": {
+      "code_sha256": "7920d27af2e5112fec2f9190e33cd14fd80ab279260376cc1f7948c9d971a68c",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        54,
+        98
+      ],
+      "memory_access_count": 10
+    },
+    "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new": {
+      "code_sha256": "e3a7b744d08746d907578cd610ec6350e009513dff0debaad6a6fe3e42546983",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes",
+        "memset",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        72,
+        112
+      ],
+      "memory_access_count": 13
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable>::select": {
+      "code_sha256": "b951b3d818048e8f9a403badf6c9bf2e3b73364f6d6fd478f1415d5b840dba47",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        142
+      ],
+      "memory_access_count": 14
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add": {
+      "code_sha256": "f79e3cffe0fc085aa13e5b89c55b2858c183fc77ae1a9c7a046e23efc9ee07ca",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 744
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double": {
+      "code_sha256": "191be1c6e8c8764355f36416204b266bd45df6c9e60cf7898059be77795309bb",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::square"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 230
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::to_bytes": {
+      "code_sha256": "1aa1c450239e3be024a07a7aa2264747b2ba1d01b7319dd8fac76a3b4533c17f",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 66
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var": {
+      "code_sha256": "3a6ef7961ed8d95b427ff0adf78bf22ac7c06cdc0e97863558796c7b7bd0fde3",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+        "subtle_ng::black_box",
+        "memset"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 259
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul": {
+      "code_sha256": "acee1bcc412ed935da7874a30171682462f8496f537cd70750ea4b1a35dbb43e",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 282
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add": {
+      "code_sha256": "11c2123f9675a9cf86227670ec69923fcedc31315bf17973a9272dbe989cd56e",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 66
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one": {
+      "code_sha256": "0860c8aff232454362123c04b62a9aa57a127d40e3a7c51204a81d5bcc762715",
+      "edges": [
+        "<alloc::raw_vec::RawVecInner>::grow_amortized"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        22
+      ],
+      "memory_access_count": 3
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one": {
+      "code_sha256": "2a83bc1c6bd773ec1c250187d493316c0e21081e30b3fe2a0c18ca9ee638ff24",
+      "edges": [
+        "<alloc::raw_vec::RawVecInner>::grow_amortized"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        22
+      ],
+      "memory_access_count": 3
+    },
+    "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "1af7ec209492e498bd57136dcd6aaad3cc92b54530f12a7a74d77e3b87899ef3",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConditionallySelectable>::conditional_select"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 12
+    },
+    "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "b448ef72dd8acbb41c84478742a098216059bca87d8a601b596124209dea32ef",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 28
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point": {
+      "code_sha256": "ae39eedf7847a3d0a35fa58b8aa50c00f37d657d3ff1d6ce2fdcc8c46cdcffa4",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+        "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+        "subtle_ng::black_box",
+        "memset",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        1012,
+        1190
+      ],
+      "memory_access_count": 25
+    },
+    "audit_dot_product": {
+      "code_sha256": "04660716fdde8e53689452279cf448c64214e892b24f74d17f06898cd711099a",
+      "edges": [
+        "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::square",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+        "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+        "memcpy"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error",
+        "core::panicking::panic_bounds_check"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        66,
+        86,
+        110,
+        142,
+        194,
+        202,
+        582,
+        628,
+        668,
+        718,
+        744,
+        862,
+        884,
+        1018,
+        2536,
+        2542,
+        2570,
+        2574,
+        2632,
+        2636,
+        2712,
+        2730,
+        2756,
+        2782,
+        2812,
+        2838,
+        2920,
+        2936,
+        2964
+      ],
+      "memory_access_count": 313
+    },
+    "audit_double_mul": {
+      "code_sha256": "0ec88e13e6c2f2e64083595c841e7ef4bb1b728c88896419c7ff6e50f8ae94b3",
+      "edges": [
+        "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::negate",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+        "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+        "memcpy"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        80,
+        108,
+        134,
+        162,
+        544,
+        592,
+        632,
+        682,
+        710,
+        992,
+        1128,
+        1138,
+        1164,
+        1192,
+        1224,
+        1252
+      ],
+      "memory_access_count": 80
+    },
+    "audit_mul_base": {
+      "code_sha256": "3cda4420afa6a7fb8f3f06760c523cbf153f35cd61431c5106b7b91f72fc4604",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "123e7c81858cff4f3563ed2a27929e5555bb433d42178d6eff5dc970b3b89775",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "0367c0a86f36ee38f6ffcc6992fe5225a3b98ce7912c45114aecb7c44d2c0198",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_mul_point",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 4
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "541246703f6f7ebf34c564c01b4b8cb2042fc2a588ba4ba36bdaa3312049e43d",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 8
+    },
+    "audit_normal_eq": {
+      "code_sha256": "d477c3a5d2fcbd8d0ebc313cd998f919ca2246c92612c2f1936307a56259b68f",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26 as subtle_ng::ConstantTimeEq>::ct_eq",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 10
+    },
+    "audit_normal_negate": {
+      "code_sha256": "3839140dbcc7be03e0dd0b5abf75e6f2070c462b883d8dd1c2bfec4a55c81bf5",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::normalize",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 66
+    },
+    "audit_normalize": {
+      "code_sha256": "5215382f9437094822b62b218cbc94e68b6c222eb18aee547d993b079d1a54d0",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 6
+    },
+    "audit_point_add": {
+      "code_sha256": "0f65b3d6005d30ae3460ea24a8917efc369c91eb2d770a756fff67f106571b1b",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "7ec051e2422dc0310544b71d3ba855ffe9989e9011ee7faa51e03efb2dbdc843",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+        "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 515
+    },
+    "audit_point_eq": {
+      "code_sha256": "32adc7ace7da48ca63ebec40ab250b457feb909bdb3bc8b6bf5905cc210d0d57",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 82
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "f473c0cc4ebe762a09fa2ee7caee83fa1240dd0cb6468dc71da9cc0ce7545989",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul",
+        "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+        "<secp256kfun::vendor::k256::affine::AffinePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 82
+    },
+    "audit_point_negate": {
+      "code_sha256": "b94e0c2b95068ef365106cd76210243ea3e44df6a606a63a3b52abdad61569d7",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 66
+    },
+    "audit_scalar_add": {
+      "code_sha256": "d4c2ee9d30f6546b494d72afff0f28981dea23f0bb888a7ce0f5f32a749209e5",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "242520f42b92d09d9b18af537e9165da4bb9e1e19759634f54993a60d17660ae",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 6
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "15a3b393cbab482e45bdf863bb94fc98671448f34ec1d9149d8613d145e47fd3",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::add",
+        "memset",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        20,
+        42,
+        106
+      ],
+      "memory_access_count": 12
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "148bb4dd4b201ff6b060248ae0441baed32338f0c056fff775d18d621255bb1e",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "5439e050450a280c9e5562cafb203f71323fe598adc0cd00c496129b85ba9a89",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+        "subtle_ng::black_box",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        170,
+        252,
+        334,
+        416,
+        498,
+        582,
+        648,
+        714,
+        780,
+        846,
+        912,
+        978,
+        1044,
+        1110,
+        1176,
+        1242,
+        1292,
+        1342,
+        1392,
+        1442,
+        1492,
+        1542,
+        1592,
+        1642,
+        1692,
+        1742,
+        1792,
+        1842,
+        1892,
+        1942,
+        1992
+      ],
+      "memory_access_count": 9
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "b80354b550aac8ec446f044caf8456a454969f86ec5f2e4ea938c45730ae31cd",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::is_high"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "928aaa080534eb828bf62e48d41bc48bceb4b51b71227d9734ac7aa66d5c5d9c",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32>::is_zero"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "c335e4dec5c514930d76d70aec57802bce3be690884ac48430f22436383fa898",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "612defa73bc504208bd180326c31d32d1af0ae7d57836ace9768faec2abb4dcf",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 4
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "067037207c978b764c5c68ab9ae11fbe4248f2c774acf446766a81a0f89b598d",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 48
+    },
+    "audit_y_even": {
+      "code_sha256": "dee9cf641237745d58b2e8030cc35006dcbd347c753a393bb07f5c3167cec3c0",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 3
+    },
+    "<alloc::raw_vec::RawVecInner>::grow_amortized": {
+      "code_sha256": "25aabd2706d8ba8cd7b9c144c805c7d829075c500336d8ff1048ebbf73ecd52d",
+      "edges": [
+        "<alloc::raw_vec::RawVecInner>::finish_grow"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        24,
+        32,
+        54
+      ],
+      "memory_access_count": 14
+    },
+    "<alloc::raw_vec::RawVecInner>::finish_grow": {
+      "code_sha256": "82fa0e5c08f405ca169302cfa93a1536760fc877be64b71160f1418a4434627a",
+      "edges": [
+        "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+        "memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        30,
+        44,
+        48,
+        72,
+        76,
+        92,
+        108,
+        112,
+        118,
+        134,
+        152
+      ],
+      "memory_access_count": 24
+    },
+    "subtle_ng::black_box": {
+      "code_sha256": "37e8403ee2b8b86d41fb914310be27eabaed86fffda5f5992fe8a16c7c9dc1bb",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "memset": {
+      "code_sha256": "a96abbde2917ace3be5583ee6545698fe6fb2c834c9d90016c2bcb0ea1042702",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        2,
+        18,
+        34,
+        46,
+        70,
+        80,
+        92,
+        104
+      ],
+      "memory_access_count": 3
+    },
+    "memcpy": {
+      "code_sha256": "4aa36457501feef38bebd263093f51fd6301cf7c85731ac21913652b6e9ae2a4",
+      "edges": [
+        "compiler_builtins::mem::memcpy"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "compiler_builtins::mem::memcpy": {
+      "code_sha256": "6c2ccc3198d2ba2f1c30724c85ae2aabb59e441c487c8f3f1642d68ce40c3e8a",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        4,
+        20,
+        44,
+        66,
+        90,
+        94,
+        110,
+        122,
+        128,
+        144,
+        162,
+        192,
+        230,
+        244,
+        260,
+        308,
+        352,
+        370
+      ],
+      "memory_access_count": 25
+    }
+  }
+}

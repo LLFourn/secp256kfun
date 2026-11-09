@@ -1,0 +1,27 @@
+timingsafe_requested=false DIT_before=0x0 DIT_during=0x0
+seed=1 samples=100000 fixed=9a3744504560639ec670b7a17d492b273e077b0a96bef58ba7760779e544546e point=020efec87c5749ec1157912e0e171f60de9e5341348819a2de99f140c59a424c79
+test	n0	n1	t-all	t90	t75	t50	median0-ns	median1-ns
+k*G IDENTICAL	50041	49959	     0.46	    -0.51	    -0.92	    -0.28	27417.0	27417.0
+k*G one/random	49477	50523	    -0.65	    -0.24	    -0.20	    -0.47	20875.0	20875.0
+k*G normalize IDENTICAL	50012	49988	    -0.26	    -1.34	    -1.07	    -2.25	23584.0	23584.0
+k*G normalize one/random	49827	50173	    -0.24	     0.64	     1.44	     1.35	23375.0	23334.0
+k*P IDENTICAL	50016	49984	     0.01	    -1.08	    -1.45	    -0.76	20125.0	20125.0
+k*P fixed/random	49993	50007	     0.99	     0.08	    -0.79	    -0.45	19375.0	19375.0
+invert IDENTICAL	49963	50037	    -1.24	    -1.38	    -0.53	    -0.41	7209.0	7209.0
+invert one/random	49970	50030	     1.27	     1.70	     0.94	     0.21	7291.0	7291.0
+normal eq IDENTICAL	50046	49954	    -1.27	    -1.21	    -1.21	      n/a	0.0	0.0
+normal eq identity/nonidentity	50096	49904	     0.08	     0.48	     0.48	      n/a	0.0	0.0
+normalize IDENTICAL	50063	49937	     0.73	     0.11	     0.71	     1.32	2958.0	2958.0
+normalize identity/nonidentity	49972	50028	   -22.70	  -128.02	  -148.63	  -152.70	2917.0	2958.0
+calibration adds=0 incremental_ns median=0.000 p10=0.000 p90=0.000
+CALIBRATION k*G + 0 adds	50118	49882	     1.12	     0.34	     0.58	    -0.91	18958.0	18917.0
+calibration adds=4 incremental_ns median=0.000 p10=-0.040 p90=0.000
+CALIBRATION k*G + 4 adds	49903	50097	    -0.41	    -0.16	     0.41	    -0.47	18625.0	18625.0
+calibration adds=16 incremental_ns median=0.447 p10=0.407 p90=0.488
+CALIBRATION k*G + 16 adds	50151	49849	     0.56	    -0.29	    -1.22	     1.57	18666.0	18666.0
+calibration adds=64 incremental_ns median=6.876 p10=6.796 p90=7.162
+CALIBRATION k*G + 64 adds	49950	50050	    -0.57	    -1.44	    -8.83	   -18.05	18667.0	18667.0
+calibration adds=256 incremental_ns median=38.736 p10=38.289 p90=38.818
+CALIBRATION k*G + 256 adds	49993	50007	    -7.05	   -61.81	   -70.48	   -99.16	18625.0	18667.0
+calibration adds=1024 incremental_ns median=217.081 p10=216.837 p90=219.646
+CALIBRATION k*G + 1024 adds	50106	49894	   -11.42	  -106.49	  -255.95	  -291.81	18667.0	18916.0

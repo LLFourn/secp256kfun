@@ -1,0 +1,1018 @@
+{
+  "schema": 1,
+  "review_date": "2026-11-06",
+  "reviewer": "codex; candidate for Clank peer review",
+  "configuration_sha256": "40e168d939fc9ced60a7c285bbc15efe14d6228d52f15202b6a473d1e5003430",
+  "roots": {
+    "audit_mul_base": {
+      "code_sha256": "666c143b493ba8a3844c9aa0a0bf5cde4a5c4674d7763067f554dbb59be81d3f",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_mul_normal": {
+      "code_sha256": "f09de7fa3f45e85024115a78b01472a4d65769b74726f5996dd1621313a53bc8",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_mul_nonnormal": {
+      "code_sha256": "f09de7fa3f45e85024115a78b01472a4d65769b74726f5996dd1621313a53bc8",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "f09de7fa3f45e85024115a78b01472a4d65769b74726f5996dd1621313a53bc8",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_double_mul": {
+      "code_sha256": "1337489c495ca194ce2a74298cebfc41569204a28ad211abda776f07759824a1",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_dot_product": {
+      "code_sha256": "478a6187ae904decbdbf6387ef5cfccf582b93aa4f5ba4d8b263864324e88b37",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_add": {
+      "code_sha256": "c26dc8333233fa342a2f608f9261a14ca35d9e42c05745b15f6b32c47abd0e64",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "3bd3c83e08544e4d4af790b349fbcaa00b189a5b4ef18f38bf24cb9279b387cf",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_negate": {
+      "code_sha256": "2a7c8372325101733e7208c5ea87fbee715e6c74059b91bd99d2e31329d49ea4",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_normal_negate": {
+      "code_sha256": "639638e21aa1caa59ce055dd77544ee0d6844aaf6f77857dc53c88cf8dcf0ab5",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "5929db5af918a623de03cfae1324ae5b03df4ede095ccc7f701707da2c23effb",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_normal_cond_negate": {
+      "code_sha256": "98e206da4a70bf8e1c5af8b30d12fb256a404aed490604b8ff346c0d3a7b5625",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_normalize": {
+      "code_sha256": "5445f19d0628669975a2da7b94569fa77a08e2da7d981a443b68c9afc5994315",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "8ee63708bc3d3d0b128bbedf8d140c645da553e9abd2276b6d24f09e171f289b",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_eq": {
+      "code_sha256": "e90988af13cbc9261596c72c14f42e06abd54b1fef625c36d344370fb4b2d225",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "c9e724dfd3c17194b9c2c041f10f327d513458d1d32f3ebe76693d1a17f897d5",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_normal_eq": {
+      "code_sha256": "febfb942b324c9bd6812f480141610ef20bd72f9277dbf2a885db2357584714c",
+      "status": "inspected-with-gaps",
+      "reason": "Equality short circuit removed. Every reached function has zero conditional branches and inspected fixed field/stack addresses. No universal input proof or hardware-latency claim.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_y_even": {
+      "code_sha256": "cff10c8d2ea3bea041ae3b03b0279dd874f4aec6e5668171a6e01474b1d72fb5",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_add": {
+      "code_sha256": "e91152ca78299b2af5cb026e0eb004f2f63fad1eb175afecb67f3d836c22fcdb",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "80a64717990e0027fd2bbf26a926fe66aed64fe8488bf26a88e68115b0384acc",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "477fd57b635ab6282f362806d6398ef3cf3aa3d57cd5e35186188dae77b46822",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "68e2bd2cd8e9a095d045acb453959db91e05a4542087161024fd61147082075e",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof. Secret-derived unwrap guard is invariant under NonZero precondition; taint cannot establish that invariant.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "ceb9eeffca9489a7af26e36de0586d57d25d34b52142b7a9c77a085f1d81ae01",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "d3d46752ee2d592e16ced18520f4a28f5fd23295a02f76b3c9b004d568643d8f",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "68005bc310f64c4b8975c753e1744dd0eb40952aa414f4b9f8be357d302a8e07",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "b71e031b078e88b3be74392511b9bec2128bd19bef9d83d9c52e694fe14b8dfa",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "ca0a137f3c03ba0585f57e1c4d8c62b708070a0a5592c1b001494dd7110d8bc7",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "8a57b1170d7e111c8bdc00c908c461f58e084d8371bd53aa2afcc0f732355d8a",
+      "status": "inspected-with-gaps",
+      "reason": "Manual branch classification and transitive branch/load/store inventory; no universal input or machine-latency proof.",
+      "memory_scope": "Public pointers/lengths/layout/allocation state; canonical typed inputs. See per-function address notes and explicit excluded/unresolved callees. No speculative, prefetch, cache-content, instruction-latency, or hardware-time claim.",
+      "review_note": "ct-fix-apple-timing, compared with finalized equality fix 530f289. Source digest changes for public rustdoc only; harness digest changes for the separate native normalization experiment and timing-state restoration checks. This analyzed image is byte-identical and every reachable-code snapshot is identical; existing branch/address classifications and gaps are retained. Prior x86 taint and both RV32 scalar suites remain evidence for these exact image bytes, not new semantic runs. The public platform contract adds no runtime mitigation."
+    }
+  },
+  "functions": {
+    "_rustc::__rust_no_alloc_shim_is_unstable_v2": {
+      "code_sha256": "76cdfddcd07a384b12a119efb5d3cdfb7117aaaf7ef4f2515e2f7cef945da8cd",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_dot_product": {
+      "code_sha256": "b499ba2bebb2fa2f6d888c07b5472440626d9a9b76720c4c26c15bc683d20ff1",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "56": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "80": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "108": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "148": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "204": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "264": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "632": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "712": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "792": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "856": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "876": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "884": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "912": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "920": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "964": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "988": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1000": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1048": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1060": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1116": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1968": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2004": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2016": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2064": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2076": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2132": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2140": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2200": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2232": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2260": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2284": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2376": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2404": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2432": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "audit_double_mul": {
+      "code_sha256": "7844f81f95f4a3521adad27ccfe204f1353a5bfec6b430153c1b6fae0e3ad2b8",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_base": {
+      "code_sha256": "f0944dc03465f7f74e51fbd645f15ce58dbe5e9ee77693ad59da84b3474025eb",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "2f099fe8ef34cbdd8366d9f4fcb1ec38a1cc316540836623ce6148c1ba8ab09b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "f252eae922fb669df55f76d5b60926919241b4bc304eacbac6eaeedf808f46db",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_cond_negate": {
+      "code_sha256": "4cb177ad2c58f616d6f5b4be929065a4beca17c1455343d5461a422d79f9f4bf",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_eq": {
+      "code_sha256": "cef6299af84cf102363b09ef1837b38222fb96a6acb61801564273102d4f96d6",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normal_negate": {
+      "code_sha256": "e0a049b501a040a2299ba0b359d14387772ecb886d4824e90758eaee33dd6d5d",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_normalize": {
+      "code_sha256": "242b02c4ec81d599000db96583766a7f4020733521abc110de255683e844fe6f",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_add": {
+      "code_sha256": "d5f5b349d491e62ba27d335acede2db67ee9dd0f9befe6d7ad77e3600038fc47",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "8bb287a4715cbb83cf425b31057270cfefb15848a71ee1ea5510a9a0695f6c0e",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "4cb177ad2c58f616d6f5b4be929065a4beca17c1455343d5461a422d79f9f4bf",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_eq": {
+      "code_sha256": "a1ccd9e127648822ce23658356753e30edd48954c6da008da301b1c4a26206d7",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "ffb4da3bcbadd10cd06af408f32d384ab9dbea7b17239dd4bcd62144b09c2868",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_point_negate": {
+      "code_sha256": "9991d472aadc8a1dcf8bac5d8eba3b23063f396b9d30db353299175f011bb714",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_add": {
+      "code_sha256": "a8770d53815703ec04a87852a450e5b7d51ba92717b28ef26adaaba1ebb3c365",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "133aef8cca5d01ec937042b6597debd25501f9e7c224541fe22307ff778ca349",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "d6db969ba95e9367276c4488195d17d541a8c4767d1d4f2aca7c79cfcf88705a",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "40": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "108": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "805ed0a7eaa496bc758029ad72434a6c7e1e0c7bffcdadc275156a6b1233e2c5",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "3532cc4ef599c18f58b64341edf0ea3665cc01a47f696d7066f73c90363ebd0e",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "41532d1138aa4729c5c8bdfdf7ecb9e520f8c0dd165ef4048a006ff084c8de73",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "4126a44e3cefc9b31be3184c772325150d86c8f159780a4a3f740274c250c844",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "dbcced985a80c5d54b77971c6e95316c0699b8ed03e32b3a5754e6ae057c2eca",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "a3458c1a60abd5f86f4796d4e2569987b43ea27f96c55b7abfd859dc6472143f",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "3669d599b7fd0dd1ab8e228f486976c5f54e6d52b869a130320e7b6d3c2808a5",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "audit_y_even": {
+      "code_sha256": "e28551d6114873bd8277cc07983c7a276e03a74bbdabcc97201fdfac84f363f1",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "secp256kfun::vendor::k256::mul::lincomb_generic::<1>": {
+      "code_sha256": "c255da1b3f92bb65053ce79e4d1724f4363db8cc846dbf8a6f1411802ee5ee93",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "3676": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism": {
+      "code_sha256": "968e740874d564c8997eefe432ff8a7d95da4ba61f53bbeeda894aa8aa712541",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add": {
+      "code_sha256": "b76798b38841238b9462db1bc2adb5d69e136dd1e50d05cb4c0dfbf126b29466",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double": {
+      "code_sha256": "cfeceab39b9792a431b185cfb6549d5ca71e59b3a53a688379a81a1a050b0c22",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed": {
+      "code_sha256": "c953f4d6ab40f45bb2d734c0f0b99f20f5da6864a5b9ecacec0094da03c8ccf0",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::eq_affine": {
+      "code_sha256": "869e37322609f24eab2b9f236e9210df44cfa6836904abdd8e0c001a88b5b97f",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::invert": {
+      "code_sha256": "d818554c9f684d3df50f59ca2874758db92a969155c1ca57122ff7e1aeb2eedf",
+      "branch_reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {
+        "1368": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        },
+        "1440": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        },
+        "1496": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::square": {
+      "code_sha256": "951527031a953b5fc8b3e96636e9bcf32431ea7b970f1afb69ca9ad83b0040b6",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add": {
+      "code_sha256": "ff61d7500b02f88ff930f246bd76d4d9feb6e4603b799393ca2cf1a028697766",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul": {
+      "code_sha256": "13b77c2435432de3b9ebc6804b4e5552eb9b7ef85011e5cf6d68b8efb9000427",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::invert": {
+      "code_sha256": "38a7829ada8baae5de9ff979b8f5c358aa4127f18ba523a908593a28d86e4c68",
+      "branch_reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {
+        "1508": {
+          "class": "fixed-loop",
+          "reason": "Decrement/compare backedges of pow2k use constants from the fixed addition chain in field.rs/scalar.rs. Identity/invertible-result selection is masked; the separate scalar unwrap guard is classified separately."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::is_high": {
+      "code_sha256": "b0912b8fafe348152c48b1769584ddbbbc513ffbf4dbc06cd8e502e60a59db11",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul": {
+      "code_sha256": "9221799cb3b78cd0db09e0296e463e5cd05a3b0bd3b3de038394627ebac7374c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_4x64::Scalar4x64>::add": {
+      "code_sha256": "f79162033bb09070e673f40df0de0354b41fdf1c14f8f9da1369d4e5d0d90ce7",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new": {
+      "code_sha256": "3356b133cb978c55b83d047d218db0b3c8f47c6974d19c939c11d5c1bfb85221",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable>::select": {
+      "code_sha256": "7e146546d406b05e3b478e856fa14c17d18986ef57cb4529ccd722d84ef375be",
+      "branch_reason": "Fixed eight-entry construction/scan; select compares each public scan index with the secret digit and masks all coordinates. Final negation is masked.",
+      "address_reason": "Fixed eight-entry stride traversal; secret digit only selects masked coordinate values. Fixed output/stack stores. Not a formal memory dataflow proof on this target.",
+      "branches": {
+        "308": {
+          "class": "fixed-loop",
+          "reason": "Fixed eight-entry construction/scan; select compares each public scan index with the secret digit and masks all coordinates. Final negation is masked."
+        }
+      }
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var": {
+      "code_sha256": "8404ef893e16d2088085e4682fc9ce282b4b527ff2f934445953266ea8306e6c",
+      "branch_reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates.",
+      "address_reason": "Product limb selection is indexed by public shift >> log2(word_bits), with public carry/shift offsets; the call sites fix shift=384. Other accesses are fixed stack/limb offsets.",
+      "branches": {
+        "444": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "484": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "488": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "512": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "524": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "540": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "544": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "568": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "580": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "596": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "600": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "624": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        },
+        "648": {
+          "class": "public-structure",
+          "reason": "All comparisons/index bounds and shift-zero predicates derive from the shift argument, passed as literal 384 by decompose_scalar (mul.rs:213-214); products affect values, not these predicates."
+        }
+      }
+    },
+    "secp256kfun::vendor::k256::mul::decompose_scalar": {
+      "code_sha256": "4cc7f1b27d117663b939d647c947ef9789262555a84d8617ebcd216f5e0e8b49",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from": {
+      "code_sha256": "66f02b04c3b6d76b6329b65a62e793ba35cc7b11b3493c2bfbcc13ed4939ea7d",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul": {
+      "code_sha256": "f4282c0c9071ee7a435c78756be712217be54661ca314dfefaa94a6caa021cf8",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_sub": {
+      "code_sha256": "043ec6063042038127ba947974aad7a93d6b2b0315dd3c17cf1b133367ec3747",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert": {
+      "code_sha256": "02dee0e8cffc358b62d891479d40e42ff842284a98bac7828e5c3409954ac96d",
+      "branch_reason": "CtOption::unwrap success tests secret-derived !is_zero. Public Scalar<NonZero> precondition makes this predicate true on every valid input. Memcheck reports the taint dependency; that is not a valid-input branch variation.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {
+        "40": {
+          "class": "valid-input-invariant",
+          "reason": "CtOption::unwrap success tests secret-derived !is_zero. Public Scalar<NonZero> precondition makes this predicate true on every valid input. Memcheck reports the taint dependency; that is not a valid-input branch variation."
+        }
+      }
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_neg": {
+      "code_sha256": "cf5a4da9d21c141365b8a12c5eeca76d4b4d2f0cebbb1a01d26be5d0f4d91a42",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::cmp::PartialEq>::eq": {
+      "code_sha256": "be3b787e6a670dc2cba7f5a8b59688ae9c7d164c47d5cc827fb1472d3d7fbe87",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_high": {
+      "code_sha256": "1e20998899c39574eee8d3530658efb76ae83f6d812a0a24cafaa6da545c053c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_zero": {
+      "code_sha256": "0645231ce62c40ed7526c812839c051d78b7ae41b9dba8b097734804182cd85b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add": {
+      "code_sha256": "81d9870bcb092d2399f2cd0c4c3d6cb73bd06350700b7a589062e628d200edee",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize": {
+      "code_sha256": "f2cc39a5c280b7e1bdd7e8647d13c96ff1e6e92cdd8cc7c948e661ee910cd95a",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul": {
+      "code_sha256": "1cd029a10d777248a1c184d5ac225369d9c331ea88f8f392cbae96b36651210d",
+      "branch_reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings.",
+      "address_reason": "Public point/scalar slice position and allocation layout; fixed window/digit positions. Secret digits are passed to a full table scan. Allocation and external memcpy implementations remain outside the static claim where listed.",
+      "branches": {
+        "72": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "104": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "136": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "172": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "320": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1448": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "1536": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "2376": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3284": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3340": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3348": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3368": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3376": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3412": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3420": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3520": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "3528": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "4336": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "4400": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "4428": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "4456": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        },
+        "4480": {
+          "class": "public-structure",
+          "reason": "Length/capacity/bounds and allocation-result predicates, public iterator position (including the two-element iterator flag), and fixed 32-window/four-doubling counters. Scalar dot uses min(public lengths). No predicate here identified as a secret value; see separate transitive equality/inversion findings."
+        }
+      }
+    },
+    "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point": {
+      "code_sha256": "898398a560ca8b741309bced892b4a3761adf801a7b5e79878a7b03c3180b13c",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate": {
+      "code_sha256": "6cf537d97cb6becf6f373e092f2db068747362b9e2ee421cf069ec060434d9dc",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_eq_norm_point": {
+      "code_sha256": "ed9a285da41341d09464c2f1f54f72d6ffd3f15664aafa3b23fda584c10b3bb8",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_is_y_even": {
+      "code_sha256": "45653a7b1d379034cf4e7047735998d186a9aae4efaf58eccdc15e76c5fdcbd7",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_add_norm_point": {
+      "code_sha256": "735d395241f08947af86e93c0ef54b1e56e684a3ca4e7bc5086f0de8a82c19b2",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point": {
+      "code_sha256": "9d135e3c9f661d728e03231788bf318dcd2353fafcc25fc41ca702dc8cb0ef85",
+      "branch_reason": "Both identity predicates and coordinate comparisons execute unconditionally; no conditional branches in this body after ct-fix-normal-eq.",
+      "address_reason": "Inspected fixed x/y/z field offsets from public point pointers and fixed stack offsets; transitive comparison and subtle black_box helpers unchanged. No secret-indexed accesses.",
+      "branches": {}
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate": {
+      "code_sha256": "58e08ae65080ff29d58ee0fb2f13c8dde718690a7cac1ddaaa60a2bee034c142",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar as core::cmp::PartialEq>::eq": {
+      "code_sha256": "ed56ce4e396a9d4994ab072fdade507ef59ea7c9b0ab5e13adc2257e28014014",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52 as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "eb98bef2105768a61705e8a971b8fa51e2bae2918577ef6d6384fd19260b6ef2",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "4351bf8d78ea5ce3ee4c97d945664d67a17feb4e798b1dd78ba2097abbfa1829",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "3928e849a8fda0446ef3826e62dcc25e3898d3fac21a2f8ed6c374fc6c7e88d2",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "0f5ae0a7955a700051941eb7e1592387bc144aa5eb207317540c2f1c3ae61458",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg": {
+      "code_sha256": "401d2a318de3b728fc90f61df8c4d1b471da0a019a84d532586b7235638649c5",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul": {
+      "code_sha256": "3c24c6861a055e2ce5b2d007bbf5c59fb2bba9bdf5f272c10a54658fdc90a5ff",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign": {
+      "code_sha256": "b43b7676a5b609e807498f3dbffc632b67b7e16d6ca8db28e02bb8d89362eeb8",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg": {
+      "code_sha256": "7c4fa1c8dc1e3776607fa48bef8972713533b8aef18d0383081a744790f0499b",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "subtle_ng::black_box": {
+      "code_sha256": "26be2eb9a3848663602e9560fe10f299a0be1dc5996b6300bc985285f73d3f1f",
+      "branch_reason": "No conditional branches in the reached body.",
+      "address_reason": "Inspected fixed field/limb offsets, public argument and stack pointers, and compiler temporaries. Linear-definition output is only an inspection aid, not a CFG or taint proof.",
+      "branches": {}
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one": {
+      "code_sha256": "91be26a0c47127b1c566f4f78789755639ae29095d1f40d346a74e66cd5a1064",
+      "branch_reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model.",
+      "address_reason": "Allocation metadata and caller-provided public sizes/pointers, including the dummy firmware arena. No real ESP allocator is linked into this image.",
+      "branches": {
+        "68": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        }
+      }
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one": {
+      "code_sha256": "aa26052c585faf001cfddfb697911344fd7d0031f0e55bd4b755907a37078867",
+      "branch_reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model.",
+      "address_reason": "Allocation metadata and caller-provided public sizes/pointers, including the dummy firmware arena. No real ESP allocator is linked into this image.",
+      "branches": {
+        "68": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        }
+      }
+    },
+    "<alloc::raw_vec::RawVecInner>::finish_grow": {
+      "code_sha256": "b5f6f4cc8a78e74ea62ff89de49431af661c45202610b6a2404b10c3260a516a",
+      "branch_reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model.",
+      "address_reason": "Allocation metadata and caller-provided public sizes/pointers, including the dummy firmware arena. No real ESP allocator is linked into this image.",
+      "branches": {
+        "40": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        },
+        "64": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        },
+        "68": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        },
+        "92": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        },
+        "100": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        },
+        "120": {
+          "class": "public-structure",
+          "reason": "Capacity, element size, alignment, requested length, arena cursor/limit, and allocation success derive from public layout/state. Allocator internals/environment are outside the arithmetic threat model."
+        }
+      }
+    }
+  }
+}

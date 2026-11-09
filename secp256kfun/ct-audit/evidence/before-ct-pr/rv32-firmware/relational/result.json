@@ -1,0 +1,196 @@
+{
+  "binary_sha256": "2cc4820272fd804e8b03eac36945a98b7822f673820dae079ac32c1434701094",
+  "binsec": "Binsec version 0.11.3",
+  "solver": "Z3 version 5.3.3 - 64 bit",
+  "cases": {
+    "audit_scalar_add": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_add.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_sub": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_sub.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_mul": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_mul.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_negate": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_negate.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_eq": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_eq.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_is_high": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_is_high.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "audit_scalar_is_zero": {
+      "expected": "secure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/audit_scalar_is_zero.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "ct_control_branch": {
+      "expected": "insecure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/ct_control_branch.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    },
+    "ct_control_address": {
+      "expected": "insecure",
+      "accepted": true,
+      "returncode": 0,
+      "command": [
+        "target/ct-audit/opam/ct-audit/bin/binsec",
+        "-sse",
+        "-checkct",
+        "-smt-solver",
+        "z3",
+        "-smt-timeout",
+        "10",
+        "-sse-depth",
+        "1000000",
+        "-sse-timeout",
+        "90",
+        "-sse-script",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/relational/ct_control_address.ini",
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/rv32-firmware/ct_audit"
+      ]
+    }
+  }
+}

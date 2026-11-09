@@ -1,0 +1,17 @@
+{
+  "compared_to": "530f289",
+  "binary_sha256": "2cc4820272fd804e8b03eac36945a98b7822f673820dae079ac32c1434701094",
+  "binary_identical": true,
+  "reachable_code_identical": true,
+  "configuration_changes": {
+    "harness_sha256": {
+      "before": "ea8e846dc7f12e2955a2baabcadc05e77d33195b29f0b83c6aa91c0246dbac79",
+      "after": "14189ae930baed46fd8ecabbe87166408912289c54371b2fe2ed5b3f9278fbb6"
+    },
+    "source_sha256": {
+      "before": "73cacc507531db78a50ec065ba47eeaa30b7b0d0622a1e13d75c84745008de42",
+      "after": "f58ed234a6cc40e979827374cac61712d5b8ff7db26a4b6013bbed0b4995b84e"
+    }
+  },
+  "semantic_evidence": "Retained unchanged image-bound proof/taint evidence; not rerun."
+}

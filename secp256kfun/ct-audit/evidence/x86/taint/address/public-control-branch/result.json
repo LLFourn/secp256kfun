@@ -1,0 +1,22 @@
+{
+  "command": [
+    "limactl",
+    "shell",
+    "ct-x86",
+    "--",
+    "valgrind",
+    "--tool=memcheck",
+    "--xml=yes",
+    "--xml-fd=2",
+    "--error-exitcode=99",
+    "--track-origins=yes",
+    "--error-limit=no",
+    "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/controls/x86/ct_audit",
+    "--public-control-branch"
+  ],
+  "binary_sha256": "41f29a4033350111ebae49ae363844112d70cc4488fa3476f00c06d4513d7330",
+  "returncode": 0,
+  "errors": [],
+  "completed": true,
+  "gate_exit_code": 0
+}

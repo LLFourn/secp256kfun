@@ -1,0 +1,100 @@
+{
+  "host_os": {
+    "command": [
+      "sw_vers"
+    ],
+    "returncode": 0,
+    "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+    "stderr": ""
+  },
+  "host_cpu": {
+    "command": [
+      "sysctl",
+      "-n",
+      "machdep.cpu.brand_string"
+    ],
+    "returncode": 0,
+    "stdout": "Apple M5 Max\n",
+    "stderr": ""
+  },
+  "vm_os": {
+    "command": [
+      "limactl",
+      "shell",
+      "ct-x86",
+      "--",
+      "cat",
+      "/etc/os-release"
+    ],
+    "returncode": 0,
+    "stdout": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+    "stderr": ""
+  },
+  "vm_packages": {
+    "command": [
+      "limactl",
+      "shell",
+      "ct-x86",
+      "--",
+      "dpkg-query",
+      "-W",
+      "valgrind",
+      "libc6-dbg"
+    ],
+    "returncode": 0,
+    "stdout": "libc6-dbg:amd64\t2.39-0ubuntu8.9\nvalgrind\t1:3.22.0-0ubuntu3\n",
+    "stderr": ""
+  },
+  "vm_disk": {
+    "command": [
+      "limactl",
+      "shell",
+      "ct-x86",
+      "--",
+      "df",
+      "-h",
+      "/"
+    ],
+    "returncode": 0,
+    "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda1       6.8G  2.7G  4.1G  40% /\n",
+    "stderr": ""
+  },
+  "vm_host_disk": {
+    "command": [
+      "du",
+      "-sh",
+      "/Users/llfourn/.lima/ct-x86"
+    ],
+    "returncode": 0,
+    "stdout": "2.0G\t/Users/llfourn/.lima/ct-x86\n",
+    "stderr": ""
+  },
+  "opam_packages": {
+    "command": [
+      "opam",
+      "list",
+      "--root=target/ct-audit/opam",
+      "--switch=ct-audit",
+      "--installed",
+      "--columns=name,version"
+    ],
+    "returncode": 0,
+    "stdout": "# Packages matching: installed\n# Name                # Version\nbase-bigarray         base\nbase-threads          base\nbase-unix             base\nbinsec                0.11.3\nconf-g++              1.0\nconf-gcc              1.0\nconf-gmp              5\nconf-pkg-config       5\ncsexp                 1.5.2\ndune                  3.24.2\ndune-private-libs     3.24.2\ndune-site             3.24.2\ndyn                   3.24.2\ndypgen                0.2.1\nfs-io                 3.24.2\nISO8601               0.2.6\nmenhir                20260209\nmenhirCST             20260209\nmenhirGLR             20260209\nmenhirLib             20260209\nmenhirSdk             20260209\nmula                  0.1.2\nocaml                 4.14.3\nocaml-base-compiler   4.14.3\nocaml-config          2\nocaml-options-vanilla 1\nocamlfind             1.9.8\nocamlgraph            2.2.0\nordering              3.24.2\npp                    2.0.0\nstdune                3.24.2\ntoml                  7.1.0\ntop-closure           3.24.2\nunisim_archisec       0.0.14\nzarith                1.14\n",
+    "stderr": ""
+  },
+  "local_python": {
+    "command": [
+      "python3",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "Python 3.15.0\n",
+    "stderr": ""
+  },
+  "added_rust_components_du_kib": "158396\t/Users/llfourn/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-unknown-linux-gnu\n17000\t/Users/llfourn/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin\n",
+  "vm_evidence": "QEMU amd64 emulated on Apple M5 Max; semantic Valgrind only, no x86 hardware timing",
+  "vm_shutdown": "limactl stop ct-x86 completed; QEMU exceeded the 3-minute graceful deadline and Lima killed it. Final limactl list status: Stopped. Guest mount of worktree was read-only; all evidence was copied to host before shutdown.",
+  "review_correction_vm_shutdown": "ct-x86 restarted for remapped-image checks, both complete taint suites saved on host, then limactl stop --force ct-x86. Final state Stopped. Other VMs untouched.",
+  "review_correction_additional_disk": "Approximately 600 MiB under target/ct-audit/repro for ten fresh reproducibility builds; no new tools installed.",
+  "equality_fix_vm_shutdown": "ct-x86 restarted for two full taint suites of the equality fix, including both-Zero fixture and branch/address controls. Evidence saved on host, then limactl stop --force ct-x86; final state Stopped before native timing. Other VMs untouched."
+}

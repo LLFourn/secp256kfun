@@ -1,0 +1,113 @@
+{
+  "binary_sha256": "3d04815ad8cd61970c0dbce179d3e47d208cd65d7155636f7586b71b7c9df590",
+  "valgrind": "valgrind-3.22.0",
+  "evidence": "runner-mediated semantic instrumentation (record hardware separately)",
+  "runs": {
+    "--defined": {
+      "returncode": 0,
+      "errors": []
+    },
+    "--positive-branch": {
+      "returncode": 99,
+      "errors": [
+        {
+          "kind": "UninitCondition",
+          "frames": [
+            {
+              "function": "ct_audit::taint::positive_branch",
+              "ip": "0x1018DCF"
+            },
+            {
+              "function": "ct_audit::main",
+              "ip": "0x1018C78"
+            },
+            {
+              "function": "std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>",
+              "ip": "0x1015262"
+            },
+            {
+              "function": "std::rt::lang_start::<()>::{closure#0}",
+              "ip": "0x10152E8"
+            },
+            {
+              "function": "std::rt::lang_start_internal",
+              "ip": "0x104E916"
+            },
+            {
+              "function": "main",
+              "ip": "0x10196A8"
+            }
+          ]
+        }
+      ]
+    },
+    "--positive-address": {
+      "returncode": 99,
+      "errors": [
+        {
+          "kind": "UninitValue",
+          "frames": [
+            {
+              "function": "ct_audit::taint::positive_address",
+              "ip": "0x1018E04"
+            },
+            {
+              "function": "ct_audit::main",
+              "ip": "0x10156AF"
+            },
+            {
+              "function": "std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>",
+              "ip": "0x1015262"
+            },
+            {
+              "function": "std::rt::lang_start::<()>::{closure#0}",
+              "ip": "0x10152E8"
+            },
+            {
+              "function": "std::rt::lang_start_internal",
+              "ip": "0x104E916"
+            },
+            {
+              "function": "main",
+              "ip": "0x10196A8"
+            }
+          ]
+        }
+      ]
+    },
+    "--taint": {
+      "returncode": 99,
+      "errors": [
+        {
+          "kind": "UninitCondition",
+          "frames": [
+            {
+              "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert",
+              "ip": "0x1025B9D"
+            },
+            {
+              "function": "ct_audit::main",
+              "ip": "0x1018544"
+            },
+            {
+              "function": "std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>",
+              "ip": "0x1015262"
+            },
+            {
+              "function": "std::rt::lang_start::<()>::{closure#0}",
+              "ip": "0x10152E8"
+            },
+            {
+              "function": "std::rt::lang_start_internal",
+              "ip": "0x104E916"
+            },
+            {
+              "function": "main",
+              "ip": "0x10196A8"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

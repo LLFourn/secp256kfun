@@ -1,0 +1,196 @@
+{
+  "date": "2026-11-06",
+  "not_run": [
+    "hosted GitHub Actions",
+    "native x86 hardware timing",
+    "ESP32-C3 hardware timing",
+    "whole-backend formal proof"
+  ],
+  "review_correction": {
+    "base_commit": "8d4348a03569",
+    "scope": "path remapping, removal of linker-only debug metadata, reproducibility gate and source coverage guards; no arithmetic or harness change",
+    "reproducibility": "all five configurations: separate default/relocated Cargo-home builds match reviewed snapshots; all four ELF final images also byte-identical across those builds",
+    "binary_guard": "all five final images contain none of the current HOME/CARGO_HOME/checkout/Zig-cache prefixes (lexical or canonical)",
+    "section_preservation": "ELF allocated section addresses/sizes/flags/data preserved by debug stripping; Mach-O section contents preserved",
+    "semantic": "both RV32 suites rerun with all seven roots secure and both deliberate leaks insecure; two x86 taint runs match exactly two classified findings and both positive controls; Darwin defined harness completes 336 calls",
+    "review_records": "every root re-audit note updated; function sets/edges/branch offsets/memory counts and prior classifications preserved",
+    "coverage_guards": "trait body bounded; all src outside backend scanned for qualified unused-method references, with regression mutations in point.rs/scalar.rs/nested module",
+    "hosted_ci": "not run; macOS-vs-Linux Zig build differences remain an explicit caveat"
+  },
+  "provenance_correction": {
+    "reviewed_commit": "09b87df227fe",
+    "scope": "removed misleading build HEAD; renamed HEAD vendor tree as base_vendor_tree; actual build inputs remain identified by content digests",
+    "rebuilt": "all five pins regenerated; final analyzed executable bytes and all reachable-code snapshots identical to 09b87df; only build_driver_sha256 changes in configuration",
+    "reproducibility": "all five alternate-Cargo-home checks rerun and passed; retained pins regenerated with the current driver",
+    "review_records": "every root note refreshed for the metadata-only driver/configuration change; no code or classification changes",
+    "checks": "12 Python detector tests passed; all five snapshots checked against prior code and updated baselines; ct_audit_review --base 09b87df passed",
+    "semantic_evidence": "not rerun for this correction: all analyzed binary hashes are unchanged, retaining the existing proof and taint evidence",
+    "timing": "direction counts computed from all six retained TSV summaries; report distinguishes class-difference flags from a calibrated delay threshold; no new timing run",
+    "follow_up": "both-Zero taint fixture requirement added to queued ct-fix-normal-eq plan"
+  },
+  "pre_fix_checks": [
+    "five cross/native-built configurations: --record then --check, exact snapshots matched",
+    "contract inventory matches 26 trait methods / 28 roots / taint cases",
+    "classification validator covers every reachable function and branch offset",
+    "12 Python detector tests passed, including method/root mutation, equal-branch-count instruction mutation, incomplete solver status and configuration drift",
+    "BINSEC: 7 scalar roots plus branch/address controls accepted in both RV32 profiles",
+    "Valgrind: two complete runs, 336 defined and 336 tainted calls each; exact two findings; both deliberate leaks detected",
+    "cargo fmt --all --check and standalone audit fmt --check passed",
+    "audit crate clippy --all-targets --locked -- -D warnings passed",
+    "audit crate cargo test --locked: Welch statistics test passed",
+    "cargo clippy --workspace --all-targets --all-features --locked passed with existing schnorr_fun warning",
+    "cargo test -p secp256kfun --all-features --locked passed including doctests",
+    "3 native timing seeds x 2 modes, same final timing binary",
+    "evidence/pin/baseline/proof binary hash consistency checked"
+  ],
+  "checks": [
+    "cargo test -p secp256kfun --all-features --locked: 89 tests and 48 doctests passed, including the new normalized equality identity/opposites regression",
+    "normalized equality regression also passed with --no-default-features",
+    "cargo fmt --all --check and standalone audit fmt --check passed",
+    "workspace Clippy passed with the existing schnorr_fun warning; standalone audit Clippy passed with -D warnings",
+    "12 Python detector tests passed",
+    "all five optimized builds: equality transitive conditional branch count 1 -> 0, no unresolved or excluded equality callees",
+    "all five Cargo-home reproducibility checks match the new candidate baselines",
+    "both RV32 relational suites rerun: seven scalar roots secure, both deliberate-leak controls insecure, all complete",
+    "two full x86 taint suites: equality finding absent, sole NonZero inversion invariant retained, defined control clean, branch/address controls detected, 336 calls per defined/taint run",
+    "ct_audit_review.py --base 8d2c122 passed; all source/config/binary/proof/taint/reproducibility hashes consistent",
+    "native post-fix timing: three seeds x two modes x 100000 samples per row, one pinned executable; all equality statistics below 4.5, identical controls below 2.58; repeated DIT-off normalization flags retained as a platform-context finding"
+  ],
+  "equality_fix": {
+    "plan": "ct-fix-normal-eq",
+    "branch": "ct-audit-master",
+    "pre_fix_audit_commit": "8d2c122",
+    "production_change": "lhs.is_identity() & rhs.is_identity() replaces bool short circuit; coordinate comparisons and output unchanged",
+    "taint_fixture": "case 6: n and m both Zero; existing one-Zero cases 2 and 5 preserved; all 28 roots x 12 cases still run",
+    "static_review": "evidence/<platform>/equality-fix.json records before/after root summaries, hashes and inspected relocated operands outside equality",
+    "timing": "completed six native runs with ct-x86 stopped; exact executable/input pins, raw TSV summaries and parsed summary in evidence/darwin/timing-after-normal-eq; original timing preserved; equality zero-variance crops explicitly recorded as n/a",
+    "remaining_gaps": "unchanged platform latency/speculation/prefetch/public-layout/model gaps; no hosted CI or native x86/ESP32-C3 hardware timing"
+  },
+  "apple_timing": {
+    "plan": "ct-fix-apple-timing",
+    "compared_to_finalized_equality_fix": "530f289",
+    "production_change": "README and Secret/Secrecy/Point/Scalar rustdoc only; no runtime, dependency, public API or MSRV change",
+    "harness_change": "Optional 16-call normalization batches, identical and delay controls, DIT restoration readback/assertion and nested/unwind test",
+    "static": "All five primary optimized images byte-identical to 530f289; every reachable-code snapshot unchanged; source/harness configuration digests and all root notes refreshed",
+    "semantic": "Not rerun: both RV32 proof suites and x86 taint evidence retained for identical analyzed binary hashes; only NonZero inversion invariant remains classified in x86 taint",
+    "reproducibility": "All five alternate-Cargo-home snapshot checks rerun and passed; four ELF executable pairs byte-identical, Darwin whole-image pairs differ as before",
+    "summary_correction": "All five small summary.json inventories now match the existing detailed post-equality analyses; prior equality fix had left old branch counts on all targets and old memory counts on Darwin, ARM Linux and RV32.",
+    "timing": "Six native runs, seeds 1/2/3 x default/API-enabled, 100000 samples per row, 16 normalizations per sample; all mode readbacks and restoration checks passed, all controls retained",
+    "native_code": "Both historical timing images and focused image inspected; six normalization function fingerprints identical; raw deltas retained and classified as same-target calls/fixed-loop relocation only; 16 unrolled wrapper calls verified",
+    "checks": [
+      "48 all-feature doctests passed",
+      "44 no-default-feature doctests passed",
+      "Strict all-feature rustdoc passed; all four new anchor links resolve in both feature configurations",
+      "Ordinary no-default-feature rustdoc built with one existing nonce.rs:38 std::sync::Mutex warning; strict no-default-feature rustdoc fails on that pre-existing link",
+      "Audit tests: Welch and nested/unwound restoration, 2 passed",
+      "Audit Clippy all targets with -D warnings passed",
+      "Workspace and audit formatting passed",
+      "12 Python detector tests passed; review validator --base 530f289 passed",
+      "Cargo package --list --allow-dirty --offline: 57 files, zero ct-audit files"
+    ],
+    "gaps": "No instruction-wide hardware guarantee or installed runtime mitigation; no isolated/core-pinned host, sample-stream retention, hosted CI, native x86 hardware timing or ESP32-C3 timing"
+  },
+  "apple_timing_contract_correction": {
+    "reviewed_commit": "e9f66b4eef1d",
+    "scope": "README prose and audit/story summary now include repeated timing differences between two coordinate representations of the same nonidentity point; no mechanism attributed",
+    "readme_at_timing_build_sha256": "318397ba104ff293e91a836d55f8d4026ba0177d955dc83b77f7838b9adc8b45",
+    "corrected_public_readme_sha256": "dc5b74b6a8e861269cf896236a9b6789a315aa31bd15de69bce1499b9843f66a",
+    "checks": {
+      "all-features": {
+        "command": [
+          "cargo",
+          "doc",
+          "-p",
+          "secp256kfun",
+          "--no-deps",
+          "--locked",
+          "--all-features"
+        ],
+        "returncode": 0,
+        "corrected_text_rendered": true,
+        "four_anchor_links_resolve": true,
+        "warnings": []
+      },
+      "no-default-features": {
+        "command": [
+          "cargo",
+          "doc",
+          "-p",
+          "secp256kfun",
+          "--no-deps",
+          "--locked",
+          "--no-default-features"
+        ],
+        "returncode": 0,
+        "corrected_text_rendered": true,
+        "four_anchor_links_resolve": true,
+        "warnings": [
+          "warning: unresolved link to `std::sync::Mutex`",
+          "warning: `secp256kfun` (lib doc) generated 1 warning"
+        ]
+      }
+    },
+    "retained_evidence": "Source and harness files, profiles, code examples and all measurement data unchanged; no binary re-record, semantic or timing rerun. method.json source_readme_sha256 remains the README at the original focused timing build."
+  },
+  "history_note": "Earlier sections retain their original dates, pins and obsolete findings. ct_pr is the current branch/address gate result; native Apple timing remains separately pinned historical evidence.",
+  "ct_pr": {
+    "date": "2026-11-09",
+    "plan": "ct-pr",
+    "compared_to": "37f65e1",
+    "production_change": "Remove the scalar-invert CtOption unwrap branch using a masked zero fallback; NonZero public API behavior retained. Prior normalized equality fix retained.",
+    "inventory": {
+      "methods": 26,
+      "roots": 28,
+      "secret_scalar_roots": 17,
+      "fixture_cases": 12,
+      "calls_per_defined_or_taint_pass": 336,
+      "checked_against": "Concrete wrapper aliases/signatures, trait methods, unused entry point references, taint calls and relational case lists."
+    },
+    "static": "All five snapshots and review records refreshed after inspecting every changed reachable function; controls absent from normal image symbols. Fixed-loop branches remain permitted. Unresolved transfers remain explicit gaps.",
+    "reproducibility": "All five default/relocated Cargo-home snapshots match; four ELF image pairs byte-identical; Darwin snapshot equality only. Final build pins retained per target.",
+    "relational": {
+      "profiles": [
+        "rv32",
+        "rv32-firmware"
+      ],
+      "roots_per_profile": 12,
+      "production_cases_per_profile": 20,
+      "control_cases_per_profile": 4,
+      "all_accepted": true,
+      "scope": "Ten scalar-only roots, all independent scalar-dot public length pairs 0..2, and fixed-generator multiplication with/without normalization. Canonical symbolic scalars, NonZero/bool constraints, fixed public disjoint memory. No arbitrary-point, arbitrary-length, alias, instruction-latency or hardware claim.",
+      "artifacts": "rv32*/relational; separate control image pins/disassembly in controls/rv32*"
+    },
+    "taint": {
+      "valgrind": "3.22.0",
+      "native": false,
+      "runner": "limactl shell ct-x86 --",
+      "production_findings": 0,
+      "accepted_findings_allowlist": false,
+      "whole_gate_exits": {
+        "normal": 0,
+        "branch": 99,
+        "address": 99
+      },
+      "every_run_self_tests": "Both secret-scalar controls reject with exit 99 and intended finding kind/frame; both public-input counterparts accept with exit 0. Defined production run is clean; all completion receipts mandatory.",
+      "artifacts": "x86/taint/normal, branch, address; exit-checks.json and compressed raw XML/stdout/logs"
+    },
+    "negative_controls": "Only standalone unpublished audit crate feature negative-controls; actual scalar-add result feeds intentional branch/address. Never a library feature; absent from all five ordinary audit image symbol tables.",
+    "checks": [
+      "cargo test -p secp256kfun --all-features --locked: passed including 48 doctests and scalar inversion properties",
+      "cargo test -p secp256kfun --no-default-features --locked: passed including 44 doctests and scalar inversion properties",
+      "Standalone audit Clippy --all-targets --all-features --locked -- -D warnings: passed",
+      "Workspace and standalone audit cargo fmt --check: passed",
+      "14 Python detector/inventory mutation tests: passed",
+      "ct_audit.py coverage and ct_audit_review.py --base 37f65e1: passed",
+      "actionlint 1.7.12: passed",
+      "cargo package --list --allow-dirty --offline: 58 files, no ct-audit files; library feature set unchanged",
+      "Evidence inputs, executable hashes, checker hashes and final snapshots cross-checked"
+    ],
+    "known_build_warning": "Pinned Zig emits an existing deprecated linker optimization setting warning; builds complete.",
+    "timing": "Not rerun. Previous Apple experiments remain historical, with their original executable/source hashes. Timing is report-only and never a CI gate.",
+    "owned_vm": "ct-x86 stopped after final semantic runs; no other team VM touched.",
+    "installation_budget": "No new heavyweight installation; actionlint 1.7.12 Go caches about 107 MiB. Existing opam switch about 864 MiB; within original 20-GB limit.",
+    "publication": "Pending queued ct-pr-publish after peer review: clean ct-checks branch, push, real hosted passing and deliberate failing runs, PR against master. No hosted CI success/failure is claimed by these local results.",
+    "limitations": "Executed-path x86 taint under local emulation; hosted native build still pending. Scoped RV32 models only. Static-only ARM/Darwin and unresolved-transfer gaps; no whole-protocol, latency, speculation/prefetch, native x86/ESP32-C3 timing or universal CPU guarantee. Empty allocating point-dot public-length panic remains a separate functional bug."
+  }
+}

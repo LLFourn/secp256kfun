@@ -1,0 +1,44 @@
+{
+  "normal": {
+    "returncode": 0,
+    "expected": 0,
+    "command": [
+      "/opt/homebrew/opt/python@3.15/bin/python3.15",
+      "secp256kfun/scripts/ct_audit_taint.py",
+      "--runner",
+      "limactl shell ct-x86 --",
+      "--control-switch",
+      "secp256kfun/ct-audit/ci-control.json",
+      "--output",
+      "target/ct-audit/ct-pr/taint/normal"
+    ]
+  },
+  "branch": {
+    "returncode": 99,
+    "expected": 99,
+    "command": [
+      "/opt/homebrew/opt/python@3.15/bin/python3.15",
+      "secp256kfun/scripts/ct_audit_taint.py",
+      "--runner",
+      "limactl shell ct-x86 --",
+      "--control-switch",
+      "target/ct-audit/ct-pr/taint/branch-switch.json",
+      "--output",
+      "target/ct-audit/ct-pr/taint/branch"
+    ]
+  },
+  "address": {
+    "returncode": 99,
+    "expected": 99,
+    "command": [
+      "/opt/homebrew/opt/python@3.15/bin/python3.15",
+      "secp256kfun/scripts/ct_audit_taint.py",
+      "--runner",
+      "limactl shell ct-x86 --",
+      "--control-switch",
+      "target/ct-audit/ct-pr/taint/address-switch.json",
+      "--output",
+      "target/ct-audit/ct-pr/taint/address"
+    ]
+  }
+}

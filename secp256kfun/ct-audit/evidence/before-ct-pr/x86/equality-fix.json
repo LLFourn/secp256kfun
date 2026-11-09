@@ -1,0 +1,218 @@
+{
+  "base_commit": "8d2c122",
+  "changes": [
+    {
+      "function": "audit_dot_product",
+      "before_sha256": "980ee6df0115dd0dcffb5538ea9e4a526dc4b44158090489177777c2294b6fdd",
+      "after_sha256": "6c96d4ce306236de6ddd331d794176f2542681285962ab29b730fc310df72efc",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 1364,
+          "before": "movq 0x53c45(%rip), %rbx     # 0x106d6b0 <writev+0x106d6b0>",
+          "after": "movq 0x53c45(%rip), %rbx     # 0x106d8d0 <writev+0x106d8d0>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "audit_mul_base",
+      "before_sha256": "bdd966342f9a957c3efa055f5d71e41e1c00b92462fd1bd9bc7acb2b7b25b299",
+      "after_sha256": "9bd46f5c51812fbc656541906f0f3944bd1b6a65b4720b52f6dd0f5fa9ba72c9",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 0,
+          "before": "movq -0x163f7(%rip), %rdx    # 0x10042b0 <secp256kfun::G>",
+          "after": "movq -0x16617(%rip), %rdx    # 0x10042b0 <secp256kfun::G>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "audit_mul_normalize",
+      "before_sha256": "4dbf259f5a32f9f1337ee3aa33ed0a50b43ebdd34fbfbe97c6b85884c0be80a7",
+      "after_sha256": "e9f91c5cdc57a082fe96ebab9ea5e68c84e28e4a44040c92d5e28b81193985d4",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 10,
+          "before": "movq -0x16421(%rip), %rdx    # 0x10042b0 <secp256kfun::G>",
+          "after": "movq -0x16641(%rip), %rdx    # 0x10042b0 <secp256kfun::G>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "before_sha256": "7882ab21a439f5593af0a0353db6ad851ed47b377338bc761d1f64ac267772d5",
+      "after_sha256": "8022d92c6e517fb3d414b6f9bac90f6c5bc0491e04d616fc4682a6463e41fc94",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 692,
+          "before": "paddq -0x1b24c(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>",
+          "after": "paddq -0x1b46c(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>"
+        },
+        {
+          "offset": 760,
+          "before": "paddq -0x1b170(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>",
+          "after": "paddq -0x1b390(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>"
+        },
+        {
+          "offset": 1561,
+          "before": "paddq -0x1b5b1(%rip), %xmm0   # 0x10018f0 <writev+0x10018f0>",
+          "after": "paddq -0x1b7d1(%rip), %xmm0   # 0x10018f0 <writev+0x10018f0>"
+        },
+        {
+          "offset": 1600,
+          "before": "paddq -0x1b4b8(%rip), %xmm1   # 0x1001a10 <writev+0x1001a10>",
+          "after": "paddq -0x1b6d8(%rip), %xmm1   # 0x1001a10 <writev+0x1001a10>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed",
+      "before_sha256": "ec35e961a7e5d407d69e9b92d56f6f6a6ec288f4114c07390fc94006fcb88203",
+      "after_sha256": "7dffb062c499020f6d1198151d3a511d18890fac0e06887c0fefe92182de54b8",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 537,
+          "before": "paddq -0x1c361(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>",
+          "after": "paddq -0x1c581(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>"
+        },
+        {
+          "offset": 602,
+          "before": "paddq -0x1c282(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>",
+          "after": "paddq -0x1c4a2(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>"
+        },
+        {
+          "offset": 2869,
+          "before": "movdqa -0x1cd2d(%rip), %xmm0   # 0x1001840 <writev+0x1001840>",
+          "after": "movdqa -0x1cf4d(%rip), %xmm0   # 0x1001840 <writev+0x1001840>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "before_sha256": "bd3b9688b1d7124a8b863221c197ce94c4a5839b813a73afd6199b153e3b46c5",
+      "after_sha256": "11bab8e52900f7295c157cd25edce89b74156bf3680b7a6c0ef47e1d1ee8fa08",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 60,
+          "before": "movd -0x203ec(%rip), %xmm0   # 0x10040e8 <writev+0x10040e8>",
+          "after": "movd -0x2060c(%rip), %xmm0   # 0x10040e8 <writev+0x10040e8>"
+        },
+        {
+          "offset": 671,
+          "before": "movdqa -0x22ef7(%rip), %xmm3   # 0x1001840 <writev+0x1001840>",
+          "after": "movdqa -0x23117(%rip), %xmm3   # 0x1001840 <writev+0x1001840>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "before_sha256": "3af181d057c83b57828b505d7eee7ca9da5a0ce62326130eebf9db29a496bcae",
+      "after_sha256": "a45462ac8451ccd40922a29c41b2e0301d0d18baab1b0a24428b4a14e741e87d",
+      "equality_fix": false,
+      "non_transfer_differences": [],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul",
+      "before_sha256": "7f13e846a377818b8c32f5c9086dd4f382a8a5088cc2a1474edd319d3455f733",
+      "after_sha256": "2f53c4ad8ce426c81362a05b9c094c3c646393b7834b0effd67afe55295f4cb0",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 4073,
+          "before": "movq 0x46660(%rip), %rax     # 0x106d6b0 <writev+0x106d6b0>",
+          "after": "movq 0x46660(%rip), %rax     # 0x106d8d0 <writev+0x106d8d0>"
+        },
+        {
+          "offset": 5735,
+          "before": "movq 0x45fe2(%rip), %rbx     # 0x106d6b0 <writev+0x106d6b0>",
+          "after": "movq 0x45fe2(%rip), %rbx     # 0x106d8d0 <writev+0x106d8d0>"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    },
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point",
+      "before_sha256": "2a1be0505844faaa177597f5a1f8a24a8bcd214d198ce4a92f58f3729e0d5ef4",
+      "after_sha256": "0dd24d95f06a7c513b798a7803ef6d17b76be23932f15568dbe432bd07b7dcf0",
+      "equality_fix": true,
+      "non_transfer_differences": [],
+      "reason": "Both identity predicates are evaluated unconditionally and combined as Choices; the old secret-dependent conditional branch is absent. Loads/stores use fixed point-field and stack offsets, including all reached helpers."
+    }
+  ],
+  "binary_sha256": "3d04815ad8cd61970c0dbce179d3e47d208cd65d7155636f7586b71b7c9df590",
+  "config_sha256": "26659febb667335e7b3c98b21f6bc58f492855edc5225fdedcef70da6d91fe9e",
+  "summary_before": {
+    "branches": 82,
+    "memory": 5427,
+    "latency_candidates": 160,
+    "unresolved": 5,
+    "functions": 76
+  },
+  "summary_after": {
+    "branches": 81,
+    "memory": 5427,
+    "latency_candidates": 160,
+    "unresolved": 5,
+    "functions": 76
+  },
+  "equality_before": {
+    "functions": 4,
+    "branches": 1,
+    "memory": 41,
+    "latency_candidates": 2,
+    "unresolved": 0,
+    "excluded_leaves": []
+  },
+  "equality_after": {
+    "functions": 4,
+    "branches": 0,
+    "memory": 41,
+    "latency_candidates": 2,
+    "unresolved": 0,
+    "excluded_leaves": []
+  },
+  "unchanged_root_hashes": [
+    "audit_point_negate",
+    "audit_normal_negate",
+    "audit_point_cond_negate",
+    "audit_normal_cond_negate",
+    "audit_normalize",
+    "audit_point_eq",
+    "audit_point_eq_normal",
+    "audit_y_even",
+    "audit_scalar_add",
+    "audit_scalar_sub",
+    "audit_scalar_mul",
+    "audit_scalar_invert",
+    "audit_scalar_negate",
+    "audit_scalar_cond_negate",
+    "audit_scalar_eq",
+    "audit_scalar_is_high",
+    "audit_scalar_is_zero",
+    "audit_scalar_dot"
+  ],
+  "changed_root_hashes": [
+    "audit_mul_base",
+    "audit_mul_normal",
+    "audit_mul_nonnormal",
+    "audit_mul_secret_point",
+    "audit_double_mul",
+    "audit_dot_product",
+    "audit_point_add",
+    "audit_point_add_normal",
+    "audit_mul_normalize",
+    "audit_normal_eq"
+  ]
+}

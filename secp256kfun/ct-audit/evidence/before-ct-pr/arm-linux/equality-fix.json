@@ -1,0 +1,101 @@
+{
+  "base_commit": "8d2c122",
+  "changes": [
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point",
+      "before_sha256": "fbb252a36f5ea8aba7f65ca804aaaa0f8bcc4d49172b411629328e0b556130b7",
+      "after_sha256": "df7ab04cc2b47ce149cac211f64896a37d1b1d953112b3cd8bdfb6baf7057744",
+      "equality_fix": true,
+      "non_transfer_differences": [],
+      "reason": "Both identity predicates are evaluated unconditionally and combined as Choices; the old secret-dependent conditional branch is absent. Loads/stores use fixed point-field and stack offsets, including all reached helpers."
+    },
+    {
+      "function": "memcpy@plt",
+      "before_sha256": "f354c2d0ef29d5d52e3b1fd430882e8efdc5522694e9869923fdb6a5fd876914",
+      "after_sha256": "1f057214c24d8eb94ba44e3d2b48b1e60df460d7f20f311bab12dca52452451f",
+      "equality_fix": false,
+      "non_transfer_differences": [
+        {
+          "offset": 0,
+          "before": "adrp x16, 0x107f000 <std::thread::current::id::ID+0x107efb8>",
+          "after": "adrp x16, 0x1080000 <writev+0x1080000>"
+        },
+        {
+          "offset": 4,
+          "before": "ldr x17, [x16, #0xf70]",
+          "after": "ldr x17, [x16, #0x50]"
+        },
+        {
+          "offset": 8,
+          "before": "add x16, x16, #0xf70",
+          "after": "add x16, x16, #0x50"
+        }
+      ],
+      "reason": "Inspected instruction delta: relocated constant/GOT/arena addresses or disassembler target annotations only. Same opcodes, branch offsets, memory counts, call edges, exclusions and unresolved transfers."
+    }
+  ],
+  "binary_sha256": "4ba1457f2262f24d3651dca3824b76faf15912afb841e990159e0e4eeb4868be",
+  "config_sha256": "eaa574f52086eae1ffd7e684e69d5f8a87093bbdd0ff7fac000df1daed5b6fdb",
+  "summary_before": {
+    "branches": 87,
+    "memory": 3577,
+    "latency_candidates": 281,
+    "unresolved": 1,
+    "functions": 77
+  },
+  "summary_after": {
+    "branches": 86,
+    "memory": 3579,
+    "latency_candidates": 281,
+    "unresolved": 1,
+    "functions": 77
+  },
+  "equality_before": {
+    "functions": 4,
+    "branches": 1,
+    "memory": 30,
+    "latency_candidates": 2,
+    "unresolved": 0,
+    "excluded_leaves": []
+  },
+  "equality_after": {
+    "functions": 4,
+    "branches": 0,
+    "memory": 32,
+    "latency_candidates": 2,
+    "unresolved": 0,
+    "excluded_leaves": []
+  },
+  "unchanged_root_hashes": [
+    "audit_mul_base",
+    "audit_mul_normal",
+    "audit_mul_nonnormal",
+    "audit_mul_secret_point",
+    "audit_point_add",
+    "audit_point_add_normal",
+    "audit_point_negate",
+    "audit_normal_negate",
+    "audit_point_cond_negate",
+    "audit_normal_cond_negate",
+    "audit_normalize",
+    "audit_mul_normalize",
+    "audit_point_eq",
+    "audit_point_eq_normal",
+    "audit_y_even",
+    "audit_scalar_add",
+    "audit_scalar_sub",
+    "audit_scalar_mul",
+    "audit_scalar_invert",
+    "audit_scalar_negate",
+    "audit_scalar_cond_negate",
+    "audit_scalar_eq",
+    "audit_scalar_is_high",
+    "audit_scalar_is_zero",
+    "audit_scalar_dot"
+  ],
+  "changed_root_hashes": [
+    "audit_double_mul",
+    "audit_dot_product",
+    "audit_normal_eq"
+  ]
+}

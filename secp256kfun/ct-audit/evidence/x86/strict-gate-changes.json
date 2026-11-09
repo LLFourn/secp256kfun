@@ -1,0 +1,5245 @@
+{
+  "compared_to": "37f65e1",
+  "binary_sha256": "7375926b001b0d886341c4b42a9df2a5f8ca8037b78a308382614373046e7c18",
+  "configuration_sha256": "441f34e821db0ac77d3e051d03e5975a6aa4e4eafffc2a9e090c4853de1a2c75",
+  "before": {
+    "branches": 81,
+    "memory": 5427,
+    "latency_candidates": 160,
+    "unresolved": 5,
+    "functions": 76
+  },
+  "after": {
+    "branches": 80,
+    "memory": 5426,
+    "latency_candidates": 160,
+    "unresolved": 5,
+    "functions": 76
+  },
+  "changes": [
+    {
+      "function": "audit_dot_product",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 42,
+          "instruction": "je 0x10197ea <audit_dot_product+0xba>",
+          "context": [
+            "movq %rsi, %r13",
+            "movq %rdi, 0x1f0(%rsp)",
+            "testq %r8, %r8"
+          ]
+        },
+        {
+          "offset": 79,
+          "instruction": "je 0x101a855 <audit_dot_product+0x1125>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 125,
+          "instruction": "je 0x101a855 <audit_dot_product+0x1125>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 170,
+          "instruction": "jbe 0x101a789 <audit_dot_product+0x1059>",
+          "context": [
+            "imulq $0x3c0, %r15, %r12      # imm = 0x3C0",
+            "movabsq $0x22222222222222, %rax # imm = 0x22222222222222",
+            "cmpq %rax, %r15"
+          ]
+        },
+        {
+          "offset": 301,
+          "instruction": "je 0x101a862 <audit_dot_product+0x1132>",
+          "context": [
+            "cmpq %r14, %r15",
+            "cmovbq %r15, %r14",
+            "testq %r14, %r14"
+          ]
+        },
+        {
+          "offset": 395,
+          "instruction": "je 0x1019ce4 <audit_dot_product+0x5b4>",
+          "context": [
+            "addq $0x78, %r14",
+            "addq $0x20, %r13",
+            "cmpq %r14, 0x70(%rsp)"
+          ]
+        },
+        {
+          "offset": 1160,
+          "instruction": "jne 0x1019bc4 <audit_dot_product+0x494>",
+          "context": [
+            "callq 0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x20(%rsp), %r12",
+            "cmpq 0x10(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1258,
+          "instruction": "jne 0x1019c26 <audit_dot_product+0x4f6>",
+          "context": [
+            "callq 0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x38(%rsp), %r12",
+            "cmpq 0x28(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1371,
+          "instruction": "jne 0x1019c97 <audit_dot_product+0x567>",
+          "context": [
+            "cmpq 0x40(%rsp), %r12",
+            "movq 0x80(%rsp), %r13",
+            "movq 0x53c45(%rip), %rbx     # 0x106d8d0 <writev+0x106d8d0>"
+          ]
+        },
+        {
+          "offset": 1439,
+          "instruction": "jne 0x1019890 <audit_dot_product+0x160>",
+          "context": [
+            "callq 0x10253d0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "movq 0x68(%rsp), %r12",
+            "cmpq 0x58(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1466,
+          "instruction": "je 0x101a862 <audit_dot_product+0x1132>",
+          "context": [
+            "callq 0x1023fe0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>",
+            "jmp 0x1019890 <audit_dot_product+0x160>",
+            "cmpq $0x0, 0x50(%rsp)"
+          ]
+        },
+        {
+          "offset": 1486,
+          "instruction": "je 0x101a870 <audit_dot_product+0x1140>",
+          "context": [
+            "je 0x101a862 <audit_dot_product+0x1132>",
+            "cmpq $0x0, 0x20(%rsp)",
+            "movq 0x88(%rsp), %r14"
+          ]
+        },
+        {
+          "offset": 1525,
+          "instruction": "je 0x101a87e <audit_dot_product+0x114e>",
+          "context": [
+            "leaq 0x270(%rsp), %rdi",
+            "callq 0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>",
+            "cmpq $0x0, 0x68(%rsp)"
+          ]
+        },
+        {
+          "offset": 1537,
+          "instruction": "je 0x101a88c <audit_dot_product+0x115c>",
+          "context": [
+            "cmpq $0x0, 0x68(%rsp)",
+            "je 0x101a87e <audit_dot_product+0x114e>",
+            "cmpq $0x0, 0x38(%rsp)"
+          ]
+        },
+        {
+          "offset": 1601,
+          "instruction": "je 0x1019e3e <audit_dot_product+0x70e>",
+          "context": [
+            "movq %rbx, %rdx",
+            "callq 0x1025e40 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add>",
+            "cmpq $0x1, %r14"
+          ]
+        },
+        {
+          "offset": 1656,
+          "instruction": "jae 0x101a848 <audit_dot_product+0x1118>",
+          "context": [
+            "nopl (%rax,%rax)",
+            "movq 0x50(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1670,
+          "instruction": "jae 0x101a83b <audit_dot_product+0x110b>",
+          "context": [
+            "jae 0x101a848 <audit_dot_product+0x1118>",
+            "movq 0x20(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1721,
+          "instruction": "jae 0x101a821 <audit_dot_product+0x10f1>",
+          "context": [
+            "callq 0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>",
+            "movq 0x68(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1735,
+          "instruction": "jae 0x101a82e <audit_dot_product+0x10fe>",
+          "context": [
+            "jae 0x101a821 <audit_dot_product+0x10f1>",
+            "movq 0x38(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1800,
+          "instruction": "jne 0x1019da0 <audit_dot_product+0x670>",
+          "context": [
+            "addq $0x3c0, %r12            # imm = 0x3C0",
+            "addq $0x21, %r13",
+            "cmpq %rbx, 0x88(%rsp)"
+          ]
+        },
+        {
+          "offset": 3562,
+          "instruction": "jne 0x1019e80 <audit_dot_product+0x750>",
+          "context": [
+            "movaps %xmm1, 0xa0(%rsp)",
+            "movaps %xmm0, 0x90(%rsp)",
+            "decl %ecx"
+          ]
+        },
+        {
+          "offset": 3608,
+          "instruction": "jae 0x101a7ed <audit_dot_product+0x10bd>",
+          "context": [
+            "nopw (%rax,%rax)",
+            "movq 0x50(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3622,
+          "instruction": "jae 0x101a7fa <audit_dot_product+0x10ca>",
+          "context": [
+            "jae 0x101a7ed <audit_dot_product+0x10bd>",
+            "movq 0x20(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3685,
+          "instruction": "jae 0x101a807 <audit_dot_product+0x10d7>",
+          "context": [
+            "callq 0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>",
+            "movq 0x68(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3699,
+          "instruction": "jae 0x101a814 <audit_dot_product+0x10e4>",
+          "context": [
+            "jae 0x101a807 <audit_dot_product+0x10d7>",
+            "movq 0x38(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3779,
+          "instruction": "jne 0x101a540 <audit_dot_product+0xe10>",
+          "context": [
+            "addq $0x21, %rbx",
+            "cmpq %rbp, %r14",
+            "leaq 0xb8(%rsp), %rsi"
+          ]
+        },
+        {
+          "offset": 3796,
+          "instruction": "jne 0x1019e70 <audit_dot_product+0x740>",
+          "context": [
+            "jne 0x101a540 <audit_dot_product+0xe10>",
+            "decq 0x70(%rsp)",
+            "cmpq $0x0, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 3938,
+          "instruction": "je 0x101a6aa <audit_dot_product+0xf7a>",
+          "context": [
+            "movaps %xmm0, 0x320(%rsp)",
+            "movq 0x58(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 3970,
+          "instruction": "je 0x101a6ca <audit_dot_product+0xf9a>",
+          "context": [
+            "callq 0x10196c0 <__rustc::__rust_dealloc>",
+            "movq 0x40(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4002,
+          "instruction": "je 0x101a6ed <audit_dot_product+0xfbd>",
+          "context": [
+            "callq 0x10196c0 <__rustc::__rust_dealloc>",
+            "movq 0x28(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4037,
+          "instruction": "je 0x101a710 <audit_dot_product+0xfe0>",
+          "context": [
+            "callq 0x10196c0 <__rustc::__rust_dealloc>",
+            "movq 0x10(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4188,
+          "instruction": "je 0x1019820 <audit_dot_product+0xf0>",
+          "context": [
+            "popq %rbp",
+            "retq ",
+            "testq %r12, %r12"
+          ]
+        },
+        {
+          "offset": 4220,
+          "instruction": "je 0x101a89a <audit_dot_product+0x116a>",
+          "context": [
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "movl $0x8, %edi",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4266,
+          "instruction": "jne 0x1019840 <audit_dot_product+0x110>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 42,
+          "instruction": "je 0x101b3fa <audit_dot_product+0xba>",
+          "context": [
+            "movq %rsi, %r13",
+            "movq %rdi, 0x1f0(%rsp)",
+            "testq %r8, %r8"
+          ]
+        },
+        {
+          "offset": 79,
+          "instruction": "je 0x101c465 <audit_dot_product+0x1125>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 125,
+          "instruction": "je 0x101c465 <audit_dot_product+0x1125>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 170,
+          "instruction": "jbe 0x101c399 <audit_dot_product+0x1059>",
+          "context": [
+            "imulq $0x3c0, %r15, %r12      # imm = 0x3C0",
+            "movabsq $0x22222222222222, %rax # imm = 0x22222222222222",
+            "cmpq %rax, %r15"
+          ]
+        },
+        {
+          "offset": 301,
+          "instruction": "je 0x101c472 <audit_dot_product+0x1132>",
+          "context": [
+            "cmpq %r14, %r15",
+            "cmovbq %r15, %r14",
+            "testq %r14, %r14"
+          ]
+        },
+        {
+          "offset": 395,
+          "instruction": "je 0x101b8f4 <audit_dot_product+0x5b4>",
+          "context": [
+            "addq $0x78, %r14",
+            "addq $0x20, %r13",
+            "cmpq %r14, 0x70(%rsp)"
+          ]
+        },
+        {
+          "offset": 1160,
+          "instruction": "jne 0x101b7d4 <audit_dot_product+0x494>",
+          "context": [
+            "callq 0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x20(%rsp), %r12",
+            "cmpq 0x10(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1258,
+          "instruction": "jne 0x101b836 <audit_dot_product+0x4f6>",
+          "context": [
+            "callq 0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x38(%rsp), %r12",
+            "cmpq 0x28(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1371,
+          "instruction": "jne 0x101b8a7 <audit_dot_product+0x567>",
+          "context": [
+            "cmpq 0x40(%rsp), %r12",
+            "movq 0x80(%rsp), %r13",
+            "movq 0x53be5(%rip), %rbx     # 0x106f480 <writev+0x106f480>"
+          ]
+        },
+        {
+          "offset": 1439,
+          "instruction": "jne 0x101b4a0 <audit_dot_product+0x160>",
+          "context": [
+            "callq 0x1026fb0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "movq 0x68(%rsp), %r12",
+            "cmpq 0x58(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 1466,
+          "instruction": "je 0x101c472 <audit_dot_product+0x1132>",
+          "context": [
+            "callq 0x1025bc0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>",
+            "jmp 0x101b4a0 <audit_dot_product+0x160>",
+            "cmpq $0x0, 0x50(%rsp)"
+          ]
+        },
+        {
+          "offset": 1486,
+          "instruction": "je 0x101c480 <audit_dot_product+0x1140>",
+          "context": [
+            "je 0x101c472 <audit_dot_product+0x1132>",
+            "cmpq $0x0, 0x20(%rsp)",
+            "movq 0x88(%rsp), %r14"
+          ]
+        },
+        {
+          "offset": 1525,
+          "instruction": "je 0x101c48e <audit_dot_product+0x114e>",
+          "context": [
+            "leaq 0x270(%rsp), %rdi",
+            "callq 0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>",
+            "cmpq $0x0, 0x68(%rsp)"
+          ]
+        },
+        {
+          "offset": 1537,
+          "instruction": "je 0x101c49c <audit_dot_product+0x115c>",
+          "context": [
+            "cmpq $0x0, 0x68(%rsp)",
+            "je 0x101c48e <audit_dot_product+0x114e>",
+            "cmpq $0x0, 0x38(%rsp)"
+          ]
+        },
+        {
+          "offset": 1601,
+          "instruction": "je 0x101ba4e <audit_dot_product+0x70e>",
+          "context": [
+            "movq %rbx, %rdx",
+            "callq 0x1027a10 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add>",
+            "cmpq $0x1, %r14"
+          ]
+        },
+        {
+          "offset": 1656,
+          "instruction": "jae 0x101c458 <audit_dot_product+0x1118>",
+          "context": [
+            "nopl (%rax,%rax)",
+            "movq 0x50(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1670,
+          "instruction": "jae 0x101c44b <audit_dot_product+0x110b>",
+          "context": [
+            "jae 0x101c458 <audit_dot_product+0x1118>",
+            "movq 0x20(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1721,
+          "instruction": "jae 0x101c431 <audit_dot_product+0x10f1>",
+          "context": [
+            "callq 0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>",
+            "movq 0x68(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1735,
+          "instruction": "jae 0x101c43e <audit_dot_product+0x10fe>",
+          "context": [
+            "jae 0x101c431 <audit_dot_product+0x10f1>",
+            "movq 0x38(%rsp), %rsi",
+            "cmpq %rsi, %rbx"
+          ]
+        },
+        {
+          "offset": 1800,
+          "instruction": "jne 0x101b9b0 <audit_dot_product+0x670>",
+          "context": [
+            "addq $0x3c0, %r12            # imm = 0x3C0",
+            "addq $0x21, %r13",
+            "cmpq %rbx, 0x88(%rsp)"
+          ]
+        },
+        {
+          "offset": 3562,
+          "instruction": "jne 0x101ba90 <audit_dot_product+0x750>",
+          "context": [
+            "movaps %xmm1, 0xa0(%rsp)",
+            "movaps %xmm0, 0x90(%rsp)",
+            "decl %ecx"
+          ]
+        },
+        {
+          "offset": 3608,
+          "instruction": "jae 0x101c3fd <audit_dot_product+0x10bd>",
+          "context": [
+            "nopw (%rax,%rax)",
+            "movq 0x50(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3622,
+          "instruction": "jae 0x101c40a <audit_dot_product+0x10ca>",
+          "context": [
+            "jae 0x101c3fd <audit_dot_product+0x10bd>",
+            "movq 0x20(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3685,
+          "instruction": "jae 0x101c417 <audit_dot_product+0x10d7>",
+          "context": [
+            "callq 0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>",
+            "movq 0x68(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3699,
+          "instruction": "jae 0x101c424 <audit_dot_product+0x10e4>",
+          "context": [
+            "jae 0x101c417 <audit_dot_product+0x10d7>",
+            "movq 0x38(%rsp), %rsi",
+            "cmpq %rsi, %rbp"
+          ]
+        },
+        {
+          "offset": 3779,
+          "instruction": "jne 0x101c150 <audit_dot_product+0xe10>",
+          "context": [
+            "addq $0x21, %rbx",
+            "cmpq %rbp, %r14",
+            "leaq 0xb8(%rsp), %rsi"
+          ]
+        },
+        {
+          "offset": 3796,
+          "instruction": "jne 0x101ba80 <audit_dot_product+0x740>",
+          "context": [
+            "jne 0x101c150 <audit_dot_product+0xe10>",
+            "decq 0x70(%rsp)",
+            "cmpq $0x0, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 3938,
+          "instruction": "je 0x101c2ba <audit_dot_product+0xf7a>",
+          "context": [
+            "movaps %xmm0, 0x320(%rsp)",
+            "movq 0x58(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 3970,
+          "instruction": "je 0x101c2da <audit_dot_product+0xf9a>",
+          "context": [
+            "callq 0x101b2d0 <__rustc::__rust_dealloc>",
+            "movq 0x40(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4002,
+          "instruction": "je 0x101c2fd <audit_dot_product+0xfbd>",
+          "context": [
+            "callq 0x101b2d0 <__rustc::__rust_dealloc>",
+            "movq 0x28(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4037,
+          "instruction": "je 0x101c320 <audit_dot_product+0xfe0>",
+          "context": [
+            "callq 0x101b2d0 <__rustc::__rust_dealloc>",
+            "movq 0x10(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4188,
+          "instruction": "je 0x101b430 <audit_dot_product+0xf0>",
+          "context": [
+            "popq %rbp",
+            "retq ",
+            "testq %r12, %r12"
+          ]
+        },
+        {
+          "offset": 4220,
+          "instruction": "je 0x101c4aa <audit_dot_product+0x116a>",
+          "context": [
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "movl $0x8, %edi",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 4266,
+          "instruction": "jne 0x101b450 <audit_dot_product+0x110>",
+          "context": [
+            "movq %r12, %rdi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        }
+      ],
+      "old_memory": 314,
+      "new_memory": 314,
+      "operand_differences": [
+        {
+          "offset": 42,
+          "before": [
+            "je",
+            "0x10197ea <audit_dot_product+0xba>"
+          ],
+          "after": [
+            "je",
+            "0x101b3fa <audit_dot_product+0xba>"
+          ]
+        },
+        {
+          "offset": 58,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 71,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 79,
+          "before": [
+            "je",
+            "0x101a855 <audit_dot_product+0x1125>"
+          ],
+          "after": [
+            "je",
+            "0x101c465 <audit_dot_product+0x1125>"
+          ]
+        },
+        {
+          "offset": 104,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 117,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 125,
+          "before": [
+            "je",
+            "0x101a855 <audit_dot_product+0x1125>"
+          ],
+          "after": [
+            "je",
+            "0x101c465 <audit_dot_product+0x1125>"
+          ]
+        },
+        {
+          "offset": 170,
+          "before": [
+            "jbe",
+            "0x101a789 <audit_dot_product+0x1059>"
+          ],
+          "after": [
+            "jbe",
+            "0x101c399 <audit_dot_product+0x1059>"
+          ]
+        },
+        {
+          "offset": 181,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 301,
+          "before": [
+            "je",
+            "0x101a862 <audit_dot_product+0x1132>"
+          ],
+          "after": [
+            "je",
+            "0x101c472 <audit_dot_product+0x1132>"
+          ]
+        },
+        {
+          "offset": 335,
+          "before": [
+            "jmp",
+            "0x10198c1 <audit_dot_product+0x191>"
+          ],
+          "after": [
+            "jmp",
+            "0x101b4d1 <audit_dot_product+0x191>"
+          ]
+        },
+        {
+          "offset": 395,
+          "before": [
+            "je",
+            "0x1019ce4 <audit_dot_product+0x5b4>"
+          ],
+          "after": [
+            "je",
+            "0x101b8f4 <audit_dot_product+0x5b4>"
+          ]
+        },
+        {
+          "offset": 530,
+          "before": [
+            "callq",
+            "0x1024e70 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ],
+          "after": [
+            "callq",
+            "0x1026a50 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ]
+        },
+        {
+          "offset": 617,
+          "before": [
+            "callq",
+            "0x101ca40 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism>"
+          ],
+          "after": [
+            "callq",
+            "0x101e620 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism>"
+          ]
+        },
+        {
+          "offset": 633,
+          "before": [
+            "callq",
+            "0x1023750 <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ],
+          "after": [
+            "callq",
+            "0x1025330 <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ]
+        },
+        {
+          "offset": 648,
+          "before": [
+            "callq",
+            "0x1023750 <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ],
+          "after": [
+            "callq",
+            "0x1025330 <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ]
+        },
+        {
+          "offset": 674,
+          "before": [
+            "callq",
+            "0x1028fc0 <<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg>"
+          ],
+          "after": [
+            "callq",
+            "0x102ab60 <<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg>"
+          ]
+        },
+        {
+          "offset": 695,
+          "before": [
+            "callq",
+            "0x1028db0 <<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "callq",
+            "0x102a950 <<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 746,
+          "before": [
+            "callq",
+            "0x1028fc0 <<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg>"
+          ],
+          "after": [
+            "callq",
+            "0x102ab60 <<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg>"
+          ]
+        },
+        {
+          "offset": 767,
+          "before": [
+            "callq",
+            "0x1028db0 <<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "callq",
+            "0x102a950 <<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 818,
+          "before": [
+            "callq",
+            "0x10290f0 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac90 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg>"
+          ]
+        },
+        {
+          "offset": 835,
+          "before": [
+            "callq",
+            "0x1028a40 <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "callq",
+            "0x102a5e0 <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 982,
+          "before": [
+            "callq",
+            "0x10290f0 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac90 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg>"
+          ]
+        },
+        {
+          "offset": 1001,
+          "before": [
+            "callq",
+            "0x1028a40 <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "callq",
+            "0x102a5e0 <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 1145,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 1160,
+          "before": [
+            "jne",
+            "0x1019bc4 <audit_dot_product+0x494>"
+          ],
+          "after": [
+            "jne",
+            "0x101b7d4 <audit_dot_product+0x494>"
+          ]
+        },
+        {
+          "offset": 1167,
+          "before": [
+            "callq",
+            "0x1024050 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025c30 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 1243,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 1258,
+          "before": [
+            "jne",
+            "0x1019c26 <audit_dot_product+0x4f6>"
+          ],
+          "after": [
+            "jne",
+            "0x101b836 <audit_dot_product+0x4f6>"
+          ]
+        },
+        {
+          "offset": 1265,
+          "before": [
+            "callq",
+            "0x1024050 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025c30 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 1341,
+          "before": [
+            "callq",
+            "0x10253d0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ],
+          "after": [
+            "callq",
+            "0x1026fb0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ]
+        },
+        {
+          "offset": 1364,
+          "before": [
+            "movq",
+            "0x53c45(%rip), %rbx     # 0x106d8d0 <writev+0x106d8d0>"
+          ],
+          "after": [
+            "movq",
+            "0x53be5(%rip), %rbx     # 0x106f480 <writev+0x106f480>"
+          ]
+        },
+        {
+          "offset": 1371,
+          "before": [
+            "jne",
+            "0x1019c97 <audit_dot_product+0x567>"
+          ],
+          "after": [
+            "jne",
+            "0x101b8a7 <audit_dot_product+0x567>"
+          ]
+        },
+        {
+          "offset": 1378,
+          "before": [
+            "callq",
+            "0x1023fe0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025bc0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 1424,
+          "before": [
+            "callq",
+            "0x10253d0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ],
+          "after": [
+            "callq",
+            "0x1026fb0 <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ]
+        },
+        {
+          "offset": 1439,
+          "before": [
+            "jne",
+            "0x1019890 <audit_dot_product+0x160>"
+          ],
+          "after": [
+            "jne",
+            "0x101b4a0 <audit_dot_product+0x160>"
+          ]
+        },
+        {
+          "offset": 1450,
+          "before": [
+            "callq",
+            "0x1023fe0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025bc0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 1455,
+          "before": [
+            "jmp",
+            "0x1019890 <audit_dot_product+0x160>"
+          ],
+          "after": [
+            "jmp",
+            "0x101b4a0 <audit_dot_product+0x160>"
+          ]
+        },
+        {
+          "offset": 1466,
+          "before": [
+            "je",
+            "0x101a862 <audit_dot_product+0x1132>"
+          ],
+          "after": [
+            "je",
+            "0x101c472 <audit_dot_product+0x1132>"
+          ]
+        },
+        {
+          "offset": 1486,
+          "before": [
+            "je",
+            "0x101a870 <audit_dot_product+0x1140>"
+          ],
+          "after": [
+            "je",
+            "0x101c480 <audit_dot_product+0x1140>"
+          ]
+        },
+        {
+          "offset": 1514,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 1525,
+          "before": [
+            "je",
+            "0x101a87e <audit_dot_product+0x114e>"
+          ],
+          "after": [
+            "je",
+            "0x101c48e <audit_dot_product+0x114e>"
+          ]
+        },
+        {
+          "offset": 1537,
+          "before": [
+            "je",
+            "0x101a88c <audit_dot_product+0x115c>"
+          ],
+          "after": [
+            "je",
+            "0x101c49c <audit_dot_product+0x115c>"
+          ]
+        },
+        {
+          "offset": 1568,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 1592,
+          "before": [
+            "callq",
+            "0x1025e40 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x1027a10 <<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add>"
+          ]
+        },
+        {
+          "offset": 1601,
+          "before": [
+            "je",
+            "0x1019e3e <audit_dot_product+0x70e>"
+          ],
+          "after": [
+            "je",
+            "0x101ba4e <audit_dot_product+0x70e>"
+          ]
+        },
+        {
+          "offset": 1656,
+          "before": [
+            "jae",
+            "0x101a848 <audit_dot_product+0x1118>"
+          ],
+          "after": [
+            "jae",
+            "0x101c458 <audit_dot_product+0x1118>"
+          ]
+        },
+        {
+          "offset": 1670,
+          "before": [
+            "jae",
+            "0x101a83b <audit_dot_product+0x110b>"
+          ],
+          "after": [
+            "jae",
+            "0x101c44b <audit_dot_product+0x110b>"
+          ]
+        },
+        {
+          "offset": 1697,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 1708,
+          "before": [
+            "callq",
+            "0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ]
+        },
+        {
+          "offset": 1721,
+          "before": [
+            "jae",
+            "0x101a821 <audit_dot_product+0x10f1>"
+          ],
+          "after": [
+            "jae",
+            "0x101c431 <audit_dot_product+0x10f1>"
+          ]
+        },
+        {
+          "offset": 1735,
+          "before": [
+            "jae",
+            "0x101a82e <audit_dot_product+0x10fe>"
+          ],
+          "after": [
+            "jae",
+            "0x101c43e <audit_dot_product+0x10fe>"
+          ]
+        },
+        {
+          "offset": 1765,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 1776,
+          "before": [
+            "callq",
+            "0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ]
+        },
+        {
+          "offset": 1800,
+          "before": [
+            "jne",
+            "0x1019da0 <audit_dot_product+0x670>"
+          ],
+          "after": [
+            "jne",
+            "0x101b9b0 <audit_dot_product+0x670>"
+          ]
+        },
+        {
+          "offset": 1884,
+          "before": [
+            "callq",
+            "0x1020e40 <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ],
+          "after": [
+            "callq",
+            "0x1022a20 <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ]
+        },
+        {
+          "offset": 1905,
+          "before": [
+            "callq",
+            "0x1020e40 <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ],
+          "after": [
+            "callq",
+            "0x1022a20 <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ]
+        },
+        {
+          "offset": 1982,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 2588,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 2807,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 2884,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 3121,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 3150,
+          "before": [
+            "callq",
+            "0x1029070 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac10 <<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul>"
+          ]
+        },
+        {
+          "offset": 3562,
+          "before": [
+            "jne",
+            "0x1019e80 <audit_dot_product+0x750>"
+          ],
+          "after": [
+            "jne",
+            "0x101ba90 <audit_dot_product+0x750>"
+          ]
+        },
+        {
+          "offset": 3608,
+          "before": [
+            "jae",
+            "0x101a7ed <audit_dot_product+0x10bd>"
+          ],
+          "after": [
+            "jae",
+            "0x101c3fd <audit_dot_product+0x10bd>"
+          ]
+        },
+        {
+          "offset": 3622,
+          "before": [
+            "jae",
+            "0x101a7fa <audit_dot_product+0x10ca>"
+          ],
+          "after": [
+            "jae",
+            "0x101c40a <audit_dot_product+0x10ca>"
+          ]
+        },
+        {
+          "offset": 3656,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 3672,
+          "before": [
+            "callq",
+            "0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ]
+        },
+        {
+          "offset": 3685,
+          "before": [
+            "jae",
+            "0x101a807 <audit_dot_product+0x10d7>"
+          ],
+          "after": [
+            "jae",
+            "0x101c417 <audit_dot_product+0x10d7>"
+          ]
+        },
+        {
+          "offset": 3699,
+          "before": [
+            "jae",
+            "0x101a814 <audit_dot_product+0x10e4>"
+          ],
+          "after": [
+            "jae",
+            "0x101c424 <audit_dot_product+0x10e4>"
+          ]
+        },
+        {
+          "offset": 3736,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 3752,
+          "before": [
+            "callq",
+            "0x1029080 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ],
+          "after": [
+            "callq",
+            "0x102ac20 <<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign>"
+          ]
+        },
+        {
+          "offset": 3779,
+          "before": [
+            "jne",
+            "0x101a540 <audit_dot_product+0xe10>"
+          ],
+          "after": [
+            "jne",
+            "0x101c150 <audit_dot_product+0xe10>"
+          ]
+        },
+        {
+          "offset": 3796,
+          "before": [
+            "jne",
+            "0x1019e70 <audit_dot_product+0x740>"
+          ],
+          "after": [
+            "jne",
+            "0x101ba80 <audit_dot_product+0x740>"
+          ]
+        },
+        {
+          "offset": 3938,
+          "before": [
+            "je",
+            "0x101a6aa <audit_dot_product+0xf7a>"
+          ],
+          "after": [
+            "je",
+            "0x101c2ba <audit_dot_product+0xf7a>"
+          ]
+        },
+        {
+          "offset": 3957,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 3970,
+          "before": [
+            "je",
+            "0x101a6ca <audit_dot_product+0xf9a>"
+          ],
+          "after": [
+            "je",
+            "0x101c2da <audit_dot_product+0xf9a>"
+          ]
+        },
+        {
+          "offset": 3989,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 4002,
+          "before": [
+            "je",
+            "0x101a6ed <audit_dot_product+0xfbd>"
+          ],
+          "after": [
+            "je",
+            "0x101c2fd <audit_dot_product+0xfbd>"
+          ]
+        },
+        {
+          "offset": 4024,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 4037,
+          "before": [
+            "je",
+            "0x101a710 <audit_dot_product+0xfe0>"
+          ],
+          "after": [
+            "je",
+            "0x101c320 <audit_dot_product+0xfe0>"
+          ]
+        },
+        {
+          "offset": 4059,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 4188,
+          "before": [
+            "je",
+            "0x1019820 <audit_dot_product+0xf0>"
+          ],
+          "after": [
+            "je",
+            "0x101b430 <audit_dot_product+0xf0>"
+          ]
+        },
+        {
+          "offset": 4194,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 4207,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 4220,
+          "before": [
+            "je",
+            "0x101a89a <audit_dot_product+0x116a>"
+          ],
+          "after": [
+            "je",
+            "0x101c4aa <audit_dot_product+0x116a>"
+          ]
+        },
+        {
+          "offset": 4245,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 4258,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 4266,
+          "before": [
+            "jne",
+            "0x1019840 <audit_dot_product+0x110>"
+          ],
+          "after": [
+            "jne",
+            "0x101b450 <audit_dot_product+0x110>"
+          ]
+        },
+        {
+          "offset": 4280,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 4285,
+          "before": [
+            "movl",
+            "$0x10041f0, %edx        # imm = 0x10041F0"
+          ],
+          "after": [
+            "movl",
+            "$0x10057d0, %edx        # imm = 0x10057D0"
+          ]
+        },
+        {
+          "offset": 4293,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4298,
+          "before": [
+            "movl",
+            "$0x1004208, %edx        # imm = 0x1004208"
+          ],
+          "after": [
+            "movl",
+            "$0x10057e8, %edx        # imm = 0x10057E8"
+          ]
+        },
+        {
+          "offset": 4306,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4311,
+          "before": [
+            "movl",
+            "$0x1004220, %edx        # imm = 0x1004220"
+          ],
+          "after": [
+            "movl",
+            "$0x1005800, %edx        # imm = 0x1005800"
+          ]
+        },
+        {
+          "offset": 4319,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4324,
+          "before": [
+            "movl",
+            "$0x1004238, %edx        # imm = 0x1004238"
+          ],
+          "after": [
+            "movl",
+            "$0x1005818, %edx        # imm = 0x1005818"
+          ]
+        },
+        {
+          "offset": 4332,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4337,
+          "before": [
+            "movl",
+            "$0x1004280, %edx        # imm = 0x1004280"
+          ],
+          "after": [
+            "movl",
+            "$0x1005860, %edx        # imm = 0x1005860"
+          ]
+        },
+        {
+          "offset": 4345,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4350,
+          "before": [
+            "movl",
+            "$0x1004298, %edx        # imm = 0x1004298"
+          ],
+          "after": [
+            "movl",
+            "$0x1005878, %edx        # imm = 0x1005878"
+          ]
+        },
+        {
+          "offset": 4358,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4363,
+          "before": [
+            "movl",
+            "$0x1004268, %edx        # imm = 0x1004268"
+          ],
+          "after": [
+            "movl",
+            "$0x1005848, %edx        # imm = 0x1005848"
+          ]
+        },
+        {
+          "offset": 4371,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4376,
+          "before": [
+            "movl",
+            "$0x1004250, %edx        # imm = 0x1004250"
+          ],
+          "after": [
+            "movl",
+            "$0x1005830, %edx        # imm = 0x1005830"
+          ]
+        },
+        {
+          "offset": 4384,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4397,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 4402,
+          "before": [
+            "movl",
+            "$0x1004190, %edx        # imm = 0x1004190"
+          ],
+          "after": [
+            "movl",
+            "$0x1005770, %edx        # imm = 0x1005770"
+          ]
+        },
+        {
+          "offset": 4411,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4416,
+          "before": [
+            "movl",
+            "$0x10041a8, %edx        # imm = 0x10041A8"
+          ],
+          "after": [
+            "movl",
+            "$0x1005788, %edx        # imm = 0x1005788"
+          ]
+        },
+        {
+          "offset": 4425,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4430,
+          "before": [
+            "movl",
+            "$0x10041c0, %edx        # imm = 0x10041C0"
+          ],
+          "after": [
+            "movl",
+            "$0x10057a0, %edx        # imm = 0x10057A0"
+          ]
+        },
+        {
+          "offset": 4439,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4444,
+          "before": [
+            "movl",
+            "$0x10041d8, %edx        # imm = 0x10041D8"
+          ],
+          "after": [
+            "movl",
+            "$0x10057b8, %edx        # imm = 0x10057B8"
+          ]
+        },
+        {
+          "offset": 4453,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 4461,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_mul_base",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 1,
+      "new_memory": 1,
+      "operand_differences": [
+        {
+          "offset": 0,
+          "before": [
+            "movq",
+            "-0x16617(%rip), %rdx    # 0x10042b0 <secp256kfun::G>"
+          ],
+          "after": [
+            "movq",
+            "-0x16c47(%rip), %rdx    # 0x1005890 <secp256kfun::G>"
+          ]
+        },
+        {
+          "offset": 7,
+          "before": [
+            "jmp",
+            "0x1028130 <<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point>"
+          ],
+          "after": [
+            "jmp",
+            "0x1029d00 <<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_mul_normalize",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 21,
+      "new_memory": 21,
+      "operand_differences": [
+        {
+          "offset": 10,
+          "before": [
+            "movq",
+            "-0x16641(%rip), %rdx    # 0x10042b0 <secp256kfun::G>"
+          ],
+          "after": [
+            "movq",
+            "-0x16c71(%rip), %rdx    # 0x1005890 <secp256kfun::G>"
+          ]
+        },
+        {
+          "offset": 23,
+          "before": [
+            "callq",
+            "0x1028130 <<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point>"
+          ],
+          "after": [
+            "callq",
+            "0x1029d00 <<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point>"
+          ]
+        },
+        {
+          "offset": 31,
+          "before": [
+            "callq",
+            "0x1025e50 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize>"
+          ],
+          "after": [
+            "callq",
+            "0x1027a20 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_y_even",
+      "inversion_change": false,
+      "opcodes_same": false,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 0,
+      "new_memory": 0,
+      "operand_differences": [],
+      "review": "Same unconditional tail jump to norm_point_is_y_even, followed by eleven unreachable int3 alignment bytes. No branch or memory behavior changed; no symbol/edge enters this padding."
+    },
+    {
+      "function": "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 6796,
+          "instruction": "jb 0x101c6e0 <secp256kfun::vendor::k256::mul::lincomb_generic::<1>+0x17b0>",
+          "context": [
+            "movaps %xmm1, 0x120(%rsp)",
+            "movaps %xmm0, 0x110(%rsp)",
+            "addq $-0x1, %rbx"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 6796,
+          "instruction": "jb 0x101e2c0 <secp256kfun::vendor::k256::mul::lincomb_generic::<1>+0x17b0>",
+          "context": [
+            "movaps %xmm1, 0x120(%rsp)",
+            "movaps %xmm0, 0x110(%rsp)",
+            "addq $-0x1, %rbx"
+          ]
+        }
+      ],
+      "old_memory": 779,
+      "new_memory": 779,
+      "operand_differences": [
+        {
+          "offset": 39,
+          "before": [
+            "callq",
+            "0x1024e70 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ],
+          "after": [
+            "callq",
+            "0x1026a50 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ]
+        },
+        {
+          "offset": 205,
+          "before": [
+            "movl",
+            "$0x10044f0, %edx        # imm = 0x10044F0"
+          ],
+          "after": [
+            "movl",
+            "$0x1005ab0, %edx        # imm = 0x1005AB0"
+          ]
+        },
+        {
+          "offset": 216,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 1086,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1098,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1108,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1120,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1146,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1292,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 2821,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 2943,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3065,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3187,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3309,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3431,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3553,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 4917,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5039,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5161,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5283,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5405,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5527,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5649,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5824,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 5845,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 5878,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 5891,
+          "before": [
+            "movl",
+            "$0x1004478, %esi        # imm = 0x1004478"
+          ],
+          "after": [
+            "movl",
+            "$0x1005a38, %esi        # imm = 0x1005A38"
+          ]
+        },
+        {
+          "offset": 5902,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5923,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 5945,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6070,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6184,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6298,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6412,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6534,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 6548,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6670,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 6684,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6796,
+          "before": [
+            "jb",
+            "0x101c6e0 <secp256kfun::vendor::k256::mul::lincomb_generic::<1>+0x17b0>"
+          ],
+          "after": [
+            "jb",
+            "0x101e2c0 <secp256kfun::vendor::k256::mul::lincomb_generic::<1>+0x17b0>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 17,
+      "new_memory": 17,
+      "operand_differences": [
+        {
+          "offset": 10,
+          "before": [
+            "movl",
+            "$0x10044f0, %edx        # imm = 0x10044F0"
+          ],
+          "after": [
+            "movl",
+            "$0x1005ab0, %edx        # imm = 0x1005AB0"
+          ]
+        },
+        {
+          "offset": 15,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 305,
+      "new_memory": 305,
+      "operand_differences": [
+        {
+          "offset": 119,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 220,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 324,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 602,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 692,
+          "before": [
+            "paddq",
+            "-0x1b46c(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1d02c(%rip), %xmm1   # 0x1001910 <writev+0x1001910>"
+          ]
+        },
+        {
+          "offset": 760,
+          "before": [
+            "paddq",
+            "-0x1b390(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1cf30(%rip), %xmm0   # 0x1001a50 <writev+0x1001a50>"
+          ]
+        },
+        {
+          "offset": 1087,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 1361,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 1561,
+          "before": [
+            "paddq",
+            "-0x1b7d1(%rip), %xmm0   # 0x10018f0 <writev+0x10018f0>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1d391(%rip), %xmm0   # 0x1001910 <writev+0x1001910>"
+          ]
+        },
+        {
+          "offset": 1600,
+          "before": [
+            "paddq",
+            "-0x1b6d8(%rip), %xmm1   # 0x1001a10 <writev+0x1001a10>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1d278(%rip), %xmm1   # 0x1001a50 <writev+0x1001a50>"
+          ]
+        },
+        {
+          "offset": 2573,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2600,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2810,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2829,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2976,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 3000,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 254,
+      "new_memory": 254,
+      "operand_differences": [
+        {
+          "offset": 152,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 253,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 436,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 537,
+          "before": [
+            "paddq",
+            "-0x1c581(%rip), %xmm1   # 0x10018f0 <writev+0x10018f0>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1e141(%rip), %xmm1   # 0x1001910 <writev+0x1001910>"
+          ]
+        },
+        {
+          "offset": 602,
+          "before": [
+            "paddq",
+            "-0x1c4a2(%rip), %xmm0   # 0x1001a10 <writev+0x1001a10>"
+          ],
+          "after": [
+            "paddq",
+            "-0x1e042(%rip), %xmm0   # 0x1001a50 <writev+0x1001a50>"
+          ]
+        },
+        {
+          "offset": 729,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 857,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 1908,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 1940,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2139,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2163,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2353,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2377,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 2534,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 2869,
+          "before": [
+            "movdqa",
+            "-0x1cf4d(%rip), %xmm0   # 0x1001840 <writev+0x1001840>"
+          ],
+          "after": [
+            "movdqa",
+            "-0x1eb1d(%rip), %xmm0   # 0x1001850 <writev+0x1001850>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 426,
+          "instruction": "jne 0x1024730 <<secp256kfun::vendor::k256::mul::LookupTable>::select+0x80>",
+          "context": [
+            "incb %bl",
+            "addq $0x78, %r14",
+            "cmpq $0x3c0, %r14            # imm = 0x3C0"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 426,
+          "instruction": "jne 0x1026310 <<secp256kfun::vendor::k256::mul::LookupTable>::select+0x80>",
+          "context": [
+            "incb %bl",
+            "addq $0x78, %r14",
+            "cmpq $0x3c0, %r14            # imm = 0x3C0"
+          ]
+        }
+      ],
+      "old_memory": 67,
+      "new_memory": 67,
+      "operand_differences": [
+        {
+          "offset": 60,
+          "before": [
+            "movd",
+            "-0x2060c(%rip), %xmm0   # 0x10040e8 <writev+0x10040e8>"
+          ],
+          "after": [
+            "movd",
+            "-0x20c64(%rip), %xmm0   # 0x1005670 <writev+0x1005670>"
+          ]
+        },
+        {
+          "offset": 161,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 426,
+          "before": [
+            "jne",
+            "0x1024730 <<secp256kfun::vendor::k256::mul::LookupTable>::select+0x80>"
+          ],
+          "after": [
+            "jne",
+            "0x1026310 <<secp256kfun::vendor::k256::mul::LookupTable>::select+0x80>"
+          ]
+        },
+        {
+          "offset": 443,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 671,
+          "before": [
+            "movdqa",
+            "-0x23117(%rip), %xmm3   # 0x1001840 <writev+0x1001840>"
+          ],
+          "after": [
+            "movdqa",
+            "-0x24ce7(%rip), %xmm3   # 0x1001850 <writev+0x1001850>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 525,
+          "instruction": "jae 0x1024c18 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x258>",
+          "context": [
+            "movq %rsi, 0x78(%rsp)",
+            "movq %rax, 0x80(%rsp)",
+            "cmpq $0x200, %r8             # imm = 0x200"
+          ]
+        },
+        {
+          "offset": 578,
+          "instruction": "je 0x1024c28 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>",
+          "context": [
+            "testq %rdx, %rdx",
+            "sete %dil",
+            "orb %cl, %dil"
+          ]
+        },
+        {
+          "offset": 587,
+          "instruction": "ja 0x1024cd5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x315>",
+          "context": [
+            "orb %cl, %dil",
+            "je 0x1024c28 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>",
+            "cmpq $0x1bf, %r8             # imm = 0x1BF"
+          ]
+        },
+        {
+          "offset": 657,
+          "instruction": "je 0x1024c63 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>",
+          "context": [
+            "cmpq $0x180, %r8             # imm = 0x180",
+            "setae %cl",
+            "orb %dil, %cl"
+          ]
+        },
+        {
+          "offset": 666,
+          "instruction": "ja 0x1024cd8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x318>",
+          "context": [
+            "orb %dil, %cl",
+            "je 0x1024c63 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>",
+            "cmpq $0x17f, %r8             # imm = 0x17F"
+          ]
+        },
+        {
+          "offset": 716,
+          "instruction": "je 0x1024c9e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>",
+          "context": [
+            "cmpq $0x140, %r8             # imm = 0x140",
+            "setae %cl",
+            "orb %dil, %cl"
+          ]
+        },
+        {
+          "offset": 725,
+          "instruction": "ja 0x1024ce9 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x329>",
+          "context": [
+            "orb %dil, %cl",
+            "je 0x1024c9e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>",
+            "cmpq $0x13f, %r8             # imm = 0x13F"
+          ]
+        },
+        {
+          "offset": 772,
+          "instruction": "jb 0x1024cf5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>",
+          "context": [
+            "movq %r8, %rdi",
+            "shrq $0x6, %rdi",
+            "cmpq $0x200, %r8             # imm = 0x200"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 525,
+          "instruction": "jae 0x10267f8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x258>",
+          "context": [
+            "movq %rsi, 0x78(%rsp)",
+            "movq %rax, 0x80(%rsp)",
+            "cmpq $0x200, %r8             # imm = 0x200"
+          ]
+        },
+        {
+          "offset": 578,
+          "instruction": "je 0x1026808 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>",
+          "context": [
+            "testq %rdx, %rdx",
+            "sete %dil",
+            "orb %cl, %dil"
+          ]
+        },
+        {
+          "offset": 587,
+          "instruction": "ja 0x10268b5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x315>",
+          "context": [
+            "orb %cl, %dil",
+            "je 0x1026808 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>",
+            "cmpq $0x1bf, %r8             # imm = 0x1BF"
+          ]
+        },
+        {
+          "offset": 657,
+          "instruction": "je 0x1026843 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>",
+          "context": [
+            "cmpq $0x180, %r8             # imm = 0x180",
+            "setae %cl",
+            "orb %dil, %cl"
+          ]
+        },
+        {
+          "offset": 666,
+          "instruction": "ja 0x10268b8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x318>",
+          "context": [
+            "orb %dil, %cl",
+            "je 0x1026843 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>",
+            "cmpq $0x17f, %r8             # imm = 0x17F"
+          ]
+        },
+        {
+          "offset": 716,
+          "instruction": "je 0x102687e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>",
+          "context": [
+            "cmpq $0x140, %r8             # imm = 0x140",
+            "setae %cl",
+            "orb %dil, %cl"
+          ]
+        },
+        {
+          "offset": 725,
+          "instruction": "ja 0x10268c9 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x329>",
+          "context": [
+            "orb %dil, %cl",
+            "je 0x102687e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>",
+            "cmpq $0x13f, %r8             # imm = 0x13F"
+          ]
+        },
+        {
+          "offset": 772,
+          "instruction": "jb 0x10268d5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>",
+          "context": [
+            "movq %r8, %rdi",
+            "shrq $0x6, %rdi",
+            "cmpq $0x200, %r8             # imm = 0x200"
+          ]
+        }
+      ],
+      "old_memory": 77,
+      "new_memory": 77,
+      "operand_differences": [
+        {
+          "offset": 525,
+          "before": [
+            "jae",
+            "0x1024c18 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x258>"
+          ],
+          "after": [
+            "jae",
+            "0x10267f8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x258>"
+          ]
+        },
+        {
+          "offset": 578,
+          "before": [
+            "je",
+            "0x1024c28 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>"
+          ],
+          "after": [
+            "je",
+            "0x1026808 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x268>"
+          ]
+        },
+        {
+          "offset": 587,
+          "before": [
+            "ja",
+            "0x1024cd5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x315>"
+          ],
+          "after": [
+            "ja",
+            "0x10268b5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x315>"
+          ]
+        },
+        {
+          "offset": 598,
+          "before": [
+            "jmp",
+            "0x1024c38 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x278>"
+          ],
+          "after": [
+            "jmp",
+            "0x1026818 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x278>"
+          ]
+        },
+        {
+          "offset": 611,
+          "before": [
+            "jmp",
+            "0x1024cb3 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2f3>"
+          ],
+          "after": [
+            "jmp",
+            "0x1026893 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2f3>"
+          ]
+        },
+        {
+          "offset": 657,
+          "before": [
+            "je",
+            "0x1024c63 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>"
+          ],
+          "after": [
+            "je",
+            "0x1026843 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2a3>"
+          ]
+        },
+        {
+          "offset": 666,
+          "before": [
+            "ja",
+            "0x1024cd8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x318>"
+          ],
+          "after": [
+            "ja",
+            "0x10268b8 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x318>"
+          ]
+        },
+        {
+          "offset": 673,
+          "before": [
+            "jmp",
+            "0x1024c73 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2b3>"
+          ],
+          "after": [
+            "jmp",
+            "0x1026853 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2b3>"
+          ]
+        },
+        {
+          "offset": 716,
+          "before": [
+            "je",
+            "0x1024c9e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>"
+          ],
+          "after": [
+            "je",
+            "0x102687e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2de>"
+          ]
+        },
+        {
+          "offset": 725,
+          "before": [
+            "ja",
+            "0x1024ce9 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x329>"
+          ],
+          "after": [
+            "ja",
+            "0x10268c9 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x329>"
+          ]
+        },
+        {
+          "offset": 732,
+          "before": [
+            "jmp",
+            "0x1024cae <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2ee>"
+          ],
+          "after": [
+            "jmp",
+            "0x102688e <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x2ee>"
+          ]
+        },
+        {
+          "offset": 772,
+          "before": [
+            "jb",
+            "0x1024cf5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>"
+          ],
+          "after": [
+            "jb",
+            "0x10268d5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>"
+          ]
+        },
+        {
+          "offset": 779,
+          "before": [
+            "movl",
+            "$0x1004518, %edx        # imm = 0x1004518"
+          ],
+          "after": [
+            "movl",
+            "$0x1005ad8, %edx        # imm = 0x1005AD8"
+          ]
+        },
+        {
+          "offset": 784,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 807,
+          "before": [
+            "jmp",
+            "0x1024cf5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>"
+          ],
+          "after": [
+            "jmp",
+            "0x10268d5 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var+0x335>"
+          ]
+        },
+        {
+          "offset": 841,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 887,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1004,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1016,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1028,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 72,
+      "new_memory": 72,
+      "operand_differences": [
+        {
+          "offset": 27,
+          "before": [
+            "movl",
+            "$0x10042d8, %edx        # imm = 0x10042D8"
+          ],
+          "after": [
+            "movl",
+            "$0x10058b8, %edx        # imm = 0x10058B8"
+          ]
+        },
+        {
+          "offset": 48,
+          "before": [
+            "callq",
+            "0x10249c0 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var>"
+          ],
+          "after": [
+            "callq",
+            "0x10265a0 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var>"
+          ]
+        },
+        {
+          "offset": 58,
+          "before": [
+            "movl",
+            "$0x10042b8, %edx        # imm = 0x10042B8"
+          ],
+          "after": [
+            "movl",
+            "$0x1005898, %edx        # imm = 0x1005898"
+          ]
+        },
+        {
+          "offset": 66,
+          "before": [
+            "callq",
+            "0x1021120 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x1022d00 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ]
+        },
+        {
+          "offset": 76,
+          "before": [
+            "movl",
+            "$0x1004318, %edx        # imm = 0x1004318"
+          ],
+          "after": [
+            "movl",
+            "$0x10058f8, %edx        # imm = 0x10058F8"
+          ]
+        },
+        {
+          "offset": 92,
+          "before": [
+            "callq",
+            "0x10249c0 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var>"
+          ],
+          "after": [
+            "callq",
+            "0x10265a0 <<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var>"
+          ]
+        },
+        {
+          "offset": 105,
+          "before": [
+            "movl",
+            "$0x10042f8, %edx        # imm = 0x10042F8"
+          ],
+          "after": [
+            "movl",
+            "$0x10058d8, %edx        # imm = 0x10058D8"
+          ]
+        },
+        {
+          "offset": 113,
+          "before": [
+            "callq",
+            "0x1021120 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x1022d00 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ]
+        },
+        {
+          "offset": 200,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 326,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 338,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 350,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 460,
+          "before": [
+            "movl",
+            "$0x1004358, %edx        # imm = 0x1004358"
+          ],
+          "after": [
+            "movl",
+            "$0x1005938, %edx        # imm = 0x1005938"
+          ]
+        },
+        {
+          "offset": 465,
+          "before": [
+            "callq",
+            "0x1021120 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x1022d00 <<secp256kfun::vendor::k256::scalar::Scalar>::mul>"
+          ]
+        },
+        {
+          "offset": 557,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 659,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 671,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 683,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 253,
+      "new_memory": 253,
+      "operand_differences": [
+        {
+          "offset": 818,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 936,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1054,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1177,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1300,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1423,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1546,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 1666,
+          "before": [
+            "callq",
+            "*0x47e78(%rip)          # 0x106d8d0 <writev+0x106d8d0>"
+          ],
+          "after": [
+            "callq",
+            "*0x47e48(%rip)          # 0x106f480 <writev+0x106f480>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert",
+      "inversion_change": true,
+      "opcodes_same": false,
+      "old_branches": [
+        {
+          "offset": 29,
+          "instruction": "jne 0x1025bb9 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert+0x39>",
+          "context": [
+            "movzbl 0x28(%rsp), %eax",
+            "movb %al, 0x7(%rsp)",
+            "cmpb $0x1, %al"
+          ]
+        }
+      ],
+      "new_branches": [],
+      "old_memory": 8,
+      "new_memory": 7,
+      "operand_differences": [],
+      "review": "Inspected replacement of unwrap success branch/panic tail with unconditional mask or conditional-select of the inverse versus zero. All other fixed exponentiation loop offsets retained. Valid NonZero input behavior preserved; all scalar models rerun on both RV32 profiles."
+    },
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 60,
+          "instruction": "je 0x102807c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>",
+          "context": [
+            "movl $0x1, %esi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 121,
+          "instruction": "je 0x102807c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>",
+          "context": [
+            "movl $0x1, %esi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 182,
+          "instruction": "je 0x102808b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>",
+          "context": [
+            "movl $0x8, %esi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 243,
+          "instruction": "je 0x102808b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>",
+          "context": [
+            "movl $0x8, %esi",
+            "callq 0x10196b0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 456,
+          "instruction": "jne 0x1027961 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16e1>",
+          "context": [
+            "movl $0x1, %eax",
+            "testb $0x1, 0x138(%rsp)",
+            "movb $0x1, %cl"
+          ]
+        },
+        {
+          "offset": 2009,
+          "instruction": "je 0x1027918 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1698>",
+          "context": [
+            "callq 0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x150(%rsp), %rbx",
+            "cmpq 0x140(%rsp), %rbx"
+          ]
+        },
+        {
+          "offset": 2181,
+          "instruction": "je 0x102792a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16aa>",
+          "context": [
+            "leaq 0x7e0(%rsp), %rbp",
+            "movq %r14, %rdx",
+            "leaq 0x858(%rsp), %r13"
+          ]
+        },
+        {
+          "offset": 4106,
+          "instruction": "je 0x102794a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16ca>",
+          "context": [
+            "movq 0x180(%rsp), %r13",
+            "cmpq 0x170(%rsp), %r13",
+            "movq %r13, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 5760,
+          "instruction": "jne 0x1026410 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>",
+          "context": [
+            "callq *%rbx",
+            "movq 0x198(%rsp), %r12",
+            "cmpq 0x188(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 5866,
+          "instruction": "je 0x102809a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e1a>",
+          "context": [
+            "movq 0x78(%rsp), %r13",
+            "jmp 0x1027290 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1010>",
+            "cmpq $0x0, 0x130(%rsp)"
+          ]
+        },
+        {
+          "offset": 5905,
+          "instruction": "je 0x10280a8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e28>",
+          "context": [
+            "movq 0x80(%rsp), %r14",
+            "movq 0x110(%rsp), %r13",
+            "movq 0x88(%rsp), %r15"
+          ]
+        },
+        {
+          "offset": 5935,
+          "instruction": "je 0x10280b6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>",
+          "context": [
+            "movq %r15, %rsi",
+            "callq 0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>",
+            "testq %rbx, %rbx"
+          ]
+        },
+        {
+          "offset": 5950,
+          "instruction": "je 0x10280c4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e44>",
+          "context": [
+            "testq %rbx, %rbx",
+            "je 0x10280b6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>",
+            "cmpq $0x0, 0x120(%rsp)"
+          ]
+        },
+        {
+          "offset": 6005,
+          "instruction": "je 0x10280d2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>",
+          "context": [
+            "movq %rbx, %rdx",
+            "callq 0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>",
+            "cmpq $0x0, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 6020,
+          "instruction": "je 0x10280e6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e66>",
+          "context": [
+            "cmpq $0x0, 0x78(%rsp)",
+            "je 0x10280d2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>",
+            "cmpq $0x0, 0x128(%rsp)"
+          ]
+        },
+        {
+          "offset": 6182,
+          "instruction": "je 0x10280fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>",
+          "context": [
+            "movaps %xmm1, 0x10(%rsp)",
+            "movaps %xmm0, (%rsp)",
+            "testq %r12, %r12"
+          ]
+        },
+        {
+          "offset": 6205,
+          "instruction": "je 0x102810e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e8e>",
+          "context": [
+            "je 0x10280fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>",
+            "movq %rbx, 0x138(%rsp)",
+            "cmpq $0x0, 0x118(%rsp)"
+          ]
+        },
+        {
+          "offset": 7410,
+          "instruction": "jne 0x1027b80 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1900>",
+          "context": [
+            "movaps %xmm1, 0x10(%rsp)",
+            "movaps %xmm0, (%rsp)",
+            "decq %rbp"
+          ]
+        },
+        {
+          "offset": 7510,
+          "instruction": "je 0x1027fe9 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d69>",
+          "context": [
+            "movups %xmm0, (%rbx)",
+            "movq 0x188(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 7556,
+          "instruction": "je 0x102801f <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d9f>",
+          "context": [
+            "testq %rax, %rax",
+            "movq 0x80(%rsp), %r14",
+            "movq 0x110(%rsp), %r15"
+          ]
+        },
+        {
+          "offset": 7594,
+          "instruction": "je 0x1028043 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dc3>",
+          "context": [
+            "callq 0x10196c0 <__rustc::__rust_dealloc>",
+            "movq 0x158(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 7630,
+          "instruction": "je 0x1028067 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1de7>",
+          "context": [
+            "callq 0x10196c0 <__rustc::__rust_dealloc>",
+            "movq 0x140(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 60,
+          "instruction": "je 0x1029c4c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>",
+          "context": [
+            "movl $0x1, %esi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 121,
+          "instruction": "je 0x1029c4c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>",
+          "context": [
+            "movl $0x1, %esi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 182,
+          "instruction": "je 0x1029c5b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>",
+          "context": [
+            "movl $0x8, %esi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 243,
+          "instruction": "je 0x1029c5b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>",
+          "context": [
+            "movl $0x8, %esi",
+            "callq 0x101b2c0 <__rustc::__rust_alloc>",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 456,
+          "instruction": "jne 0x1029531 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16e1>",
+          "context": [
+            "movl $0x1, %eax",
+            "testb $0x1, 0x138(%rsp)",
+            "movb $0x1, %cl"
+          ]
+        },
+        {
+          "offset": 2009,
+          "instruction": "je 0x10294e8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1698>",
+          "context": [
+            "callq 0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "movq 0x150(%rsp), %rbx",
+            "cmpq 0x140(%rsp), %rbx"
+          ]
+        },
+        {
+          "offset": 2181,
+          "instruction": "je 0x10294fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16aa>",
+          "context": [
+            "leaq 0x7e0(%rsp), %rbp",
+            "movq %r14, %rdx",
+            "leaq 0x858(%rsp), %r13"
+          ]
+        },
+        {
+          "offset": 4106,
+          "instruction": "je 0x102951a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16ca>",
+          "context": [
+            "movq 0x180(%rsp), %r13",
+            "cmpq 0x170(%rsp), %r13",
+            "movq %r13, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 5760,
+          "instruction": "jne 0x1027fe0 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>",
+          "context": [
+            "callq *%rbx",
+            "movq 0x198(%rsp), %r12",
+            "cmpq 0x188(%rsp), %r12"
+          ]
+        },
+        {
+          "offset": 5866,
+          "instruction": "je 0x1029c6a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e1a>",
+          "context": [
+            "movq 0x78(%rsp), %r13",
+            "jmp 0x1028e60 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1010>",
+            "cmpq $0x0, 0x130(%rsp)"
+          ]
+        },
+        {
+          "offset": 5905,
+          "instruction": "je 0x1029c78 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e28>",
+          "context": [
+            "movq 0x80(%rsp), %r14",
+            "movq 0x110(%rsp), %r13",
+            "movq 0x88(%rsp), %r15"
+          ]
+        },
+        {
+          "offset": 5935,
+          "instruction": "je 0x1029c86 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>",
+          "context": [
+            "movq %r15, %rsi",
+            "callq 0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>",
+            "testq %rbx, %rbx"
+          ]
+        },
+        {
+          "offset": 5950,
+          "instruction": "je 0x1029c94 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e44>",
+          "context": [
+            "testq %rbx, %rbx",
+            "je 0x1029c86 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>",
+            "cmpq $0x0, 0x120(%rsp)"
+          ]
+        },
+        {
+          "offset": 6005,
+          "instruction": "je 0x1029ca2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>",
+          "context": [
+            "movq %rbx, %rdx",
+            "callq 0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>",
+            "cmpq $0x0, 0x78(%rsp)"
+          ]
+        },
+        {
+          "offset": 6020,
+          "instruction": "je 0x1029cb6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e66>",
+          "context": [
+            "cmpq $0x0, 0x78(%rsp)",
+            "je 0x1029ca2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>",
+            "cmpq $0x0, 0x128(%rsp)"
+          ]
+        },
+        {
+          "offset": 6182,
+          "instruction": "je 0x1029cca <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>",
+          "context": [
+            "movaps %xmm1, 0x10(%rsp)",
+            "movaps %xmm0, (%rsp)",
+            "testq %r12, %r12"
+          ]
+        },
+        {
+          "offset": 6205,
+          "instruction": "je 0x1029cde <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e8e>",
+          "context": [
+            "je 0x1029cca <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>",
+            "movq %rbx, 0x138(%rsp)",
+            "cmpq $0x0, 0x118(%rsp)"
+          ]
+        },
+        {
+          "offset": 7410,
+          "instruction": "jne 0x1029750 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1900>",
+          "context": [
+            "movaps %xmm1, 0x10(%rsp)",
+            "movaps %xmm0, (%rsp)",
+            "decq %rbp"
+          ]
+        },
+        {
+          "offset": 7510,
+          "instruction": "je 0x1029bb9 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d69>",
+          "context": [
+            "movups %xmm0, (%rbx)",
+            "movq 0x188(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 7556,
+          "instruction": "je 0x1029bef <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d9f>",
+          "context": [
+            "testq %rax, %rax",
+            "movq 0x80(%rsp), %r14",
+            "movq 0x110(%rsp), %r15"
+          ]
+        },
+        {
+          "offset": 7594,
+          "instruction": "je 0x1029c13 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dc3>",
+          "context": [
+            "callq 0x101b2d0 <__rustc::__rust_dealloc>",
+            "movq 0x158(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        },
+        {
+          "offset": 7630,
+          "instruction": "je 0x1029c37 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1de7>",
+          "context": [
+            "callq 0x101b2d0 <__rustc::__rust_dealloc>",
+            "movq 0x140(%rsp), %rax",
+            "testq %rax, %rax"
+          ]
+        }
+      ],
+      "old_memory": 865,
+      "new_memory": 865,
+      "operand_differences": [
+        {
+          "offset": 37,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 52,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 60,
+          "before": [
+            "je",
+            "0x102807c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>"
+          ],
+          "after": [
+            "je",
+            "0x1029c4c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>"
+          ]
+        },
+        {
+          "offset": 98,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 113,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 121,
+          "before": [
+            "je",
+            "0x102807c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>"
+          ],
+          "after": [
+            "je",
+            "0x1029c4c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dfc>"
+          ]
+        },
+        {
+          "offset": 159,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 174,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 182,
+          "before": [
+            "je",
+            "0x102808b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>"
+          ],
+          "after": [
+            "je",
+            "0x1029c5b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>"
+          ]
+        },
+        {
+          "offset": 220,
+          "before": [
+            "callq",
+            "0x10196f0 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ],
+          "after": [
+            "callq",
+            "0x101b300 <__rustc::__rust_no_alloc_shim_is_unstable_v2>"
+          ]
+        },
+        {
+          "offset": 235,
+          "before": [
+            "callq",
+            "0x10196b0 <__rustc::__rust_alloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2c0 <__rustc::__rust_alloc>"
+          ]
+        },
+        {
+          "offset": 243,
+          "before": [
+            "je",
+            "0x102808b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>"
+          ],
+          "after": [
+            "je",
+            "0x1029c5b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e0b>"
+          ]
+        },
+        {
+          "offset": 392,
+          "before": [
+            "jmp",
+            "0x102644e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1ce>"
+          ],
+          "after": [
+            "jmp",
+            "0x102801e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1ce>"
+          ]
+        },
+        {
+          "offset": 456,
+          "before": [
+            "jne",
+            "0x1027961 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16e1>"
+          ],
+          "after": [
+            "jne",
+            "0x1029531 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16e1>"
+          ]
+        },
+        {
+          "offset": 584,
+          "before": [
+            "callq",
+            "0x1024e70 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ],
+          "after": [
+            "callq",
+            "0x1026a50 <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ]
+        },
+        {
+          "offset": 646,
+          "before": [
+            "movl",
+            "$0x10044f0, %edx        # imm = 0x10044F0"
+          ],
+          "after": [
+            "movl",
+            "$0x1005ab0, %edx        # imm = 0x1005AB0"
+          ]
+        },
+        {
+          "offset": 662,
+          "before": [
+            "callq",
+            "0x10238d0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ],
+          "after": [
+            "callq",
+            "0x10254b0 <<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul>"
+          ]
+        },
+        {
+          "offset": 846,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 976,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1113,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1368,
+          "before": [
+            "callq",
+            "0x10291d0 <subtle_ng::black_box>"
+          ],
+          "after": [
+            "callq",
+            "0x102ad70 <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1988,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 2009,
+          "before": [
+            "je",
+            "0x1027918 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1698>"
+          ],
+          "after": [
+            "je",
+            "0x10294e8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1698>"
+          ]
+        },
+        {
+          "offset": 2117,
+          "before": [
+            "callq",
+            "0x1023de0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "callq",
+            "0x10259c0 <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 2181,
+          "before": [
+            "je",
+            "0x102792a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16aa>"
+          ],
+          "after": [
+            "je",
+            "0x10294fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16aa>"
+          ]
+        },
+        {
+          "offset": 3170,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3296,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3415,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3549,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3673,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3800,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 3920,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 4073,
+          "before": [
+            "movq",
+            "0x46660(%rip), %rax     # 0x106d8d0 <writev+0x106d8d0>"
+          ],
+          "after": [
+            "movq",
+            "0x46640(%rip), %rax     # 0x106f480 <writev+0x106f480>"
+          ]
+        },
+        {
+          "offset": 4106,
+          "before": [
+            "je",
+            "0x102794a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16ca>"
+          ],
+          "after": [
+            "je",
+            "0x102951a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x16ca>"
+          ]
+        },
+        {
+          "offset": 4151,
+          "before": [
+            "callq",
+            "*0x46613(%rip)          # 0x106d8d0 <writev+0x106d8d0>"
+          ],
+          "after": [
+            "callq",
+            "*0x465f3(%rip)          # 0x106f480 <writev+0x106f480>"
+          ]
+        },
+        {
+          "offset": 4868,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 4989,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5106,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5233,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5350,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5466,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5576,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 5735,
+          "before": [
+            "movq",
+            "0x45fe2(%rip), %rbx     # 0x106d8d0 <writev+0x106d8d0>"
+          ],
+          "after": [
+            "movq",
+            "0x45fc2(%rip), %rbx     # 0x106f480 <writev+0x106f480>"
+          ]
+        },
+        {
+          "offset": 5760,
+          "before": [
+            "jne",
+            "0x1026410 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>"
+          ],
+          "after": [
+            "jne",
+            "0x1027fe0 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>"
+          ]
+        },
+        {
+          "offset": 5774,
+          "before": [
+            "callq",
+            "0x1023fe0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025bc0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 5779,
+          "before": [
+            "jmp",
+            "0x1026410 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>"
+          ],
+          "after": [
+            "jmp",
+            "0x1027fe0 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x190>"
+          ]
+        },
+        {
+          "offset": 5792,
+          "before": [
+            "callq",
+            "0x1024050 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025c30 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 5797,
+          "before": [
+            "jmp",
+            "0x1026a5f <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x7df>"
+          ],
+          "after": [
+            "jmp",
+            "0x102862f <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x7df>"
+          ]
+        },
+        {
+          "offset": 5813,
+          "before": [
+            "callq",
+            "0x1024050 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025c30 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 5829,
+          "before": [
+            "jmp",
+            "0x1026b0b <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x88b>"
+          ],
+          "after": [
+            "jmp",
+            "0x10286db <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x88b>"
+          ]
+        },
+        {
+          "offset": 5842,
+          "before": [
+            "callq",
+            "0x1023fe0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ],
+          "after": [
+            "callq",
+            "0x1025bc0 <<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one>"
+          ]
+        },
+        {
+          "offset": 5852,
+          "before": [
+            "jmp",
+            "0x1027290 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1010>"
+          ],
+          "after": [
+            "jmp",
+            "0x1028e60 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1010>"
+          ]
+        },
+        {
+          "offset": 5866,
+          "before": [
+            "je",
+            "0x102809a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e1a>"
+          ],
+          "after": [
+            "je",
+            "0x1029c6a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e1a>"
+          ]
+        },
+        {
+          "offset": 5905,
+          "before": [
+            "je",
+            "0x10280a8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e28>"
+          ],
+          "after": [
+            "je",
+            "0x1029c78 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e28>"
+          ]
+        },
+        {
+          "offset": 5927,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 5935,
+          "before": [
+            "je",
+            "0x10280b6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>"
+          ],
+          "after": [
+            "je",
+            "0x1029c86 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e36>"
+          ]
+        },
+        {
+          "offset": 5950,
+          "before": [
+            "je",
+            "0x10280c4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e44>"
+          ],
+          "after": [
+            "je",
+            "0x1029c94 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e44>"
+          ]
+        },
+        {
+          "offset": 5975,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 5994,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6005,
+          "before": [
+            "je",
+            "0x10280d2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>"
+          ],
+          "after": [
+            "je",
+            "0x1029ca2 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e52>"
+          ]
+        },
+        {
+          "offset": 6020,
+          "before": [
+            "je",
+            "0x10280e6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e66>"
+          ],
+          "after": [
+            "je",
+            "0x1029cb6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e66>"
+          ]
+        },
+        {
+          "offset": 6052,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 6071,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6182,
+          "before": [
+            "je",
+            "0x10280fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>"
+          ],
+          "after": [
+            "je",
+            "0x1029cca <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e7a>"
+          ]
+        },
+        {
+          "offset": 6205,
+          "before": [
+            "je",
+            "0x102810e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e8e>"
+          ],
+          "after": [
+            "je",
+            "0x1029cde <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1e8e>"
+          ]
+        },
+        {
+          "offset": 6242,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 6270,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 6406,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6520,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6634,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6748,
+          "before": [
+            "callq",
+            "0x101d760 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ],
+          "after": [
+            "callq",
+            "0x101f340 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::double>"
+          ]
+        },
+        {
+          "offset": 6872,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 6886,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 7008,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 7022,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 7146,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 7160,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 7285,
+          "before": [
+            "callq",
+            "0x10246b0 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "callq",
+            "0x1026290 <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 7299,
+          "before": [
+            "callq",
+            "0x101caa0 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "callq",
+            "0x101e680 <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 7410,
+          "before": [
+            "jne",
+            "0x1027b80 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1900>"
+          ],
+          "after": [
+            "jne",
+            "0x1029750 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1900>"
+          ]
+        },
+        {
+          "offset": 7510,
+          "before": [
+            "je",
+            "0x1027fe9 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d69>"
+          ],
+          "after": [
+            "je",
+            "0x1029bb9 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d69>"
+          ]
+        },
+        {
+          "offset": 7524,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 7556,
+          "before": [
+            "je",
+            "0x102801f <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d9f>"
+          ],
+          "after": [
+            "je",
+            "0x1029bef <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1d9f>"
+          ]
+        },
+        {
+          "offset": 7578,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 7594,
+          "before": [
+            "je",
+            "0x1028043 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dc3>"
+          ],
+          "after": [
+            "je",
+            "0x1029c13 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1dc3>"
+          ]
+        },
+        {
+          "offset": 7614,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 7630,
+          "before": [
+            "je",
+            "0x1028067 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1de7>"
+          ],
+          "after": [
+            "je",
+            "0x1029c37 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul+0x1de7>"
+          ]
+        },
+        {
+          "offset": 7650,
+          "before": [
+            "callq",
+            "0x10196c0 <__rustc::__rust_dealloc>"
+          ],
+          "after": [
+            "callq",
+            "0x101b2d0 <__rustc::__rust_dealloc>"
+          ]
+        },
+        {
+          "offset": 7686,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 7701,
+          "before": [
+            "callq",
+            "0x1061a21 <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "callq",
+            "0x10635c1 <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 7706,
+          "before": [
+            "movl",
+            "$0x10043b8, %edx        # imm = 0x10043B8"
+          ],
+          "after": [
+            "movl",
+            "$0x1005978, %edx        # imm = 0x1005978"
+          ]
+        },
+        {
+          "offset": 7715,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7720,
+          "before": [
+            "movl",
+            "$0x10043d0, %edx        # imm = 0x10043D0"
+          ],
+          "after": [
+            "movl",
+            "$0x1005990, %edx        # imm = 0x1005990"
+          ]
+        },
+        {
+          "offset": 7729,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7734,
+          "before": [
+            "movl",
+            "$0x10043e8, %edx        # imm = 0x10043E8"
+          ],
+          "after": [
+            "movl",
+            "$0x10059a8, %edx        # imm = 0x10059A8"
+          ]
+        },
+        {
+          "offset": 7743,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7748,
+          "before": [
+            "movl",
+            "$0x1004400, %edx        # imm = 0x1004400"
+          ],
+          "after": [
+            "movl",
+            "$0x10059c0, %edx        # imm = 0x10059C0"
+          ]
+        },
+        {
+          "offset": 7757,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7772,
+          "before": [
+            "movl",
+            "$0x1004418, %edx        # imm = 0x1004418"
+          ],
+          "after": [
+            "movl",
+            "$0x10059d8, %edx        # imm = 0x10059D8"
+          ]
+        },
+        {
+          "offset": 7777,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7792,
+          "before": [
+            "movl",
+            "$0x1004430, %edx        # imm = 0x1004430"
+          ],
+          "after": [
+            "movl",
+            "$0x10059f0, %edx        # imm = 0x10059F0"
+          ]
+        },
+        {
+          "offset": 7797,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7812,
+          "before": [
+            "movl",
+            "$0x1004448, %edx        # imm = 0x1004448"
+          ],
+          "after": [
+            "movl",
+            "$0x1005a08, %edx        # imm = 0x1005A08"
+          ]
+        },
+        {
+          "offset": 7817,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 7832,
+          "before": [
+            "movl",
+            "$0x1004460, %edx        # imm = 0x1004460"
+          ],
+          "after": [
+            "movl",
+            "$0x1005a20, %edx        # imm = 0x1005A20"
+          ]
+        },
+        {
+          "offset": 7837,
+          "before": [
+            "callq",
+            "0x1063e0f <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "callq",
+            "0x10659af <core::panicking::panic_bounds_check>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    }
+  ]
+}

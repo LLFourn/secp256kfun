@@ -1,0 +1,11 @@
+timingsafe_requested=false DIT_before=0x0 DIT_during=0x0
+seed=2 samples=100000 fixed=8e0bb7534fcf4f12ac7458fb8092fe529ce56ea0bb68edb63b5f6ccb168aad93 point=02f8ccb495646e17340d11bb581b17d3180d67443ccd0bdd8d0f6107eab8de2655
+test	n0	n1	t-all	t90	t75	t50	median0-ns	median1-ns
+normalization_batch_calls=16 medians_ns=whole_batch nonidentity_affine=0218883310d2c6fe5d8741ea766aadb9ee6200361bb06bc014a936650966439f6b
+normalize IDENTICAL projective	49941	50059	     1.34	     0.05	     0.48	    -0.32	47709.0	47709.0
+normalize IDENTICAL z=1	49885	50115	    -0.93	     0.37	     0.12	    -0.61	45625.0	45666.0
+normalize identity/projective	49823	50177	   -26.10	  -254.87	  -274.12	  -330.04	45916.0	47000.0
+normalize identity/z=1	50020	49980	     1.52	    -1.91	    -2.21	    -5.30	45792.0	45833.0
+normalize nonidentity z=1/projective	50006	49994	   -54.09	  -264.65	  -282.29	  -309.75	45875.0	46959.0
+normalize POSITIVE +4096 adds	50025	49975	   -23.63	  -198.86	  -167.69	  -106.26	47541.0	48459.0
+DIT_restored=0x0

@@ -1,0 +1,1183 @@
+{
+  "config": {
+    "target": "aarch64-apple-darwin",
+    "cpu": "apple-m1",
+    "profile": "release",
+    "features": "std",
+    "opt_level": "3",
+    "lto": false,
+    "codegen_units": 1,
+    "panic": "abort",
+    "relocation_model": "target-default",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nrelease: 1.98.1\nLLVM version: 22.1.8",
+    "objdump": "LLVM (http://llvm.org/):",
+    "cross_linker": "rustc target default",
+    "path_remap_policy": "v1: home=/build-home, Cargo home=/cargo, checkout=/audit, Zig cache=/zig-cache; lexical and canonical spellings, most-specific last; reject remaining host prefixes",
+    "debug_metadata": "Linux: strip-debug, keep .debug_gdb_scripts, compare allocated sections; Darwin: strip-debug, compare section contents; RV32: retain remapped DWARF. Symbol tables retained on all targets.",
+    "source_sha256": "f58ed234a6cc40e979827374cac61712d5b8ff7db26a4b6013bbed0b4995b84e",
+    "harness_sha256": "14189ae930baed46fd8ecabbe87166408912289c54371b2fe2ed5b3f9278fbb6",
+    "analyzer_sha256": "18d27d507cdd749496b5726101802f5ec749af13320a27302907df58e0618429",
+    "build_driver_sha256": "11568fd531f3fb1ea3102f6592b4e7759a00576a20e09e1b6e5260da388c394f",
+    "manifests_sha256": "48b19d30e71f66503de903480a7d8cb207ec6b14116ec9357e1b00ab49da2992",
+    "lock_sha256": "e2ca6d526de4f0cdb9691d058450ceeaac87fb2f7932412af43a659cd31742c2",
+    "contracts_sha256": "6e455ba2579573e6c2d581c2dc662c435e38c8c1f1b7a0315933c2c092b1ecb7"
+  },
+  "roots": {
+    "audit_mul_base": [
+      "audit_mul_base",
+      "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_mul_normal": [
+      "audit_mul_secret_point",
+      "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_mul_nonnormal": [
+      "audit_mul_secret_point",
+      "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_mul_secret_point": [
+      "audit_mul_secret_point",
+      "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_double_mul": [
+      "_rustc::__rust_no_alloc_shim_is_unstable_v2",
+      "audit_double_mul",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul",
+      "subtle_ng::black_box",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+      "<alloc::raw_vec::RawVecInner>::finish_grow"
+    ],
+    "audit_dot_product": [
+      "_rustc::__rust_no_alloc_shim_is_unstable_v2",
+      "audit_dot_product",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+      "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select",
+      "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg",
+      "<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign",
+      "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg",
+      "subtle_ng::black_box",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+      "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one",
+      "<alloc::raw_vec::RawVecInner>::finish_grow"
+    ],
+    "audit_point_add": [
+      "audit_point_add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add"
+    ],
+    "audit_point_add_normal": [
+      "audit_point_add_normal",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_add_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_point_negate": [
+      "audit_point_negate"
+    ],
+    "audit_normal_negate": [
+      "audit_normal_negate",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_neg",
+      "subtle_ng::black_box"
+    ],
+    "audit_point_cond_negate": [
+      "audit_point_cond_negate",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate",
+      "subtle_ng::black_box"
+    ],
+    "audit_normal_cond_negate": [
+      "audit_normal_cond_negate",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate",
+      "subtle_ng::black_box"
+    ],
+    "audit_normalize": [
+      "audit_normalize",
+      "<secp256kfun::vendor::k256::field::FieldElement>::invert",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+      "subtle_ng::black_box"
+    ],
+    "audit_mul_normalize": [
+      "audit_mul_normalize",
+      "secp256kfun::vendor::k256::mul::lincomb_generic::<1>",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+      "<secp256kfun::vendor::k256::field::FieldElement>::invert",
+      "<secp256kfun::vendor::k256::field::FieldElement>::square",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+      "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+      "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+      "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_point_eq": [
+      "audit_point_eq",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::cmp::PartialEq>::eq",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConstantTimeEq>::ct_eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_point_eq_normal": [
+      "audit_point_eq_normal",
+      "<secp256kfun::vendor::k256::projective::ProjectivePoint>::eq_affine",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_eq_norm_point",
+      "subtle_ng::black_box"
+    ],
+    "audit_normal_eq": [
+      "audit_normal_eq",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point",
+      "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52 as subtle_ng::ConstantTimeEq>::ct_eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_y_even": [
+      "audit_y_even",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_is_y_even",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_add": [
+      "audit_scalar_add",
+      "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add",
+      "<secp256kfun::vendor::k256::scalar::scalar_4x64::Scalar4x64>::add",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_sub": [
+      "audit_scalar_sub",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_sub",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_mul": [
+      "audit_scalar_mul",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_invert": [
+      "audit_scalar_invert",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::invert",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_negate": [
+      "audit_scalar_negate",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_cond_negate": [
+      "audit_scalar_cond_negate",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_eq": [
+      "audit_scalar_eq",
+      "<secp256kfun::vendor::k256::scalar::Scalar as core::cmp::PartialEq>::eq",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_is_high": [
+      "audit_scalar_is_high",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_high",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_is_zero": [
+      "audit_scalar_is_zero",
+      "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_zero",
+      "subtle_ng::black_box"
+    ],
+    "audit_scalar_dot": [
+      "audit_scalar_dot",
+      "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add",
+      "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+      "<secp256kfun::vendor::k256::scalar::scalar_4x64::Scalar4x64>::add",
+      "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul",
+      "subtle_ng::black_box"
+    ]
+  },
+  "functions": {
+    "_rustc::__rust_no_alloc_shim_is_unstable_v2": {
+      "code_sha256": "76cdfddcd07a384b12a119efb5d3cdfb7117aaaf7ef4f2515e2f7cef945da8cd",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_dot_product": {
+      "code_sha256": "b499ba2bebb2fa2f6d888c07b5472440626d9a9b76720c4c26c15bc683d20ff1",
+      "edges": [
+        "_rustc::__rust_no_alloc_shim_is_unstable_v2",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism",
+        "<secp256kfun::vendor::k256::field::FieldElement>::square",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::is_high",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from",
+        "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select",
+        "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg",
+        "<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign",
+        "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one"
+      ],
+      "excluded_leaves": [
+        "_rustc::__rust_alloc",
+        "_rustc::__rust_dealloc",
+        "alloc::raw_vec::handle_error",
+        "core::panicking::panic_bounds_check",
+        "external:_memcpy"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        56,
+        80,
+        108,
+        148,
+        204,
+        264,
+        632,
+        712,
+        792,
+        856,
+        876,
+        884,
+        912,
+        920,
+        964,
+        988,
+        1000,
+        1048,
+        1060,
+        1116,
+        1968,
+        2004,
+        2016,
+        2064,
+        2076,
+        2132,
+        2140,
+        2200,
+        2232,
+        2260,
+        2284,
+        2376,
+        2404,
+        2432
+      ],
+      "memory_access_count": 223
+    },
+    "audit_double_mul": {
+      "code_sha256": "7844f81f95f4a3521adad27ccfe204f1353a5bfec6b430153c1b6fae0e3ad2b8",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_mul_base": {
+      "code_sha256": "f0944dc03465f7f74e51fbd645f15ce58dbe5e9ee77693ad59da84b3474025eb",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 1
+    },
+    "audit_mul_secret_point": {
+      "code_sha256": "2f099fe8ef34cbdd8366d9f4fcb1ec38a1cc316540836623ce6148c1ba8ab09b",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_mul_normalize": {
+      "code_sha256": "f252eae922fb669df55f76d5b60926919241b4bc304eacbac6eaeedf808f46db",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+        "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "audit_normal_cond_negate": {
+      "code_sha256": "4cb177ad2c58f616d6f5b4be929065a4beca17c1455343d5461a422d79f9f4bf",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "audit_normal_eq": {
+      "code_sha256": "cef6299af84cf102363b09ef1837b38222fb96a6acb61801564273102d4f96d6",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_normal_negate": {
+      "code_sha256": "e0a049b501a040a2299ba0b359d14387772ecb886d4824e90758eaee33dd6d5d",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_neg"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "audit_normalize": {
+      "code_sha256": "242b02c4ec81d599000db96583766a7f4020733521abc110de255683e844fe6f",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "audit_point_add": {
+      "code_sha256": "d5f5b349d491e62ba27d335acede2db67ee9dd0f9befe6d7ad77e3600038fc47",
+      "edges": [
+        "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_point_add_normal": {
+      "code_sha256": "8bb287a4715cbb83cf425b31057270cfefb15848a71ee1ea5510a9a0695f6c0e",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_add_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_point_cond_negate": {
+      "code_sha256": "4cb177ad2c58f616d6f5b4be929065a4beca17c1455343d5461a422d79f9f4bf",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "audit_point_eq": {
+      "code_sha256": "a1ccd9e127648822ce23658356753e30edd48954c6da008da301b1c4a26206d7",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::cmp::PartialEq>::eq"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_point_eq_normal": {
+      "code_sha256": "ffb4da3bcbadd10cd06af408f32d384ab9dbea7b17239dd4bcd62144b09c2868",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_eq_norm_point"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_point_negate": {
+      "code_sha256": "9991d472aadc8a1dcf8bac5d8eba3b23063f396b9d30db353299175f011bb714",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 12
+    },
+    "audit_scalar_add": {
+      "code_sha256": "a8770d53815703ec04a87852a450e5b7d51ba92717b28ef26adaaba1ebb3c365",
+      "edges": [
+        "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_cond_negate": {
+      "code_sha256": "133aef8cca5d01ec937042b6597debd25501f9e7c224541fe22307ff778ca349",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 6
+    },
+    "audit_scalar_dot": {
+      "code_sha256": "d6db969ba95e9367276c4488195d17d541a8c4767d1d4f2aca7c79cfcf88705a",
+      "edges": [
+        "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add",
+        "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        40,
+        108
+      ],
+      "memory_access_count": 12
+    },
+    "audit_scalar_eq": {
+      "code_sha256": "805ed0a7eaa496bc758029ad72434a6c7e1e0c7bffcdadc275156a6b1233e2c5",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar as core::cmp::PartialEq>::eq"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_invert": {
+      "code_sha256": "3532cc4ef599c18f58b64341edf0ea3665cc01a47f696d7066f73c90363ebd0e",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_is_high": {
+      "code_sha256": "41532d1138aa4729c5c8bdfdf7ecb9e520f8c0dd165ef4048a006ff084c8de73",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_high"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_is_zero": {
+      "code_sha256": "4126a44e3cefc9b31be3184c772325150d86c8f159780a4a3f740274c250c844",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_zero"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_mul": {
+      "code_sha256": "dbcced985a80c5d54b77971c6e95316c0699b8ed03e32b3a5754e6ae057c2eca",
+      "edges": [
+        "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_scalar_negate": {
+      "code_sha256": "a3458c1a60abd5f86f4796d4e2569987b43ea27f96c55b7abfd859dc6472143f",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 8
+    },
+    "audit_scalar_sub": {
+      "code_sha256": "3669d599b7fd0dd1ab8e228f486976c5f54e6d52b869a130320e7b6d3c2808a5",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_sub"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "audit_y_even": {
+      "code_sha256": "e28551d6114873bd8277cc07983c7a276e03a74bbdabcc97201fdfac84f363f1",
+      "edges": [
+        "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_is_y_even"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "secp256kfun::vendor::k256::mul::lincomb_generic::<1>": {
+      "code_sha256": "c255da1b3f92bb65053ce79e4d1724f4363db8cc846dbf8a6f1411802ee5ee93",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        3676
+      ],
+      "memory_access_count": 585
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::endomorphism": {
+      "code_sha256": "968e740874d564c8997eefe432ff8a7d95da4ba61f53bbeeda894aa8aa712541",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 14
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add": {
+      "code_sha256": "b76798b38841238b9462db1bc2adb5d69e136dd1e50d05cb4c0dfbf126b29466",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 197
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double": {
+      "code_sha256": "cfeceab39b9792a431b185cfb6549d5ca71e59b3a53a688379a81a1a050b0c22",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::FieldElement>::square",
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 42
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed": {
+      "code_sha256": "c953f4d6ab40f45bb2d734c0f0b99f20f5da6864a5b9ecacec0094da03c8ccf0",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 178
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint>::eq_affine": {
+      "code_sha256": "869e37322609f24eab2b9f236e9210df44cfa6836904abdd8e0c001a88b5b97f",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 30
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::invert": {
+      "code_sha256": "d818554c9f684d3df50f59ca2874758db92a969155c1ca57122ff7e1aeb2eedf",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::FieldElement>::square",
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        1368,
+        1440,
+        1496
+      ],
+      "memory_access_count": 340
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement>::square": {
+      "code_sha256": "951527031a953b5fc8b3e96636e9bcf32431ea7b970f1afb69ca9ad83b0040b6",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 8
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Add>::add": {
+      "code_sha256": "ff61d7500b02f88ff930f246bd76d4d9feb6e4603b799393ca2cf1a028697766",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::scalar_4x64::Scalar4x64>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul": {
+      "code_sha256": "13b77c2435432de3b9ebc6804b4e5552eb9b7ef85011e5cf6d68b8efb9000427",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::invert": {
+      "code_sha256": "38a7829ada8baae5de9ff979b8f5c358aa4127f18ba523a908593a28d86e4c68",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        1508
+      ],
+      "memory_access_count": 433
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::is_high": {
+      "code_sha256": "b0912b8fafe348152c48b1769584ddbbbc513ffbf4dbc06cd8e502e60a59db11",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul": {
+      "code_sha256": "9221799cb3b78cd0db09e0296e463e5cd05a3b0bd3b3de038394627ebac7374c",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 19
+    },
+    "<secp256kfun::vendor::k256::scalar::scalar_4x64::Scalar4x64>::add": {
+      "code_sha256": "f79162033bb09070e673f40df0de0354b41fdf1c14f8f9da1369d4e5d0d90ce7",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new": {
+      "code_sha256": "3356b133cb978c55b83d047d218db0b3c8f47c6974d19c939c11d5c1bfb85221",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 55
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable>::select": {
+      "code_sha256": "7e146546d406b05e3b478e856fa14c17d18986ef57cb4529ccd722d84ef375be",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [
+        308
+      ],
+      "memory_access_count": 42
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var": {
+      "code_sha256": "8404ef893e16d2088085e4682fc9ce282b4b527ff2f934445953266ea8306e6c",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [
+        "core::panicking::panic_bounds_check"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        444,
+        484,
+        488,
+        512,
+        524,
+        540,
+        544,
+        568,
+        580,
+        596,
+        600,
+        624,
+        648
+      ],
+      "memory_access_count": 40
+    },
+    "secp256kfun::vendor::k256::mul::decompose_scalar": {
+      "code_sha256": "4cc7f1b27d117663b939d647c947ef9789262555a84d8617ebcd216f5e0e8b49",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul",
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul_shift_var",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 36
+    },
+    "<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from": {
+      "code_sha256": "66f02b04c3b6d76b6329b65a62e793ba35cc7b11b3493c2bfbcc13ed4939ea7d",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add"
+      ],
+      "excluded_leaves": [
+        "external:_memcpy"
+      ],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 157
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Mul>::mul": {
+      "code_sha256": "f4282c0c9071ee7a435c78756be712217be54661ca314dfefaa94a6caa021cf8",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_sub": {
+      "code_sha256": "043ec6063042038127ba947974aad7a93d6b2b0315dd3c17cf1b133367ec3747",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 14
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_invert": {
+      "code_sha256": "02dee0e8cffc358b62d891479d40e42ff842284a98bac7828e5c3409954ac96d",
+      "edges": [
+        "<secp256kfun::vendor::k256::scalar::Scalar>::invert"
+      ],
+      "excluded_leaves": [
+        "core::panicking::assert_failed::<u8, u8>"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        40
+      ],
+      "memory_access_count": 8
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_neg": {
+      "code_sha256": "cf5a4da9d21c141365b8a12c5eeca76d4b4d2f0cebbb1a01d26be5d0f4d91a42",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::cmp::PartialEq>::eq": {
+      "code_sha256": "be3b787e6a670dc2cba7f5a8b59688ae9c7d164c47d5cc827fb1472d3d7fbe87",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConstantTimeEq>::ct_eq"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_high": {
+      "code_sha256": "1e20998899c39574eee8d3530658efb76ae83f6d812a0a24cafaa6da545c053c",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 4
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_is_zero": {
+      "code_sha256": "0645231ce62c40ed7526c812839c051d78b7ae41b9dba8b097734804182cd85b",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 3
+    },
+    "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Add>::add": {
+      "code_sha256": "81d9870bcb092d2399f2cd0c4c3d6cb73bd06350700b7a589062e628d200edee",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize": {
+      "code_sha256": "f2cc39a5c280b7e1bdd7e8647d13c96ff1e6e92cdd8cc7c948e661ee910cd95a",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::FieldElement>::invert",
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 50
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_double_mul": {
+      "code_sha256": "1cd029a10d777248a1c184d5ac225369d9c331ea88f8f392cbae96b36651210d",
+      "edges": [
+        "_rustc::__rust_no_alloc_shim_is_unstable_v2",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add",
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::double",
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new",
+        "<secp256kfun::vendor::k256::mul::LookupTable>::select",
+        "secp256kfun::vendor::k256::mul::decompose_scalar",
+        "subtle_ng::black_box",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one",
+        "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one"
+      ],
+      "excluded_leaves": [
+        "_rustc::__rust_alloc",
+        "_rustc::__rust_dealloc",
+        "alloc::raw_vec::handle_error",
+        "core::panicking::panic_bounds_check",
+        "external:_memcpy"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        72,
+        104,
+        136,
+        172,
+        320,
+        1448,
+        1536,
+        2376,
+        3284,
+        3340,
+        3348,
+        3368,
+        3376,
+        3412,
+        3420,
+        3520,
+        3528,
+        4336,
+        4400,
+        4428,
+        4456,
+        4480
+      ],
+      "memory_access_count": 665
+    },
+    "<secp256kfun::backend::k256_impl::VariableTime as secp256kfun::backend::TimeSensitive>::scalar_mul_norm_point": {
+      "code_sha256": "898398a560ca8b741309bced892b4a3761adf801a7b5e79878a7b03c3180b13c",
+      "edges": [
+        "secp256kfun::vendor::k256::mul::lincomb_generic::<1>"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::scalar_cond_negate": {
+      "code_sha256": "6cf537d97cb6becf6f373e092f2db068747362b9e2ee421cf069ec060434d9dc",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 16
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_eq_norm_point": {
+      "code_sha256": "ed9a285da41341d09464c2f1f54f72d6ffd3f15664aafa3b23fda584c10b3bb8",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::eq_affine",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_is_y_even": {
+      "code_sha256": "45653a7b1d379034cf4e7047735998d186a9aae4efaf58eccdc15e76c5fdcbd7",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 3
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_add_norm_point": {
+      "code_sha256": "735d395241f08947af86e93c0ef54b1e56e684a3ca4e7bc5086f0de8a82c19b2",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add_mixed",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 20
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_eq_norm_point": {
+      "code_sha256": "9d135e3c9f661d728e03231788bf318dcd2353fafcc25fc41ca702dc8cb0ef85",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52 as subtle_ng::ConstantTimeEq>::ct_eq",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 14
+    },
+    "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::norm_point_conditional_negate": {
+      "code_sha256": "58e08ae65080ff29d58ee0fb2f13c8dde718690a7cac1ddaaa60a2bee034c142",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 18
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar as core::cmp::PartialEq>::eq": {
+      "code_sha256": "ed56ce4e396a9d4994ab072fdade507ef59ea7c9b0ab5e13adc2257e28014014",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 14
+    },
+    "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52 as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "eb98bef2105768a61705e8a971b8fa51e2bae2918577ef6d6384fd19260b6ef2",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 16
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "4351bf8d78ea5ce3ee4c97d945664d67a17feb4e798b1dd78ba2097abbfa1829",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 15
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConstantTimeEq>::ct_eq": {
+      "code_sha256": "3928e849a8fda0446ef3826e62dcc25e3898d3fac21a2f8ed6c374fc6c7e88d2",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul",
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 24
+    },
+    "<secp256kfun::vendor::k256::scalar::Scalar as subtle_ng::ConditionallySelectable>::conditional_select": {
+      "code_sha256": "0f5ae0a7955a700051941eb7e1592387bc144aa5eb207317540c2f1c3ae61458",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 3
+    },
+    "<&secp256kfun::vendor::k256::scalar::Scalar as core::ops::arith::Neg>::neg": {
+      "code_sha256": "401d2a318de3b728fc90f61df8c4d1b471da0a019a84d532586b7235638649c5",
+      "edges": [
+        "subtle_ng::black_box"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 12
+    },
+    "<secp256kfun::vendor::k256::field::FieldElement as core::ops::arith::Mul<&secp256kfun::vendor::k256::field::FieldElement>>::mul": {
+      "code_sha256": "3c24c6861a055e2ce5b2d007bbf5c59fb2bba9bdf5f272c10a54658fdc90a5ff",
+      "edges": [
+        "<secp256kfun::vendor::k256::field::field_5x52::FieldElement5x52>::mul"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 0
+    },
+    "<secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::AddAssign<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::add_assign": {
+      "code_sha256": "b43b7676a5b609e807498f3dbffc632b67b7e16d6ca8db28e02bb8d89362eeb8",
+      "edges": [
+        "<secp256kfun::vendor::k256::projective::ProjectivePoint>::add"
+      ],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 17
+    },
+    "<&secp256kfun::vendor::k256::projective::ProjectivePoint as core::ops::arith::Neg>::neg": {
+      "code_sha256": "7c4fa1c8dc1e3776607fa48bef8972713533b8aef18d0383081a744790f0499b",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 12
+    },
+    "subtle_ng::black_box": {
+      "code_sha256": "26be2eb9a3848663602e9560fe10f299a0be1dc5996b6300bc985285f73d3f1f",
+      "edges": [],
+      "excluded_leaves": [],
+      "unresolved": [],
+      "branch_offsets": [],
+      "memory_access_count": 2
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::LookupTable>>::grow_one": {
+      "code_sha256": "91be26a0c47127b1c566f4f78789755639ae29095d1f40d346a74e66cd5a1064",
+      "edges": [
+        "<alloc::raw_vec::RawVecInner>::finish_grow"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        68
+      ],
+      "memory_access_count": 9
+    },
+    "<alloc::raw_vec::RawVec<secp256kfun::vendor::k256::mul::Radix16Decomposition>>::grow_one": {
+      "code_sha256": "aa26052c585faf001cfddfb697911344fd7d0031f0e55bd4b755907a37078867",
+      "edges": [
+        "<alloc::raw_vec::RawVecInner>::finish_grow"
+      ],
+      "excluded_leaves": [
+        "alloc::raw_vec::handle_error"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        68
+      ],
+      "memory_access_count": 9
+    },
+    "<alloc::raw_vec::RawVecInner>::finish_grow": {
+      "code_sha256": "b5f6f4cc8a78e74ea62ff89de49431af661c45202610b6a2404b10c3260a516a",
+      "edges": [
+        "_rustc::__rust_no_alloc_shim_is_unstable_v2"
+      ],
+      "excluded_leaves": [
+        "_rustc::__rust_alloc",
+        "_rustc::__rust_realloc"
+      ],
+      "unresolved": [],
+      "branch_offsets": [
+        40,
+        64,
+        68,
+        92,
+        100,
+        120
+      ],
+      "memory_access_count": 10
+    }
+  }
+}

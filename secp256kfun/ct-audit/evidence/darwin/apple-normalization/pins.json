@@ -1,0 +1,117 @@
+{
+  "binary_sha256": "bd3c86236c6da8a5792bb943292ab5a2ea404ebc22ce0b9452774d90ab6b30cd",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: aarch64-apple-darwin\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "host": "Apple M5 Max; ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+  "target": "aarch64-apple-darwin",
+  "cpu": "rustc target default (no target-cpu override)",
+  "command": [
+    "cargo",
+    "build",
+    "--manifest-path",
+    "secp256kfun/ct-audit/Cargo.toml",
+    "--release",
+    "--locked",
+    "--bin",
+    "ct_timing"
+  ],
+  "profile": "release, opt-level=3, LTO=false, codegen-units=1, panic=abort, debug=1, std feature",
+  "source_sha256": "f58ed234a6cc40e979827374cac61712d5b8ff7db26a4b6013bbed0b4995b84e",
+  "harness_sha256": "14189ae930baed46fd8ecabbe87166408912289c54371b2fe2ed5b3f9278fbb6",
+  "manifests_sha256": "48b19d30e71f66503de903480a7d8cb207ec6b14116ec9357e1b00ab49da2992",
+  "lock_sha256": "e2ca6d526de4f0cdb9691d058450ceeaac87fb2f7932412af43a659cd31742c2",
+  "evidence": "Native focused batched normalization; default then timingsafe per seed, no concurrent audit builds, own ct-x86 VM stopped; machine not isolated or core-pinned.",
+  "samples_per_row": 100000,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "batch_calls": 16,
+  "median_unit": "ns per 16-call batch; positive control also includes delay",
+  "cli": "ct_timing SEED 100000 [timingsafe] normalize",
+  "dit_cpu_support": "1",
+  "sdk_header_sha256": "458a9b1a0fe3c668b80f9ae4ae567e0f8aadc2a252ffd5c4588ef5a7277be1d1",
+  "run_commands": [
+    {
+      "seed": 1,
+      "mode": "default",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "1",
+        "100000",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:27:20.532570+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:27:59.702552+00:00"
+    },
+    {
+      "seed": 1,
+      "mode": "safe",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "1",
+        "100000",
+        "timingsafe",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:27:59.702736+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:28:30.002125+00:00"
+    },
+    {
+      "seed": 2,
+      "mode": "default",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "2",
+        "100000",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:28:30.002315+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:28:58.356907+00:00"
+    },
+    {
+      "seed": 2,
+      "mode": "safe",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "2",
+        "100000",
+        "timingsafe",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:28:58.357105+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:29:28.319737+00:00"
+    },
+    {
+      "seed": 3,
+      "mode": "default",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "3",
+        "100000",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:29:28.319896+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:29:56.570638+00:00"
+    },
+    {
+      "seed": 3,
+      "mode": "safe",
+      "argv": [
+        "/Users/llfourn/src/secp256kfun/.clank/worktrees/ct-audit-master/target/ct-audit/ct_timing-apple-normalization",
+        "3",
+        "100000",
+        "timingsafe",
+        "normalize"
+      ],
+      "started_utc": "2026-11-06T04:29:56.570803+00:00",
+      "returncode": 0,
+      "finished_utc": "2026-11-06T04:30:25.830702+00:00"
+    }
+  ]
+}

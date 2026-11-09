@@ -1,0 +1,23 @@
+{
+  "binary_sha256": "c651ce5dfcc69ee4f4219c3c81f967e3e2f166e37ff75a2376057ca3267381e7",
+  "command": [
+    "target/ct-audit/opam/ct-audit/bin/binsec",
+    "-sse",
+    "-checkct",
+    "-smt-solver",
+    "z3",
+    "-smt-timeout",
+    "10",
+    "-sse-depth",
+    "1000000",
+    "-sse-timeout",
+    "30",
+    "-sse-script",
+    "target/ct-audit/binsec/is-zero.ini",
+    "target/ct-audit/x86/ct_audit"
+  ],
+  "returncode": -6,
+  "binsec": "0.11.3",
+  "z3": "5.3.3",
+  "result": "unsupported decoder exception; no proof result"
+}

@@ -1,0 +1,3368 @@
+{
+  "compared_to": "37f65e1",
+  "binary_sha256": "7415d3eebc299facfda0ec09e80ddbdfebe725ea8764b19f147802b048a36275",
+  "configuration_sha256": "76e50343bb4f0176bfe549890a07891399df796be59f692547119b1707cf977b",
+  "before": {
+    "branches": 143,
+    "memory": 4123,
+    "latency_candidates": 762,
+    "unresolved": 0,
+    "functions": 61
+  },
+  "after": {
+    "branches": 142,
+    "memory": 4124,
+    "latency_candidates": 762,
+    "unresolved": 0,
+    "functions": 61
+  },
+  "changes": [
+    {
+      "function": "<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 42,
+          "instruction": "bltu a4, a3, 0x11ecc <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc+0x34>",
+          "context": [
+            "sub a3, a1, a3",
+            "lui a4, 0x20",
+            "li a0, 0x0"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 42,
+          "instruction": "bltu a4, a3, 0x11e88 <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc+0x34>",
+          "context": [
+            "sub a3, a1, a3",
+            "lui a4, 0x20",
+            "li a0, 0x0"
+          ]
+        }
+      ],
+      "old_memory": 2,
+      "new_memory": 2,
+      "operand_differences": [
+        {
+          "offset": 8,
+          "before": [
+            "addi",
+            "a3, a3, 0x734"
+          ],
+          "after": [
+            "addi",
+            "a3, a3, 0x690"
+          ]
+        },
+        {
+          "offset": 12,
+          "before": [
+            "lw",
+            "a4, 0x734(a2)"
+          ],
+          "after": [
+            "lw",
+            "a4, 0x690(a2)"
+          ]
+        },
+        {
+          "offset": 42,
+          "before": [
+            "bltu",
+            "a4, a3, 0x11ecc <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc+0x34>"
+          ],
+          "after": [
+            "bltu",
+            "a4, a3, 0x11e88 <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc+0x34>"
+          ]
+        },
+        {
+          "offset": 46,
+          "before": [
+            "sw",
+            "a3, 0x734(a2)"
+          ],
+          "after": [
+            "sw",
+            "a3, 0x690(a2)"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 134,
+          "instruction": "bnez s0, 0x121d8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x68>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x3c8(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 182,
+          "instruction": "bnez s0, 0x12208 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x98>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x398(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 230,
+          "instruction": "bnez s0, 0x12238 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0xc8>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x368(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 294,
+          "instruction": "bnez s0, 0x12278 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x108>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x328(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 358,
+          "instruction": "bnez s0, 0x122b8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x148>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x2e8(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 424,
+          "instruction": "bnez s0, 0x122fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x18a>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x2a6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 490,
+          "instruction": "bnez s0, 0x1233c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1cc>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x264(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 540,
+          "instruction": "bnez s0, 0x1236e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1fe>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x232(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 588,
+          "instruction": "bnez s0, 0x1239e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x22e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x202(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 636,
+          "instruction": "bnez s0, 0x123ce <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x25e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x1d2(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 684,
+          "instruction": "bnez s0, 0x123fe <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x28e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x1a2(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 732,
+          "instruction": "bnez s0, 0x1242e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2be>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x172(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 780,
+          "instruction": "bnez s0, 0x1245e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2ee>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x142(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 134,
+          "instruction": "bnez s0, 0x12184 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x68>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x376(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 182,
+          "instruction": "bnez s0, 0x121b4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x98>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x346(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 230,
+          "instruction": "bnez s0, 0x121e4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0xc8>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x316(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 294,
+          "instruction": "bnez s0, 0x12224 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x108>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x2d6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 358,
+          "instruction": "bnez s0, 0x12264 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x148>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x296(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 424,
+          "instruction": "bnez s0, 0x122a6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x18a>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x254(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 490,
+          "instruction": "bnez s0, 0x122e8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1cc>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x212(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 540,
+          "instruction": "bnez s0, 0x1231a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1fe>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x1e0(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 588,
+          "instruction": "bnez s0, 0x1234a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x22e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x1b0(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 636,
+          "instruction": "bnez s0, 0x1237a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x25e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x180(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 684,
+          "instruction": "bnez s0, 0x123aa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x28e>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x150(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 732,
+          "instruction": "bnez s0, 0x123da <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2be>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0x120(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 780,
+          "instruction": "bnez s0, 0x1240a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2ee>",
+          "context": [
+            "auipc ra, 0x9",
+            "jalr 0xf0(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        }
+      ],
+      "old_memory": 13,
+      "new_memory": 13,
+      "operand_differences": [
+        {
+          "offset": 98,
+          "before": [
+            "jalr",
+            "0x3e6(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x394(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 128,
+          "before": [
+            "jalr",
+            "0x3c8(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x376(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 134,
+          "before": [
+            "bnez",
+            "s0, 0x121d8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x68>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x12184 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x68>"
+          ]
+        },
+        {
+          "offset": 176,
+          "before": [
+            "jalr",
+            "0x398(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x346(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 182,
+          "before": [
+            "bnez",
+            "s0, 0x12208 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x98>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x121b4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x98>"
+          ]
+        },
+        {
+          "offset": 224,
+          "before": [
+            "jalr",
+            "0x368(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x316(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 230,
+          "before": [
+            "bnez",
+            "s0, 0x12238 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0xc8>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x121e4 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0xc8>"
+          ]
+        },
+        {
+          "offset": 258,
+          "before": [
+            "jalr",
+            "0x346(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x2f4(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 288,
+          "before": [
+            "jalr",
+            "0x328(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x2d6(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 294,
+          "before": [
+            "bnez",
+            "s0, 0x12278 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x108>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x12224 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x108>"
+          ]
+        },
+        {
+          "offset": 322,
+          "before": [
+            "jalr",
+            "0x306(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x2b4(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 352,
+          "before": [
+            "jalr",
+            "0x2e8(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x296(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 358,
+          "before": [
+            "bnez",
+            "s0, 0x122b8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x148>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x12264 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x148>"
+          ]
+        },
+        {
+          "offset": 386,
+          "before": [
+            "jalr",
+            "0x2c6(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x274(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 418,
+          "before": [
+            "jalr",
+            "0x2a6(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x254(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 424,
+          "before": [
+            "bnez",
+            "s0, 0x122fa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x18a>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x122a6 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x18a>"
+          ]
+        },
+        {
+          "offset": 452,
+          "before": [
+            "jalr",
+            "0x284(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x232(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 484,
+          "before": [
+            "jalr",
+            "0x264(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x212(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 490,
+          "before": [
+            "bnez",
+            "s0, 0x1233c <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1cc>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x122e8 <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1cc>"
+          ]
+        },
+        {
+          "offset": 534,
+          "before": [
+            "jalr",
+            "0x232(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1e0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 540,
+          "before": [
+            "bnez",
+            "s0, 0x1236e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1fe>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x1231a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x1fe>"
+          ]
+        },
+        {
+          "offset": 582,
+          "before": [
+            "jalr",
+            "0x202(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1b0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 588,
+          "before": [
+            "bnez",
+            "s0, 0x1239e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x22e>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x1234a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x22e>"
+          ]
+        },
+        {
+          "offset": 630,
+          "before": [
+            "jalr",
+            "0x1d2(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x180(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 636,
+          "before": [
+            "bnez",
+            "s0, 0x123ce <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x25e>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x1237a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x25e>"
+          ]
+        },
+        {
+          "offset": 678,
+          "before": [
+            "jalr",
+            "0x1a2(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x150(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 684,
+          "before": [
+            "bnez",
+            "s0, 0x123fe <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x28e>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x123aa <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x28e>"
+          ]
+        },
+        {
+          "offset": 726,
+          "before": [
+            "jalr",
+            "0x172(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x120(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 732,
+          "before": [
+            "bnez",
+            "s0, 0x1242e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2be>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x123da <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2be>"
+          ]
+        },
+        {
+          "offset": 774,
+          "before": [
+            "jalr",
+            "0x142(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0xf0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 780,
+          "before": [
+            "bnez",
+            "s0, 0x1245e <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2ee>"
+          ],
+          "after": [
+            "bnez",
+            "s0, 0x1240a <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize+0x2ee>"
+          ]
+        },
+        {
+          "offset": 816,
+          "before": [
+            "jalr",
+            "0x9e(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "0x4c(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 836,
+          "before": [
+            "jalr",
+            "0x8a(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "0x38(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 896,
+          "before": [
+            "jalr",
+            "0xc8(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x76(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 930,
+          "before": [
+            "jalr",
+            "0xa6(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x54(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 958,
+          "before": [
+            "jalr",
+            "0x8a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x38(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 986,
+          "before": [
+            "jalr",
+            "0x6e(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1c(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 998,
+          "before": [
+            "jalr",
+            "-0x18(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "-0x6a(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 1032,
+          "before": [
+            "jalr",
+            "0x40(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x12(ra) <memcpy>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 12,
+      "new_memory": 12,
+      "operand_differences": [
+        {
+          "offset": 142,
+          "before": [
+            "jr",
+            "0x24(t1) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jr",
+            "-0x2e(t1) <subtle_ng::black_box>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "secp256kfun::vendor::k256::mul::decompose_scalar",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 6,
+      "new_memory": 6,
+      "operand_differences": [
+        {
+          "offset": 54,
+          "before": [
+            "addi",
+            "a2, a2, 0x2e8"
+          ],
+          "after": [
+            "addi",
+            "a2, a2, 0x308"
+          ]
+        },
+        {
+          "offset": 108,
+          "before": [
+            "addi",
+            "a2, a2, 0x308"
+          ],
+          "after": [
+            "addi",
+            "a2, a2, 0x328"
+          ]
+        },
+        {
+          "offset": 152,
+          "before": [
+            "jalr",
+            "0x2(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x50(ra) <memcpy>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_dot_product",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [
+        {
+          "offset": 66,
+          "instruction": "beqz a4, 0x1824c <audit_dot_product+0x9e>",
+          "context": [
+            "mv s2, a2",
+            "mv s5, a1",
+            "mv s3, a0"
+          ]
+        },
+        {
+          "offset": 86,
+          "instruction": "beqz a0, 0x18d90 <audit_dot_product+0xbe2>",
+          "context": [
+            "mv a1, s0",
+            "auipc ra, 0xffffa",
+            "jalr -0x364(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 110,
+          "instruction": "beqz a0, 0x18d90 <audit_dot_product+0xbe2>",
+          "context": [
+            "mv a1, s0",
+            "auipc ra, 0xffffa",
+            "jalr -0x37c(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 142,
+          "instruction": "bgeu a0, s10, 0x18d14 <audit_dot_product+0xb66>",
+          "context": [
+            "sw s10, 0x60(sp)",
+            "sw s7, 0x64(sp)",
+            "sw zero, 0x68(sp)"
+          ]
+        },
+        {
+          "offset": 194,
+          "instruction": "bltu s10, s2, 0x18276 <audit_dot_product+0xc8>",
+          "context": [
+            "sw a0, 0x78(sp)",
+            "sw s9, 0x7c(sp)",
+            "sw zero, 0x80(sp)"
+          ]
+        },
+        {
+          "offset": 202,
+          "instruction": "beqz s10, 0x18d9c <audit_dot_product+0xbee>",
+          "context": [
+            "bltu s10, s2, 0x18276 <audit_dot_product+0xc8>",
+            "mv s10, s2",
+            "sw s10, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 582,
+          "instruction": "beq s3, a0, 0x1849c <audit_dot_product+0x2ee>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x2e4(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "lw a0, 0x54(sp)"
+          ]
+        },
+        {
+          "offset": 628,
+          "instruction": "beq s3, a0, 0x184aa <audit_dot_product+0x2fc>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x2b6(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "lw a0, 0x60(sp)"
+          ]
+        },
+        {
+          "offset": 668,
+          "instruction": "beq s3, a0, 0x184b8 <audit_dot_product+0x30a>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x1fe(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "lw a0, 0x6c(sp)"
+          ]
+        },
+        {
+          "offset": 718,
+          "instruction": "beq s3, a0, 0x184c6 <audit_dot_product+0x318>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x1cc(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "lw a0, 0x78(sp)"
+          ]
+        },
+        {
+          "offset": 744,
+          "instruction": "bne s2, a0, 0x1827e <audit_dot_product+0xd0>",
+          "context": [
+            "jalr 0x12a(ra) <memcpy>",
+            "sw s2, 0x80(sp)",
+            "lw a0, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 862,
+          "instruction": "bltu a1, a0, 0x185ac <audit_dot_product+0x3fe>",
+          "context": [
+            "jalr 0x494(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>",
+            "li a0, 0x2",
+            "lw a1, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 884,
+          "instruction": "beqz s3, 0x18d84 <audit_dot_product+0xbd6>",
+          "context": [
+            "addi s1, s9, 0x3c0",
+            "addi s0, s7, 0x41",
+            "li s6, 0x1"
+          ]
+        },
+        {
+          "offset": 1018,
+          "instruction": "bne a0, s6, 0x18522 <audit_dot_product+0x374>",
+          "context": [
+            "addi s0, s0, 0x21",
+            "addi s3, s3, -0x1",
+            "lw a0, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 2536,
+          "instruction": "bnez a1, 0x185ea <audit_dot_product+0x43c>",
+          "context": [
+            "jalr -0x5d6(ra) <memcpy>",
+            "lw a1, 0x50(sp)",
+            "addi a1, a1, -0x1"
+          ]
+        },
+        {
+          "offset": 2542,
+          "instruction": "beqz s3, 0x18c4a <audit_dot_product+0xa9c>",
+          "context": [
+            "addi a1, a1, -0x1",
+            "bnez a1, 0x185ea <audit_dot_product+0x43c>",
+            "lw s3, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 2570,
+          "instruction": "beq s7, s1, 0x18d54 <audit_dot_product+0xba6>",
+          "context": [
+            "lw a0, 0x10(sp)",
+            "add s2, s2, a0",
+            "add s6, s6, a0"
+          ]
+        },
+        {
+          "offset": 2574,
+          "instruction": "beq s8, s1, 0x18d78 <audit_dot_product+0xbca>",
+          "context": [
+            "add s2, s2, a0",
+            "add s6, s6, a0",
+            "beq s7, s1, 0x18d54 <audit_dot_product+0xba6>"
+          ]
+        },
+        {
+          "offset": 2632,
+          "instruction": "beq s9, s1, 0x18d60 <audit_dot_product+0xbb2>",
+          "context": [
+            "li a2, 0x78",
+            "auipc ra, 0x3",
+            "jalr -0x63a(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2636,
+          "instruction": "beq s10, s1, 0x18d6c <audit_dot_product+0xbbe>",
+          "context": [
+            "auipc ra, 0x3",
+            "jalr -0x63a(ra) <memcpy>",
+            "beq s9, s1, 0x18d60 <audit_dot_product+0xbb2>"
+          ]
+        },
+        {
+          "offset": 2712,
+          "instruction": "bne s3, s1, 0x18bb8 <audit_dot_product+0xa0a>",
+          "context": [
+            "addi s2, s2, 0x21",
+            "addi s11, s11, 0x3c0",
+            "addi s6, s6, 0x21"
+          ]
+        },
+        {
+          "offset": 2730,
+          "instruction": "bnez a4, 0x185e6 <audit_dot_product+0x438>",
+          "context": [
+            "sw a0, 0x10(sp)",
+            "lw s6, 0x24(sp)",
+            "lw s11, 0x20(sp)"
+          ]
+        },
+        {
+          "offset": 2756,
+          "instruction": "beqz a1, 0x18c86 <audit_dot_product+0xad8>",
+          "context": [
+            "jalr -0x6b2(ra) <memcpy>",
+            "lw a1, 0x78(sp)",
+            "addi a0, sp, 0xfc"
+          ]
+        },
+        {
+          "offset": 2782,
+          "instruction": "beqz a3, 0x18ca2 <audit_dot_product+0xaf4>",
+          "context": [
+            "addi a2, sp, 0xfc",
+            "lw a3, 0x6c(sp)",
+            "sw a1, 0x0(a2)"
+          ]
+        },
+        {
+          "offset": 2812,
+          "instruction": "beqz a2, 0x18cbc <audit_dot_product+0xb0e>",
+          "context": [
+            "lw a2, 0x60(sp)",
+            "sw a1, 0x0(a0)",
+            "addi a0, sp, 0xfc"
+          ]
+        },
+        {
+          "offset": 2838,
+          "instruction": "beqz a3, 0x18cd6 <audit_dot_product+0xb28>",
+          "context": [
+            "addi a2, sp, 0xfc",
+            "lw a3, 0x54(sp)",
+            "sw a1, 0x0(a2)"
+          ]
+        },
+        {
+          "offset": 2920,
+          "instruction": "beqz s1, 0x18d4c <audit_dot_product+0xb9e>",
+          "context": [
+            "addi sp, sp, 0x720",
+            "ret ",
+            "sw s3, 0x4(sp)"
+          ]
+        },
+        {
+          "offset": 2936,
+          "instruction": "beqz a0, 0x18240 <audit_dot_product+0x92>",
+          "context": [
+            "mv a1, s1",
+            "auipc ra, 0xffff9",
+            "jalr 0x17a(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 2964,
+          "instruction": "bnez s9, 0x1826a <audit_dot_product+0xbc>",
+          "context": [
+            "jalr 0x162(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>",
+            "mv s9, a0",
+            "mv a0, s10"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 66,
+          "instruction": "beqz a4, 0x181f0 <audit_dot_product+0x9e>",
+          "context": [
+            "mv s2, a2",
+            "mv s5, a1",
+            "mv s3, a0"
+          ]
+        },
+        {
+          "offset": 86,
+          "instruction": "beqz a0, 0x18d34 <audit_dot_product+0xbe2>",
+          "context": [
+            "mv a1, s0",
+            "auipc ra, 0xffffa",
+            "jalr -0x34c(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 110,
+          "instruction": "beqz a0, 0x18d34 <audit_dot_product+0xbe2>",
+          "context": [
+            "mv a1, s0",
+            "auipc ra, 0xffffa",
+            "jalr -0x364(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 142,
+          "instruction": "bgeu a0, s10, 0x18cb8 <audit_dot_product+0xb66>",
+          "context": [
+            "sw s10, 0x60(sp)",
+            "sw s7, 0x64(sp)",
+            "sw zero, 0x68(sp)"
+          ]
+        },
+        {
+          "offset": 194,
+          "instruction": "bltu s10, s2, 0x1821a <audit_dot_product+0xc8>",
+          "context": [
+            "sw a0, 0x78(sp)",
+            "sw s9, 0x7c(sp)",
+            "sw zero, 0x80(sp)"
+          ]
+        },
+        {
+          "offset": 202,
+          "instruction": "beqz s10, 0x18d40 <audit_dot_product+0xbee>",
+          "context": [
+            "bltu s10, s2, 0x1821a <audit_dot_product+0xc8>",
+            "mv s10, s2",
+            "sw s10, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 582,
+          "instruction": "beq s3, a0, 0x18440 <audit_dot_product+0x2ee>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x2ec(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "lw a0, 0x54(sp)"
+          ]
+        },
+        {
+          "offset": 628,
+          "instruction": "beq s3, a0, 0x1844e <audit_dot_product+0x2fc>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x2be(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>",
+            "lw a0, 0x60(sp)"
+          ]
+        },
+        {
+          "offset": 668,
+          "instruction": "beq s3, a0, 0x1845c <audit_dot_product+0x30a>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x206(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "lw a0, 0x6c(sp)"
+          ]
+        },
+        {
+          "offset": 718,
+          "instruction": "beq s3, a0, 0x1846a <audit_dot_product+0x318>",
+          "context": [
+            "auipc ra, 0xffffc",
+            "jalr 0x1d4(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>",
+            "lw a0, 0x78(sp)"
+          ]
+        },
+        {
+          "offset": 744,
+          "instruction": "bne s2, a0, 0x18222 <audit_dot_product+0xd0>",
+          "context": [
+            "jalr 0xe0(ra) <memcpy>",
+            "sw s2, 0x80(sp)",
+            "lw a0, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 862,
+          "instruction": "bltu a1, a0, 0x18550 <audit_dot_product+0x3fe>",
+          "context": [
+            "jalr 0x49c(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>",
+            "li a0, 0x2",
+            "lw a1, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 884,
+          "instruction": "beqz s3, 0x18d28 <audit_dot_product+0xbd6>",
+          "context": [
+            "addi s1, s9, 0x3c0",
+            "addi s0, s7, 0x41",
+            "li s6, 0x1"
+          ]
+        },
+        {
+          "offset": 1018,
+          "instruction": "bne a0, s6, 0x184c6 <audit_dot_product+0x374>",
+          "context": [
+            "addi s0, s0, 0x21",
+            "addi s3, s3, -0x1",
+            "lw a0, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 2536,
+          "instruction": "bnez a1, 0x1858e <audit_dot_product+0x43c>",
+          "context": [
+            "jalr -0x620(ra) <memcpy>",
+            "lw a1, 0x50(sp)",
+            "addi a1, a1, -0x1"
+          ]
+        },
+        {
+          "offset": 2542,
+          "instruction": "beqz s3, 0x18bee <audit_dot_product+0xa9c>",
+          "context": [
+            "addi a1, a1, -0x1",
+            "bnez a1, 0x1858e <audit_dot_product+0x43c>",
+            "lw s3, 0xc(sp)"
+          ]
+        },
+        {
+          "offset": 2570,
+          "instruction": "beq s7, s1, 0x18cf8 <audit_dot_product+0xba6>",
+          "context": [
+            "lw a0, 0x10(sp)",
+            "add s2, s2, a0",
+            "add s6, s6, a0"
+          ]
+        },
+        {
+          "offset": 2574,
+          "instruction": "beq s8, s1, 0x18d1c <audit_dot_product+0xbca>",
+          "context": [
+            "add s2, s2, a0",
+            "add s6, s6, a0",
+            "beq s7, s1, 0x18cf8 <audit_dot_product+0xba6>"
+          ]
+        },
+        {
+          "offset": 2632,
+          "instruction": "beq s9, s1, 0x18d04 <audit_dot_product+0xbb2>",
+          "context": [
+            "li a2, 0x78",
+            "auipc ra, 0x3",
+            "jalr -0x684(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2636,
+          "instruction": "beq s10, s1, 0x18d10 <audit_dot_product+0xbbe>",
+          "context": [
+            "auipc ra, 0x3",
+            "jalr -0x684(ra) <memcpy>",
+            "beq s9, s1, 0x18d04 <audit_dot_product+0xbb2>"
+          ]
+        },
+        {
+          "offset": 2712,
+          "instruction": "bne s3, s1, 0x18b5c <audit_dot_product+0xa0a>",
+          "context": [
+            "addi s2, s2, 0x21",
+            "addi s11, s11, 0x3c0",
+            "addi s6, s6, 0x21"
+          ]
+        },
+        {
+          "offset": 2730,
+          "instruction": "bnez a4, 0x1858a <audit_dot_product+0x438>",
+          "context": [
+            "sw a0, 0x10(sp)",
+            "lw s6, 0x24(sp)",
+            "lw s11, 0x20(sp)"
+          ]
+        },
+        {
+          "offset": 2756,
+          "instruction": "beqz a1, 0x18c2a <audit_dot_product+0xad8>",
+          "context": [
+            "jalr -0x6fc(ra) <memcpy>",
+            "lw a1, 0x78(sp)",
+            "addi a0, sp, 0xfc"
+          ]
+        },
+        {
+          "offset": 2782,
+          "instruction": "beqz a3, 0x18c46 <audit_dot_product+0xaf4>",
+          "context": [
+            "addi a2, sp, 0xfc",
+            "lw a3, 0x6c(sp)",
+            "sw a1, 0x0(a2)"
+          ]
+        },
+        {
+          "offset": 2812,
+          "instruction": "beqz a2, 0x18c60 <audit_dot_product+0xb0e>",
+          "context": [
+            "lw a2, 0x60(sp)",
+            "sw a1, 0x0(a0)",
+            "addi a0, sp, 0xfc"
+          ]
+        },
+        {
+          "offset": 2838,
+          "instruction": "beqz a3, 0x18c7a <audit_dot_product+0xb28>",
+          "context": [
+            "addi a2, sp, 0xfc",
+            "lw a3, 0x54(sp)",
+            "sw a1, 0x0(a2)"
+          ]
+        },
+        {
+          "offset": 2920,
+          "instruction": "beqz s1, 0x18cf0 <audit_dot_product+0xb9e>",
+          "context": [
+            "addi sp, sp, 0x720",
+            "ret ",
+            "sw s3, 0x4(sp)"
+          ]
+        },
+        {
+          "offset": 2936,
+          "instruction": "beqz a0, 0x181e4 <audit_dot_product+0x92>",
+          "context": [
+            "mv a1, s1",
+            "auipc ra, 0xffff9",
+            "jalr 0x192(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 2964,
+          "instruction": "bnez s9, 0x1820e <audit_dot_product+0xbc>",
+          "context": [
+            "jalr 0x17a(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>",
+            "mv s9, a0",
+            "mv a0, s10"
+          ]
+        }
+      ],
+      "old_memory": 313,
+      "new_memory": 313,
+      "operand_differences": [
+        {
+          "offset": 66,
+          "before": [
+            "beqz",
+            "a4, 0x1824c <audit_dot_product+0x9e>"
+          ],
+          "after": [
+            "beqz",
+            "a4, 0x181f0 <audit_dot_product+0x9e>"
+          ]
+        },
+        {
+          "offset": 82,
+          "before": [
+            "jalr",
+            "-0x364(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ],
+          "after": [
+            "jalr",
+            "-0x34c(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 86,
+          "before": [
+            "beqz",
+            "a0, 0x18d90 <audit_dot_product+0xbe2>"
+          ],
+          "after": [
+            "beqz",
+            "a0, 0x18d34 <audit_dot_product+0xbe2>"
+          ]
+        },
+        {
+          "offset": 106,
+          "before": [
+            "jalr",
+            "-0x37c(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ],
+          "after": [
+            "jalr",
+            "-0x364(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 110,
+          "before": [
+            "beqz",
+            "a0, 0x18d90 <audit_dot_product+0xbe2>"
+          ],
+          "after": [
+            "beqz",
+            "a0, 0x18d34 <audit_dot_product+0xbe2>"
+          ]
+        },
+        {
+          "offset": 142,
+          "before": [
+            "bgeu",
+            "a0, s10, 0x18d14 <audit_dot_product+0xb66>"
+          ],
+          "after": [
+            "bgeu",
+            "a0, s10, 0x18cb8 <audit_dot_product+0xb66>"
+          ]
+        },
+        {
+          "offset": 154,
+          "before": [
+            "jalr",
+            "-0x362(ra) <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "jalr",
+            "-0x34a(ra) <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 194,
+          "before": [
+            "bltu",
+            "s10, s2, 0x18276 <audit_dot_product+0xc8>"
+          ],
+          "after": [
+            "bltu",
+            "s10, s2, 0x1821a <audit_dot_product+0xc8>"
+          ]
+        },
+        {
+          "offset": 202,
+          "before": [
+            "beqz",
+            "s10, 0x18d9c <audit_dot_product+0xbee>"
+          ],
+          "after": [
+            "beqz",
+            "s10, 0x18d40 <audit_dot_product+0xbee>"
+          ]
+        },
+        {
+          "offset": 238,
+          "before": [
+            "jalr",
+            "0x286(ra) <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ],
+          "after": [
+            "jalr",
+            "0x28e(ra) <secp256kfun::vendor::k256::mul::decompose_scalar>"
+          ]
+        },
+        {
+          "offset": 256,
+          "before": [
+            "jalr",
+            "0x30a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x2c0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 274,
+          "before": [
+            "jalr",
+            "0x2f8(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x2ae(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 296,
+          "before": [
+            "jalr",
+            "0x6b6(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "0x6be(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 316,
+          "before": [
+            "jalr",
+            "0x2ce(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x284(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 336,
+          "before": [
+            "jalr",
+            "0x2ba(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x270(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 348,
+          "before": [
+            "jalr",
+            "0x2be(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ],
+          "after": [
+            "jalr",
+            "0x2c6(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ]
+        },
+        {
+          "offset": 362,
+          "before": [
+            "jalr",
+            "0x2b0(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ],
+          "after": [
+            "jalr",
+            "0x2b8(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::is_high>"
+          ]
+        },
+        {
+          "offset": 380,
+          "before": [
+            "jalr",
+            "-0x3a6(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::negate>"
+          ],
+          "after": [
+            "jalr",
+            "-0x39e(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::negate>"
+          ]
+        },
+        {
+          "offset": 404,
+          "before": [
+            "jalr",
+            "-0x2b4(ra) <<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "jalr",
+            "-0x2ac(ra) <<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 422,
+          "before": [
+            "jalr",
+            "0x264(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x21a(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 438,
+          "before": [
+            "jalr",
+            "-0x3e0(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::negate>"
+          ],
+          "after": [
+            "jalr",
+            "-0x3d8(ra) <<secp256kfun::vendor::k256::scalar::Scalar>::negate>"
+          ]
+        },
+        {
+          "offset": 462,
+          "before": [
+            "jalr",
+            "-0x2ee(ra) <<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "jalr",
+            "-0x2e6(ra) <<secp256kfun::vendor::k256::scalar::scalar_8x32::Scalar8x32 as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 480,
+          "before": [
+            "jalr",
+            "0x22a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1e0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 492,
+          "before": [
+            "jalr",
+            "0x204(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg>"
+          ],
+          "after": [
+            "jalr",
+            "0x20c(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg>"
+          ]
+        },
+        {
+          "offset": 508,
+          "before": [
+            "jalr",
+            "0x2b4(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "jalr",
+            "0x2bc(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 524,
+          "before": [
+            "jalr",
+            "0x1e4(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg>"
+          ],
+          "after": [
+            "jalr",
+            "0x1ec(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::neg>"
+          ]
+        },
+        {
+          "offset": 544,
+          "before": [
+            "jalr",
+            "0x290(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ],
+          "after": [
+            "jalr",
+            "0x298(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint as subtle_ng::ConditionallySelectable>::conditional_select>"
+          ]
+        },
+        {
+          "offset": 562,
+          "before": [
+            "jalr",
+            "0x1d8(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x18e(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 576,
+          "before": [
+            "jalr",
+            "0x2e4(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "jalr",
+            "0x2ec(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 582,
+          "before": [
+            "beq",
+            "s3, a0, 0x1849c <audit_dot_product+0x2ee>"
+          ],
+          "after": [
+            "beq",
+            "s3, a0, 0x18440 <audit_dot_product+0x2ee>"
+          ]
+        },
+        {
+          "offset": 606,
+          "before": [
+            "jalr",
+            "0x1ac(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x162(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 622,
+          "before": [
+            "jalr",
+            "0x2b6(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ],
+          "after": [
+            "jalr",
+            "0x2be(ra) <<secp256kfun::vendor::k256::mul::Radix16Decomposition>::new>"
+          ]
+        },
+        {
+          "offset": 628,
+          "before": [
+            "beq",
+            "s3, a0, 0x184aa <audit_dot_product+0x2fc>"
+          ],
+          "after": [
+            "beq",
+            "s3, a0, 0x1844e <audit_dot_product+0x2fc>"
+          ]
+        },
+        {
+          "offset": 648,
+          "before": [
+            "jalr",
+            "0x182(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x138(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 662,
+          "before": [
+            "jalr",
+            "0x1fe(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ],
+          "after": [
+            "jalr",
+            "0x206(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ]
+        },
+        {
+          "offset": 668,
+          "before": [
+            "beq",
+            "s3, a0, 0x184b8 <audit_dot_product+0x30a>"
+          ],
+          "after": [
+            "beq",
+            "s3, a0, 0x1845c <audit_dot_product+0x30a>"
+          ]
+        },
+        {
+          "offset": 696,
+          "before": [
+            "jalr",
+            "0x152(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x108(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 712,
+          "before": [
+            "jalr",
+            "0x1cc(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ],
+          "after": [
+            "jalr",
+            "0x1d4(ra) <<secp256kfun::vendor::k256::mul::LookupTable as core::convert::From<&secp256kfun::vendor::k256::projective::ProjectivePoint>>::from>"
+          ]
+        },
+        {
+          "offset": 718,
+          "before": [
+            "beq",
+            "s3, a0, 0x184c6 <audit_dot_product+0x318>"
+          ],
+          "after": [
+            "beq",
+            "s3, a0, 0x1846a <audit_dot_product+0x318>"
+          ]
+        },
+        {
+          "offset": 736,
+          "before": [
+            "jalr",
+            "0x12a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0xe0(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 744,
+          "before": [
+            "bne",
+            "s2, a0, 0x1827e <audit_dot_product+0xd0>"
+          ],
+          "after": [
+            "bne",
+            "s2, a0, 0x18222 <audit_dot_product+0xd0>"
+          ]
+        },
+        {
+          "offset": 748,
+          "before": [
+            "j",
+            "0x184d4 <audit_dot_product+0x326>"
+          ],
+          "after": [
+            "j",
+            "0x18478 <audit_dot_product+0x326>"
+          ]
+        },
+        {
+          "offset": 762,
+          "before": [
+            "j",
+            "0x183f8 <audit_dot_product+0x24a>"
+          ],
+          "after": [
+            "j",
+            "0x1839c <audit_dot_product+0x24a>"
+          ]
+        },
+        {
+          "offset": 776,
+          "before": [
+            "j",
+            "0x18426 <audit_dot_product+0x278>"
+          ],
+          "after": [
+            "j",
+            "0x183ca <audit_dot_product+0x278>"
+          ]
+        },
+        {
+          "offset": 790,
+          "before": [
+            "j",
+            "0x1844e <audit_dot_product+0x2a0>"
+          ],
+          "after": [
+            "j",
+            "0x183f2 <audit_dot_product+0x2a0>"
+          ]
+        },
+        {
+          "offset": 804,
+          "before": [
+            "j",
+            "0x18480 <audit_dot_product+0x2d2>"
+          ],
+          "after": [
+            "j",
+            "0x18424 <audit_dot_product+0x2d2>"
+          ]
+        },
+        {
+          "offset": 820,
+          "before": [
+            "jalr",
+            "0x3b8(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "0x3c0(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 836,
+          "before": [
+            "jalr",
+            "0x3a8(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "0x3b0(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 854,
+          "before": [
+            "jalr",
+            "0x494(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "jalr",
+            "0x49c(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 862,
+          "before": [
+            "bltu",
+            "a1, a0, 0x185ac <audit_dot_product+0x3fe>"
+          ],
+          "after": [
+            "bltu",
+            "a1, a0, 0x18550 <audit_dot_product+0x3fe>"
+          ]
+        },
+        {
+          "offset": 884,
+          "before": [
+            "beqz",
+            "s3, 0x18d84 <audit_dot_product+0xbd6>"
+          ],
+          "after": [
+            "beqz",
+            "s3, 0x18d28 <audit_dot_product+0xbd6>"
+          ]
+        },
+        {
+          "offset": 904,
+          "before": [
+            "jalr",
+            "0x364(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "0x36c(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 922,
+          "before": [
+            "jalr",
+            "0x450(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "jalr",
+            "0x458(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 940,
+          "before": [
+            "jalr",
+            "0x5e(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x14(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 958,
+          "before": [
+            "jalr",
+            "0x32e(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "0x336(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 976,
+          "before": [
+            "jalr",
+            "0x41a(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "jalr",
+            "0x422(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 994,
+          "before": [
+            "jalr",
+            "0x28(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x22(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 1018,
+          "before": [
+            "bne",
+            "a0, s6, 0x18522 <audit_dot_product+0x374>"
+          ],
+          "after": [
+            "bne",
+            "a0, s6, 0x184c6 <audit_dot_product+0x374>"
+          ]
+        },
+        {
+          "offset": 1096,
+          "before": [
+            "jalr",
+            "0x520(ra) <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ],
+          "after": [
+            "jalr",
+            "0x528(ra) <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ]
+        },
+        {
+          "offset": 1110,
+          "before": [
+            "jalr",
+            "0x512(ra) <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ],
+          "after": [
+            "jalr",
+            "0x51a(ra) <<secp256kfun::vendor::k256::field::FieldElement>::square>"
+          ]
+        },
+        {
+          "offset": 1128,
+          "before": [
+            "jalr",
+            "0x376(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "0x37e(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 1374,
+          "before": [
+            "jalr",
+            "0xc8(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ],
+          "after": [
+            "jalr",
+            "0xd0(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ]
+        },
+        {
+          "offset": 1538,
+          "before": [
+            "jalr",
+            "0x24(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ],
+          "after": [
+            "jalr",
+            "0x2c(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ]
+        },
+        {
+          "offset": 1856,
+          "before": [
+            "jalr",
+            "0x9e(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "0xa6(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 2040,
+          "before": [
+            "jalr",
+            "-0x1d2(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ],
+          "after": [
+            "jalr",
+            "-0x1ca(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ]
+        },
+        {
+          "offset": 2138,
+          "before": [
+            "jalr",
+            "-0x7c(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "-0x74(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 2158,
+          "before": [
+            "jalr",
+            "-0x90(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "-0x88(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 2372,
+          "before": [
+            "jalr",
+            "-0x31e(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ],
+          "after": [
+            "jalr",
+            "-0x316(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ]
+        },
+        {
+          "offset": 2390,
+          "before": [
+            "jalr",
+            "-0x178(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "-0x170(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 2406,
+          "before": [
+            "jalr",
+            "-0x188(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "-0x180(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 2510,
+          "before": [
+            "jalr",
+            "-0x3a8(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ],
+          "after": [
+            "jalr",
+            "-0x3a0(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::add_modulus_correction>"
+          ]
+        },
+        {
+          "offset": 2528,
+          "before": [
+            "jalr",
+            "-0x5d6(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x620(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2536,
+          "before": [
+            "bnez",
+            "a1, 0x185ea <audit_dot_product+0x43c>"
+          ],
+          "after": [
+            "bnez",
+            "a1, 0x1858e <audit_dot_product+0x43c>"
+          ]
+        },
+        {
+          "offset": 2542,
+          "before": [
+            "beqz",
+            "s3, 0x18c4a <audit_dot_product+0xa9c>"
+          ],
+          "after": [
+            "beqz",
+            "s3, 0x18bee <audit_dot_product+0xa9c>"
+          ]
+        },
+        {
+          "offset": 2570,
+          "before": [
+            "beq",
+            "s7, s1, 0x18d54 <audit_dot_product+0xba6>"
+          ],
+          "after": [
+            "beq",
+            "s7, s1, 0x18cf8 <audit_dot_product+0xba6>"
+          ]
+        },
+        {
+          "offset": 2574,
+          "before": [
+            "beq",
+            "s8, s1, 0x18d78 <audit_dot_product+0xbca>"
+          ],
+          "after": [
+            "beq",
+            "s8, s1, 0x18d1c <audit_dot_product+0xbca>"
+          ]
+        },
+        {
+          "offset": 2592,
+          "before": [
+            "jalr",
+            "-0x334(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "-0x32c(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 2610,
+          "before": [
+            "jalr",
+            "-0x248(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "jalr",
+            "-0x240(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 2628,
+          "before": [
+            "jalr",
+            "-0x63a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x684(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2632,
+          "before": [
+            "beq",
+            "s9, s1, 0x18d60 <audit_dot_product+0xbb2>"
+          ],
+          "after": [
+            "beq",
+            "s9, s1, 0x18d04 <audit_dot_product+0xbb2>"
+          ]
+        },
+        {
+          "offset": 2636,
+          "before": [
+            "beq",
+            "s10, s1, 0x18d6c <audit_dot_product+0xbbe>"
+          ],
+          "after": [
+            "beq",
+            "s10, s1, 0x18d10 <audit_dot_product+0xbbe>"
+          ]
+        },
+        {
+          "offset": 2656,
+          "before": [
+            "jalr",
+            "-0x374(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ],
+          "after": [
+            "jalr",
+            "-0x36c(ra) <<secp256kfun::vendor::k256::mul::LookupTable>::select>"
+          ]
+        },
+        {
+          "offset": 2674,
+          "before": [
+            "jalr",
+            "-0x288(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ],
+          "after": [
+            "jalr",
+            "-0x280(ra) <<secp256kfun::vendor::k256::projective::ProjectivePoint>::add>"
+          ]
+        },
+        {
+          "offset": 2692,
+          "before": [
+            "jalr",
+            "-0x67a(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x6c4(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2712,
+          "before": [
+            "bne",
+            "s3, s1, 0x18bb8 <audit_dot_product+0xa0a>"
+          ],
+          "after": [
+            "bne",
+            "s3, s1, 0x18b5c <audit_dot_product+0xa0a>"
+          ]
+        },
+        {
+          "offset": 2730,
+          "before": [
+            "bnez",
+            "a4, 0x185e6 <audit_dot_product+0x438>"
+          ],
+          "after": [
+            "bnez",
+            "a4, 0x1858a <audit_dot_product+0x438>"
+          ]
+        },
+        {
+          "offset": 2748,
+          "before": [
+            "jalr",
+            "-0x6b2(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x6fc(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 2756,
+          "before": [
+            "beqz",
+            "a1, 0x18c86 <audit_dot_product+0xad8>"
+          ],
+          "after": [
+            "beqz",
+            "a1, 0x18c2a <audit_dot_product+0xad8>"
+          ]
+        },
+        {
+          "offset": 2774,
+          "before": [
+            "j",
+            "0x18c88 <audit_dot_product+0xada>"
+          ],
+          "after": [
+            "j",
+            "0x18c2c <audit_dot_product+0xada>"
+          ]
+        },
+        {
+          "offset": 2782,
+          "before": [
+            "beqz",
+            "a3, 0x18ca2 <audit_dot_product+0xaf4>"
+          ],
+          "after": [
+            "beqz",
+            "a3, 0x18c46 <audit_dot_product+0xaf4>"
+          ]
+        },
+        {
+          "offset": 2802,
+          "before": [
+            "j",
+            "0x18ca4 <audit_dot_product+0xaf6>"
+          ],
+          "after": [
+            "j",
+            "0x18c48 <audit_dot_product+0xaf6>"
+          ]
+        },
+        {
+          "offset": 2812,
+          "before": [
+            "beqz",
+            "a2, 0x18cbc <audit_dot_product+0xb0e>"
+          ],
+          "after": [
+            "beqz",
+            "a2, 0x18c60 <audit_dot_product+0xb0e>"
+          ]
+        },
+        {
+          "offset": 2828,
+          "before": [
+            "j",
+            "0x18cc0 <audit_dot_product+0xb12>"
+          ],
+          "after": [
+            "j",
+            "0x18c64 <audit_dot_product+0xb12>"
+          ]
+        },
+        {
+          "offset": 2838,
+          "before": [
+            "beqz",
+            "a3, 0x18cd6 <audit_dot_product+0xb28>"
+          ],
+          "after": [
+            "beqz",
+            "a3, 0x18c7a <audit_dot_product+0xb28>"
+          ]
+        },
+        {
+          "offset": 2854,
+          "before": [
+            "j",
+            "0x18cd8 <audit_dot_product+0xb2a>"
+          ],
+          "after": [
+            "j",
+            "0x18c7c <audit_dot_product+0xb2a>"
+          ]
+        },
+        {
+          "offset": 2920,
+          "before": [
+            "beqz",
+            "s1, 0x18d4c <audit_dot_product+0xb9e>"
+          ],
+          "after": [
+            "beqz",
+            "s1, 0x18cf0 <audit_dot_product+0xb9e>"
+          ]
+        },
+        {
+          "offset": 2932,
+          "before": [
+            "jalr",
+            "0x17a(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ],
+          "after": [
+            "jalr",
+            "0x192(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 2936,
+          "before": [
+            "beqz",
+            "a0, 0x18240 <audit_dot_product+0x92>"
+          ],
+          "after": [
+            "beqz",
+            "a0, 0x181e4 <audit_dot_product+0x92>"
+          ]
+        },
+        {
+          "offset": 2956,
+          "before": [
+            "jalr",
+            "0x162(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ],
+          "after": [
+            "jalr",
+            "0x17a(ra) <<ct_audit::arena::Arena as core::alloc::global::GlobalAlloc>::alloc>"
+          ]
+        },
+        {
+          "offset": 2964,
+          "before": [
+            "bnez",
+            "s9, 0x1826a <audit_dot_product+0xbc>"
+          ],
+          "after": [
+            "bnez",
+            "s9, 0x1820e <audit_dot_product+0xbc>"
+          ]
+        },
+        {
+          "offset": 2970,
+          "before": [
+            "j",
+            "0x18242 <audit_dot_product+0x94>"
+          ],
+          "after": [
+            "j",
+            "0x181e6 <audit_dot_product+0x94>"
+          ]
+        },
+        {
+          "offset": 2978,
+          "before": [
+            "j",
+            "0x18262 <audit_dot_product+0xb4>"
+          ],
+          "after": [
+            "j",
+            "0x18206 <audit_dot_product+0xb4>"
+          ]
+        },
+        {
+          "offset": 2990,
+          "before": [
+            "jalr",
+            "0x1c4(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x1cc(ra) <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 3002,
+          "before": [
+            "jalr",
+            "0x1b8(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x1c0(ra) <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 3014,
+          "before": [
+            "jalr",
+            "0x1ac(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x1b4(ra) <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 3026,
+          "before": [
+            "jalr",
+            "0x1a0(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x1a8(ra) <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 3038,
+          "before": [
+            "jalr",
+            "0x194(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x19c(ra) <core::panicking::panic_bounds_check>"
+          ]
+        },
+        {
+          "offset": 3050,
+          "before": [
+            "jalr",
+            "0x14e(ra) <alloc::raw_vec::handle_error>"
+          ],
+          "after": [
+            "jalr",
+            "0x166(ra) <alloc::raw_vec::handle_error>"
+          ]
+        },
+        {
+          "offset": 3062,
+          "before": [
+            "jalr",
+            "0x17c(ra) <core::panicking::panic_bounds_check>"
+          ],
+          "after": [
+            "jalr",
+            "0x184(ra) <core::panicking::panic_bounds_check>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_normalize",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 6,
+      "new_memory": 6,
+      "operand_differences": [
+        {
+          "offset": 18,
+          "before": [
+            "jalr",
+            "-0x416(ra) <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize>"
+          ],
+          "after": [
+            "jalr",
+            "-0x40e(ra) <<secp256kfun::backend::k256_impl::ConstantTime as secp256kfun::backend::TimeSensitive>::point_normalize>"
+          ]
+        },
+        {
+          "offset": 34,
+          "before": [
+            "jalr",
+            "0x1e(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "-0x2c(ra) <memcpy>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_point_eq_normal",
+      "inversion_change": false,
+      "opcodes_same": true,
+      "old_branches": [],
+      "new_branches": [],
+      "old_memory": 82,
+      "new_memory": 82,
+      "operand_differences": [
+        {
+          "offset": 56,
+          "before": [
+            "jalr",
+            "0x236(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1ec(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 72,
+          "before": [
+            "jalr",
+            "0x226(ra) <memcpy>"
+          ],
+          "after": [
+            "jalr",
+            "0x1dc(ra) <memcpy>"
+          ]
+        },
+        {
+          "offset": 88,
+          "before": [
+            "jalr",
+            "0xee(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ],
+          "after": [
+            "jalr",
+            "0xf6(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ]
+        },
+        {
+          "offset": 118,
+          "before": [
+            "jalr",
+            "0xd0(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ],
+          "after": [
+            "jalr",
+            "0xd8(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ]
+        },
+        {
+          "offset": 134,
+          "before": [
+            "jalr",
+            "0x16e(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "0x124(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 150,
+          "before": [
+            "jalr",
+            "0x15e(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "0x114(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 162,
+          "before": [
+            "jalr",
+            "0x152(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "0x108(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 180,
+          "before": [
+            "jalr",
+            "0x58e(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "0x596(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 336,
+          "before": [
+            "jalr",
+            "-0xa(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ],
+          "after": [
+            "jalr",
+            "-0x2(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ]
+        },
+        {
+          "offset": 352,
+          "before": [
+            "jalr",
+            "0x4e2(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ],
+          "after": [
+            "jalr",
+            "0x4ea(ra) <<secp256kfun::vendor::k256::field::field_10x26::FieldElement10x26>::mul>"
+          ]
+        },
+        {
+          "offset": 478,
+          "before": [
+            "jalr",
+            "-0x98(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ],
+          "after": [
+            "jalr",
+            "-0x90(ra) <<secp256kfun::vendor::k256::field::FieldElement>::normalizes_to_zero>"
+          ]
+        },
+        {
+          "offset": 492,
+          "before": [
+            "jalr",
+            "0x8(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "-0x42(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 508,
+          "before": [
+            "jalr",
+            "-0x8(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "-0x52(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 522,
+          "before": [
+            "jalr",
+            "-0x16(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "-0x60(ra) <subtle_ng::black_box>"
+          ]
+        },
+        {
+          "offset": 538,
+          "before": [
+            "jalr",
+            "-0x26(ra) <subtle_ng::black_box>"
+          ],
+          "after": [
+            "jalr",
+            "-0x70(ra) <subtle_ng::black_box>"
+          ]
+        }
+      ],
+      "review": "Inspected relocated call/branch targets, constants, panic-location data, GOT or firmware arena addresses. Opcodes, branch offsets, call/exclusion/unresolved sets and memory counts unchanged. Data accesses still use the same fixed or public structure; this is manual scoped inspection, not a universal provenance proof."
+    },
+    {
+      "function": "audit_scalar_invert",
+      "inversion_change": true,
+      "opcodes_same": false,
+      "old_branches": [
+        {
+          "offset": 170,
+          "instruction": "bnez s0, 0x1a97e <audit_scalar_invert+0x8a>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x3e0(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 252,
+          "instruction": "bnez s0, 0x1a9d0 <audit_scalar_invert+0xdc>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x432(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 334,
+          "instruction": "bnez s0, 0x1aa22 <audit_scalar_invert+0x12e>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x484(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 416,
+          "instruction": "bnez s0, 0x1aa74 <audit_scalar_invert+0x180>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x4d6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 498,
+          "instruction": "bnez s0, 0x1aac6 <audit_scalar_invert+0x1d2>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x528(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 582,
+          "instruction": "bnez s0, 0x1ab1a <audit_scalar_invert+0x226>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x57c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 648,
+          "instruction": "bnez s0, 0x1ab5c <audit_scalar_invert+0x268>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x5be(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 714,
+          "instruction": "bnez s0, 0x1ab9e <audit_scalar_invert+0x2aa>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x600(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 780,
+          "instruction": "bnez s0, 0x1abe0 <audit_scalar_invert+0x2ec>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x642(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 846,
+          "instruction": "bnez s0, 0x1ac22 <audit_scalar_invert+0x32e>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x684(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 912,
+          "instruction": "bnez s0, 0x1ac64 <audit_scalar_invert+0x370>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x6c6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 978,
+          "instruction": "bnez s0, 0x1aca6 <audit_scalar_invert+0x3b2>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x708(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1044,
+          "instruction": "bnez s0, 0x1ace8 <audit_scalar_invert+0x3f4>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x74a(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1110,
+          "instruction": "bnez s0, 0x1ad2a <audit_scalar_invert+0x436>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x78c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1176,
+          "instruction": "bnez s0, 0x1ad6c <audit_scalar_invert+0x478>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x7ce(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1242,
+          "instruction": "bnez s0, 0x1adae <audit_scalar_invert+0x4ba>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x7f0(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1292,
+          "instruction": "bnez s0, 0x1ade0 <audit_scalar_invert+0x4ec>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x7be(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1342,
+          "instruction": "bnez s0, 0x1ae12 <audit_scalar_invert+0x51e>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x78c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1392,
+          "instruction": "bnez s0, 0x1ae44 <audit_scalar_invert+0x550>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x75a(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1442,
+          "instruction": "bnez s0, 0x1ae76 <audit_scalar_invert+0x582>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x728(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1492,
+          "instruction": "bnez s0, 0x1aea8 <audit_scalar_invert+0x5b4>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x6f6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1542,
+          "instruction": "bnez s0, 0x1aeda <audit_scalar_invert+0x5e6>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x6c4(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1592,
+          "instruction": "bnez s0, 0x1af0c <audit_scalar_invert+0x618>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x692(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1642,
+          "instruction": "bnez s0, 0x1af3e <audit_scalar_invert+0x64a>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x660(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1692,
+          "instruction": "bnez s0, 0x1af70 <audit_scalar_invert+0x67c>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x62e(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1742,
+          "instruction": "bnez s0, 0x1afa2 <audit_scalar_invert+0x6ae>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x5fc(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1792,
+          "instruction": "bnez s0, 0x1afd4 <audit_scalar_invert+0x6e0>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x5ca(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1842,
+          "instruction": "bnez s0, 0x1b006 <audit_scalar_invert+0x712>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x598(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1892,
+          "instruction": "bnez s0, 0x1b038 <audit_scalar_invert+0x744>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x566(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1942,
+          "instruction": "bnez s0, 0x1b06a <audit_scalar_invert+0x776>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x534(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1992,
+          "instruction": "bnez s0, 0x1b09c <audit_scalar_invert+0x7a8>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x502(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 2038,
+          "instruction": "bne a0, a1, 0x1b114 <audit_scalar_invert+0x820>",
+          "context": [
+            "jalr 0x45e(ra) <subtle_ng::black_box>",
+            "zext.b a0, a0",
+            "li a1, 0x1"
+          ]
+        }
+      ],
+      "new_branches": [
+        {
+          "offset": 170,
+          "instruction": "bnez s0, 0x1a922 <audit_scalar_invert+0x8a>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x42a(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 252,
+          "instruction": "bnez s0, 0x1a974 <audit_scalar_invert+0xdc>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x47c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 334,
+          "instruction": "bnez s0, 0x1a9c6 <audit_scalar_invert+0x12e>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x4ce(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 416,
+          "instruction": "bnez s0, 0x1aa18 <audit_scalar_invert+0x180>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x520(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 498,
+          "instruction": "bnez s0, 0x1aa6a <audit_scalar_invert+0x1d2>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x572(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 582,
+          "instruction": "bnez s0, 0x1aabe <audit_scalar_invert+0x226>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x5c6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 648,
+          "instruction": "bnez s0, 0x1ab00 <audit_scalar_invert+0x268>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x608(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 714,
+          "instruction": "bnez s0, 0x1ab42 <audit_scalar_invert+0x2aa>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x64a(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 780,
+          "instruction": "bnez s0, 0x1ab84 <audit_scalar_invert+0x2ec>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x68c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 846,
+          "instruction": "bnez s0, 0x1abc6 <audit_scalar_invert+0x32e>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x6ce(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 912,
+          "instruction": "bnez s0, 0x1ac08 <audit_scalar_invert+0x370>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x710(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 978,
+          "instruction": "bnez s0, 0x1ac4a <audit_scalar_invert+0x3b2>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x752(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1044,
+          "instruction": "bnez s0, 0x1ac8c <audit_scalar_invert+0x3f4>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x794(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1110,
+          "instruction": "bnez s0, 0x1acce <audit_scalar_invert+0x436>",
+          "context": [
+            "auipc ra, 0x1",
+            "jalr -0x7d6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1176,
+          "instruction": "bnez s0, 0x1ad10 <audit_scalar_invert+0x478>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x7e8(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1242,
+          "instruction": "bnez s0, 0x1ad52 <audit_scalar_invert+0x4ba>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x7a6(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1292,
+          "instruction": "bnez s0, 0x1ad84 <audit_scalar_invert+0x4ec>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x774(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1342,
+          "instruction": "bnez s0, 0x1adb6 <audit_scalar_invert+0x51e>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x742(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1392,
+          "instruction": "bnez s0, 0x1ade8 <audit_scalar_invert+0x550>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x710(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1442,
+          "instruction": "bnez s0, 0x1ae1a <audit_scalar_invert+0x582>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x6de(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1492,
+          "instruction": "bnez s0, 0x1ae4c <audit_scalar_invert+0x5b4>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x6ac(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1542,
+          "instruction": "bnez s0, 0x1ae7e <audit_scalar_invert+0x5e6>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x67a(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1592,
+          "instruction": "bnez s0, 0x1aeb0 <audit_scalar_invert+0x618>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x648(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1642,
+          "instruction": "bnez s0, 0x1aee2 <audit_scalar_invert+0x64a>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x616(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1692,
+          "instruction": "bnez s0, 0x1af14 <audit_scalar_invert+0x67c>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x5e4(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1742,
+          "instruction": "bnez s0, 0x1af46 <audit_scalar_invert+0x6ae>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x5b2(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1792,
+          "instruction": "bnez s0, 0x1af78 <audit_scalar_invert+0x6e0>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x580(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1842,
+          "instruction": "bnez s0, 0x1afaa <audit_scalar_invert+0x712>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x54e(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1892,
+          "instruction": "bnez s0, 0x1afdc <audit_scalar_invert+0x744>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x51c(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1942,
+          "instruction": "bnez s0, 0x1b00e <audit_scalar_invert+0x776>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x4ea(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        },
+        {
+          "offset": 1992,
+          "instruction": "bnez s0, 0x1b040 <audit_scalar_invert+0x7a8>",
+          "context": [
+            "auipc ra, 0x0",
+            "jalr 0x4b8(ra) <memcpy>",
+            "addi s0, s0, -0x1"
+          ]
+        }
+      ],
+      "old_memory": 8,
+      "new_memory": 9,
+      "operand_differences": [],
+      "review": "Inspected replacement of unwrap success branch/panic tail with unconditional mask or conditional-select of the inverse versus zero. All other fixed exponentiation loop offsets retained. Valid NonZero input behavior preserved; all scalar models rerun on both RV32 profiles."
+    }
+  ]
+}
