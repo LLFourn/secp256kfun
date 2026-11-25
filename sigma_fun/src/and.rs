@@ -91,11 +91,10 @@ where
         let (lhs_statement, rhs_statement) = statement;
         self.lhs
             .implied_announcement(lhs_statement, challenge, lhs_response)
-            .and_then(|lhs_announcement| {
+            .zip(
                 self.rhs
-                    .implied_announcement(rhs_statement, challenge, rhs_response)
-                    .map(|rhs_announcement| (lhs_announcement, rhs_announcement))
-            })
+                    .implied_announcement(rhs_statement, challenge, rhs_response),
+            )
     }
 
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {

@@ -147,11 +147,10 @@ impl<A: Sigma, B: Sigma<ChallengeLength = A::ChallengeLength>> Sigma for Or<A, B
 
         self.lhs
             .implied_announcement(lhs_statement, lhs_challenge, lhs_response)
-            .and_then(|lhs_announcement| {
+            .zip(
                 self.rhs
-                    .implied_announcement(rhs_statement, &rhs_challenge, rhs_response)
-                    .map(|rhs_announcement| (lhs_announcement, rhs_announcement))
-            })
+                    .implied_announcement(rhs_statement, &rhs_challenge, rhs_response),
+            )
     }
 
     fn hash_statement<H: Update>(&self, hash: &mut H, statement: &Self::Statement) {
