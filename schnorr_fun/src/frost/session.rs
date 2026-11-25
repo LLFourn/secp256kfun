@@ -90,7 +90,12 @@ impl CoordinatorSignSession {
     /// You can use this instead of calling [`verify_signature_share`] on each share (but you won't
     /// know when signature share was invalid).
     ///
+    /// A signature share is required from **every** party in the session (see [`parties`]), not
+    /// just `threshold` of them. To sign with fewer parties, start a new session with only those
+    /// parties and fresh nonces.
+    ///
     /// [`verify_signature_share`]: Self::verify_signature_share
+    /// [`parties`]: Self::parties
     pub fn verify_and_combine_signature_shares(
         &self,
         shared_key: &SharedKey<EvenY>,
@@ -100,6 +105,17 @@ impl CoordinatorSignSession {
             return Err(VerifySignatureSharesError::NotEnough {
                 missing: shared_key.threshold() - signature_shares.len(),
             });
+        }
+        // The aggregate nonce and each party's Lagrange coefficient were fixed over the whole
+        // session's signer set, so a share missing from any one of them can't be made up for by
+        // the others.
+        let missing = self
+            .nonces
+            .keys()
+            .filter(|index| !signature_shares.contains_key(index))
+            .count();
+        if missing > 0 {
+            return Err(VerifySignatureSharesError::NotEnough { missing });
         }
         for (share_index, signature_share) in &signature_shares {
             self.verify_signature_share(
@@ -226,7 +242,8 @@ impl std::error::Error for SignatureShareInvalid {}
 /// Error returned by [`CoordinatorSignSession::verify_and_combine_signature_shares`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum VerifySignatureSharesError {
-    /// Not enough signature shares to compelte the signature
+    /// Not enough signature shares to complete the signature. Either fewer than `threshold` were
+    /// provided or some parties in the session have not provided one.
     NotEnough {
         /// How many are missing
         missing: usize,
