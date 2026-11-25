@@ -311,6 +311,36 @@ impl ProjectivePoint {
     pub fn is_identity(&self) -> Choice {
         self.z.normalizes_to_zero()
     }
+
+    /// Scales every point to `z = 1` (identities keep `z = 0`) with fully normalized `x` and `y`,
+    /// using a single field inversion for the whole batch. `scratch` must be as long as `points`.
+    ///
+    /// Adapted from upstream k256 0.13's `batch_normalize_generic` and elliptic-curve 0.13's
+    /// `invert_batch_internal` (Montgomery's trick). Unlike upstream it keeps the projective
+    /// representation and needs only one scratch buffer.
+    pub fn batch_normalize_in_place(points: &mut [ProjectivePoint], scratch: &mut [FieldElement]) {
+        assert_eq!(points.len(), scratch.len());
+        // A single zero z would make the product of all of them zero, so identities contribute a
+        // dummy one and are left with z = 0 at the end, as upstream does.
+        let mut acc = FieldElement::ONE;
+        for (point, prefix) in points.iter().zip(scratch.iter_mut()) {
+            *prefix = acc;
+            let z =
+                FieldElement::conditional_select(&point.z, &FieldElement::ONE, point.is_identity());
+            acc = acc * &z;
+        }
+
+        let mut acc_inv = acc.invert().unwrap();
+        for (point, prefix) in points.iter_mut().zip(scratch.iter()).rev() {
+            let is_identity = point.is_identity();
+            let z = FieldElement::conditional_select(&point.z, &FieldElement::ONE, is_identity);
+            let z_inv = acc_inv * prefix;
+            acc_inv = acc_inv * &z;
+            point.x = (point.x * &z_inv).normalize();
+            point.y = (point.y * &z_inv).normalize();
+            point.z.conditional_assign(&FieldElement::ONE, !is_identity);
+        }
+    }
 }
 
 impl Default for ProjectivePoint {

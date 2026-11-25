@@ -68,6 +68,23 @@ impl BackendPoint for Point {
         })
     }
 
+    fn batch_normalize<const N: usize>(points: &mut [Point; N]) {
+        // With a heap, keep a large `N`'s scratch off the stack.
+        #[cfg(feature = "alloc")]
+        let mut scratch = vec![FieldElement::ONE; N];
+        #[cfg(not(feature = "alloc"))]
+        let mut scratch = [FieldElement::ONE; N];
+        ProjectivePoint::batch_normalize_in_place(points, &mut scratch);
+    }
+
+    #[cfg(feature = "alloc")]
+    fn batch_normalize_slice(points: &mut [Point]) {
+        ProjectivePoint::batch_normalize_in_place(
+            points,
+            &mut vec![FieldElement::ONE; points.len()],
+        );
+    }
+
     fn hash_to_curve<
         H: crate::hash::Hash32 + crate::digest::Update + crate::digest::crypto_common::BlockSizeUser,
     >(
@@ -348,4 +365,26 @@ fn norm_point_to_affine(proj_point: &Point) -> AffinePoint {
         &AffinePoint::IDENTITY,
         proj_point.is_identity(),
     )
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn batch_normalize_matches_point_normalize() {
+        let add = ConstantTime::point_add_point;
+        let g2 = add(&G_POINT, &G_POINT);
+        let g3 = add(&g2, &G_POINT);
+        let g5 = add(&g3, &g2);
+        let mut points = [g2, g3, ProjectivePoint::IDENTITY, g5, add(&g5, &g5)];
+        assert!(points.iter().all(|point| point.z != FieldElement::ONE));
+        let mut expected = points;
+        expected.iter_mut().for_each(ConstantTime::point_normalize);
+
+        Point::batch_normalize(&mut points);
+        for (batched, single) in points.iter().zip(&expected) {
+            assert!(batched.x == single.x && batched.y == single.y && batched.z == single.z);
+        }
+    }
 }

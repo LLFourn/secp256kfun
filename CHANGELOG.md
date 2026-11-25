@@ -2,6 +2,13 @@
 
 ## UNRELEASED
 
+- `secp256kfun`: add `BatchNormalize` for arrays and (with `alloc`) `Vec`s of points: normalizes the
+  whole collection with one field inversion, keeping secrecy and zero markers.
+- `secp256kfun`: add `Point::batch_normalize_iter::<N>`, which normalizes an iterator of points
+  lazily, `N` at a time.
+- `schnorr_fun`: `SharedKey::grind_fingerprint` is faster: it batch-normalizes candidate
+  coefficients. Results are unchanged.
+
 ## schnorr_fun v0.13.0
 
 A security audit of `chilldkg` produced a batch of fixes and an API rework.
