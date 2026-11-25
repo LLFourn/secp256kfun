@@ -22,10 +22,14 @@
 /// use secp256kfun::{G, Point, Scalar, g, marker::*};
 /// let x = Scalar::random(&mut rand::thread_rng());
 /// let H = Point::random(&mut rand::thread_rng());
-/// let X = g!(x * H); // This is constant time because x is secret by default.
+/// let X = g!(x * H); // Secret requires the constant-time implementation.
 /// let x = x.public();
-/// let X = g!(x * H); // This may run faster (in variable time)
+/// let X = g!(x * H); // Public permits variable-time algorithms.
 /// ```
+///
+/// Markers do not enable CPU timing protections or verify compiler output.
+/// See the [timing and platform requirements](crate#timing-and-platform-requirements),
+/// including the caller's responsibility for Apple timing-safe execution context.
 ///
 /// [`Secret`]: crate::marker::Secret
 /// [`Point`]: crate::marker::Public
@@ -33,8 +37,12 @@
 /// [`Point`s]: crate::Point
 pub trait Secrecy: Default + Clone + PartialEq + Eq + Copy + 'static + Ord + PartialOrd {}
 
-/// Indicates that the value is secret and therefore makes core operations
-/// executed on it to use  _constant time_ versions of the operations.
+/// Requires core operations to use implementations obligated to keep control flow
+/// and memory addresses independent of this value, under their valid-input contracts.
+///
+/// This marker does not enable CPU protections or guarantee hardware timing safety.
+/// The [timing and platform requirements](crate#timing-and-platform-requirements)
+/// apply to callers, including those using Apple silicon.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]

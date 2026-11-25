@@ -1,0 +1,108 @@
+name: Constant-time checks
+on:
+  pull_request:
+  push:
+    branches: [master, ct-checks]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  drift:
+    name: Reviewed machine-code drift (${{ matrix.platform }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x86, arm-linux, rv32, rv32-firmware]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,riscv32imc-unknown-none-elf
+          components: llvm-tools
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned cross linker
+        run: |
+          python3 -m pip install ziglang==0.16.0 cargo-zigbuild==0.23.0
+          python3 -c 'import pathlib, ziglang; print(pathlib.Path(ziglang.__file__).parent)' >> "$GITHUB_PATH"
+      - name: Check contracts and detector mutations
+        run: |
+          python3 -m unittest discover -s secp256kfun/scripts -p 'test_ct_audit.py'
+          python3 secp256kfun/scripts/ct_audit.py coverage
+          python3 secp256kfun/scripts/ct_audit_review.py
+      - name: Check baseline updates have re-audit notes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 secp256kfun/scripts/ct_audit_review.py --base "$BASE_SHA"
+      - name: Rebuild and compare reviewed machine code
+        run: python3 secp256kfun/scripts/ct_audit.py '${{ matrix.platform }}' --check
+      - name: Verify snapshot reproducibility with a relocated Cargo home
+        if: matrix.platform == 'x86'
+        run: python3 secp256kfun/scripts/ct_audit_repro.py x86
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ct-${{ matrix.platform }}
+          path: |
+            target/ct-audit/${{ matrix.platform }}/
+            target/ct-audit/repro/${{ matrix.platform }}/
+  taint:
+    name: Native x86 secret-input taint and rejection controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install semantic instrumentation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      - name: Reject secret-dependent branches and addresses
+        run: >-
+          python3 secp256kfun/scripts/ct_audit_taint.py --build-native
+          --control-switch secp256kfun/ct-audit/ci-control.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ct-native-x86-taint
+          path: target/ct-audit/taint/
+  relational:
+    name: Bounded rv32 relational checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: riscv32imc-unknown-none-elf
+          components: llvm-tools
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: '4.14.3'
+      - run: |
+          python3 -m pip install z3-solver==5.3.3.0
+          opam install -y binsec.0.11.3
+      - name: Verify both optimization configurations and controls
+        run: |
+          for platform in rv32 rv32-firmware; do
+            python3 secp256kfun/scripts/ct_audit.py "$platform" --check
+            python3 secp256kfun/scripts/ct_audit.py "$platform" --controls
+            opam exec -- python3 secp256kfun/scripts/ct_audit_relational.py --platform "$platform"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ct-relational
+          path: |
+            target/ct-audit/rv32*/
+            target/ct-audit/controls/rv32*/

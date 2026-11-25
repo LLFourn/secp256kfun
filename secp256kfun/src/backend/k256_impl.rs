@@ -78,6 +78,9 @@ impl BackendPoint for Point {
     }
 }
 
+/// Operations here are obligated to keep control flow and memory addresses independent of
+/// secret values, for valid inputs and fixed public structure. `ct-audit/contracts.json`
+/// ties this obligation to executable audit roots; the marker itself is not a proof.
 pub struct ConstantTime;
 
 impl TimeSensitive for ConstantTime {
@@ -137,7 +140,7 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn norm_point_eq_norm_point(lhs: &Point, rhs: &Point) -> bool {
-        let both_infinity = Choice::from((lhs.is_zero() && rhs.is_zero()) as u8);
+        let both_infinity = lhs.is_identity() & rhs.is_identity();
         (both_infinity | lhs.x.ct_eq(&rhs.x) & lhs.y.ct_eq(&rhs.y)).into()
     }
 
@@ -191,7 +194,8 @@ impl TimeSensitive for ConstantTime {
     }
 
     fn scalar_invert(scalar: &Scalar) -> Scalar {
-        scalar.invert().unwrap()
+        // Safe callers require NonZero; a zero fallback avoids branching on that secret invariant.
+        scalar.invert().unwrap_or(Scalar::ZERO)
     }
 
     fn scalar_mul_basepoint(scalar: &Scalar, base: &BasePoint) -> Point {

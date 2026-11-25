@@ -1,0 +1,36 @@
+[package]
+name = "secp256kfun-ct-audit"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+secp256kfun = { path = "..", default-features = false }
+rand_chacha = { version = "=0.3.1", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+negative-controls = []
+std = ["secp256kfun/std", "dep:rand_chacha"]
+alloc = ["secp256kfun/alloc"]
+firmware = ["alloc", "secp256kfun/serde", "secp256kfun/bincode"]
+
+[[bin]]
+name = "ct_audit"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+debug = 1
+debug-assertions = false
+overflow-checks = false
+lto = false
+codegen-units = 1
+panic = "abort"
+
+[profile.firmware]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
