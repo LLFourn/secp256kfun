@@ -16,9 +16,11 @@ ecdsa_fun = "0.12"
 sha2 = "0.10" # You need a hash function for nonce derivation
 ```
 
-### Should use?
+### Status
 
-This library and [secp256kfun] is experimental.
+This library and [secp256kfun] are maturing, and Frostsnap pays a bounty for vulnerabilities in them (see
+[SECURITY.md](https://github.com/LLFourn/secp256kfun/blob/master/SECURITY.md)). See [secp256kfun]'s README for what is
+still in progress.
 
 ### Feature flags
 

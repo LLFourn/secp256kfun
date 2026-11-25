@@ -14,13 +14,7 @@ A mid-level rust secp256k1 elliptic curve cryptography library that's optimized 
 - **unoptimizable**: The most straightforward way of expressing a certain operation on the group is also the most efficient way.
 - **Documented**: We try and make working examples for each function and document them.
 
-Fun does not mean (yet -- please help!):
-
-- **well reviewed**: The implementations here have no received much review.
-- **side-channel resistant**: There has been no empirical investigation into whether this library or the underlying arithmetic from [k256] is resistant against timing attacks etc. **No** attempt is made to "zero" out secrets when memory is freed.
-- **performant**: The library is in general not as performant as [libsecp256k1][1].
-
-The goal is for this library to let researchers experiment with ideas, have them work on Bitcoin *and* to enjoy it!
+The goal is to let you implement cryptographic schemes on Bitcoin correctly, from a research prototype through to production, *and* to enjoy it!
 _High-level_ libraries like [rust-secp256k1][2] make it difficult to implement exotic cryptographic schemes correctly and efficiently.
 _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the resulting code is often error prone and difficult to read.
 
@@ -31,14 +25,22 @@ _Low-level_ libraries like [parity/libsecp256k1][4] make it possible but the res
 secp256kfun = "0.12"
 ```
 
-### Should use?
+### Status
 
-This library is ready for production as long what you are trying to produce is **fun and amusement!**.
-If you want to engineer something solid that a lot of people's money will depend on, this library is a risky choice.
-Here are some alternatives:
+secp256kFUN is maturing. It secures bitcoin in production in [Frostsnap](https://frostsnap.com) hardware wallets, and
+Frostsnap pays a bounty for vulnerabilities (see [SECURITY.md](https://github.com/LLFourn/secp256kfun/blob/master/SECURITY.md)).
+Still in progress:
+
+- **review**: it has had less independent review than [libsecp256k1][1].
+- **side channels**: the [k256] arithmetic it uses is written to be constant time, but there has been no empirical
+  investigation of timing leaks. Secrets are not zeroed when memory is freed.
+- **performance**: it is in general slower than [libsecp256k1][1].
+- **API stability**: minor versions can make breaking changes until 1.0.
+
+If you only need standard ECDSA or BIP340 signing, consider:
 
 1. [rust-secp256k1][2] - the rust bindings to the libsecp256k1 that Bitcoin itself uses
-2. [k256] - the arithmetic of this library is (by default) based on this library.
+2. [k256] - this library's arithmetic backend is derived from it (vendored in `secp256kfun/src/vendor/k256`)
 3. [ristretto][3] - in the case you don't need to use secp256k1
 
 ## Documentation
