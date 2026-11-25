@@ -222,7 +222,7 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
         let mut verified_bits = 0usize;
 
         // Check each non-constant coefficient
-        for i in 1..self.point_polynomial.len() {
+        for coeff in &self.point_polynomial[1..] {
             let remaining_total = fingerprint
                 .max_bits_total
                 .saturating_sub(verified_bits as u8) as usize;
@@ -231,7 +231,7 @@ impl<T: Normalized, Z: ZeroChoice> SharedKey<T, Z> {
             }
 
             // Update hash state with next coefficient
-            hash_state = hash_state.add(self.point_polynomial[i]);
+            hash_state = hash_state.add(coeff);
 
             let hash_result = hash_state.clone().finalize_fixed();
             let hash_bytes: &[u8] = hash_result.as_ref();
