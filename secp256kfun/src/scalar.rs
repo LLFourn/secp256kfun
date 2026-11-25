@@ -349,9 +349,34 @@ crate::impl_fromstr_deserialize! {
     }
 }
 
-crate::impl_display_debug_serialize! {
+crate::impl_display_serialize! {
     fn to_bytes<Z,S>(scalar: &Scalar<S,Z>) -> [u8;32] {
         scalar.to_bytes()
+    }
+}
+
+impl<S, Z> core::fmt::Debug for Scalar<S, Z> {
+    /// Formats the scalar as hex along with its markers. [`Secret`] scalars are redacted so that
+    /// logging a value (or anything containing one) can't leak it; use `Display` to export them
+    /// deliberately.
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let short_name = |name: &'static str| name.rsplit("::").next().unwrap_or(name);
+        write!(
+            f,
+            "Scalar<{},{}>(",
+            short_name(core::any::type_name::<S>()),
+            short_name(core::any::type_name::<Z>())
+        )?;
+        // `S` is unbounded so we can't ask the marker directly. Anything other than `Public` is
+        // treated as secret so a mismatch errs on the side of redacting.
+        if core::any::type_name::<S>() == core::any::type_name::<Public>() {
+            for byte in self.to_bytes() {
+                write!(f, "{byte:02x}")?;
+            }
+        } else {
+            write!(f, "<redacted>")?;
+        }
+        write!(f, ")")
     }
 }
 
@@ -607,6 +632,23 @@ mod test {
     use proptest::prelude::*;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn debug_redacts_secret_scalars() {
+        use alloc::format;
+        let secret = Scalar::random(&mut rand::thread_rng());
+        let secret_hex = format!("{secret}");
+        let debug = format!("{secret:?}");
+        assert!(!debug.contains(&secret_hex), "secret leaked: {debug}");
+        assert_eq!(debug, "Scalar<Secret,NonZero>(<redacted>)");
+
+        let public = secret.public();
+        assert_eq!(
+            format!("{public:?}"),
+            format!("Scalar<Public,NonZero>({secret_hex})")
+        );
+    }
 
     #[cfg(all(feature = "serde", feature = "bincode"))]
     #[test]

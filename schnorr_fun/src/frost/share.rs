@@ -121,9 +121,20 @@ secp256kfun::impl_fromstr_deserialize! {
     }
 }
 
-secp256kfun::impl_display_debug_serialize! {
+secp256kfun::impl_display_serialize! {
     fn to_bytes(share: &SecretShare) -> [u8;64] {
         share.to_bytes()
+    }
+}
+
+// Not the hex encoding used by `Display`: that would print the secret. `Scalar`'s `Debug` redacts
+// the share when it's `Secret`.
+impl<S> core::fmt::Debug for SecretShare<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("SecretShare")
+            .field("index", &self.index)
+            .field("share", &self.share)
+            .finish()
     }
 }
 
