@@ -542,13 +542,15 @@ impl<H: Hash32, NG> MuSig<H, NG> {
     }
 
     /// Generates a partial signature (or partial encrypted signature depending on `T`) for the local_secret_nonce.
+    ///
+    /// The nonce is taken by value so that signing twice with it by accident doesn't compile.
     pub fn sign<T>(
         &self,
         agg_key: &AggKey<EvenY>,
         session: &SignSession<T>,
         my_index: usize,
         keypair: &KeyPair,
-        local_secret_nonce: impl AsRef<SecretNonce>,
+        local_secret_nonce: impl Into<SecretNonce>,
     ) -> Scalar<Public, Zero> {
         assert_eq!(
             keypair.public_key(),
@@ -561,7 +563,7 @@ impl<H: Hash32, NG> MuSig<H, NG> {
         let mut a = agg_key.coefs[my_index];
 
         a.conditional_negate(agg_key.needs_negation);
-        let [mut r1, mut r2] = local_secret_nonce.as_ref().0;
+        let [mut r1, mut r2] = local_secret_nonce.into().0;
         r1.conditional_negate(session.nonce_needs_negation);
         r2.conditional_negate(session.nonce_needs_negation);
         s!(c * a * x_i + r1 + b * r2).public()
