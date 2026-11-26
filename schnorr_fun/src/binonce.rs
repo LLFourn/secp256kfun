@@ -178,6 +178,12 @@ impl AsRef<SecretNonce> for NonceKeyPair {
     }
 }
 
+impl From<NonceKeyPair> for SecretNonce {
+    fn from(nonce: NonceKeyPair) -> Self {
+        nonce.secret
+    }
+}
+
 impl AsRef<SecretNonce> for SecretNonce {
     fn as_ref(&self) -> &SecretNonce {
         self

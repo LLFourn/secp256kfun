@@ -178,6 +178,8 @@ impl PartySignSession {
 
     /// Generates a signature share under the frost key using a secret share.
     ///
+    /// The nonce is taken by value so that signing twice with it by accident doesn't compile.
+    ///
     /// The `secret_share` is taken as a `PairedSecretShare<EvenY>` to guarantee that the secret is aligned with an `EvenY` point.
     ///
     /// ## Panics
@@ -187,7 +189,7 @@ impl PartySignSession {
     pub fn sign(
         &self,
         secret_share: &PairedSecretShare<EvenY>,
-        secret_nonce: impl AsRef<SecretNonce>,
+        secret_nonce: impl Into<SecretNonce>,
     ) -> SignatureShare {
         if self.public_key != secret_share.public_key() {
             panic!("the share's shared key is not the same as the shared key of the session");
@@ -197,7 +199,7 @@ impl PartySignSession {
         }
         let secret_share = secret_share.secret_share();
         let lambda = poly::eval_basis_poly_at_0(secret_share.index, self.parties.iter().cloned());
-        let [mut r1, mut r2] = secret_nonce.as_ref().0;
+        let [mut r1, mut r2] = secret_nonce.into().0;
         r1.conditional_negate(self.binonce_needs_negation);
         r2.conditional_negate(self.binonce_needs_negation);
 
