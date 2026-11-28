@@ -101,6 +101,31 @@ fn musig_tweak_tests() {
     }
 }
 
+/// Returns `None` if a plain tweak follows an x-only tweak because `AggKey` can't express that.
+fn apply_tweaks(
+    mut agg_key: musig::AggKey<Normal>,
+    mut tweaks: impl Iterator<Item = Scalar<Public, Zero>>,
+    is_xonly: &[bool],
+) -> Option<musig::AggKey<EvenY>> {
+    let n_plain = is_xonly.iter().take_while(|is_xonly| !**is_xonly).count();
+    let (plain, xonly) = is_xonly.split_at(n_plain);
+
+    for _ in plain {
+        agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
+    }
+
+    let mut agg_key = agg_key.into_xonly_key();
+
+    for is_xonly in xonly {
+        if !is_xonly {
+            return None;
+        }
+        agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
+    }
+
+    Some(agg_key)
+}
+
 fn run_test(test_cases: &TestCases, test_case: &TestCase) {
     let musig = musig::new_without_nonce_generation::<sha2::Sha256>();
     let msg = hex::decode(&test_cases.msg).unwrap();
@@ -119,30 +144,15 @@ fn run_test(test_cases: &TestCases, test_case: &TestCase) {
         .map(|i| test_cases.pnonces[*i].unwrap())
         .collect();
 
-    let mut tweaks = test_case
+    let tweaks = test_case
         .tweak_indices
         .iter()
         .map(|i| test_cases.tweaks[*i].unwrap());
 
-    let mut tweak_is_xonly = test_case.is_xonly.clone();
-    let mut agg_key = musig.new_agg_key(pubkeys);
-
-    while tweak_is_xonly.get(0) == Some(&false) {
-        tweak_is_xonly.remove(0);
-        agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
-    }
-
-    let mut agg_key = agg_key.into_xonly_key();
-
-    while tweak_is_xonly.get(0) == Some(&true) {
-        tweak_is_xonly.remove(0);
-        agg_key = agg_key.tweak(tweaks.next().unwrap()).unwrap();
-    }
-
-    if !tweak_is_xonly.is_empty() {
-        // XXX: we can't run this test because it does an plain tweak after an xonly tweak
+    let Some(agg_key) = apply_tweaks(musig.new_agg_key(pubkeys), tweaks, &test_case.is_xonly)
+    else {
         return;
-    }
+    };
 
     let session = musig.start_sign_session(&agg_key, pubnonces, Message::raw(&msg[..]));
     let partial_sig = musig.sign(
@@ -162,4 +172,87 @@ fn run_test(test_cases: &TestCases, test_case: &TestCase) {
         test_case.signer_index.unwrap(),
         partial_sig
     ));
+}
+
+static SIG_AGG_JSON: &str = include_str!("musig/sig_agg_vectors.json");
+
+#[derive(serde::Deserialize)]
+#[serde(crate = "self::serde")]
+struct SigAggCases {
+    pubkeys: Vec<Point>,
+    pnonces: Vec<binonce::Nonce>,
+    tweaks: Vec<Scalar<Public, Zero>>,
+    psigs: Vec<String>,
+    msg: String,
+    valid_test_cases: Vec<SigAggCase>,
+    error_test_cases: Vec<SigAggCase>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(crate = "self::serde")]
+struct SigAggCase {
+    aggnonce: binonce::Nonce<Zero>,
+    nonce_indices: Vec<usize>,
+    key_indices: Vec<usize>,
+    tweak_indices: Vec<usize>,
+    is_xonly: Vec<bool>,
+    psig_indices: Vec<usize>,
+    expected: Option<schnorr_fun::Signature>,
+    error: Option<serde_json::Value>,
+}
+
+#[test]
+fn musig_sig_agg() {
+    let test_cases = serde_json::from_str::<SigAggCases>(SIG_AGG_JSON).unwrap();
+    let musig = musig::new_without_nonce_generation::<sha2::Sha256>();
+    let msg = hex::decode(&test_cases.msg).unwrap();
+    let message = Message::raw(&msg[..]);
+
+    for test_case in &test_cases.valid_test_cases {
+        let pubkeys = test_case
+            .key_indices
+            .iter()
+            .map(|i| test_cases.pubkeys[*i])
+            .collect();
+        let pubnonces = test_case
+            .nonce_indices
+            .iter()
+            .map(|i| test_cases.pnonces[*i])
+            .collect::<Vec<_>>();
+        let tweaks = test_case
+            .tweak_indices
+            .iter()
+            .map(|i| test_cases.tweaks[*i]);
+        let psigs = test_case
+            .psig_indices
+            .iter()
+            .map(|i| test_cases.psigs[*i].parse().unwrap());
+
+        assert_eq!(
+            binonce::Nonce::aggregate(pubnonces.iter().copied()),
+            test_case.aggnonce
+        );
+
+        let Some(agg_key) = apply_tweaks(musig.new_agg_key(pubkeys), tweaks, &test_case.is_xonly)
+        else {
+            continue;
+        };
+
+        let session = musig.start_sign_session(&agg_key, pubnonces, message);
+        let sig = musig.combine_partial_signatures(&agg_key, &session, psigs);
+
+        assert_eq!(sig, test_case.expected.unwrap());
+        assert!(
+            musig
+                .schnorr
+                .verify(&agg_key.agg_public_key(), message, &sig)
+        );
+    }
+
+    for test_case in &test_cases.error_test_cases {
+        let error = test_case.error.as_ref().unwrap();
+        let signer = error["signer"].as_u64().unwrap() as usize;
+        let bad_psig = &test_cases.psigs[test_case.psig_indices[signer]];
+        assert!(bad_psig.parse::<Scalar<Public, Zero>>().is_err());
+    }
 }

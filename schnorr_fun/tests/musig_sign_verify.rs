@@ -223,3 +223,46 @@ fn musig_sign_verify() {
         assert!(result.is_err());
     }
 }
+
+static NONCE_AGG_JSON: &str = include_str!("musig/nonce_agg_vectors.json");
+
+#[derive(serde::Deserialize)]
+#[serde(crate = "self::serde")]
+struct NonceAggCases {
+    pnonces: Vec<String>,
+    valid_test_cases: Vec<NonceAggCase>,
+    error_test_cases: Vec<NonceAggCase>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(crate = "self::serde")]
+struct NonceAggCase {
+    pnonce_indices: Vec<usize>,
+    expected: Option<String>,
+    error: Option<serde_json::Value>,
+}
+
+fn parse_pnonce(hex_str: &str) -> Option<binonce::Nonce> {
+    binonce::Nonce::from_bytes(hex::decode_array(hex_str).ok()?)
+}
+
+#[test]
+fn musig_nonce_agg() {
+    let test_cases = serde_json::from_str::<NonceAggCases>(NONCE_AGG_JSON).unwrap();
+
+    for test_case in &test_cases.valid_test_cases {
+        let nonces = test_case
+            .pnonce_indices
+            .iter()
+            .map(|i| parse_pnonce(&test_cases.pnonces[*i]).unwrap());
+        let expected: [u8; 66] = hex::decode_array(test_case.expected.as_ref().unwrap()).unwrap();
+        assert_eq!(binonce::Nonce::aggregate(nonces).to_bytes(), expected);
+    }
+
+    for test_case in &test_cases.error_test_cases {
+        let error = test_case.error.as_ref().unwrap();
+        let signer = error["signer"].as_u64().unwrap() as usize;
+        let bad_nonce = &test_cases.pnonces[test_case.pnonce_indices[signer]];
+        assert!(parse_pnonce(bad_nonce).is_none());
+    }
+}
