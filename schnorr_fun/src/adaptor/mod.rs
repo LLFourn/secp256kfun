@@ -335,5 +335,20 @@ mod test {
                 .recover_decryption_key(&other_encryption_key, &encrypted_signature, &signature)
                 .is_none()
         );
+        // The right `s` under a different `R` is not a valid signature, so recovering a key from
+        // it would break the promise that `Some` implies the signature is valid.
+        let signature_with_other_nonce = Signature {
+            R: verification_key,
+            s: signature.s,
+        };
+        assert!(
+            schnorr
+                .recover_decryption_key(
+                    &encryption_key,
+                    &encrypted_signature,
+                    &signature_with_other_nonce
+                )
+                .is_none()
+        );
     }
 }
