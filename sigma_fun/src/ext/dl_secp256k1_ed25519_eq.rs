@@ -117,7 +117,7 @@ impl<T: Transcript<CoreProof> + Default> CrossCurveDLEQ<T> {
     ///
     /// # Panics
     ///
-    /// - If the secret is larger than 2^253 -1
+    /// - If the secret is larger than 2^252 - 1
     /// - If the secret is 0
     pub fn prove(
         &self,
@@ -289,6 +289,8 @@ mod test {
         ed25519::test::{ed25519_point, ed25519_scalar},
     };
     use ::proptest::prelude::*;
+    use curve25519_dalek::constants::EIGHT_TORSION;
+    use rand::SeedableRng;
     use rand_chacha::ChaCha20Rng;
     use sha2::Sha256;
     type Transcript = HashTranscript<Sha256, ChaCha20Rng>;
@@ -304,6 +306,88 @@ mod test {
         let _ = proof_system.prove(&high_scalar, &mut rand::thread_rng());
     }
 
+    #[test]
+    fn ed25519_claim_with_torsion_is_rejected() {
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
+        let HP = PointP::random(&mut rng);
+        let HQ = &ScalarQ::random(&mut rng) * GQ;
+        let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
+
+        let secret = ScalarQ::random(&mut rng);
+        let secp_secret = {
+            let mut bytes = secret.to_bytes();
+            bytes.reverse();
+            ScalarP::from_bytes(bytes).unwrap().non_zero().unwrap()
+        };
+        let order_two_point = EIGHT_TORSION[4];
+        let torsion_claim = (
+            g!(secp_secret * GP).normalize(),
+            &secret * GQ + order_two_point,
+        );
+
+        // `prove` only proves its own honest claim, so the commitments and witness are built by
+        // hand to run the core proof against the claim with the torsion component.
+        let bits = to_bits(&secret);
+        let blindings = (0..COMMITMENT_BITS)
+            .map(|_| (ScalarP::random(&mut rng), ScalarQ::random(&mut rng)))
+            .collect::<Vec<_>>();
+        let sum_blindings = blindings.iter().fold(
+            (ScalarP::zero(), ScalarQ::zero()),
+            |(accP, accQ), (rP, rQ)| (s!(accP + rP), accQ + rQ),
+        );
+        let sum_blindings = (sum_blindings.0.public(), sum_blindings.1);
+        let commitments = proof_system
+            .powers_of_two
+            .iter()
+            .zip(bits.iter())
+            .zip(blindings.iter())
+            .map(|(((H2P, H2Q), bit), (rP, rQ))| match bit {
+                false => (g!(rP * GP).normalize(), rQ * GQ),
+                true => (
+                    g!(rP * GP + H2P).normalize().non_zero().unwrap(),
+                    rQ * GQ + H2Q,
+                ),
+            })
+            .collect::<Vec<_>>();
+        let statement = proof_system
+            .generate_statement(&sum_blindings, &torsion_claim, &commitments[..])
+            .unwrap();
+        let witness = (
+            blindings
+                .into_iter()
+                .zip(bits.iter())
+                .map(|(blinding, bit)| match bit {
+                    false => Either::Left(blinding),
+                    true => Either::Right(blinding),
+                })
+                .collect(),
+            (secp_secret, secret),
+        );
+
+        // The honest response only satisfies the verification equation for the shifted claim when
+        // the order two point is multiplied away, which happens when the challenge is even. So
+        // about half the attempts give a proof the core proof system accepts.
+        let proof = (0..64)
+            .find_map(|_| {
+                let proof =
+                    proof_system
+                        .core_proof_system
+                        .prove(&witness, &statement, Some(&mut rng));
+                proof_system
+                    .core_proof_system
+                    .verify(&statement, &proof)
+                    .then_some(proof)
+            })
+            .expect("an even challenge should turn up within 64 attempts");
+
+        let proof = CrossCurveDLEQProof {
+            sum_blindings,
+            commitments,
+            proof,
+        };
+        assert!(!proof_system.verify(&proof, torsion_claim));
+    }
+
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(3))]
         #[test]
@@ -315,6 +399,8 @@ mod test {
             let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
             let (proof, claim) = proof_system.prove(&secret, &mut rand::thread_rng());
             assert!(proof_system.verify(&proof, claim));
+            assert!(!proof_system.verify(&proof, (-claim.0, claim.1)));
+            assert!(!proof_system.verify(&proof, (claim.0, -claim.1)));
         }
     }
 
