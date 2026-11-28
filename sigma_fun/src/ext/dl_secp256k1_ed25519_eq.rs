@@ -315,6 +315,8 @@ mod test {
             let proof_system = CrossCurveDLEQ::<Transcript>::new(HP, HQ);
             let (proof, claim) = proof_system.prove(&secret, &mut rand::thread_rng());
             assert!(proof_system.verify(&proof, claim));
+            assert!(!proof_system.verify(&proof, (-claim.0, claim.1)));
+            assert!(!proof_system.verify(&proof, (claim.0, -claim.1)));
         }
     }
 

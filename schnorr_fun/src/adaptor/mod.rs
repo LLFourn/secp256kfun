@@ -309,6 +309,19 @@ mod test {
             message,
             &encrypted_signature,
         ));
+        let other_encryption_key = -encryption_key;
+        assert!(!schnorr.verify_encrypted_signature(
+            &verification_key,
+            &other_encryption_key,
+            message,
+            &encrypted_signature,
+        ));
+        assert!(!schnorr.verify_encrypted_signature(
+            &verification_key,
+            &encryption_key,
+            Message::new("test", b"give 100 coins to Eve".as_ref()),
+            &encrypted_signature,
+        ));
 
         let decryption_key = decryption_key.public();
         let signature = schnorr.decrypt_signature(decryption_key, encrypted_signature.clone());
@@ -317,5 +330,10 @@ mod test {
             .recover_decryption_key(&encryption_key, &encrypted_signature, &signature)
             .expect("recovery works");
         assert_eq!(rec_decryption_key, decryption_key);
+        assert!(
+            schnorr
+                .recover_decryption_key(&other_encryption_key, &encrypted_signature, &signature)
+                .is_none()
+        );
     }
 }
